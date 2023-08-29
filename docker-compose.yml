@@ -1,0 +1,29 @@
+version: '3'
+services:
+  nest-api:
+    container_name: nest-api
+    restart: always
+    build: .
+    ports:
+      - ${PORT}:${PORT}
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    networks:
+      - postgres
+  postgres:
+    image: postgres:15.3-alpine
+    container_name: ${POSTGRES_NAME}
+    networks:
+      - postgres
+    restart: always
+    volumes:
+      - /data/postgres:/data/postgres
+    ports:
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    env_file:
+      - .env
+networks:
+  postgres:
+    driver: bridge
