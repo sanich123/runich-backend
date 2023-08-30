@@ -14,37 +14,54 @@ export class UserService {
   }
 
   async findOne(id: string) {
-    return this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        profile: true,
-        activity: true,
-      },
-    });
+    try {
+      return this.prisma.user.findUnique({
+        where: { id },
+        include: {
+          profile: true,
+          activity: true,
+        },
+      });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
   }
 
   async createUser(createUserDto: CreateUserDto) {
-    const { id, updatedAt, createdAt, login, version } = await this.prisma.user.create({
-      data: createUserDto,
-    });
-    const tsCreatedAt = getTimeStampFromTime(createdAt);
-    const tsUpdatedAt = getTimeStampFromTime(updatedAt);
-    return { id, updatedAt: tsCreatedAt, createdAt: tsUpdatedAt, login, version };
+    try {
+      const { id, updatedAt, createdAt, login, version } = await this.prisma.user.create({
+        data: createUserDto,
+      });
+      const tsCreatedAt = getTimeStampFromTime(createdAt);
+      const tsUpdatedAt = getTimeStampFromTime(updatedAt);
+      return { id, updatedAt: tsCreatedAt, createdAt: tsUpdatedAt, login, version };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
   }
 
   async deleteUser(id: string) {
-    return await this.prisma.user.delete({ where: { id } });
+    try {
+      return await this.prisma.user.delete({ where: { id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
   }
 
   async updatePassword(newPassword: string, paramsId: string) {
-    const { login, version, createdAt, updatedAt, id } = await this.prisma.user.update({
-      where: { id: paramsId },
-      data: { password: newPassword, version: { increment: 1 } },
-    });
-    const tsCreatedAt = getTimeStampFromTime(createdAt);
-    const tsUpdatedAt = getTimeStampFromTime(updatedAt);
-    return { login, version, createdAt: tsCreatedAt, updatedAt: tsUpdatedAt, id };
+    try {
+      const { login, version, createdAt, updatedAt, id } = await this.prisma.user.update({
+        where: { id: paramsId },
+        data: { password: newPassword, version: { increment: 1 } },
+      });
+      const tsCreatedAt = getTimeStampFromTime(createdAt);
+      const tsUpdatedAt = getTimeStampFromTime(updatedAt);
+      return { login, version, createdAt: tsCreatedAt, updatedAt: tsUpdatedAt, id };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
   }
+
   async findOneByLogin(login: string) {
     try {
       return this.prisma.user.findUnique({ where: { login } });

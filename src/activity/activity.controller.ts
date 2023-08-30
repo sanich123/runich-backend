@@ -15,7 +15,11 @@ export class ActivityController {
   @Post(':id')
   @HttpCode(HttpStatus.CREATED)
   async createActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
-    console.log(id);
     return await this.activityService.createActivity(activity, id);
+  }
+
+  @Get(':id')
+  async getActivityByUserId(@Param() { id }: ParamsId) {
+    return await this.activityService.getActivitesByUserId(id);
   }
 }
