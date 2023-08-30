@@ -43,12 +43,12 @@ export class AuthService {
     }
   }
 
-  async signUp(login: string, password: string) {
+  async signUp(login: string, password: string, email: string) {
     try {
       const user = await this.userService.findOneByLogin(login);
       if (user) throw new ConflictException(ALREADY_EXIST_LOGIN);
       const hashedPassword = await hash(password, +CRYPT_SALT);
-      return await this.userService.createUser({ login, password: hashedPassword });
+      return await this.userService.createUser({ login, password: hashedPassword, email });
     } catch (error) {
       throw new InternalServerErrorException(HASHING_PASSWORD_ERROR);
     }

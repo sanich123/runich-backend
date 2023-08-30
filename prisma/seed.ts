@@ -15,6 +15,7 @@ async function main() {
       id: v4(),
       login: 'sanich123',
       password: '7fwd7rlm',
+      email: 'someEmail@gmail.com',
     },
   });
 
@@ -24,6 +25,7 @@ async function main() {
     create: {
       login: 'sanich143',
       password: '17011987',
+      email: 'someEmail2@gmail.com',
     },
   });
 

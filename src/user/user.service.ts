@@ -29,12 +29,12 @@ export class UserService {
 
   async createUser(createUserDto: CreateUserDto) {
     try {
-      const { id, updatedAt, createdAt, login, version } = await this.prisma.user.create({
+      const { id, updatedAt, createdAt, login, version, email } = await this.prisma.user.create({
         data: createUserDto,
       });
       const tsCreatedAt = getTimeStampFromTime(createdAt);
       const tsUpdatedAt = getTimeStampFromTime(updatedAt);
-      return { id, updatedAt: tsCreatedAt, createdAt: tsUpdatedAt, login, version };
+      return { id, updatedAt: tsCreatedAt, createdAt: tsUpdatedAt, login, version, email };
     } catch (error) {
       prismaErrorHandling(error);
     }
