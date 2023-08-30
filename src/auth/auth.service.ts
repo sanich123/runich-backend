@@ -21,8 +21,6 @@ const {
   WRONG_TOKEN,
   NOT_FOUND_USER,
   SIGN_TOKENS_ERROR,
-  HASHING_PASSWORD_ERROR,
-  COMPARING_PASSWORD_ERROR,
 } = MESSAGES;
 const { CRYPT_SALT, JWT_SECRET_REFRESH_KEY, TOKEN_REFRESH_EXPIRE_TIME } = process.env;
 
@@ -30,28 +28,26 @@ const { CRYPT_SALT, JWT_SECRET_REFRESH_KEY, TOKEN_REFRESH_EXPIRE_TIME } = proces
 export class AuthService {
   constructor(private readonly userService: UserService, private readonly jwtService: JwtService) {}
 
-  async logIn(login: string, password: string) {
+  async logIn(email: string, password: string) {
     try {
-      const user = await this.userService.findOneByLogin(login);
+      const user = await this.userService.findOneByLogin(email);
       if (!user) throw new BadRequestException(NON_EXISTING_LOGIN);
       const { id, password: dbPassword } = user;
       const match = await compare(password, dbPassword);
       if (!match) throw new UnauthorizedException(DIDNT_MATCH_PASSWORDS);
-      return await this.getTokens(id, login);
+      return await this.getTokens(id, email);
     } catch (error) {
-      throw new InternalServerErrorException(COMPARING_PASSWORD_ERROR);
+      throw new InternalServerErrorException(error.message);
     }
   }
 
   async signUp(login: string, password: string, email: string) {
-    try {
-      const user = await this.userService.findOneByLogin(login);
-      if (user) throw new ConflictException(ALREADY_EXIST_LOGIN);
-      const hashedPassword = await hash(password, +CRYPT_SALT);
-      return await this.userService.createUser({ login, password: hashedPassword, email });
-    } catch (error) {
-      throw new InternalServerErrorException(HASHING_PASSWORD_ERROR);
-    }
+    const user = await this.userService.findOneByLogin(login);
+    console.log(user);
+    if (user) throw new ConflictException(ALREADY_EXIST_LOGIN);
+    const hashedPassword = await hash(password, +CRYPT_SALT);
+    console.log(hashedPassword);
+    return await this.userService.createUser({ login, password: hashedPassword, email });
   }
 
   async validateToken(refreshToken: string) {

@@ -62,9 +62,9 @@ export class UserService {
     }
   }
 
-  async findOneByLogin(login: string) {
+  async findOneByLogin(email: string) {
     try {
-      return this.prisma.user.findUnique({ where: { login } });
+      return this.prisma.user.findUnique({ where: { email } });
     } catch (error) {
       prismaErrorHandling(error);
     }

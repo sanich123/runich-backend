@@ -12,6 +12,7 @@ export class ActivityService {
       const updatedActivity = await this.prisma.user.update({
         where: { id },
         data: {
+          version: { increment: 1 },
           activity: {
             create: activityDto,
           },
