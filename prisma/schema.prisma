@@ -16,6 +16,7 @@ model User {
   updatedAt DateTime @updatedAt
   profile Profile? 
   activity Activity[]
+  hashedRefreshToken String?
 }
 
 model Profile {

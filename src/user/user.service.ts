@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './user.dto';
 import { getTimeStampFromTime } from 'src/utils/utils';
+import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { hash } from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -42,5 +44,20 @@ export class UserService {
     const tsCreatedAt = getTimeStampFromTime(createdAt);
     const tsUpdatedAt = getTimeStampFromTime(updatedAt);
     return { login, version, createdAt: tsCreatedAt, updatedAt: tsUpdatedAt, id };
+  }
+  async findOneByLogin(login: string) {
+    try {
+      return this.prisma.user.findUnique({ where: { login } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+  async updateRefreshToken(id: string, refreshToken: string) {
+    try {
+      const hashedRefreshToken = await hash(refreshToken, +process.env.CRYPT_SALT);
+      return await this.prisma.user.update({ where: { id }, data: { hashedRefreshToken, version: { increment: 1 } } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
   }
 }
