@@ -32,10 +32,10 @@ export class AuthService {
     try {
       const user = await this.userService.findOneByLogin(email);
       if (!user) throw new BadRequestException(NON_EXISTING_LOGIN);
-      const { id, password: dbPassword } = user;
+      const { id, password: dbPassword, login } = user;
       const match = await compare(password, dbPassword);
       if (!match) throw new UnauthorizedException(DIDNT_MATCH_PASSWORDS);
-      return await this.getTokens(id, email);
+      return await this.getTokens(id, { email, login });
     } catch (error) {
       throw new InternalServerErrorException(error.message);
     }
@@ -64,14 +64,14 @@ export class AuthService {
     }
   }
 
-  private async getTokens(id: string, login: string) {
+  private async getTokens(id: string, { email, login }: { email: string; login: string }) {
     try {
-      const accessToken = await this.jwtService.signAsync({ id, login });
-      const refreshToken = jwt.sign({ id, login }, JWT_SECRET_REFRESH_KEY, {
+      const accessToken = await this.jwtService.signAsync({ id, email });
+      const refreshToken = jwt.sign({ id, email }, JWT_SECRET_REFRESH_KEY, {
         expiresIn: ms(TOKEN_REFRESH_EXPIRE_TIME),
       });
       await this.userService.updateRefreshToken(id, refreshToken);
-      return { accessToken, refreshToken, id };
+      return { accessToken, refreshToken, id, email, login };
     } catch (error) {
       throw new InternalServerErrorException(SIGN_TOKENS_ERROR);
     }
