@@ -15,10 +15,12 @@ export class ProfileService {
     }
   }
 
-  async createProfile(createProfileDto: ProfileDto) {
+  async createProfile({ userId, ...rest }: ProfileDto) {
     try {
-      return await this.prisma.profile.create({
-        data: createProfileDto,
+      return await this.prisma.profile.upsert({
+        where: { userId },
+        update: { ...rest },
+        create: { userId, ...rest },
       });
     } catch (error) {
       prismaErrorHandling(error);
