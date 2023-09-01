@@ -8,9 +8,8 @@ export class ActivityService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createActivity(activityDto: ActivityDto, id: string) {
-    console.log('activity from bd', activityDto);
     try {
-      const updatedActivity = await this.prisma.user.update({
+      return await this.prisma.user.update({
         where: { id },
         data: {
           version: { increment: 1 },
@@ -19,7 +18,6 @@ export class ActivityService {
           },
         },
       });
-      return updatedActivity;
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -28,6 +26,13 @@ export class ActivityService {
   async getActivitesByUserId(id: string) {
     try {
       return await this.prisma.activity.findMany({ where: { userId: id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+  async deleteActivityById(id: string) {
+    try {
+      return await this.prisma.activity.delete({ where: { id } });
     } catch (error) {
       prismaErrorHandling(error);
     }
