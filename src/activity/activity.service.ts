@@ -8,6 +8,7 @@ export class ActivityService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createActivity(activityDto: ActivityDto, id: string) {
+    console.log('activity from bd', activityDto);
     try {
       const updatedActivity = await this.prisma.user.update({
         where: { id },

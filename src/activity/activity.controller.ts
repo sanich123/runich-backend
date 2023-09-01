@@ -15,6 +15,7 @@ export class ActivityController {
   @Post(':id')
   @HttpCode(HttpStatus.CREATED)
   async createActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
+    console.log(`Activity from frontend`, activity);
     return await this.activityService.createActivity(activity, id);
   }
 
