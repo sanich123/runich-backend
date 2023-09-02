@@ -2,6 +2,7 @@ export class ActivityDto {
   date: Date;
   description: string;
   duration: number;
+  distance: number;
   emotion: string;
   isSwitchOn: boolean;
   photoUrl: string;

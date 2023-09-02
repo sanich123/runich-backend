@@ -39,6 +39,7 @@ model Activity {
   id String @id @default(uuid())
   date DateTime @default(now())
   description String?
+  distance Int
   duration Int
   emotion String?
   isSwitchOn Boolean
