@@ -30,6 +30,7 @@ export class ActivityService {
       prismaErrorHandling(error);
     }
   }
+
   async deleteActivityById(id: string) {
     try {
       return await this.prisma.activity.delete({ where: { id } });

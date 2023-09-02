@@ -22,6 +22,7 @@ export class ActivityController {
   async getActivityByUserId(@Param() { id }: ParamsId) {
     return await this.activityService.getActivitesByUserId(id);
   }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteActivityById(@Param() { id }: ParamsId) {
