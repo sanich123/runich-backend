@@ -23,6 +23,11 @@ export class ActivityController {
     return await this.activityService.getActivitesByUserId(id);
   }
 
+  @Get('/activityId/:id')
+  async getActivityByActivityId(@Param() { id }: ParamsId) {
+    return await this.activityService.getActivityByActivityId(id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteActivityById(@Param() { id }: ParamsId) {

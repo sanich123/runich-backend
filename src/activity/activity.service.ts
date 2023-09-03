@@ -23,6 +23,14 @@ export class ActivityService {
     }
   }
 
+  async getActivityByActivityId(id: string) {
+    try {
+      return await this.prisma.activity.findUnique({ where: { id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
   async getActivitesByUserId(id: string) {
     try {
       return await this.prisma.activity.findMany({ where: { userId: id } });
