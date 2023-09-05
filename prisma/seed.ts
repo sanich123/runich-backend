@@ -10,37 +10,36 @@ async function main() {
     where: { id: id1 },
     update: {},
     create: {
-      login: 'sanich123',
+      login: 'courtney123',
       password: '7FWD&rlm',
-      email: 'sanich123voronin@gmail.com',
+      email: 'dauwalter@gmail.com',
       profile: {
         create: {
-          gender: 'male',
-          sport: 'running',
-          name: 'Alexander',
-          surname: 'Voronin',
-          weight: '84',
-          bio: 'I am a pianist, but the last years I became a runner. Now I trying to be a fucking programmer',
-          birthday: new Date(1987, 0, 17),
+          gender: 'female',
+          sport: 'run',
+          name: 'Courtney',
+          surname: 'Dauwalter',
+          weight: '60',
+          bio: 'I worked as a middle and high-school teacher in the Denver area, before becoming a full-time professional runner in 2017',
+          birthday: new Date(1985, 1, 13),
           profilePhoto:
-            'https://firebasestorage.googleapis.com/v0/b/runich-6be07.appspot.com/o/images%2Fimg-1693635519423.sanich123.runningapp%2Fcache%2FImagePicker%2F0fcff42c-32d7-4a8b-b76f-99610fdeeb80.jpeg?alt=media&token=49e1484e-909b-44a9-aad3-f4af7b1eb003',
+            'https://runningmagazine.ca/wp-content/uploads/2017/10/22489723_1678610998837520_7136398489355883559_n.jpg',
         },
       },
       activity: {
         create: {
-          description: 'It was a summer day, and the birds sang in the trees',
+          description: 'Побегала чутка',
           distance: 190,
           duration: 65,
           emotion: 'fucking hard',
           isSwitchOn: false,
-          photoUrl:
-            'https://firebasestorage.googleapis.com/v0/b/runich-6be07.appspot.com/o/images%2Fimg-1693635519423.sanich123.runningapp%2Fcache%2FImagePicker%2F0fcff42c-32d7-4a8b-b76f-99610fdeeb80.jpeg?alt=media&token=49e1484e-909b-44a9-aad3-f4af7b1eb003',
+          photoUrl: 'https://article-imgs.scribdassets.com/4ny39m86bk9n1oy0/images/fileJZ891HXD.jpg',
           speed: 5,
           sport: 'run',
           title: 'It was awesome',
           comments: {
             create: {
-              comment: 'Ha-ha! I run faster than you, bastard!',
+              comment: 'Ha-ha! I run faster than you, Courtney!',
               authorId: id2,
             },
           },
@@ -250,20 +249,20 @@ async function main() {
     where: { id: id2 },
     update: {},
     create: {
-      login: 'sanich321',
+      login: 'eliud123',
       password: '7FWD&rlm',
-      email: 'varon-in@yandex.ru',
+      email: 'kipchoge@yandex.ru',
       profile: {
         create: {
-          gender: 'packman',
-          sport: 'swim',
-          name: 'Sanich',
-          surname: 'Varonen',
-          weight: '88',
-          bio: 'I love running, and runs a lot of time ',
-          birthday: new Date(1987, 0, 17),
+          gender: 'male',
+          sport: 'run',
+          name: 'Eliud',
+          surname: 'Kipchoge',
+          weight: '66',
+          bio: 'I am the best maraphoner in the histroy',
+          birthday: new Date(1984, 10, 5),
           profilePhoto:
-            'https://firebasestorage.googleapis.com/v0/b/runich-6be07.appspot.com/o/images%2Fimg-1693663275705.sanich123.runningapp%2Fcache%2FImagePicker%2F42fcd589-5a71-4277-8f38-c5c50d6014d2.jpeg?alt=media&token=cc904080-7f54-45f9-8662-f3e4514a5c82',
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Eliud_Kipchoge_in_Berlin_%28cropped%29.jpg/274px-Eliud_Kipchoge_in_Berlin_%28cropped%29.jpg',
         },
       },
       activity: {
@@ -274,13 +273,13 @@ async function main() {
           emotion: 'awesome',
           isSwitchOn: true,
           photoUrl:
-            'https://firebasestorage.googleapis.com/v0/b/runich-6be07.appspot.com/o/images%2Fimg-1693663275705.sanich123.runningapp%2Fcache%2FImagePicker%2F42fcd589-5a71-4277-8f38-c5c50d6014d2.jpeg?alt=media&token=cc904080-7f54-45f9-8662-f3e4514a5c82',
+            'https://img.olympicchannel.com/images/image/private/t_s_w1340/t_s_16_9_g_auto/f_auto/primary/cyr5teqkxh1yl63byx5c',
           speed: 2,
-          sport: 'swim',
+          sport: 'run',
           title: 'It was terrible',
           comments: {
             create: {
-              comment: 'Why are you laughing at me, bastard?',
+              comment: "Why don't you comment my post so disgusting, Eliud? It's not good for you",
               authorId: id1,
             },
           },

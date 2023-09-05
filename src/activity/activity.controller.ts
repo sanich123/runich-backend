@@ -23,6 +23,11 @@ export class ActivityController {
     return await this.activityService.getActivitesByUserId(id);
   }
 
+  @Get(':id/all')
+  async getAllActivitiesWithFriends(@Param() { id }: ParamsId) {
+    return await this.activityService.getAllActivitiesWithFriends(id);
+  }
+
   @Get('/activityId/:id')
   async getActivityByActivityId(@Param() { id }: ParamsId) {
     return await this.activityService.getActivityByActivityId(id);

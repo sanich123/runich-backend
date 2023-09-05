@@ -2,10 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { ActivityDto } from './activity.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { FriendService } from 'src/friend/friend.service';
 
 @Injectable()
 export class ActivityService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly friendsService: FriendService) {}
 
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
@@ -34,6 +35,16 @@ export class ActivityService {
   async getActivitesByUserId(id: string) {
     try {
       return await this.prisma.activity.findMany({ where: { userId: id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async getAllActivitiesWithFriends(id: string) {
+    try {
+      const friends = await this.friendsService.getFriendsById(id);
+      const ids = friends.map(({ friendId }) => friendId);
+      return await this.prisma.activity.findMany({ where: { userId: { in: [...ids, id] } } });
     } catch (error) {
       prismaErrorHandling(error);
     }
