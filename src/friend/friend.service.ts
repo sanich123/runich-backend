@@ -31,4 +31,12 @@ export class FriendService {
       prismaErrorHandling(error);
     }
   }
+
+  async deleteFriendById(id: string) {
+    try {
+      return await this.prismaService.friend.delete({ where: { id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, HttpStatus, HttpCode, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpStatus, HttpCode, Param, Delete } from '@nestjs/common';
 import { FriendService } from './friend.service';
 import { FriendDto } from './friend.dto';
 import { ParamsId } from 'src/app/params-validation';
@@ -20,5 +20,11 @@ export class FriendController {
   @Get(':id')
   async getFriendsById(@Param() { id }: ParamsId) {
     return await this.friendService.getFriendsById(id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteFriendById(@Param() { id }: ParamsId) {
+    return await this.friendService.deleteFriendById(id);
   }
 }
