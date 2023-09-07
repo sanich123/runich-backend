@@ -39,4 +39,12 @@ export class FriendService {
       prismaErrorHandling(error);
     }
   }
+
+  async getFollowers(id: string) {
+    try {
+      return await this.prismaService.friend.findMany({ where: { friendId: id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
 }

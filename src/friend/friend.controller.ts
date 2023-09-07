@@ -27,4 +27,9 @@ export class FriendController {
   async deleteFriendById(@Param() { id }: ParamsId) {
     return await this.friendService.deleteFriendById(id);
   }
+
+  @Get(`:id/followers`)
+  async getFollowers(@Param() { id }: ParamsId) {
+    return await this.friendService.getFollowers(id);
+  }
 }
