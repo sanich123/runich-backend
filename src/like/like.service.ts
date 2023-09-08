@@ -9,12 +9,12 @@ export class LikeService {
 
   async sendOrDeleteLike({ authorId, activityId }: LikeDto) {
     try {
-      const like = await this.prismaService.like.findUnique({
+      const like = await this.prismaService.like.findFirst({
         where: { authorId, activityId },
       });
       if (like) {
         return await this.prismaService.like.delete({
-          where: { authorId, activityId },
+          where: { id: like.id },
         });
       }
       return await this.prismaService.like.create({

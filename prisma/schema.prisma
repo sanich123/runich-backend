@@ -75,6 +75,6 @@ model Friend {
 model Like {
   id String @id @default(uuid())
   activity Activity @relation(fields: [activityId], references: [id])
-  activityId String @unique
+  activityId String
   authorId String
 }
