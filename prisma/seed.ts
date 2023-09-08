@@ -1,4 +1,21 @@
 import { PrismaClient } from '@prisma/client';
+import {
+  USER1_ACTIVITY,
+  USER1_PROFILE,
+  USER1_PROFILE_INFO,
+  USER2_ACTIVITY,
+  USER2_PROFILE,
+  USER2_PROFILE_INFO,
+  USER3_ACTIVITY,
+  USER3_PROFILE,
+  USER3_PROFILE_INFO,
+  USER4_ACTIVITY,
+  USER4_PROFILE,
+  USER4_PROFILE_INFO,
+  USER5_ACTIVITY,
+  USER5_PROFILE,
+  USER5_PROFILE_INFO,
+} from '../src/utils/mocks';
 import { v4 } from 'uuid';
 
 const prisma = new PrismaClient();
@@ -6,263 +23,20 @@ async function main() {
   const id1 = v4();
   const id2 = v4();
   const id3 = v4();
+  const id4 = v4();
+  const id5 = v4();
+  const id6 = v4();
 
   const user1 = await prisma.user.upsert({
     where: { id: id1 },
     update: {},
     create: {
-      login: 'courtney123',
-      password: '7FWD&rlm',
-      email: 'dauwalter@gmail.com',
+      ...USER1_PROFILE_INFO,
       friends: {
         create: [{ friendId: id3 }, { friendId: id2 }],
       },
       profile: {
-        create: {
-          gender: 'female',
-          sport: 'run',
-          name: 'Courtney',
-          surname: 'Dauwalter',
-          weight: '60',
-          bio: 'I worked as a middle and high-school teacher in the Denver area, before becoming a full-time professional runner in 2017',
-          birthday: new Date(1985, 1, 13),
-          profilePhoto:
-            'https://runningmagazine.ca/wp-content/uploads/2017/10/22489723_1678610998837520_7136398489355883559_n.jpg',
-          city: 'Minnesota',
-        },
-      },
-      activity: {
-        create: {
-          description: 'Побегала чутка',
-          distance: 190,
-          duration: 65,
-          emotion: 'fucking hard',
-          isSwitchOn: false,
-          photoUrl: 'https://article-imgs.scribdassets.com/4ny39m86bk9n1oy0/images/fileJZ891HXD.jpg',
-          speed: 5,
-          sport: 'run',
-          title: 'It was awesome',
-          likes: {
-            create: [{ authorId: id2 }, { authorId: id1 }, { authorId: id3 }],
-          },
-          comments: {
-            create: [
-              {
-                comment: 'Courtney, you are the best runner ever!',
-                authorId: id2,
-              },
-              {
-                comment: 'Thank you, Eliud!',
-                authorId: id1,
-              },
-              {
-                comment: 'Courtney, will you run with me on my long run on sunday?',
-                authorId: id3,
-              },
-              {
-                comment: 'Of course, Kilian!',
-                authorId: id1,
-              },
-            ],
-          },
-          locations: [
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244111,
-                longitude: 37.30492,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.30494,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244114,
-                longitude: 37.30495,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244115,
-                longitude: 37.30496,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244114,
-                longitude: 37.30494,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.30494,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244117,
-                longitude: 37.30495,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.304956,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244115,
-                longitude: 37.304953,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244116,
-                longitude: 37.304952,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.304951,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.62441134,
-                longitude: 37.3049513,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.624411345,
-                longitude: 37.30495133,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113456,
-                longitude: 37.304951332,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.62441,
-                longitude: 37.304951,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-          ],
-        },
+        create: USER1_PROFILE,
       },
     },
   });
@@ -271,512 +45,114 @@ async function main() {
     where: { id: id2 },
     update: {},
     create: {
-      login: 'eliud123',
-      password: '7FWD&rlm',
-      email: 'kipchoge@yandex.ru',
+      ...USER2_PROFILE_INFO,
       friends: {
         create: [{ friendId: id3 }],
       },
       profile: {
-        create: {
-          gender: 'male',
-          sport: 'run',
-          name: 'Eliud',
-          surname: 'Kipchoge',
-          weight: '66',
-          bio: 'I am the best maraphoner in the histroy',
-          birthday: new Date(1984, 10, 5),
-          profilePhoto:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Eliud_Kipchoge_in_Berlin_%28cropped%29.jpg/274px-Eliud_Kipchoge_in_Berlin_%28cropped%29.jpg',
-        },
+        create: USER2_PROFILE,
       },
       activity: {
-        create: {
-          description: 'It was rainy and terrible!',
-          distance: 260,
-          duration: 165,
-          emotion: 'awesome',
-          isSwitchOn: true,
-          photoUrl:
-            'https://img.olympicchannel.com/images/image/private/t_s_w1340/t_s_16_9_g_auto/f_auto/primary/cyr5teqkxh1yl63byx5c',
-          speed: 2,
-          sport: 'run',
-          title: 'It was terrible',
-          comments: {
-            create: [
-              {
-                comment: 'Eliud, lets go on marathon!',
-                authorId: id1,
-              },
-              {
-                comment: 'Ok, Courtney, later',
-                authorId: id1,
-              },
-              {
-                comment: 'You are always busy! Terrible',
-                authorId: id1,
-              },
-              {
-                comment: 'Довайте жить дружно',
-                authorId: id3,
-              },
-            ],
-          },
-          locations: [
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244111,
-                longitude: 37.30492,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.30494,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244114,
-                longitude: 37.30495,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244115,
-                longitude: 37.30496,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244114,
-                longitude: 37.30494,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.30494,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244117,
-                longitude: 37.30495,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.304956,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244115,
-                longitude: 37.304953,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244116,
-                longitude: 37.304952,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.304951,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.62441134,
-                longitude: 37.3049513,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.624411345,
-                longitude: 37.30495133,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113456,
-                longitude: 37.304951332,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.62441,
-                longitude: 37.304951,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-          ],
-        },
+        create: USER2_ACTIVITY,
       },
     },
   });
+
   const user3 = await prisma.user.upsert({
     where: { id: id3 },
     update: {},
     create: {
-      login: 'kilian123',
-      password: '7FWD&rlm',
-      email: 'kilianjornet@yandex.ru',
+      ...USER3_PROFILE_INFO,
       friends: {
         create: [{ friendId: id1 }, { friendId: id2 }],
       },
       profile: {
-        create: {
-          gender: 'male',
-          sport: 'run',
-          name: 'Kilian',
-          surname: 'Jornet',
-          weight: '58',
-          bio: 'I am the best trailrunner ever',
-          birthday: new Date(1987, 9, 27),
-          profilePhoto:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/K%C3%ADlian_Jornet_Burgada.jpg/220px-K%C3%ADlian_Jornet_Burgada.jpg',
-          city: 'Sabadell',
-        },
+        create: USER3_PROFILE,
       },
-
       activity: {
-        create: {
-          description: 'Snowy and terrible',
-          distance: 2604,
-          duration: 16534,
-          emotion: 'awesome',
-          isSwitchOn: true,
-          photoUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg/1280px-Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg',
-          speed: 234,
-          sport: 'run',
-          title: 'It was terrible',
-          comments: {
-            create: [
-              {
-                comment: 'Kilian, call me later, pls',
-                authorId: id1,
-              },
-              {
-                comment: 'Ok, Eliud',
-                authorId: id3,
-              },
-            ],
-          },
-          likes: {
-            create: [{ authorId: id2 }, { authorId: id1 }, { authorId: id3 }],
-          },
-          locations: [
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244111,
-                longitude: 37.30492,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.30494,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244114,
-                longitude: 37.30495,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244115,
-                longitude: 37.30496,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244114,
-                longitude: 37.30494,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.30494,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244117,
-                longitude: 37.30495,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.304956,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244115,
-                longitude: 37.304953,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244116,
-                longitude: 37.304952,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113,
-                longitude: 37.304951,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.62441134,
-                longitude: 37.3049513,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.624411345,
-                longitude: 37.30495133,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.6244113456,
-                longitude: 37.304951332,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-            {
-              coords: {
-                accuracy: 100,
-                altitude: 204.79998779296875,
-                altitudeAccuracy: 85.56611633300781,
-                heading: 0,
-                latitude: 55.62441,
-                longitude: 37.304951,
-                speed: 0,
-              },
-              mocked: false,
-              timestamp: 1693661794508,
-            },
-          ],
-        },
+        create: USER3_ACTIVITY,
       },
     },
   });
-  console.log(user1, user2, user3);
+
+  const user4 = await prisma.user.upsert({
+    where: { id: id4 },
+    update: {},
+    create: {
+      ...USER4_PROFILE_INFO,
+      friends: {
+        create: [{ friendId: id1 }, { friendId: id2 }],
+      },
+      profile: {
+        create: USER4_PROFILE,
+      },
+      activity: {
+        create: USER4_ACTIVITY,
+      },
+    },
+  });
+
+  const user5 = await prisma.user.upsert({
+    where: { id: id5 },
+    update: {},
+    create: {
+      ...USER5_PROFILE_INFO,
+      friends: {
+        create: [{ friendId: id3 }, { friendId: id4 }],
+      },
+      profile: {
+        create: USER5_PROFILE,
+      },
+      activity: {
+        create: USER5_ACTIVITY,
+      },
+    },
+  });
+
+  const activity1 = await prisma.activity.upsert({
+    where: { id: id6 },
+    update: {},
+    create: {
+      userId: user1.id,
+      ...USER1_ACTIVITY,
+    },
+  });
+
+  const likesToActivity1 = await prisma.like.createMany({
+    data: [
+      {
+        activityId: activity1.id,
+        authorId: user2.id,
+      },
+      { activityId: activity1.id, authorId: user3.id },
+    ],
+  });
+
+  const commentsToActivity1 = await prisma.comment.createMany({
+    data: [
+      {
+        activityId: activity1.id,
+        authorId: user2.id,
+        comment: 'How are you, Courtney?',
+      },
+      {
+        activityId: activity1.id,
+        authorId: user1.id,
+        comment: 'I am fine, Eliud! And what about you?',
+      },
+      {
+        activityId: activity1.id,
+        authorId: user2.id,
+        comment: 'I am too. What about long run on Sunday in Kenya? I will pace you!',
+      },
+      {
+        activityId: activity1.id,
+        authorId: user1.id,
+        comment: 'Oh, I do not know exactly, maybe yes, maybe no. See you',
+      },
+    ],
+  });
+  console.log(user1, activity1, likesToActivity1, commentsToActivity1, user4, user5);
 }
 
 main()
