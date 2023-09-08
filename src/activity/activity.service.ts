@@ -34,7 +34,7 @@ export class ActivityService {
 
   async getActivitesByUserId(id: string) {
     try {
-      return await this.prisma.activity.findMany({ where: { userId: id } });
+      return await this.prisma.activity.findMany({ where: { userId: id }, orderBy: { date: 'desc' } });
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -44,7 +44,10 @@ export class ActivityService {
     try {
       const friends = await this.friendsService.getFriendsById(id);
       const ids = friends.map(({ friendId }) => friendId);
-      return await this.prisma.activity.findMany({ where: { userId: { in: [...ids, id] } } });
+      return await this.prisma.activity.findMany({
+        where: { userId: { in: [...ids, id] } },
+        orderBy: { date: 'desc' },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }

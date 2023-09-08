@@ -11,6 +11,9 @@ export class CommentService {
     try {
       return await this.prisma.comment.findMany({
         where: { activityId: id },
+        orderBy: {
+          date: 'desc',
+        },
       });
     } catch (error) {
       prismaErrorHandling(error);
