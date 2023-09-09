@@ -12,7 +12,7 @@ export class CommentService {
       return await this.prisma.comment.findMany({
         where: { activityId: id },
         orderBy: {
-          date: 'desc',
+          date: 'asc',
         },
       });
     } catch (error) {
