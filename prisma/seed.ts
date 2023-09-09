@@ -48,7 +48,6 @@ async function main() {
     update: {},
     create: {
       ...DAUWALTER_PROFILE_INFO,
-      friends: { create: [{ friendId: kilianJornetId }, { friendId: eliudKipchogeId }] },
       profile: { create: DAUWALTER_PROFILE },
     },
   });
@@ -58,7 +57,6 @@ async function main() {
     update: {},
     create: {
       ...KIPCHOGE_PROFILE_INFO,
-      friends: { create: [{ friendId: kilianJornetId }, { friendId: moFarahId }] },
       profile: { create: KIPCHOGE_PROFILE },
       activity: { create: KIPCHOGE_ACTIVITY },
     },
@@ -69,9 +67,6 @@ async function main() {
     update: {},
     create: {
       ...JORNET_PROFILE_INFO,
-      friends: {
-        create: [{ friendId: courtneyDauwalterId }, { friendId: eliudKipchogeId }, { friendId: kenenisaBekeleId }],
-      },
       profile: { create: JORNET_PROFILE },
       activity: { create: JORNET_ACTIVITY },
     },
@@ -82,9 +77,6 @@ async function main() {
     update: {},
     create: {
       ...FARAH_PROFILE_INFO,
-      friends: {
-        create: [{ friendId: kenenisaBekeleId }, { friendId: eliudKipchogeId }],
-      },
       profile: { create: FARAH_PROFILE },
       activity: { create: FARAH_ACTIVITY },
     },
@@ -95,9 +87,6 @@ async function main() {
     update: {},
     create: {
       ...HAILE_PROFILE_INFO,
-      friends: {
-        create: [{ friendId: kilianJornetId }, { friendId: moFarahId }, { friendId: kilianJornetId }],
-      },
       profile: { create: HAILE_PROFILE },
       activity: { create: HAILE_ACTIVITY },
     },
@@ -108,14 +97,6 @@ async function main() {
     update: {},
     create: {
       ...BEKELE_PROFILE_INFO,
-      friends: {
-        create: [
-          { friendId: haileGebrselassieId },
-          { friendId: eliudKipchogeId },
-          { friendId: courtneyDauwalterId },
-          { friendId: kilianJornetId },
-        ],
-      },
       profile: { create: BEKELE_PROFILE },
       activity: { create: BEKELE_ACTIVITY },
     },
@@ -163,6 +144,14 @@ async function main() {
     ],
   });
 
+  const friendsOfDauwalter = await prisma.friend.createMany({
+    data: [
+      { userId: courtneyDauwalter.id, friendId: eliudKipchoge.id },
+      { userId: courtneyDauwalter.id, friendId: kilianJornet.id },
+      { userId: courtneyDauwalter.id, friendId: moFarah.id },
+    ],
+  });
+
   const kipchogeActivity = await prisma.activity.upsert({
     where: { id: kipchogeActivityId },
     update: {},
@@ -202,6 +191,14 @@ async function main() {
         authorId: eliudKipchoge.id,
         comment: 'Да хер его знает, чет пока не бегается',
       },
+    ],
+  });
+
+  const friendsOfKipchoge = await prisma.friend.createMany({
+    data: [
+      { userId: eliudKipchoge.id, friendId: courtneyDauwalter.id },
+      { userId: eliudKipchoge.id, friendId: kilianJornet.id },
+      { userId: eliudKipchoge.id, friendId: moFarah.id },
     ],
   });
 
@@ -246,7 +243,41 @@ async function main() {
       },
     ],
   });
+  const friendsOfJornet = await prisma.friend.createMany({
+    data: [
+      { userId: kilianJornet.id, friendId: courtneyDauwalter.id },
+      { userId: kilianJornet.id, friendId: haileGebrselassie.id },
+      { userId: kilianJornet.id, friendId: moFarah.id },
+      { userId: kilianJornet.id, friendId: kenenisaBekele.id },
+    ],
+  });
 
+  const friendsOfFarah = await prisma.friend.createMany({
+    data: [
+      { userId: moFarah.id, friendId: courtneyDauwalter.id },
+      { userId: moFarah.id, friendId: haileGebrselassie.id },
+      { userId: moFarah.id, friendId: kilianJornet.id },
+      { userId: moFarah.id, friendId: kenenisaBekele.id },
+    ],
+  });
+
+  const friendsOfHaile = await prisma.friend.createMany({
+    data: [
+      { userId: haileGebrselassie.id, friendId: courtneyDauwalter.id },
+      { userId: haileGebrselassie.id, friendId: moFarah.id },
+      { userId: haileGebrselassie.id, friendId: kilianJornet.id },
+      { userId: haileGebrselassie.id, friendId: kenenisaBekele.id },
+    ],
+  });
+
+  const friendsOfBekele = await prisma.friend.createMany({
+    data: [
+      { userId: kenenisaBekele.id, friendId: courtneyDauwalter.id },
+      { userId: kenenisaBekele.id, friendId: moFarah.id },
+      { userId: kenenisaBekele.id, friendId: kilianJornet.id },
+      { userId: kenenisaBekele.id, friendId: haileGebrselassie.id },
+    ],
+  });
   const farahActivity = await prisma.activity.upsert({
     where: { id: farahActivityId },
     update: {},
@@ -289,6 +320,12 @@ async function main() {
     bekeleActivity,
     likesDauwalterActivity,
     commentsDauwalterActivity,
+    friendsOfDauwalter,
+    friendsOfKipchoge,
+    friendsOfJornet,
+    friendsOfFarah,
+    friendsOfHaile,
+    friendsOfBekele,
     likesKipchogeActivity,
     commentsKipchogeActivity,
     likesJornetActivity,
