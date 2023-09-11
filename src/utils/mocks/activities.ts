@@ -6,7 +6,8 @@ export const DAUWALTER_ACTIVITY = {
   duration: 65,
   emotion: 'fucking hard',
   isSwitchOn: false,
-  photoUrl: 'https://article-imgs.scribdassets.com/4ny39m86bk9n1oy0/images/fileJZ891HXD.jpg',
+  photoUrl:
+    'https://media.istockphoto.com/id/864568096/photo/the-scenic-beauty-of-the-colorado-rocky-mountains-on-the-dallas-divide.jpg?s=612x612&w=0&k=20&c=SHvL34WRfOVspbH-cCRrLw21TCU7tHWm5J_TlBy4XH4=',
   speed: 5,
   sport: 'run',
   title: 'It was awesome',
@@ -19,8 +20,7 @@ export const KIPCHOGE_ACTIVITY = {
   duration: 165,
   emotion: 'awesome',
   isSwitchOn: true,
-  photoUrl:
-    'https://img.olympicchannel.com/images/image/private/t_s_w1340/t_s_16_9_g_auto/f_auto/primary/cyr5teqkxh1yl63byx5c',
+  photoUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTnBsPM3bhkznyHnRbAYnc2glOrtWFAVKpFWR2H7n4a&s',
   speed: 2,
   sport: 'run',
   title: 'It was terrible',
@@ -33,8 +33,7 @@ export const JORNET_ACTIVITY = {
   duration: 16534,
   emotion: 'awesome',
   isSwitchOn: true,
-  photoUrl:
-    'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg/1280px-Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg',
+  photoUrl: 'https://i.pinimg.com/originals/d3/45/11/d3451114ab4e1d55ead624930bcff60c.jpg',
   speed: 234,
   sport: 'run',
   title: 'It was terrible',
@@ -47,7 +46,7 @@ export const FARAH_ACTIVITY = {
   duration: 134,
   emotion: 'awesome',
   isSwitchOn: true,
-  photoUrl: 'https://cdn.britannica.com/26/58626-050-3B2B1DA0/Simien-Mountains-Ethiopian-Plateau-Ethiopia.jpg',
+  photoUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQE5rU3wTcIHo-Dzhi4WkMVPlNe0rJxy2f98AYEOLXc&s',
   speed: 23,
   sport: 'run',
   title: 'Awesome!!',
@@ -60,7 +59,7 @@ export const HAILE_ACTIVITY = {
   duration: 1334,
   emotion: 'fucked',
   isSwitchOn: true,
-  photoUrl: 'https://sgtraveler.com/wp-content/uploads/2021/05/Nairobi.jpeg',
+  photoUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8tVCAkhmImgC-WkZGGtdmk1vq_EtXKkgtlZ6TIY4m&s',
   speed: 223,
   sport: 'run',
   title: 'Fucked',
@@ -73,9 +72,51 @@ export const BEKELE_ACTIVITY = {
   duration: 1334,
   emotion: 'good',
   isSwitchOn: true,
-  photoUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/49/5000_m_men_final_Berlin_2009.jpg',
+  photoUrl:
+    'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxleHBsb3JlLWZlZWR8MXx8fGVufDB8fHx8fA%3D%3D&w=1000&q=80',
   speed: 223,
   sport: 'run',
   title: 'Очень хорошо',
+  locations: MOCK_LOCATIONS,
+};
+
+export const WALMSLEY_ACTIVITY = {
+  description: 'It was hot',
+  distance: 220,
+  duration: 12334,
+  emotion: 'good',
+  isSwitchOn: true,
+  photoUrl:
+    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8bW91bnRhaW5zfGVufDB8fDB8fHww&w=1000&q=80',
+  speed: 223,
+  sport: 'run',
+  title: 'Очень хорошо',
+  locations: MOCK_LOCATIONS,
+};
+
+export const KISELEV_ACTIVITY = {
+  description: 'It was not good',
+  distance: 23230,
+  duration: 1223334,
+  emotion: 'good',
+  isSwitchOn: true,
+  photoUrl:
+    'https://media.istockphoto.com/id/864568096/photo/the-scenic-beauty-of-the-colorado-rocky-mountains-on-the-dallas-divide.jpg?s=612x612&w=0&k=20&c=SHvL34WRfOVspbH-cCRrLw21TCU7tHWm5J_TlBy4XH4=',
+  speed: 223,
+  sport: 'run',
+  title: 'Not bad',
+  locations: MOCK_LOCATIONS,
+};
+
+export const MITYAEV_ACTIVITY = {
+  description: 'It was very difficult!',
+  distance: 2230,
+  duration: 12334,
+  emotion: 'good',
+  isSwitchOn: true,
+  photoUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT3n99r_j1-dX3jpaoxO16geHZyjkx7q238iuM779eJ&s',
+  speed: 223,
+  sport: 'swim',
+  title: 'Not bad',
   locations: MOCK_LOCATIONS,
 };

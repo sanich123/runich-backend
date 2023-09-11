@@ -6,6 +6,9 @@ import {
   HAILE_ACTIVITY,
   DAUWALTER_ACTIVITY,
   BEKELE_ACTIVITY,
+  WALMSLEY_ACTIVITY,
+  KISELEV_ACTIVITY,
+  MITYAEV_ACTIVITY,
 } from '../src/utils/mocks/activities';
 import {
   BEKELE_PROFILE_INFO,
@@ -14,6 +17,9 @@ import {
   HAILE_PROFILE_INFO,
   JORNET_PROFILE_INFO,
   KIPCHOGE_PROFILE_INFO,
+  KISELEV_PROFILE_INFO,
+  MITYAEV_PROFILE_INFO,
+  WALMSLEY_PROFILE_INFO,
 } from '../src/utils/mocks/profiles-info';
 import {
   BEKELE_PROFILE,
@@ -22,6 +28,9 @@ import {
   HAILE_PROFILE,
   JORNET_PROFILE,
   KIPCHOGE_PROFILE,
+  KISELEV_PROFILE,
+  MITYAEV_PROFILE,
+  WALMSLEY_PROFILE,
 } from '../src/utils/mocks/profiles';
 import { getIds } from '../src/utils/mocks/getIds';
 
@@ -41,6 +50,12 @@ async function main() {
     jornetActivityId,
     bekeleActivityId,
     haileActivityId,
+    jimWalmsleyId,
+    jimWalmsleyActivityId,
+    stepanKiselevId,
+    stepanKiselevActivityId,
+    dmitryMityaevId,
+    dmitryMityaevActivityId,
   } = getIds();
 
   const courtneyDauwalter = await prisma.user.upsert({
@@ -100,6 +115,99 @@ async function main() {
       profile: { create: BEKELE_PROFILE },
       activity: { create: BEKELE_ACTIVITY },
     },
+  });
+
+  const jimWalmsley = await prisma.user.upsert({
+    where: { id: jimWalmsleyId },
+    update: {},
+    create: {
+      ...WALMSLEY_PROFILE_INFO,
+      profile: { create: WALMSLEY_PROFILE },
+    },
+  });
+
+  const stepanKiselev = await prisma.user.upsert({
+    where: { id: stepanKiselevId },
+    update: {},
+    create: {
+      ...KISELEV_PROFILE_INFO,
+      profile: { create: KISELEV_PROFILE },
+    },
+  });
+
+  const dmitryMityaev = await prisma.user.upsert({
+    where: { id: dmitryMityaevId },
+    update: {},
+    create: {
+      ...MITYAEV_PROFILE_INFO,
+      profile: { create: MITYAEV_PROFILE },
+    },
+  });
+
+  const stepanKiselevActivity = await prisma.activity.upsert({
+    where: { id: stepanKiselevActivityId },
+    update: {},
+    create: {
+      userId: stepanKiselev.id,
+      ...KISELEV_ACTIVITY,
+    },
+  });
+
+  const dmitryMityaevActivity = await prisma.activity.upsert({
+    where: { id: dmitryMityaevActivityId },
+    update: {},
+    create: {
+      userId: dmitryMityaev.id,
+      ...MITYAEV_ACTIVITY,
+    },
+  });
+
+  const likesKiselevActivity = await prisma.like.createMany({
+    data: [
+      { activityId: stepanKiselevActivity.id, authorId: eliudKipchoge.id },
+      { activityId: stepanKiselevActivity.id, authorId: kilianJornet.id },
+      { activityId: stepanKiselevActivity.id, authorId: kenenisaBekele.id },
+      { activityId: stepanKiselevActivity.id, authorId: courtneyDauwalter.id },
+      { activityId: stepanKiselevActivity.id, authorId: moFarah.id },
+      { activityId: stepanKiselevActivity.id, authorId: haileGebrselassie.id },
+      { activityId: stepanKiselevActivity.id, authorId: jimWalmsley.id },
+      { activityId: stepanKiselevActivity.id, authorId: stepanKiselev.id },
+    ],
+  });
+
+  const likesMityaevActivity = await prisma.like.createMany({
+    data: [
+      { activityId: dmitryMityaevActivity.id, authorId: eliudKipchoge.id },
+      { activityId: dmitryMityaevActivity.id, authorId: kilianJornet.id },
+      { activityId: dmitryMityaevActivity.id, authorId: kenenisaBekele.id },
+      { activityId: dmitryMityaevActivity.id, authorId: courtneyDauwalter.id },
+      { activityId: dmitryMityaevActivity.id, authorId: moFarah.id },
+      { activityId: dmitryMityaevActivity.id, authorId: haileGebrselassie.id },
+      { activityId: dmitryMityaevActivity.id, authorId: jimWalmsley.id },
+      { activityId: dmitryMityaevActivity.id, authorId: stepanKiselev.id },
+      { activityId: dmitryMityaevActivity.id, authorId: dmitryMityaev.id },
+    ],
+  });
+
+  const jimWalmsleyActivity = await prisma.activity.upsert({
+    where: { id: jimWalmsleyActivityId },
+    update: {},
+    create: {
+      userId: jimWalmsley.id,
+      ...WALMSLEY_ACTIVITY,
+    },
+  });
+
+  const likesWalmsleyActivity = await prisma.like.createMany({
+    data: [
+      { activityId: jimWalmsleyActivity.id, authorId: eliudKipchoge.id },
+      { activityId: jimWalmsleyActivity.id, authorId: kilianJornet.id },
+      { activityId: jimWalmsleyActivity.id, authorId: kenenisaBekele.id },
+      { activityId: jimWalmsleyActivity.id, authorId: courtneyDauwalter.id },
+      { activityId: jimWalmsleyActivity.id, authorId: moFarah.id },
+      { activityId: jimWalmsleyActivity.id, authorId: haileGebrselassie.id },
+      { activityId: jimWalmsleyActivity.id, authorId: jimWalmsley.id },
+    ],
   });
 
   const dauwalterActivity = await prisma.activity.upsert({
@@ -330,6 +438,9 @@ async function main() {
     commentsKipchogeActivity,
     likesJornetActivity,
     commentsJornetActivity,
+    likesKiselevActivity,
+    likesWalmsleyActivity,
+    likesMityaevActivity,
   );
 }
 

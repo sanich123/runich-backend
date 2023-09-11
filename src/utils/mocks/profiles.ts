@@ -74,3 +74,42 @@ export const BEKELE_PROFILE = {
     'https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Kenenisa_Bekele_2014_Paris_Marathon_t084500.jpg/800px-Kenenisa_Bekele_2014_Paris_Marathon_t084500.jpg',
   city: 'Addis-Abeba',
 };
+
+export const WALMSLEY_PROFILE = {
+  gender: 'male',
+  sport: 'run',
+  name: 'Jim',
+  surname: 'Walmsley',
+  weight: '70',
+  bio: 'I am the second sky runner in the world!',
+  birthday: new Date(1990, 0, 17),
+  profilePhoto:
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Jim_Walmsley_2014_%28cropped%29.jpg/800px-Jim_Walmsley_2014_%28cropped%29.jpg',
+  city: 'Phoenix',
+};
+
+export const KISELEV_PROFILE = {
+  gender: 'male',
+  sport: 'run',
+  name: 'Stepan',
+  surname: 'Kiselev',
+  weight: '70',
+  bio: 'I am one of the best Russian maraphoners!',
+  birthday: new Date(1986, 10, 3),
+  profilePhoto:
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Stepan_Kiselev_-_2019_Kazan_Marathon_%28cropped%29.jpg/266px-Stepan_Kiselev_-_2019_Kazan_Marathon_%28cropped%29.jpg',
+  city: 'Moscow',
+};
+
+export const MITYAEV_PROFILE = {
+  gender: 'male',
+  sport: 'run',
+  name: 'Dmitry',
+  surname: 'Mityaev',
+  weight: '82',
+  bio: 'I am one of the best Russian trailrunners!',
+  birthday: new Date(1991, 10, 3),
+  profilePhoto:
+    'https://img.redbull.com/images/c_limit,w_1500,h_1000,f_auto,q_auto/redbullcom/2019/07/02/3c8556cd-b912-4dbe-9763-664e481483ce/dmitry-mityaev',
+  city: 'Gelendzhik',
+};

@@ -33,3 +33,21 @@ export const BEKELE_PROFILE_INFO = {
   password: '7FWD&rlm',
   email: 'bekele@yandex.ru',
 };
+
+export const WALMSLEY_PROFILE_INFO = {
+  login: 'walmsley123',
+  password: '7FWD&rlm',
+  email: 'walmsley@yandex.ru',
+};
+
+export const KISELEV_PROFILE_INFO = {
+  login: 'kiselev123',
+  password: '7FWD&rlm',
+  email: 'kiselev@yandex.ru',
+};
+
+export const MITYAEV_PROFILE_INFO = {
+  login: 'mityaev123',
+  password: '7FWD&rlm',
+  email: 'mityaev@yandex.ru',
+};
