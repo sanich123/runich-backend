@@ -81,6 +81,7 @@ model Friend {
 
 model Like {
   id String @id @default(uuid())
+  date DateTime @default(now())
   activity Activity @relation(fields: [activityId], references: [id])
   activityId String
   authorId String

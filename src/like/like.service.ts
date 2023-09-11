@@ -30,7 +30,12 @@ export class LikeService {
 
   async getLikesByActivityId(id: string) {
     try {
-      return await this.prismaService.like.findMany({ where: { activityId: id } });
+      return await this.prismaService.like.findMany({
+        where: { activityId: id },
+        orderBy: {
+          date: 'desc',
+        },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }
