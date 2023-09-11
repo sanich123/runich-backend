@@ -23,6 +23,8 @@ model User {
 
 model Profile {
   id String  @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   gender String?
   sport String?
   name String?
@@ -39,6 +41,8 @@ model Profile {
 model Activity {
   id String @id @default(uuid())
   date DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   description String?
   distance Int?
   duration Int
@@ -62,10 +66,13 @@ model Comment {
   date DateTime @default(now())
   comment String
   authorId String
+  commentLike CommentLike[]
 }
 
 model Friend {
   id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   user User @relation(fields: [userId], references: [id])
   userId String
   friendId String
@@ -76,5 +83,13 @@ model Like {
   id String @id @default(uuid())
   activity Activity @relation(fields: [activityId], references: [id])
   activityId String
+  authorId String
+}
+
+model CommentLike {
+  id String @id @default(uuid())
+  date DateTime @default(now())
+  comment Comment @relation(fields: [commentId], references: [id])
+  commentId String
   authorId String
 }

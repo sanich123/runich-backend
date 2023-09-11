@@ -7,9 +7,9 @@ import { ParamsId } from 'src/app/params-validation';
 export class ActivityController {
   constructor(private readonly activityService: ActivityService) {}
 
-  @Get()
-  async getAll() {
-    return 'Здесь будут все активности';
+  @Get(':id/photos')
+  async getMedia(@Param() { id }: ParamsId) {
+    return this.activityService.getMedia(id);
   }
 
   @Post(':id')

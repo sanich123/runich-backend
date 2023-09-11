@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { ParamsId } from 'src/app/params-validation';
-import { CommentDTO } from './comment.dto';
+import { CommentDTO, CommentLikeDto } from './comment.dto';
 
 @Controller('/comment')
 export class CommentController {
@@ -19,5 +19,15 @@ export class CommentController {
   @HttpCode(HttpStatus.CREATED)
   async postCommentWithActivityId(@Body() commentDto: CommentDTO, @Param() { id }: ParamsId) {
     return await this.commentService.createCommentByActivityId(commentDto, id);
+  }
+  @Post(':id/like')
+  @HttpCode(HttpStatus.CREATED)
+  async postCommentLikeWithCommentId(@Body() commentLikeDto: CommentLikeDto) {
+    return await this.commentService.createCommentLikeByCommentId(commentLikeDto);
+  }
+
+  @Get(':id/like')
+  async getCommentLikesLengthByCommentId(@Param() { id }: ParamsId) {
+    return await this.commentService.getCommentLikesLengthByCommentId(id);
   }
 }

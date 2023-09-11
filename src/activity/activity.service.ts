@@ -32,6 +32,19 @@ export class ActivityService {
     }
   }
 
+  async getMedia(id: string) {
+    try {
+      return await this.prisma.activity.findMany({
+        where: { userId: id },
+        select: {
+          photoUrl: true,
+        },
+      });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
   async getActivitesByUserId(id: string) {
     try {
       return await this.prisma.activity.findMany({ where: { userId: id }, orderBy: { date: 'desc' } });
