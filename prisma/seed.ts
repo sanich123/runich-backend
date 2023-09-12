@@ -1,18 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import {
-  KIPCHOGE_ACTIVITY,
-  JORNET_ACTIVITY,
-  FARAH_ACTIVITY,
-  HAILE_ACTIVITY,
-  DAUWALTER_ACTIVITY,
-  BEKELE_ACTIVITY,
-  WALMSLEY_ACTIVITY,
-  KISELEV_ACTIVITY,
-  MITYAEV_ACTIVITY,
-} from '../src/utils/mocks/activities';
-
-import { getIds } from '../src/utils/mocks/getIds';
-import {
   createCourtneyDownwalter,
   createDmitryMityaev,
   createEliudKipchoge,
@@ -23,22 +10,21 @@ import {
   createMoFarah,
   createStepanKiselev,
 } from '../src/utils/mocks/create-mocks-functions';
+import {
+  createBekeleActivity,
+  createDauwalterActivity,
+  createFarahActivity,
+  createHaileActivity,
+  createJornetActivity,
+  createKipchogeActivity,
+  createKiselevActivity,
+  createMityaevActivity,
+  createWalmsleyActivity,
+} from '../src/utils/mocks/create-mocks-activities';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const {
-    dauwalterActivityId,
-    kipchogeActivityId,
-    farahActivityId,
-    jornetActivityId,
-    bekeleActivityId,
-    haileActivityId,
-    jimWalmsleyActivityId,
-    stepanKiselevActivityId,
-    dmitryMityaevActivityId,
-  } = getIds();
-
   const courtneyDauwalter = await createCourtneyDownwalter();
   const eliudKipchoge = await createEliudKipchoge();
   const kilianJornet = await createKilianJornet();
@@ -51,86 +37,15 @@ async function main() {
 
   //Activities
 
-  const dauwalterActivity = await prisma.activity.upsert({
-    where: { id: dauwalterActivityId },
-    update: {},
-    create: {
-      userId: courtneyDauwalter.id,
-      ...DAUWALTER_ACTIVITY,
-    },
-  });
-
-  const kipchogeActivity = await prisma.activity.upsert({
-    where: { id: kipchogeActivityId },
-    update: {},
-    create: {
-      userId: eliudKipchoge.id,
-      ...KIPCHOGE_ACTIVITY,
-    },
-  });
-
-  const jimWalmsleyActivity = await prisma.activity.upsert({
-    where: { id: jimWalmsleyActivityId },
-    update: {},
-    create: {
-      userId: jimWalmsley.id,
-      ...WALMSLEY_ACTIVITY,
-    },
-  });
-
-  const stepanKiselevActivity = await prisma.activity.upsert({
-    where: { id: stepanKiselevActivityId },
-    update: {},
-    create: {
-      userId: stepanKiselev.id,
-      ...KISELEV_ACTIVITY,
-    },
-  });
-
-  const dmitryMityaevActivity = await prisma.activity.upsert({
-    where: { id: dmitryMityaevActivityId },
-    update: {},
-    create: {
-      userId: dmitryMityaev.id,
-      ...MITYAEV_ACTIVITY,
-    },
-  });
-
-  const jornetActivity = await prisma.activity.upsert({
-    where: { id: jornetActivityId },
-    update: {},
-    create: {
-      userId: kilianJornet.id,
-      ...JORNET_ACTIVITY,
-    },
-  });
-
-  const farahActivity = await prisma.activity.upsert({
-    where: { id: farahActivityId },
-    update: {},
-    create: {
-      userId: moFarah.id,
-      ...FARAH_ACTIVITY,
-    },
-  });
-
-  const haileActivity = await prisma.activity.upsert({
-    where: { id: haileActivityId },
-    update: {},
-    create: {
-      userId: haileGebrselassie.id,
-      ...HAILE_ACTIVITY,
-    },
-  });
-
-  const bekeleActivity = await prisma.activity.upsert({
-    where: { id: bekeleActivityId },
-    update: {},
-    create: {
-      userId: kenenisaBekele.id,
-      ...BEKELE_ACTIVITY,
-    },
-  });
+  const dauwalterActivity = await createDauwalterActivity(courtneyDauwalter.id);
+  const kipchogeActivity = await createKipchogeActivity(eliudKipchoge.id);
+  const jimWalmsleyActivity = await createWalmsleyActivity(jimWalmsley.id);
+  const stepanKiselevActivity = await createKiselevActivity(stepanKiselev.id);
+  const dmitryMityaevActivity = await createMityaevActivity(dmitryMityaev.id);
+  const jornetActivity = await createJornetActivity(kilianJornet.id);
+  const farahActivity = await createFarahActivity(moFarah.id);
+  const haileActivity = await createHaileActivity(haileGebrselassie.id);
+  const bekeleActivity = await createBekeleActivity(kenenisaBekele.id);
 
   //Likes to activities
   const likesKiselevActivity = await prisma.like.createMany({
