@@ -5,7 +5,7 @@ export class ActivityDto {
   distance: number;
   emotion: string;
   isSwitchOn: boolean;
-  photoUrl: string;
+  photoUrls: string[];
   sport: string;
   title: string;
   speed: number;
