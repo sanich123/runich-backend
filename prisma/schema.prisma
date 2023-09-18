@@ -60,7 +60,7 @@ model Activity {
 }
 
 model Comment {
-  activity Activity @relation(fields: [activityId], references: [id])
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   activityId String 
   id String @id @default(uuid())
   date DateTime @default(now())
@@ -82,7 +82,7 @@ model Friend {
 model Like {
   id String @id @default(uuid())
   date DateTime @default(now())
-  activity Activity @relation(fields: [activityId], references: [id])
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   activityId String
   authorId String
 }
@@ -90,7 +90,7 @@ model Like {
 model CommentLike {
   id String @id @default(uuid())
   date DateTime @default(now())
-  comment Comment @relation(fields: [commentId], references: [id])
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId String
   authorId String
 }
