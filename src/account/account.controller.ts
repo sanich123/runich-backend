@@ -7,6 +7,6 @@ export class AccountController {
 
   @Get()
   async getAllAccounts() {
-    return this.accountService.getAllAccounts();
+    return await this.accountService.getAllAccounts();
   }
 }

@@ -6,6 +6,6 @@ export class AccountService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getAllAccounts() {
-    return 'route is working properly';
+    return await this.prisma.user_profiles.findMany();
   }
 }
