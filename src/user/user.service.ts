@@ -15,17 +15,6 @@ export class UserService {
     }
   }
 
-  // async getAccountByUserId(id: string) {
-  //   return await this.prisma.profile.findUnique({ where: { user_id: id } });
-  // }
-
-  // async updateAccountByUserId(id: string, accountDto: ProfileDto) {
-  //   return await this.prisma.profile.update({
-  //     where: { user_id: id },
-  //     data: accountDto,
-  //   });
-  // }
-
   async upsertAccountByUserId(id: string, accountDto: ProfileDto) {
     try {
       return await this.prisma.users.update({

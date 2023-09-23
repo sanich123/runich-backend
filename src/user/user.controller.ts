@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse } from '@nestjs/swagger';
 import { ParamsId } from 'src/app/params-validation';
 import { UserService } from './user.service';
@@ -16,6 +16,7 @@ export class UserController {
   @Post(':id/profile')
   @ApiCreatedResponse({ description: 'Upsert user profile' })
   @ApiBody({ type: ProfileDto })
+  @HttpCode(HttpStatus.CREATED)
   async upsertAccountByUserId(@Param() { id }: ParamsId, @Body() accountDto: ProfileDto) {
     return await this.userService.upsertAccountByUserId(id, accountDto);
   }

@@ -7,5 +7,6 @@ import { AccountController } from './account.controller';
   imports: [PrismaModule],
   controllers: [AccountController],
   providers: [AccountService],
+  exports: [AccountService],
 })
 export class AccountModule {}
