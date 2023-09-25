@@ -2,31 +2,53 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestj
 import { CommentService } from './comment.service';
 import { ParamsId } from 'src/app/params-validation';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
+import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
+import { PATHS } from 'src/utils/const';
 
-@Controller('/comment')
+const { comment, id, like } = PATHS;
+const { OK, BAD_REQUEST, CREATED } = HttpStatus;
+
+@ApiTags(comment)
+@Controller(comment)
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
-  @Get()
-  async getAll() {
-    return 'There will be comment logic';
-  }
-  @Get(':id')
+  @Get(id)
+  @ApiOperation({ summary: 'Get comments by activity id' })
+  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
+  @ApiResponse({ status: OK, description: 'Success' })
+  @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   async getCommentsByActivityId(@Param() { id }: ParamsId) {
     return await this.commentService.getCommentsbyActivityId(id);
   }
-  @Post(':id')
-  @HttpCode(HttpStatus.CREATED)
+
+  @Post(id)
+  @ApiOperation({ summary: 'Post comment by activity id' })
+  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
+  @ApiBody({ type: CommentDTO, required: true })
+  @ApiResponse({ status: CREATED, description: 'Success' })
+  @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
+  @HttpCode(CREATED)
   async postCommentWithActivityId(@Body() commentDto: CommentDTO, @Param() { id }: ParamsId) {
     return await this.commentService.createCommentByActivityId(commentDto, id);
   }
-  @Post(':id/like')
-  @HttpCode(HttpStatus.CREATED)
+
+  @Post(`${id}/${like}`)
+  @ApiOperation({ summary: 'Post like to comment by comment id' })
+  @ApiParam({ name: 'commentId', required: true, description: 'Activity identifer' })
+  @ApiBody({ type: CommentLikeDto, required: true })
+  @ApiResponse({ status: CREATED, description: 'Success' })
+  @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
+  @HttpCode(CREATED)
   async postCommentLikeWithCommentId(@Body() commentLikeDto: CommentLikeDto) {
     return await this.commentService.createCommentLikeByCommentId(commentLikeDto);
   }
 
-  @Get(':id/like')
+  @Get(`${id}/${like}`)
+  @ApiParam({ name: 'commentId', required: true, description: 'Activity identifer' })
+  @ApiOperation({ summary: 'Get likes to comment by comment id' })
+  @ApiResponse({ status: OK, description: 'Success' })
+  @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   async getCommentLikesLengthByCommentId(@Param() { id }: ParamsId) {
     return await this.commentService.getCommentLikesLengthByCommentId(id);
   }

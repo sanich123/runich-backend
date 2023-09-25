@@ -33,9 +33,7 @@ export class ActivityService {
     try {
       return await this.prisma.activity.findMany({
         where: { user_id: id },
-        select: {
-          photoUrls: true,
-        },
+        select: { photoUrls: true },
       });
     } catch (error) {
       prismaErrorHandling(error);

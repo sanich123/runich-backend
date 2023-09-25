@@ -1,8 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { FriendDto } from './friend.dto';
-import { throwNotFoundException } from 'src/utils/utils';
 import { AccountService } from 'src/account/account.service';
 
 @Injectable()
@@ -37,7 +36,7 @@ export class FriendService {
   async addFriendByFriendId(id: string, { userId }: FriendDto) {
     try {
       const profile = await this.accountService.getAccountByUserId(id);
-      if (!profile) throw new throwNotFoundException('Could not be able to find profile of that user');
+      if (!profile) throw new NotFoundException('Could not be able to find profile of that user');
       await this.prismaService.friend.create({
         data: {
           user_id: userId,

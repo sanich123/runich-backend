@@ -2,7 +2,7 @@ import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { PrismaClientExceptionFilter } from 'nestjs-prisma';
-import { MAP_ERRORS } from './utils/const';
+import { PRISMA_ERR_TO_HTTP_CODES } from './utils/const';
 import { getLogLevels } from './utils/log-levels';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -18,7 +18,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
   const { httpAdapter } = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter, MAP_ERRORS));
+  app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter, PRISMA_ERR_TO_HTTP_CODES));
   app.useGlobalPipes(new ValidationPipe());
   console.log(`App is listening on ${PORT}`);
   await app.listen(PORT);

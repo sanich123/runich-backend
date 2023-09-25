@@ -1,11 +1,13 @@
 import { HttpStatus } from '@nestjs/common';
 
 export const PATHS = {
-  USER: 'user',
-  TRACK: 'track',
-  ALBUM: 'album',
-  ARTIST: 'artist',
-  FAVORITES: 'favs',
+  profile: 'profile',
+  activity: 'activity',
+  comment: 'comment',
+  friend: 'friend',
+  like: 'like',
+  user: 'user',
+  id: ':id',
 };
 
 export const MESSAGES = {
@@ -32,16 +34,6 @@ export const PLACES = {
   FAVS: 'favorites',
 };
 
-export const PROPS_TO_DELETE = {
-  artistId: 'artistId',
-  albumId: 'albumId',
-};
-
-export const MAP_ERRORS = {
-  P2000: HttpStatus.BAD_REQUEST,
-  P2002: HttpStatus.CONFLICT,
-  P2025: HttpStatus.NOT_FOUND,
-};
 export const PRISMA_ERR_TO_HTTP_CODES = {
   P2000: HttpStatus.BAD_REQUEST,
   P2002: HttpStatus.CONFLICT,
