@@ -48,7 +48,7 @@ export class ActivityController {
     return await this.activityService.getAllActivitiesWithFriends(id);
   }
 
-  @Get(`/${activity}/activityId/${id}`)
+  @Get(`/activityId/${id}`)
   @ApiOperation({ summary: 'Get activity by activity id' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
