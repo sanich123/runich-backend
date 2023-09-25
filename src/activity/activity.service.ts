@@ -10,13 +10,10 @@ export class ActivityService {
 
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
-      return await this.prisma.user.update({
-        where: { id },
+      return await this.prisma.activity.create({
         data: {
-          version: { increment: 1 },
-          activity: {
-            create: activityDto,
-          },
+          user_id: id,
+          ...activityDto,
         },
       });
     } catch (error) {
@@ -35,10 +32,8 @@ export class ActivityService {
   async getMedia(id: string) {
     try {
       return await this.prisma.activity.findMany({
-        where: { userId: id },
-        select: {
-          photoUrls: true,
-        },
+        where: { user_id: id },
+        select: { photoUrls: true },
       });
     } catch (error) {
       prismaErrorHandling(error);
@@ -47,7 +42,7 @@ export class ActivityService {
 
   async getActivitesByUserId(id: string) {
     try {
-      return await this.prisma.activity.findMany({ where: { userId: id }, orderBy: { date: 'desc' } });
+      return await this.prisma.activity.findMany({ where: { user_id: id }, orderBy: { date: 'desc' } });
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -58,7 +53,7 @@ export class ActivityService {
       const friends = await this.friendsService.getFriendsById(id);
       const ids = friends.map(({ friendId }) => friendId);
       return await this.prisma.activity.findMany({
-        where: { userId: { in: [...ids, id] } },
+        where: { user_id: { in: [...ids, id] } },
         orderBy: { date: 'desc' },
       });
     } catch (error) {

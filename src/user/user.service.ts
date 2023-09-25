@@ -1,81 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateUserDto } from './user.dto';
-import { getTimeStampFromTime } from 'src/utils/utils';
+import { PrismaService } from 'nestjs-prisma';
+import { ProfileDto } from 'src/account/account.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
-import { hash } from 'bcrypt';
 
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.user.findMany();
+  async getAllUsers() {
+    try {
+      return await this.prisma.users.findMany();
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
   }
 
-  async findOne(id: string) {
+  async upsertAccountByUserId(id: string, accountDto: ProfileDto) {
     try {
-      return this.prisma.user.findUnique({
+      return await this.prisma.users.update({
         where: { id },
-        include: {
-          profile: true,
-          activity: true,
+        data: {
+          profile: {
+            upsert: {
+              where: { user_id: id },
+              update: accountDto,
+              create: accountDto,
+            },
+          },
         },
       });
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
-  async createUser(createUserDto: CreateUserDto) {
-    try {
-      const { id, updatedAt, createdAt, login, version, email, activity } = await this.prisma.user.create({
-        data: createUserDto,
-        include: {
-          activity: true,
-        },
-      });
-      const tsCreatedAt = getTimeStampFromTime(createdAt);
-      const tsUpdatedAt = getTimeStampFromTime(updatedAt);
-      return { id, updatedAt: tsCreatedAt, createdAt: tsUpdatedAt, login, version, email, activity };
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
-  async deleteUser(id: string) {
-    try {
-      return await this.prisma.user.delete({ where: { id } });
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
-  async updatePassword(newPassword: string, paramsId: string) {
-    try {
-      const { login, version, createdAt, updatedAt, id } = await this.prisma.user.update({
-        where: { id: paramsId },
-        data: { password: newPassword, version: { increment: 1 } },
-      });
-      const tsCreatedAt = getTimeStampFromTime(createdAt);
-      const tsUpdatedAt = getTimeStampFromTime(updatedAt);
-      return { login, version, createdAt: tsCreatedAt, updatedAt: tsUpdatedAt, id };
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
-  async findOneByLogin(email: string) {
-    try {
-      return this.prisma.user.findUnique({ where: { email } });
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-  async updateRefreshToken(id: string, refreshToken: string) {
-    try {
-      const hashedRefreshToken = await hash(refreshToken, +process.env.CRYPT_SALT);
-      return await this.prisma.user.update({ where: { id }, data: { hashedRefreshToken, version: { increment: 1 } } });
     } catch (error) {
       prismaErrorHandling(error);
     }

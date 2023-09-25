@@ -1,52 +1,25 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put } from '@nestjs/common';
-import { MESSAGES, PATHS } from 'src/utils/const';
-import { CreateUserDto, UpdatePasswordDto } from './user.dto';
-import { UserService } from './user.service';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { ApiBody, ApiCreatedResponse, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ParamsId } from 'src/app/params-validation';
-import { throwForbiddenException, throwNotFoundException } from 'src/utils/utils';
+import { UserService } from './user.service';
+import { ProfileDto } from 'src/account/account.dto';
 
-const { USER } = PATHS;
-const { CREATED, NO_CONTENT } = HttpStatus;
-const { NOT_FOUND_USER, WRONG_PASSWORD } = MESSAGES;
-
-@Controller(USER)
+@Controller('/user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  getUsers() {
-    return this.userService.findAll();
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
+  async getAllUsers() {
+    return await this.userService.getAllUsers();
   }
 
-  @Get(':id')
-  async getUserById(@Param() { id }: ParamsId) {
-    return (await this.userService.findOne(id)) ?? throwNotFoundException(NOT_FOUND_USER);
-  }
-
-  @Put(':id')
-  async changePassword(@Body() { oldPassword, newPassword }: UpdatePasswordDto, @Param() { id }: ParamsId) {
-    const findedUser = await this.userService.findOne(id);
-    if (!findedUser) throwNotFoundException(NOT_FOUND_USER);
-    else {
-      const { password } = findedUser;
-      if (password !== oldPassword) {
-        throwForbiddenException(WRONG_PASSWORD);
-      } else {
-        return await this.userService.updatePassword(newPassword, id);
-      }
-    }
-  }
-
-  @Post()
-  @HttpCode(CREATED)
-  async createUser(@Body() createUserDto: CreateUserDto) {
-    return await this.userService.createUser(createUserDto);
-  }
-
-  @Delete(':id')
-  @HttpCode(NO_CONTENT)
-  async deleteUser(@Param() { id }: ParamsId) {
-    const findedUser = await this.userService.deleteUser(id);
-    if (!findedUser) throwNotFoundException(NOT_FOUND_USER);
+  @Post(':id/profile')
+  @ApiCreatedResponse({ description: 'Upsert user profile' })
+  @ApiBody({ type: ProfileDto })
+  @HttpCode(HttpStatus.CREATED)
+  async upsertAccountByUserId(@Param() { id }: ParamsId, @Body() accountDto: ProfileDto) {
+    return await this.userService.upsertAccountByUserId(id, accountDto);
   }
 }

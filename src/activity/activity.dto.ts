@@ -1,14 +1,27 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
 export class ActivityDto {
+  @ApiProperty({ type: Date, description: 'Date value' })
   date: Date;
-  description: string;
+  @ApiPropertyOptional({ type: String, description: 'Description value' })
+  description?: string;
+  @ApiProperty({ type: Number, description: 'Duration' })
   duration: number;
+  @ApiProperty({ type: Number, description: 'Distance' })
   distance: number;
-  emotion: string;
+  @ApiPropertyOptional({ type: String, description: 'Emotion value' })
+  emotion?: string;
+  @ApiPropertyOptional({ type: Boolean, description: 'Public switcher value' })
   isSwitchOn: boolean;
+  @ApiPropertyOptional({ isArray: true, description: 'Photo urls value' })
   photoUrls: string[];
+  @ApiProperty({ type: String, description: 'Sport value' })
   sport: string;
-  title: string;
+  @ApiPropertyOptional({ type: String, description: 'Title value' })
+  title?: string;
+  @ApiProperty({ type: Number, description: 'Speed' })
   speed: number;
+  @ApiProperty({ type: Object, description: 'Location data' })
   locations: {
     latitude: number;
     longitude: number;
@@ -16,31 +29,8 @@ export class ActivityDto {
     accuracy?: number;
     altitudeAccuracy?: number;
     heading?: number;
-    speed?: number;
+    speed: number;
     timestamp: number;
     mocked?: boolean;
   }[];
 }
-
-export type modifiedActivity = {
-  date: Date;
-  description: string;
-  duration: number;
-  emotion: string;
-  isSwitchOn: boolean;
-  photoUrl: string;
-  sport: string;
-  title: string;
-  speed: number;
-  locations: {
-    latitude: number;
-    longitude: number;
-    altitude?: number;
-    accuracy?: number;
-    altitudeAccuracy?: number;
-    heading?: number;
-    speed?: number;
-    timestamp: number;
-    mocked?: boolean;
-  }[];
-};
