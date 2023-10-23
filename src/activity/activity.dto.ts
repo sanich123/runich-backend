@@ -1,5 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+type LocationObject = {
+  latitude: number;
+  longitude: number;
+  altitude?: number;
+  accuracy?: number;
+  altitudeAccuracy?: number;
+  heading?: number;
+  speed: number;
+  timestamp: number;
+  mocked?: boolean;
+};
+
 export class ActivityDto {
   @ApiProperty({ type: Date, description: 'Date value' })
   date: Date;
@@ -21,16 +33,12 @@ export class ActivityDto {
   title?: string;
   @ApiProperty({ type: Number, description: 'Speed' })
   speed: number;
-  @ApiProperty({ type: Object, description: 'Location data' })
-  locations: {
-    latitude: number;
-    longitude: number;
-    altitude?: number;
-    accuracy?: number;
-    altitudeAccuracy?: number;
-    heading?: number;
-    speed: number;
-    timestamp: number;
-    mocked?: boolean;
+  @ApiProperty({ type: Array, description: 'Location data' })
+  locations: LocationObject[];
+  @ApiPropertyOptional({ type: Array, description: 'Km splits' })
+  kilometresSplit: {
+    lastKilometerDuration: number;
+    lastKilometerAltitude: number;
+    kilometerPoint: LocationObject;
   }[];
 }
