@@ -24,6 +24,7 @@ async function bootstrap() {
   app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter, PRISMA_ERR_TO_HTTP_CODES));
   app.useGlobalPipes(new ValidationPipe());
   console.log(`App is listening on ${PORT}`);
-  await app.listen(PORT, "::");
+  app.enableCors({ origin: false });
+  await app.listen(PORT, '::');
 }
 bootstrap();
