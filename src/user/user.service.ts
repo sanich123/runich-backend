@@ -1,15 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { ProfileDto } from 'src/account/account.dto';
+import { AccountService } from 'src/account/account.service';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly profile: AccountService) {}
 
   async getAllUsers() {
     try {
-      return await this.prisma.users.findMany();
+      const users = await this.prisma.users.findMany({
+        select: { id: true },
+      });
+      const usersProfileData = [...await Promise.all(
+        users.map(
+          async ({ id }) =>
+            await this.prisma.profile.findFirst({
+              where: { user_id: id },
+              select: { name: true, surname: true, profilePhoto: true, city: true, user_id: true },
+            }),
+        ),
+      )].filter(Boolean);
+      return usersProfileData;
     } catch (error) {
       prismaErrorHandling(error);
     }
