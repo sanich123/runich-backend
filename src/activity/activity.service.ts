@@ -23,7 +23,13 @@ export class ActivityService {
 
   async getActivityByActivityId(id: string) {
     try {
-      return await this.prisma.activity.findUnique({ where: { id } });
+      return await this.prisma.activity.findUnique({
+        where: { id },
+        include: {
+          comments: true,
+          likes: true,
+        },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }
