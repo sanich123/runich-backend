@@ -55,6 +55,19 @@ export class ActivityService {
       return await this.prisma.activity.findMany({
         where: { user_id: { in: [...ids, id] } },
         orderBy: { date: 'desc' },
+        select: {
+          description: true,
+          title: true,
+          date: true,
+          sport: true,
+          id: true,
+          user_id: true,
+          photoUrls: true,
+          duration: true,
+          distance: true,
+          likes: true,
+          comments: true,
+        },
       });
     } catch (error) {
       prismaErrorHandling(error);
