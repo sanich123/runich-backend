@@ -48,7 +48,14 @@ export class ActivityService {
 
   async getActivitesByUserId(id: string) {
     try {
-      return await this.prisma.activity.findMany({ where: { user_id: id }, orderBy: { date: 'desc' } });
+      return await this.prisma.activity.findMany({
+        where: { user_id: id },
+        orderBy: { date: 'desc' },
+        include: {
+          comments: true,
+          likes: true,
+        },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }
