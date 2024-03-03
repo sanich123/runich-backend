@@ -2,10 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
+import { AccountService } from 'src/account/account.service';
 
 @Injectable()
 export class CommentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly accountService: AccountService) {}
 
   async getCommentsbyActivityId(id: string) {
     try {
@@ -14,6 +15,9 @@ export class CommentService {
         orderBy: {
           date: 'asc',
         },
+        include: {
+          profile: true,
+        },
       });
     } catch (error) {
       prismaErrorHandling(error);
@@ -21,9 +25,12 @@ export class CommentService {
   }
 
   async createCommentByActivityId(commentDto: CommentDTO, id: string) {
+    const { authorId } = commentDto;
+    const account = await this.accountService.getAccountByUserId(authorId);
     try {
       return await this.prisma.comment.create({
         data: {
+          profileId: account.id,
           activityId: id,
           ...commentDto,
         },
@@ -43,8 +50,10 @@ export class CommentService {
           where: { id: like.id },
         });
       }
+      const account = await this.accountService.getAccountByUserId(authorId);
       return await this.prisma.commentLike.create({
         data: {
+          profileId: account.id,
           authorId,
           commentId,
         },

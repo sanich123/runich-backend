@@ -3,16 +3,23 @@ import { PrismaService } from 'nestjs-prisma';
 import { ActivityDto } from './activity.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { FriendService } from 'src/friend/friend.service';
+import { AccountService } from 'src/account/account.service';
 
 @Injectable()
 export class ActivityService {
-  constructor(private readonly prisma: PrismaService, private readonly friendsService: FriendService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly friendsService: FriendService,
+    private readonly accountService: AccountService,
+  ) {}
 
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
+      const account = await this.accountService.getAccountByUserId(id);
       return await this.prisma.activity.create({
         data: {
           user_id: id,
+          profileId: account.id,
           ...activityDto,
         },
       });
@@ -23,13 +30,15 @@ export class ActivityService {
 
   async getActivityByActivityId(id: string) {
     try {
-      return await this.prisma.activity.findUnique({
+      const activity = await this.prisma.activity.findUnique({
         where: { id },
         include: {
           comments: true,
           likes: true,
+          profile: true,
         },
       });
+      return activity;
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -39,7 +48,7 @@ export class ActivityService {
     try {
       return await this.prisma.activity.findMany({
         where: { user_id: id },
-        select: { photoUrls: true },
+        select: { photoVideoUrls: true },
       });
     } catch (error) {
       prismaErrorHandling(error);
@@ -53,7 +62,7 @@ export class ActivityService {
         orderBy: { date: 'desc' },
         include: {
           comments: true,
-          likes: true,
+          profile: true,
         },
       });
     } catch (error) {
@@ -75,11 +84,14 @@ export class ActivityService {
           sport: true,
           id: true,
           user_id: true,
-          photoUrls: true,
+          photoVideoUrls: true,
+          mapPhotoUrl: true,
           duration: true,
           distance: true,
           likes: true,
           comments: true,
+          users: true,
+          profile: true,
         },
       });
     } catch (error) {
