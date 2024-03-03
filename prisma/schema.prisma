@@ -36,6 +36,7 @@ model flow_state {
   created_at             DateTime?             @db.Timestamptz(6)
   updated_at             DateTime?             @db.Timestamptz(6)
   authentication_method  String
+  saml_relay_states      saml_relay_states[]
 
   @@index([created_at(sort: Desc)])
   @@index([auth_code], map: "idx_auth_code")
@@ -43,9 +44,15 @@ model flow_state {
   @@schema("auth")
 }
 
+model schema_migrations {
+  version String @id @unique(map: "schema_migrations_version_idx") @db.VarChar(14)
+
+  @@schema("auth")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model identities {
-  id              String
+  provider_id     String
   user_id         String    @db.Uuid
   identity_data   Json
   provider        String
@@ -53,9 +60,10 @@ model identities {
   created_at      DateTime? @db.Timestamptz(6)
   updated_at      DateTime? @db.Timestamptz(6)
   email           String?   @default(dbgenerated("lower((identity_data ->> 'email'::text))"))
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@id([provider, id])
+  @@unique([provider_id, provider], map: "identities_provider_id_provider_unique")
   @@index([email])
   @@index([user_id])
   @@schema("auth")
@@ -112,6 +120,7 @@ model mfa_factors {
   users          users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id, created_at], map: "factor_id_created_at_idx")
+  @@index([user_id])
   @@schema("auth")
 }
 
@@ -164,18 +173,13 @@ model saml_relay_states {
   from_ip_address String?       @db.Inet
   created_at      DateTime?     @db.Timestamptz(6)
   updated_at      DateTime?     @db.Timestamptz(6)
+  flow_state_id   String?       @db.Uuid
+  flow_state      flow_state?   @relation(fields: [flow_state_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   sso_providers   sso_providers @relation(fields: [sso_provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([created_at(sort: Desc)])
   @@index([for_email])
   @@index([sso_provider_id])
-  @@schema("auth")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model schema_migrations {
-  version String @id @db.VarChar(255)
-
   @@schema("auth")
 }
 
@@ -188,6 +192,10 @@ model sessions {
   factor_id      String?          @db.Uuid
   aal            aal_level?
   not_after      DateTime?        @db.Timestamptz(6)
+  refreshed_at   DateTime?        @db.Timestamp(6)
+  user_agent     String?
+  ip             String?          @db.Inet
+  tag            String?
   mfa_amr_claims mfa_amr_claims[]
   refresh_tokens refresh_tokens[]
   users          users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -286,12 +294,17 @@ model Profile {
   createdAt    DateTime  @default(now())
   gender       String?
   profilePhoto String?
+  email        String?
+  language     String?
   sport        String?
   surname      String?
   updatedAt    DateTime  @default(now())
   weight       String?
   users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
+  activities   Activity[]
+  comments     Comment[]
+  likes        Like[]
+  commentLikes CommentLike[]
   @@schema("public")
 }
 
@@ -320,7 +333,10 @@ model Activity {
   locations         Json
   users             users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user_id           String    @db.Uuid
-  photoUrls         String[]
+  mapPhotoUrl       String? 
+  photoVideoUrls    Json?
+  profile           Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profileId         String
   comments          Comment[] 
   likes             Like[]
   speed             Int
@@ -335,6 +351,8 @@ model Comment {
   date          DateTime  @default(now())
   activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
   activityId    String 
+  profile       Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profileId     String
   comment       String
   authorId      String
   commentLike   CommentLike[]
@@ -347,6 +365,8 @@ model Like {
   date          DateTime  @default(now())
   activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
   activityId    String
+  profile       Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profileId     String
   authorId      String
 
   @@schema("public")
@@ -358,7 +378,8 @@ model CommentLike {
   comment       Comment   @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId     String
   authorId      String
-
+  profile       Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profileId     String
   @@schema("public")
 }
 
