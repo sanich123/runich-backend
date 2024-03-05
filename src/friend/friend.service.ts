@@ -50,7 +50,8 @@ export class FriendService {
       return await this.prismaService.friend.create({
         data: {
           user_id: userId,
-          friendId: profile.id,
+          friendId: id,
+          profileId: profile.id,
         },
       });
     } catch (error) {

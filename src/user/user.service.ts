@@ -10,21 +10,9 @@ export class UserService {
 
   async getAllUsers() {
     try {
-      const users = await this.prisma.users.findMany({
-        select: { id: true },
+      return await this.prisma.users.findMany({
+        select: { profile: true },
       });
-      const usersProfileData = [
-        ...(await Promise.all(
-          users.map(
-            async ({ id }) =>
-              await this.prisma.profile.findUnique({
-                where: { user_id: id },
-                select: { name: true, surname: true, profilePhoto: true, city: true, user_id: true },
-              }),
-          ),
-        )),
-      ].filter(Boolean);
-      return usersProfileData;
     } catch (error) {
       prismaErrorHandling(error);
     }
