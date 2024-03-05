@@ -10,7 +10,12 @@ export class FriendService {
 
   async getFriendsById(id: string) {
     try {
-      return await this.prismaService.friend.findMany({ where: { user_id: id } });
+      return await this.prismaService.friend.findMany({
+        where: { user_id: id },
+        include: {
+          profile: true,
+        },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -27,7 +32,12 @@ export class FriendService {
 
   async getFollowers(id: string) {
     try {
-      return await this.prismaService.friend.findMany({ where: { friendId: id } });
+      return await this.prismaService.friend.findMany({
+        where: { friendId: id },
+        include: {
+          profile: true,
+        },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -37,11 +47,10 @@ export class FriendService {
     try {
       const profile = await this.accountService.getAccountByUserId(id);
       if (!profile) throw new NotFoundException('Could not be able to find profile of that user');
-      await this.prismaService.friend.create({
+      return await this.prismaService.friend.create({
         data: {
           user_id: userId,
-          friendId: id,
-          friendPhoto: profile.profilePhoto,
+          friendId: profile.id,
         },
       });
     } catch (error) {

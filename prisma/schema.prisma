@@ -277,109 +277,114 @@ model users {
   identities                  identities[]
   mfa_factors                 mfa_factors[]
   sessions                    sessions[]
-  profile                     Profile?
-  friends                     Friend[]
   activities                  Activity[]
+  friends                     Friend[]
+  profile                     Profile?
+
   @@index([instance_id])
   @@schema("auth")
 }
 
 model Profile {
-  id           String    @id @default(uuid())
+  id           String        @id @default(uuid())
   name         String?
-  user_id      String    @unique @db.Uuid
+  user_id      String        @unique @db.Uuid
   bio          String?
   birthday     DateTime?
   city         String?
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime      @default(now())
   gender       String?
   profilePhoto String?
-  email        String?
-  language     String?
   sport        String?
   surname      String?
-  updatedAt    DateTime  @default(now())
+  updatedAt    DateTime      @default(now())
   weight       String?
-  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  email        String?
+  language     String?
   activities   Activity[]
   comments     Comment[]
-  likes        Like[]
   commentLikes CommentLike[]
+  friends      Friend[]
+  likes        Like[]
+  users        users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
   @@schema("public")
 }
 
 model Friend {
-  id           String     @id @default(uuid())
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  users        users      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user_id      String     @db.Uuid
-  friendId     String
-  friendPhoto  String?
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user_id   String   @db.Uuid
+  friendId  String
+  profile   Profile  @relation(fields: [friendId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users     users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 model Activity {
-  id                String   @id @default(uuid())
-  date              DateTime @default(now())
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  description       String?
-  distance          Int?
-  duration          Int
-  emotion           String?
-  isSwitchOn        Boolean
-  locations         Json
-  users             users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user_id           String    @db.Uuid
-  mapPhotoUrl       String? 
-  photoVideoUrls    Json?
-  profile           Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profileId         String
-  comments          Comment[] 
-  likes             Like[]
-  speed             Int
-  sport             String?
-  title             String?
-  kilometresSplit   Json?
+  id              String    @id @default(uuid())
+  date            DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  description     String?
+  distance        Int?
+  duration        Int
+  emotion         String?
+  isSwitchOn      Boolean
+  locations       Json
+  user_id         String    @db.Uuid
+  speed           Int
+  sport           String?
+  title           String?
+  kilometresSplit Json?
+  profileId       String
+  mapPhotoUrl     String?
+  photoVideoUrls  Json?
+  profile         Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  comments        Comment[]
+  likes           Like[]
+
   @@schema("public")
 }
 
 model Comment {
-  id            String    @id @default(uuid())
-  date          DateTime  @default(now())
-  activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  activityId    String 
-  profile       Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profileId     String
-  comment       String
-  authorId      String
-  commentLike   CommentLike[]
+  id          String        @id @default(uuid())
+  date        DateTime      @default(now())
+  activityId  String
+  comment     String
+  authorId    String
+  profileId   String
+  activity    Activity      @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  profile     Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  commentLike CommentLike[]
 
   @@schema("public")
 }
 
 model Like {
-  id            String    @id @default(uuid())
-  date          DateTime  @default(now())
-  activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  activityId    String
-  profile       Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profileId     String
-  authorId      String
+  id         String   @id @default(uuid())
+  date       DateTime @default(now())
+  activityId String
+  authorId   String
+  profileId  String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 model CommentLike {
-  id            String    @id @default(uuid())
-  date          DateTime  @default(now())
-  comment       Comment   @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  commentId     String
-  authorId      String
-  profile       Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profileId     String
+  id        String   @id @default(uuid())
+  date      DateTime @default(now())
+  commentId String
+  authorId  String
+  profileId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
   @@schema("public")
 }
 
