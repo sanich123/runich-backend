@@ -24,9 +24,9 @@ export class ActivityDto {
   @ApiPropertyOptional({ type: String, description: 'Emotion value' })
   emotion?: string;
   @ApiPropertyOptional({ type: Boolean, description: 'Public switcher value' })
-  isSwitchOn: boolean;
-  @ApiPropertyOptional({ isArray: true, description: 'Photo urls value' })
-  photoUrls: string[];
+  isPublic: boolean;
+  @ApiPropertyOptional({ isArray: true, description: 'Photo video urls value' })
+  photoVideoUrls: { url: string; thumbnail: string | null };
   @ApiProperty({ type: String, description: 'Sport value' })
   sport: string;
   @ApiPropertyOptional({ type: String, description: 'Title value' })

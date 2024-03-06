@@ -333,7 +333,7 @@ model Activity {
   distance        Int?
   duration        Int
   emotion         String?
-  isSwitchOn      Boolean
+  isPublic        Boolean   @default(true)
   locations       Json
   user_id         String    @db.Uuid
   speed           Int

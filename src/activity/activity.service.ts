@@ -75,7 +75,7 @@ export class ActivityService {
       const friends = await this.friendsService.getFriendsById(id);
       const ids = friends.map(({ friendId }) => friendId);
       return await this.prisma.activity.findMany({
-        where: { user_id: { in: [...ids, id] } },
+        where: { user_id: { in: [...ids, id] }, isPublic: true },
         orderBy: { date: 'desc' },
         select: {
           description: true,

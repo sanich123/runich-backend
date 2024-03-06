@@ -35,7 +35,11 @@ export class FriendService {
       return await this.prismaService.friend.findMany({
         where: { friendId: id },
         include: {
-          profile: true,
+          users: {
+            include: {
+              profile: true,
+            },
+          },
         },
       });
     } catch (error) {
