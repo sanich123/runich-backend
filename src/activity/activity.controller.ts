@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Delete } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Delete, Patch } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
 import { ParamsId } from 'src/app/params-validation';
@@ -28,6 +28,12 @@ export class ActivityController {
   @HttpCode(HttpStatus.CREATED)
   async createActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
     return await this.activityService.createActivity(activity, id);
+  }
+
+  @Patch(id)
+  @HttpCode(HttpStatus.CREATED)
+  async patchActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
+    return await this.activityService.updateActivity(activity, id);
   }
 
   @Get(id)

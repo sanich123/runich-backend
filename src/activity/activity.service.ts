@@ -28,6 +28,30 @@ export class ActivityService {
     }
   }
 
+  async updateActivity(activityDto: ActivityDto, id: string) {
+    try {
+      const { date, description, emotion, isPublic, photoVideoUrls, sport, title, distance, duration, speed } =
+        activityDto;
+      return await this.prisma.activity.update({
+        where: { id },
+        data: {
+          title,
+          sport,
+          photoVideoUrls,
+          isPublic,
+          emotion,
+          date,
+          description,
+          distance,
+          duration,
+          speed,
+        },
+      });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
   async getActivityByActivityId(id: string) {
     try {
       const activity = await this.prisma.activity.findUnique({
@@ -46,6 +70,9 @@ export class ActivityService {
           likes: true,
           comments: true,
           profile: true,
+          isPublic: true,
+          emotion: true,
+          locations: true,
         },
       });
       return activity;
