@@ -32,9 +32,19 @@ export class ActivityService {
     try {
       const activity = await this.prisma.activity.findUnique({
         where: { id },
-        include: {
-          comments: true,
+        select: {
+          description: true,
+          title: true,
+          date: true,
+          sport: true,
+          id: true,
+          user_id: true,
+          photoVideoUrls: true,
+          mapPhotoUrl: true,
+          duration: true,
+          distance: true,
           likes: true,
+          comments: true,
           profile: true,
         },
       });
