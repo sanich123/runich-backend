@@ -286,27 +286,28 @@ model users {
 }
 
 model Profile {
-  id           String        @id @default(uuid())
-  name         String?
-  user_id      String        @unique @db.Uuid
-  bio          String?
-  birthday     DateTime?
-  city         String?
-  createdAt    DateTime      @default(now())
-  gender       String?
-  profilePhoto String?
-  sport        String?
-  surname      String?
-  updatedAt    DateTime      @default(now())
-  weight       String?
-  email        String?
-  language     String?
-  activities   Activity[]
-  comments     Comment[]
-  commentLikes CommentLike[]
-  friends      Friend[]
-  likes        Like[]
-  users        users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                 String        @id @default(uuid())
+  name               String?
+  user_id            String        @unique @db.Uuid
+  bio                String?
+  birthday           DateTime?
+  city               String?
+  createdAt          DateTime      @default(now())
+  gender             String?
+  profilePhoto       String?
+  sport              String?
+  surname            String?
+  updatedAt          DateTime      @default(now())
+  weight             String?
+  email              String?
+  language           String?
+  emailNotifications Boolean       @default(true)
+  activities         Activity[]
+  comments           Comment[]
+  commentLikes       CommentLike[]
+  friends            Friend[]
+  likes              Like[]
+  users              users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -333,7 +334,6 @@ model Activity {
   distance        Int?
   duration        Int
   emotion         String?
-  isPublic        Boolean   @default(true)
   locations       Json
   user_id         String    @db.Uuid
   speed           Int
@@ -343,6 +343,7 @@ model Activity {
   profileId       String
   mapPhotoUrl     String?
   photoVideoUrls  Json?
+  isPublic        Boolean   @default(true)
   profile         Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   comments        Comment[]

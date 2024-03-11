@@ -81,6 +81,7 @@ export class ActivityService {
           profile: true,
           isPublic: true,
           emotion: true,
+          kilometresSplit: true,
         },
       });
       return activity;

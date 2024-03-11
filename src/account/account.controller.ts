@@ -1,8 +1,9 @@
-import { Controller, Get, HttpStatus, Param } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { ParamsId } from 'src/app/params-validation';
 import { ApiResponse, ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
+import { ProfileDto } from './account.dto';
 
 @ApiTags(PATHS.profile)
 @Controller(PATHS.profile)
@@ -15,6 +16,12 @@ export class AccountController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getAllAccounts() {
     return await this.accountService.getAllAccounts();
+  }
+
+  @Patch(PATHS.id)
+  @HttpCode(HttpStatus.CREATED)
+  async updateProfileInfo(@Body() profile: ProfileDto, @Param() { id }: ParamsId) {
+    return await this.accountService.updateProfileInfo(profile, id);
   }
 
   @Get(PATHS.id)

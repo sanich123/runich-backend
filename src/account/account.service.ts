@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { ProfileDto } from './account.dto';
 
 @Injectable()
 export class AccountService {
@@ -9,6 +10,19 @@ export class AccountService {
   async getAllAccounts() {
     try {
       return await this.prisma.profile.findMany();
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async updateProfileInfo({ emailNotifications }: ProfileDto, id: string) {
+    try {
+      return await this.prisma.profile.update({
+        where: { id },
+        data: {
+          emailNotifications,
+        },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }

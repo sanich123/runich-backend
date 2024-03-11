@@ -11,26 +11,29 @@ export class LikeService {
 
   async sendOrDeleteLike({ authorId, activityId }: LikeDto) {
     try {
-      const like = await this.prismaService.like.findFirst({
-        where: { authorId, activityId },
-      });
       const activity = await this.prismaService.activity.findUnique({
         where: { id: activityId },
         select: {
           users: true,
           profile: true,
+          likes: true,
+          mapPhotoUrl: true,
         },
       });
-      if (like) {
+      const isLikedActivity = activity.likes.filter(({ authorId: likeAuthor }) => likeAuthor === authorId);
+      if (isLikedActivity.length) {
         return await this.prismaService.like.delete({
-          where: { id: like.id },
+          where: { id: isLikedActivity[0].id },
         });
       }
       const account = await this.accountService.getAccountByUserId(authorId);
-      if (activity && account) {
+      if (activity.profile.emailNotifications && account) {
         const receiverEmailAddress = activity.users?.email;
         const subject = 'Лайк к активности';
-        const message = `Уважаемый ${activity.profile.name}! ${account.name} только что лайкнул вашу активность!`;
+        const message = `<p>Уважаемый ${activity.profile.name}!</p><p>${
+          account.name
+        } только что лайкнул вашу активность!</p>
+        ${activity.mapPhotoUrl ? `<img src="${activity.mapPhotoUrl}" width="350px" height="200px"/>` : ''}`;
         sendEmail([receiverEmailAddress], subject, message);
       }
       return await this.prismaService.like.create({
