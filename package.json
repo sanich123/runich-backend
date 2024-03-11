@@ -28,6 +28,7 @@
     "check:vulnerabilities": "snyk container test postgres:15.3-alpine && snyk container test node:18-alpine --file=Dockerfile"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.529.1",
     "@nestjs/cli": "^10",
     "@nestjs/common": "^10",
     "@nestjs/core": "^10",
