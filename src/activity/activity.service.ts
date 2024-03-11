@@ -51,6 +51,15 @@ export class ActivityService {
       prismaErrorHandling(error);
     }
   }
+  async getLocations(id: string) {
+    return await this.prisma.activity.findUnique({
+      where: { id },
+      select: {
+        locations: true,
+        kilometresSplit: true,
+      },
+    });
+  }
 
   async getActivityByActivityId(id: string) {
     try {
@@ -72,7 +81,6 @@ export class ActivityService {
           profile: true,
           isPublic: true,
           emotion: true,
-          locations: true,
         },
       });
       return activity;

@@ -20,6 +20,11 @@ export class ActivityController {
     return this.activityService.getMedia(id);
   }
 
+  @Get(`${id}/locations`)
+  async getLocations(@Param() { id }: ParamsId) {
+    return this.activityService.getLocations(id);
+  }
+
   @Post(id)
   @ApiOperation({ summary: 'Post activity by userId' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
