@@ -1,9 +1,10 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { ParamsId } from 'src/app/params-validation';
 import { ApiResponse, ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
 import { ProfileDto } from './account.dto';
+import { blurhashFromURL } from 'blurhash-from-url';
 
 @ApiTags(PATHS.profile)
 @Controller(PATHS.profile)
@@ -31,5 +32,18 @@ export class AccountController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getAccountByUserId(@Param() { id }: ParamsId) {
     return await this.accountService.getAccountByUserId(id);
+  }
+
+  @Post('blurhash')
+  async getBlurhashOfUrlString(
+    @Body() { photoVideoUrls }: { photoVideoUrls: { url: string; thumbnail: string | null; blurhash?: string }[] },
+  ) {
+    return await Promise.all(
+      photoVideoUrls.map(async (photoVideoUrl) => {
+        const blurhash = await blurhashFromURL(photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url);
+        photoVideoUrl.blurhash = blurhash.encoded;
+        return photoVideoUrl;
+      }),
+    );
   }
 }
