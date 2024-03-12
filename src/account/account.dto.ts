@@ -17,6 +17,7 @@ export class ProfileDto {
   gender?: string | null;
   @ApiPropertyOptional({ type: String, description: 'profilePhoto value (optional)' })
   profilePhoto?: string | null;
+  profilePhotoBlurhash?: string;
   @ApiPropertyOptional({ type: String, description: 'sport value (optional)' })
   sport?: string | null;
   @ApiPropertyOptional({ type: String, description: 'surname value (optional)' })

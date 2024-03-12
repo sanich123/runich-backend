@@ -3,6 +3,7 @@ import { PrismaService } from 'nestjs-prisma';
 import { ProfileDto } from 'src/account/account.dto';
 import { AccountService } from 'src/account/account.service';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { blurhashFromURL } from 'blurhash-from-url';
 
 @Injectable()
 export class UserService {
@@ -20,6 +21,10 @@ export class UserService {
 
   async upsertAccountByUserId(id: string, accountDto: ProfileDto) {
     try {
+      if (accountDto.profilePhoto) {
+        const blurhash = await blurhashFromURL(accountDto.profilePhoto);
+        accountDto.profilePhotoBlurhash = blurhash.encoded;
+      }
       return await this.prisma.users.update({
         where: { id },
         data: {

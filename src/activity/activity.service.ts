@@ -4,6 +4,7 @@ import { ActivityDto } from './activity.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { FriendService } from 'src/friend/friend.service';
 import { AccountService } from 'src/account/account.service';
+import { blurhashFromURL } from 'blurhash-from-url';
 
 @Injectable()
 export class ActivityService {
@@ -16,11 +17,31 @@ export class ActivityService {
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
       const account = await this.accountService.getAccountByUserId(id);
+      let mapPhotoUrlBlurhash;
+      let photoVideoUrlsWithBlurhash;
+      if (activityDto.photoVideoUrls.length) {
+        photoVideoUrlsWithBlurhash = await await Promise.all(
+          activityDto.photoVideoUrls.map(async (photoVideoUrl) => {
+            const blurhash = await blurhashFromURL(
+              photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url,
+              { size: 300 },
+            );
+            photoVideoUrl.blurhash = blurhash.encoded;
+            return photoVideoUrl;
+          }),
+        );
+      }
+      if (activityDto.mapPhotoUrl) {
+        const blurhash = await blurhashFromURL(activityDto.mapPhotoUrl, { size: 300 });
+        mapPhotoUrlBlurhash = blurhash.encoded;
+      }
       return await this.prisma.activity.create({
         data: {
           user_id: id,
           profileId: account.id,
           ...activityDto,
+          photoVideoUrls: photoVideoUrlsWithBlurhash || [],
+          mapPhotoUrlBlurhash,
         },
       });
     } catch (error) {
@@ -74,6 +95,7 @@ export class ActivityService {
           user_id: true,
           photoVideoUrls: true,
           mapPhotoUrl: true,
+          mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
           likes: true,
@@ -132,6 +154,7 @@ export class ActivityService {
           user_id: true,
           photoVideoUrls: true,
           mapPhotoUrl: true,
+          mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
           likes: true,
