@@ -19,19 +19,10 @@ export class ActivityService {
       const account = await this.accountService.getAccountByUserId(id);
       let mapPhotoUrlBlurhash;
       let photoVideoUrlsWithBlurhash;
-      if (activityDto.photoVideoUrls.length) {
-        photoVideoUrlsWithBlurhash = await await Promise.all(
-          activityDto.photoVideoUrls.map(async (photoVideoUrl) => {
-            const blurhash = await blurhashFromURL(
-              photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url,
-              { size: 300 },
-            );
-            photoVideoUrl.blurhash = blurhash.encoded;
-            return photoVideoUrl;
-          }),
-        );
+      if (activityDto?.photoVideoUrls.length) {
+        photoVideoUrlsWithBlurhash = await this.getPhotoVideoUrlsWithBlurhash(activityDto.photoVideoUrls);
       }
-      if (activityDto.mapPhotoUrl) {
+      if (activityDto?.mapPhotoUrl) {
         const blurhash = await blurhashFromURL(activityDto.mapPhotoUrl, { size: 300 });
         mapPhotoUrlBlurhash = blurhash.encoded;
       }
@@ -72,6 +63,7 @@ export class ActivityService {
       prismaErrorHandling(error);
     }
   }
+
   async getLocations(id: string) {
     return await this.prisma.activity.findUnique({
       where: { id },
@@ -174,5 +166,17 @@ export class ActivityService {
     } catch (error) {
       prismaErrorHandling(error);
     }
+  }
+
+  async getPhotoVideoUrlsWithBlurhash(photoVideoUrls) {
+    return await Promise.all(
+      photoVideoUrls.map(async (photoVideoUrl) => {
+        const blurhash = await blurhashFromURL(photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url, {
+          size: 300,
+        });
+        photoVideoUrl.blurhash = blurhash.encoded;
+        return photoVideoUrl;
+      }),
+    );
   }
 }

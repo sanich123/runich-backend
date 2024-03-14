@@ -30,9 +30,9 @@ export class LikeService {
       if (activity.profile.emailNotifications && account) {
         const receiverEmailAddress = activity.users?.email;
         const subject = 'Лайк к активности';
-        const message = `<p>Уважаемый ${activity.profile.name}!</p><p>${
-          account.name
-        } только что лайкнул вашу активность!</p>
+        const message = `<p>Уважаемый ${activity.profile.name}!</p>
+        <img src="${activity.profile.profilePhoto}"/>
+        <p>${account.name} только что лайкнул вашу активность!</p>
         ${activity.mapPhotoUrl ? `<img src="${activity.mapPhotoUrl}" width="350px" height="200px"/>` : ''}`;
         sendEmail([receiverEmailAddress], subject, message);
       }

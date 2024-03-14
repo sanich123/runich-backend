@@ -28,6 +28,7 @@ export class ActivityDto {
   @ApiPropertyOptional({ isArray: true, description: 'Photo video urls value' })
   photoVideoUrls: { url: string; thumbnail: string | null; blurhash?: string }[];
   mapPhotoUrl?: string;
+  mapPhotoUrlBlurhash?: string;
   @ApiProperty({ type: String, description: 'Sport value' })
   sport: string;
   @ApiPropertyOptional({ type: String, description: 'Title value' })
