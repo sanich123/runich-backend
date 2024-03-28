@@ -4,6 +4,8 @@ import { ParamsId } from 'src/app/params-validation';
 import { ApiResponse, ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
 import { ProfileDto } from './account.dto';
+import { Pagination, PaginationParams } from 'src/utils/pagination/pagination.decorator';
+import { PaginatedResource } from 'src/utils/pagination/pagination.dto';
 
 @ApiTags(PATHS.profile)
 @Controller(PATHS.profile)
@@ -14,8 +16,8 @@ export class AccountController {
   @ApiOperation({ summary: 'Gets all profiles' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getAllAccounts() {
-    return await this.accountService.getAllAccounts();
+  async getAllAccounts(@PaginationParams() paginationParams: Pagination): Promise<PaginatedResource<Partial<ProfileDto>>> {
+    return await this.accountService.getAllAccounts(paginationParams);
   }
 
   @Patch(PATHS.id)
