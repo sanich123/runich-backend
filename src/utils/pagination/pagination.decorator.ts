@@ -10,8 +10,15 @@ export interface Pagination {
 
 export const PaginationParams = createParamDecorator((data, ctx: ExecutionContext): Pagination => {
     const req: Request = ctx.switchToHttp().getRequest();
-    const page = parseInt(req.query.page as string) | 0;
-    const size = parseInt(req.query.size as string) | 10;
+    let page = parseInt(req.query.page as string);
+    let size = parseInt(req.query.size as string);
+
+    if (!page) {
+        page = 0;
+    };
+    if (!size) {
+        size = 10;
+    };
 
     // check if page and size are valid
     if (isNaN(page) || page < 0 || isNaN(size) || size < 0) {
