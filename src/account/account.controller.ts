@@ -39,6 +39,8 @@ export class AccountController {
 
   @Get('/filter')
   @ApiOperation({ summary: 'Search profiles by different fields' })
+  @ApiParam({ name: 'page', required: false, description: 'Page Number' })
+  @ApiParam({ name: 'size', required: false, description: 'Count of results per page' })
   @ApiParam({ name: 'name', required: false, description: 'Name of user, can be a part of email' })
   @ApiParam({ name: 'surname', required: false, description: 'Second name, if name consist of two parts, put it separately' })
   @ApiParam({ name: 'email', required: false, description: 'email, must be full and correct' })
