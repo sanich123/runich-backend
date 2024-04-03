@@ -1,6 +1,15 @@
-export type PaginatedResource<T> = {
+import { ApiProperty } from '@nestjs/swagger';
+
+export class PaginationResponseDto<T> {
+
+    @ApiProperty({ example: 35 })
     totalItems: number;
-    items: T[];
+
+    @ApiProperty({ example: 0 })
     page: number;
+
+    @ApiProperty({ example: 10 })
     size: number;
+
+    items: T[];
 };

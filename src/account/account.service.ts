@@ -21,8 +21,8 @@ export class AccountService {
       return {
         totalItems: count,
         items: profiles,
-        page,
-        size
+        page: page,
+        size: size
       };
     } catch (error) {
       prismaErrorHandling(error);

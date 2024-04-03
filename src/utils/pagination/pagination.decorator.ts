@@ -20,16 +20,14 @@ export const PaginationParams = createParamDecorator((data, ctx: ExecutionContex
         size = 10;
     };
 
-    // check if page and size are valid
     if (isNaN(page) || page < 0 || isNaN(size) || size < 0) {
         throw new BadRequestException('Invalid pagination params');
     }
-    // do not allow to fetch large slices of the dataset
-    if (size > 100) {
+
+    if (size > 1000) {
         throw new BadRequestException('Invalid pagination params: Max size is 100');
     }
 
-    // calculate pagination parameters
     const limit = size;
     const offset = page * limit;
     return { page, limit, size, offset };
