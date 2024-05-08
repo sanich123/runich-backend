@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { ParamsId } from 'src/app/params-validation';
-import { ApiResponse, ApiTags, ApiOperation, ApiParam, ApiExtraModels, ApiBody, ApiCreatedResponse, getSchemaPath } from '@nestjs/swagger';
+import { ApiResponse, ApiTags, ApiOperation, ApiParam, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
 import { ProfileDto } from './account.dto';
 import { Pagination, PaginationParams } from 'src/utils/pagination/pagination.decorator';
@@ -42,7 +42,11 @@ export class AccountController {
   @ApiParam({ name: 'page', required: false, description: 'Page Number' })
   @ApiParam({ name: 'size', required: false, description: 'Count of results per page' })
   @ApiParam({ name: 'name', required: false, description: 'Name of user, can be a part of email' })
-  @ApiParam({ name: 'surname', required: false, description: 'Second name, if name consist of two parts, put it separately' })
+  @ApiParam({
+    name: 'surname',
+    required: false,
+    description: 'Second name, if name consist of two parts, put it separately',
+  })
   @ApiParam({ name: 'email', required: false, description: 'email, must be full and correct' })
   @ApiParam({ name: 'city', required: false, description: 'City' })
   @ApiParam({ name: 'gender', required: false, description: 'Gender' })
@@ -64,7 +68,7 @@ export class AccountController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getFilteredAccounts(
     @PaginationParams() paginationParams: Pagination,
-    @FilteringParams(['name', 'email', 'city', 'gender', 'sport', 'surname']) filter?: Filtering
+    @FilteringParams(['name', 'email', 'city', 'gender', 'sport', 'surname']) filter?: Filtering,
   ) {
     return await this.accountService.getFilteredAccounts(paginationParams, filter);
   }

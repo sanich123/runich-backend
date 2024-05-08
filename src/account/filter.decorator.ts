@@ -13,17 +13,15 @@ export interface Filtering {
 }
 
 export const FilteringParams = createParamDecorator((data, ctx: ExecutionContext): Filtering => {
-    const req: Request = ctx.switchToHttp().getRequest();
-    const filterDto = req.query;
-    if (!filterDto) return null;
+  const req: Request = ctx.switchToHttp().getRequest();
+  const filterDto = req.query;
+  if (!filterDto) return null;
 
-    if (typeof filterDto != 'object') throw new BadRequestException('Invalid filter parameter');
-    
-    if (typeof data != 'object') throw new BadRequestException('Invalid filter parameter');
-    
-    const filteredObj = Object.fromEntries(
-      Object.entries(filterDto).filter(([key]) => data.includes(key))
-    );
+  if (typeof filterDto != 'object') throw new BadRequestException('Invalid filter parameter');
 
-    return filteredObj;
+  if (typeof data != 'object') throw new BadRequestException('Invalid filter parameter');
+
+  const filteredObj = Object.fromEntries(Object.entries(filterDto).filter(([key]) => data.includes(key)));
+
+  return filteredObj;
 });
