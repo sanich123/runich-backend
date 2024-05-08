@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { ProfileDto } from './account.dto';
@@ -22,7 +22,7 @@ export class AccountService {
         totalItems: count,
         items: profiles,
         page: page,
-        size: size
+        size: size,
       };
     } catch (error) {
       prismaErrorHandling(error);
@@ -34,13 +34,13 @@ export class AccountService {
       const profiles = await this.prisma.profile.findMany({
         where: {
           OR: [
-            { name: { contains: filter.name, } },
-            { name: { contains: filter.surname, }},
-            { email: { contains: filter.name, }},
-            { email: { equals: filter.email, }},
-            { city: { contains: filter.city, }},
-            { gender: { equals: filter.gender, }},
-            { sport: { equals: filter.sport, }},
+            { name: { contains: filter.name } },
+            { name: { contains: filter.surname } },
+            { email: { contains: filter.name } },
+            { email: { equals: filter.email } },
+            { city: { contains: filter.city } },
+            { gender: { equals: filter.gender } },
+            { sport: { equals: filter.sport } },
           ],
         },
         skip: offset,
@@ -50,13 +50,13 @@ export class AccountService {
         const count = await this.prisma.profile.count({
           where: {
             OR: [
-              { name: { contains: filter.name, } },
-              { name: { contains: filter.surname, }},
-              { email: { contains: filter.name, }},
-              { email: { equals: filter.email, }},
-              { city: { contains: filter.city, }},
-              { gender: { equals: filter.gender, }},
-              { sport: { equals: filter.sport, }},
+              { name: { contains: filter.name } },
+              { name: { contains: filter.surname } },
+              { email: { contains: filter.name } },
+              { email: { equals: filter.email } },
+              { city: { contains: filter.city } },
+              { gender: { equals: filter.gender } },
+              { sport: { equals: filter.sport } },
             ],
           },
         });
@@ -65,14 +65,14 @@ export class AccountService {
           totalItems: count,
           items: profiles,
           page,
-          size
+          size,
         };
       }
       return {
         totalItems: profiles.length,
         items: profiles,
         page,
-        size
+        size,
       };
     } catch (error) {
       prismaErrorHandling(error);
