@@ -130,13 +130,19 @@ export class ActivityService {
     }
   }
 
-  async getAllActivitiesWithFriends(id: string) {
+  async getAllActivitiesWithFriends(id: string, page = '0', take = '10') {
+    console.log(page, take);
     try {
-      const friends = await this.friendsService.getFriendsById(id);
+      const friends = await this.prisma.friend.findMany({
+        where: { user_id: id },
+        select: { friendId: true },
+      });
       const ids = friends.map(({ friendId }) => friendId);
       return await this.prisma.activity.findMany({
         where: { user_id: { in: [...ids, id] }, isPublic: true },
         orderBy: { date: 'desc' },
+        skip: Number(page) * Number(take),
+        take: Number(take),
         select: {
           description: true,
           title: true,

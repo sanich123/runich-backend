@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Delete, Patch } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Delete, Patch, Query } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
 import { ParamsId } from 'src/app/params-validation';
@@ -50,13 +50,17 @@ export class ActivityController {
     return await this.activityService.getActivitesByUserId(id);
   }
 
-  @Get(`${id}/all`)
+  @Get(`${id}/all?`)
   @ApiOperation({ summary: 'Get activities by userId and friends ids' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getAllActivitiesWithFriends(@Param() { id }: ParamsId) {
-    return await this.activityService.getAllActivitiesWithFriends(id);
+  async getAllActivitiesWithFriends(
+    @Param() { id }: ParamsId,
+    @Query('page') page: string,
+    @Query('take') take: string,
+  ) {
+    return await this.activityService.getAllActivitiesWithFriends(id, page, take);
   }
 
   @Get(`/activityId/${id}`)
