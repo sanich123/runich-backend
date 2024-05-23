@@ -2,17 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { ActivityDto } from './activity.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
-import { FriendService } from 'src/friend/friend.service';
 import { AccountService } from 'src/account/account.service';
 import { blurhashFromURL } from 'blurhash-from-url';
 
 @Injectable()
 export class ActivityService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly friendsService: FriendService,
-    private readonly accountService: AccountService,
-  ) {}
+  constructor(private readonly prisma: PrismaService, private readonly accountService: AccountService) {}
 
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
@@ -131,14 +126,13 @@ export class ActivityService {
   }
 
   async getAllActivitiesWithFriends(id: string, page = '0', take = '10') {
-    console.log(page, take);
     try {
       const friends = await this.prisma.friend.findMany({
         where: { user_id: id },
         select: { friendId: true },
       });
       const ids = friends.map(({ friendId }) => friendId);
-      return await this.prisma.activity.findMany({
+      const activities = await this.prisma.activity.findMany({
         where: { user_id: { in: [...ids, id] }, isPublic: true },
         orderBy: { date: 'desc' },
         skip: Number(page) * Number(take),
@@ -155,12 +149,18 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
           likes: true,
-          comments: true,
-          users: true,
-          profile: true,
         },
       });
+      return { activities, isLastPage: !activities.length };
     } catch (error) {
       prismaErrorHandling(error);
     }

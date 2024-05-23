@@ -10,4 +10,6 @@ export class LikeDto {
   @IsNotEmpty()
   @ApiProperty({ description: 'Author identificator', nullable: false, type: String })
   authorId: string;
+  action: 'dislike' | 'like';
+  likeId: string | null;
 }
