@@ -157,7 +157,16 @@ export class ActivityService {
               profilePhotoBlurhash: true,
             },
           },
-          likes: true,
+          likes: {
+            include: {
+              profile: true,
+            },
+          },
+          _count: {
+            select: {
+              comments: true,
+            },
+          },
         },
       });
       return { activities, isLastPage: !activities.length };
