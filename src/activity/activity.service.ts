@@ -85,12 +85,27 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
-          likes: true,
-          comments: true,
-          profile: true,
+          comments: {
+            include: {
+              profile: true,
+            },
+          },
           isPublic: true,
           emotion: true,
           kilometresSplit: true,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
+          likes: {
+            include: {
+              profile: true,
+            },
+          },
         },
       });
       return activity;
