@@ -125,16 +125,35 @@ export class ActivityService {
     }
   }
 
-  async getActivitesByUserId(id: string) {
+  async getActivitesByUserId(id: string, page = '0', take = '10') {
     try {
-      return await this.prisma.activity.findMany({
+      const activities = await this.prisma.activity.findMany({
         where: { user_id: id },
         orderBy: { date: 'desc' },
+        skip: Number(page) * Number(take),
+        take: Number(take),
         include: {
-          comments: true,
-          profile: true,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
+          likes: {
+            include: {
+              profile: true,
+            },
+          },
+          _count: {
+            select: {
+              comments: true,
+            },
+          },
         },
       });
+      return { activities, isLastPage: !activities.length };
     } catch (error) {
       prismaErrorHandling(error);
     }

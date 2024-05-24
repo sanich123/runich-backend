@@ -41,13 +41,13 @@ export class ActivityController {
     return await this.activityService.updateActivity(activity, id);
   }
 
-  @Get(id)
+  @Get(`${id}?`)
   @ApiOperation({ summary: 'Get activities by userId' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivitiesByUserId(@Param() { id }: ParamsId) {
-    return await this.activityService.getActivitesByUserId(id);
+  async getActivitiesByUserId(@Param() { id }: ParamsId, @Query('page') page: string, @Query('take') take: string) {
+    return await this.activityService.getActivitesByUserId(id, page, take);
   }
 
   @Get(`${id}/all?`)
