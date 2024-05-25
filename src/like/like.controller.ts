@@ -5,7 +5,7 @@ import { ParamsId } from 'src/app/params-validation';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
 
-const { like, id } = PATHS;
+const { like, id, activityId } = PATHS;
 const { CREATED, BAD_REQUEST, NO_CONTENT } = HttpStatus;
 
 @ApiTags(like)
@@ -14,7 +14,7 @@ export class LikeController {
   constructor(private readonly likeService: LikeService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create or delete like' })
+  @ApiOperation({ summary: 'Create like' })
   @ApiBody({ type: LikeDto })
   @ApiResponse({ status: CREATED, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
@@ -22,9 +22,9 @@ export class LikeController {
     return await this.likeService.addLike(likeDto);
   }
 
-  @Delete(id)
+  @Delete(`${id}/${activityId}`)
   @ApiOperation({ summary: 'Delete like' })
-  @ApiParam({ name: 'likeId', required: true, description: 'Like identifer' })
+  @ApiParam({ name: 'likeId activityId', required: true, description: 'Like identifer, activityId idetifer' })
   @ApiResponse({ status: NO_CONTENT, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   async deleteLike(@Param() { id }: ParamsId) {

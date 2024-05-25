@@ -8,6 +8,7 @@ export const PATHS = {
   like: 'like',
   user: 'user',
   id: ':id',
+  activityId: ':activityId',
 };
 
 export const MESSAGES = {

@@ -3,7 +3,7 @@ import { PrismaService } from 'nestjs-prisma';
 import { LikeDto } from './like.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
-import { sendEmail } from 'src/utils/email/email';
+// import { sendEmail } from 'src/utils/email/email';
 
 @Injectable()
 export class LikeService {
@@ -11,35 +11,35 @@ export class LikeService {
 
   async addLike({ authorId, activityId }: LikeDto) {
     try {
-      const activity = await this.prismaService.activity.findUnique({
-        where: { id: activityId },
-        select: {
-          users: {
-            select: {
-              email: true,
-            },
-          },
-          profile: {
-            select: {
-              id: true,
-              profilePhoto: true,
-              name: true,
-              emailNotifications: true,
-            },
-          },
-          mapPhotoUrl: true,
-        },
-      });
+      // const activity = await this.prismaService.activity.findUnique({
+      //   where: { id: activityId },
+      //   select: {
+      //     users: {
+      //       select: {
+      //         email: true,
+      //       },
+      //     },
+      //     profile: {
+      //       select: {
+      //         id: true,
+      //         profilePhoto: true,
+      //         name: true,
+      //         emailNotifications: true,
+      //       },
+      //     },
+      //     mapPhotoUrl: true,
+      //   },
+      // });
       const account = await this.accountService.getAccountByUserId(authorId);
-      if (activity.profile.emailNotifications && account) {
-        const receiverEmailAddress = activity.users?.email;
-        const subject = 'Лайк к активности';
-        const message = `<p>Уважаемый ${activity.profile.name}!</p>
-        <img src="${activity.profile.profilePhoto}"/>
-        <p>${activity.profile.name} только что лайкнул вашу активность!</p>
-        ${activity.mapPhotoUrl ? `<img src="${activity.mapPhotoUrl}" width="350px" height="200px"/>` : ''}`;
-        sendEmail([receiverEmailAddress], subject, message);
-      }
+      // if (activity.profile.emailNotifications && account) {
+      //   const receiverEmailAddress = activity.users?.email;
+      //   const subject = 'Лайк к активности';
+      //   const message = `<p>Уважаемый ${activity.profile.name}!</p>
+      //   <img src="${activity.profile.profilePhoto}"/>
+      //   <p>${activity.profile.name} только что лайкнул вашу активность!</p>
+      //   ${activity.mapPhotoUrl ? `<img src="${activity.mapPhotoUrl}" width="350px" height="200px"/>` : ''}`;
+      //   sendEmail([receiverEmailAddress], subject, message);
+      // }
 
       return await this.prismaService.like.create({
         data: {
