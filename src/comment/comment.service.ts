@@ -12,12 +12,8 @@ export class CommentService {
     try {
       return await this.prisma.comment.findMany({
         where: { activityId: id },
-        orderBy: {
-          date: 'asc',
-        },
-        include: {
-          profile: true,
-        },
+        orderBy: { date: 'asc' },
+        include: { profile: true },
       });
     } catch (error) {
       prismaErrorHandling(error);
@@ -42,14 +38,6 @@ export class CommentService {
 
   async createCommentLikeByCommentId({ commentId, authorId }: CommentLikeDto) {
     try {
-      // const like = await this.prisma.commentLike.findFirst({
-      //   where: { commentId, authorId },
-      // });
-      // if (like) {
-      //   return await this.prisma.commentLike.delete({
-      //     where: { id: like.id },
-      //   });
-      // }
       const account = await this.accountService.getAccountByUserId(authorId);
       return await this.prisma.commentLike.create({
         data: {
@@ -62,18 +50,14 @@ export class CommentService {
       prismaErrorHandling(error);
     }
   }
+
   async deleteCommentLikeByLikeId(id: string) {
-    return await this.prisma.commentLike.delete({
-      where: { id },
-    });
+    return await this.prisma.commentLike.delete({ where: { id } });
   }
+
   async getCommentLikesLengthByCommentId(id: string) {
     try {
-      return this.prisma.commentLike.findMany({
-        where: {
-          commentId: id,
-        },
-      });
+      return await this.prisma.commentLike.findMany({ where: { commentId: id } });
     } catch (error) {
       prismaErrorHandling(error);
     }
