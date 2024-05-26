@@ -52,7 +52,11 @@ export class CommentService {
   }
 
   async deleteCommentLikeByLikeId(id: string) {
-    return await this.prisma.commentLike.delete({ where: { id } });
+    try {
+      return await this.prisma.commentLike.delete({ where: { id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
   }
 
   async getCommentLikesLengthByCommentId(id: string) {

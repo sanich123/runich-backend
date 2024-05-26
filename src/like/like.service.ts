@@ -61,12 +61,8 @@ export class LikeService {
     try {
       return await this.prismaService.like.findMany({
         where: { activityId: id },
-        orderBy: {
-          date: 'desc',
-        },
-        include: {
-          profile: true,
-        },
+        orderBy: { date: 'desc' },
+        include: { profile: true },
       });
     } catch (error) {
       prismaErrorHandling(error);
