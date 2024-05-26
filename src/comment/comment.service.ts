@@ -42,14 +42,14 @@ export class CommentService {
 
   async createCommentLikeByCommentId({ commentId, authorId }: CommentLikeDto) {
     try {
-      const like = await this.prisma.commentLike.findFirst({
-        where: { commentId, authorId },
-      });
-      if (like) {
-        return await this.prisma.commentLike.delete({
-          where: { id: like.id },
-        });
-      }
+      // const like = await this.prisma.commentLike.findFirst({
+      //   where: { commentId, authorId },
+      // });
+      // if (like) {
+      //   return await this.prisma.commentLike.delete({
+      //     where: { id: like.id },
+      //   });
+      // }
       const account = await this.accountService.getAccountByUserId(authorId);
       return await this.prisma.commentLike.create({
         data: {
@@ -62,7 +62,11 @@ export class CommentService {
       prismaErrorHandling(error);
     }
   }
-
+  async deleteCommentLikeByLikeId(id: string) {
+    return await this.prisma.commentLike.delete({
+      where: { id },
+    });
+  }
   async getCommentLikesLengthByCommentId(id: string) {
     try {
       return this.prisma.commentLike.findMany({

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { ParamsId } from 'src/app/params-validation';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
@@ -6,7 +6,7 @@ import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/s
 import { PATHS } from 'src/utils/const';
 
 const { comment, id, like } = PATHS;
-const { OK, BAD_REQUEST, CREATED } = HttpStatus;
+const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
 
 @ApiTags(comment)
 @Controller(comment)
@@ -42,6 +42,16 @@ export class CommentController {
   @HttpCode(CREATED)
   async postCommentLikeWithCommentId(@Body() commentLikeDto: CommentLikeDto) {
     return await this.commentService.createCommentLikeByCommentId(commentLikeDto);
+  }
+
+  @Delete(`${id}/${like}`)
+  @ApiOperation({ summary: 'Delete like to comment by like id' })
+  @ApiParam({ name: 'likeId', required: true, description: 'CommentLike identifer' })
+  @ApiResponse({ status: NO_CONTENT, description: 'Success' })
+  @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
+  @HttpCode(NO_CONTENT)
+  async deleteCommentLikeWithLikeId(@Param() { id }: ParamsId) {
+    return await this.commentService.deleteCommentLikeByLikeId(id);
   }
 
   @Get(`${id}/${like}`)
