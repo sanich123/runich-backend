@@ -20,15 +20,15 @@ export class CommentService {
     }
   }
 
-  async createCommentByActivityId(commentDto: CommentDTO, id: string) {
-    const { authorId } = commentDto;
+  async createCommentByActivityId({ comment, authorId }: CommentDTO, id: string) {
     const account = await this.accountService.getAccountByUserId(authorId);
     try {
       return await this.prisma.comment.create({
         data: {
           profileId: account.id,
           activityId: id,
-          ...commentDto,
+          authorId,
+          comment,
         },
       });
     } catch (error) {
@@ -39,6 +39,17 @@ export class CommentService {
   async deleteCommentByCommentId(id: string) {
     try {
       return await this.prisma.comment.delete({ where: { id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async updateCommentByCommentId(comment: string, id: string) {
+    try {
+      return await this.prisma.comment.update({
+        where: { id },
+        data: { comment },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }

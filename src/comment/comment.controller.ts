@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { ParamsId } from 'src/app/params-validation';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
@@ -41,6 +41,16 @@ export class CommentController {
   @HttpCode(NO_CONTENT)
   async deleteCommentWithCommentId(@Param() { id }: ParamsId) {
     return await this.commentService.deleteCommentByCommentId(id);
+  }
+
+  @Patch(id)
+  @ApiOperation({ summary: 'Update comment by comment id' })
+  @ApiParam({ name: 'commentId', required: true, description: 'Comment identifer' })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiResponse({ status: CREATED, description: 'Success' })
+  @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
+  async updateCommentById(@Body() { comment }: { comment: string }, @Param() { id }) {
+    return await this.commentService.updateCommentByCommentId(comment, id);
   }
 
   @Post(`${id}/${like}`)
