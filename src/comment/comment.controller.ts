@@ -33,6 +33,16 @@ export class CommentController {
     return await this.commentService.createCommentByActivityId(commentDto, id);
   }
 
+  @Delete(id)
+  @ApiOperation({ summary: 'Delete comment by comment id' })
+  @ApiParam({ name: 'commentId', required: true, description: 'Comment identifer' })
+  @ApiResponse({ status: NO_CONTENT, description: 'Success' })
+  @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
+  @HttpCode(NO_CONTENT)
+  async deleteCommentWithCommentId(@Param() { id }: ParamsId) {
+    return await this.commentService.deleteCommentByCommentId(id);
+  }
+
   @Post(`${id}/${like}`)
   @ApiOperation({ summary: 'Post like to comment by comment id' })
   @ApiParam({ name: 'commentId', required: true, description: 'Activity identifer' })

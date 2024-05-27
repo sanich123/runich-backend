@@ -141,11 +141,6 @@ export class ActivityService {
               profilePhotoBlurhash: true,
             },
           },
-          likes: {
-            include: {
-              profile: true,
-            },
-          },
           _count: {
             select: {
               comments: true,
@@ -189,11 +184,6 @@ export class ActivityService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
-            },
-          },
-          likes: {
-            include: {
-              profile: true,
             },
           },
           _count: {

@@ -36,6 +36,14 @@ export class CommentService {
     }
   }
 
+  async deleteCommentByCommentId(id: string) {
+    try {
+      return await this.prisma.comment.delete({ where: { id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
   async createCommentLikeByCommentId({ commentId, authorId }: CommentLikeDto) {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
