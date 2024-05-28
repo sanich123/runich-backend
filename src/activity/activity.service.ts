@@ -85,11 +85,6 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
-          comments: {
-            include: {
-              profile: true,
-            },
-          },
           isPublic: true,
           emotion: true,
           kilometresSplit: true,
@@ -101,9 +96,9 @@ export class ActivityService {
               profilePhotoBlurhash: true,
             },
           },
-          likes: {
-            include: {
-              profile: true,
+          _count: {
+            select: {
+              comments: true,
             },
           },
         },

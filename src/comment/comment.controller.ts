@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { ParamsId } from 'src/app/params-validation';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
@@ -13,13 +13,22 @@ const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
-  @Get(id)
+  @Get(`${id}?`)
   @ApiOperation({ summary: 'Get comments by activity id' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getCommentsByActivityId(@Param() { id }: ParamsId) {
-    return await this.commentService.getCommentsbyActivityId(id);
+  async getCommentsByActivityId(@Param() { id }: ParamsId, @Query('take') take: string) {
+    return await this.commentService.getCommentsbyActivityId(id, take);
+  }
+
+  @Get(`${id}/count`)
+  @ApiOperation({ summary: 'Get comments length by activity id' })
+  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
+  @ApiResponse({ status: OK, description: 'Success' })
+  @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
+  async getCommentsLengthByActivityId(@Param() { id }: ParamsId) {
+    return await this.commentService.getCommentsLengthbyActivityId(id);
   }
 
   @Post(id)

@@ -8,13 +8,32 @@ import { AccountService } from 'src/account/account.service';
 export class CommentService {
   constructor(private readonly prisma: PrismaService, private readonly accountService: AccountService) {}
 
-  async getCommentsbyActivityId(id: string) {
+  async getCommentsbyActivityId(id: string, take: string) {
     try {
-      return await this.prisma.comment.findMany({
+      const filtredComments = await this.prisma.comment.findMany({
         where: { activityId: id },
-        orderBy: { date: 'asc' },
-        include: { profile: true },
+        orderBy: { date: 'desc' },
+        include: {
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
+        },
+        take: Number(take),
       });
+      return { comments: filtredComments, isLastPage: filtredComments.length };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async getCommentsLengthbyActivityId(id: string) {
+    try {
+      return await this.prisma.comment.count({ where: { activityId: id } });
     } catch (error) {
       prismaErrorHandling(error);
     }
