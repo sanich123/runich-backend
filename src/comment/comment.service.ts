@@ -22,7 +22,11 @@ export class CommentService {
               profilePhotoBlurhash: true,
             },
           },
-          commentLike: true,
+          commentLike: {
+            select: {
+              authorId: true,
+            },
+          },
         },
         take: Number(take),
       });
@@ -99,7 +103,7 @@ export class CommentService {
 
   async getCommentLikesLengthByCommentId(id: string) {
     try {
-      return await this.prisma.commentLike.findMany({ where: { commentId: id } });
+      return await this.prisma.commentLike.findMany({ where: { commentId: id }, select: { authorId: true, id: true } });
     } catch (error) {
       prismaErrorHandling(error);
     }
