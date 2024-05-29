@@ -25,6 +25,7 @@ export class CommentService {
           commentLike: {
             select: {
               authorId: true,
+              id: true,
             },
           },
         },
