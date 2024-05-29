@@ -10,7 +10,7 @@ export class CommentService {
 
   async getCommentsbyActivityId(id: string, take: string) {
     try {
-      const filtredComments = await this.prisma.comment.findMany({
+      return await this.prisma.comment.findMany({
         where: { activityId: id },
         orderBy: { date: 'desc' },
         include: {
@@ -22,10 +22,10 @@ export class CommentService {
               profilePhotoBlurhash: true,
             },
           },
+          commentLike: true,
         },
         take: Number(take),
       });
-      return { comments: filtredComments, isLastPage: filtredComments.length };
     } catch (error) {
       prismaErrorHandling(error);
     }
