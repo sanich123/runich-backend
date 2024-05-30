@@ -26,7 +26,7 @@ export class ActivityService {
           user_id: id,
           profileId: account.id,
           ...activityDto,
-          photoVideoUrls: photoVideoUrlsWithBlurhash || [],
+          photoVideoUrls: photoVideoUrlsWithBlurhash || null,
           mapPhotoUrlBlurhash,
         },
       });
@@ -109,12 +109,17 @@ export class ActivityService {
     }
   }
 
-  async getMedia(id: string) {
+  async getMedia(id: string, page, take) {
     try {
-      return await this.prisma.activity.findMany({
-        where: { user_id: id },
+      const photos = await this.prisma.activity.findMany({
+        where: { user_id: id, photoVideoUrls: { not: null } },
+        skip: Number(page) * Number(take),
+        take: Number(take),
+        orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
       });
+      const flattedPhotos = photos?.map(({ photoVideoUrls }) => photoVideoUrls).flat();
+      return { photos: flattedPhotos, isLastPage: !photos?.length };
     } catch (error) {
       prismaErrorHandling(error);
     }

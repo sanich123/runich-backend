@@ -12,12 +12,12 @@ const { activity, id } = PATHS;
 export class ActivityController {
   constructor(private readonly activityService: ActivityService) {}
 
-  @Get(`${id}/photos`)
+  @Get(`${id}/photos?`)
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getMedia(@Param() { id }: ParamsId) {
-    return this.activityService.getMedia(id);
+  async getMedia(@Param() { id }: ParamsId, @Query('page') page: string, @Query('take') take: string) {
+    return this.activityService.getMedia(id, page, take);
   }
 
   @Get(`${id}/locations`)
