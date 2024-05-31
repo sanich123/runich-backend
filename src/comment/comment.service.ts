@@ -8,15 +8,51 @@ import { AccountService } from 'src/account/account.service';
 export class CommentService {
   constructor(private readonly prisma: PrismaService, private readonly accountService: AccountService) {}
 
-  async getCommentsbyActivityId(id: string) {
+  async getCommentsbyActivityId(id: string, take: string) {
     try {
       return await this.prisma.comment.findMany({
         where: { activityId: id },
-        orderBy: {
-          date: 'asc',
-        },
+        orderBy: { date: 'desc' },
         include: {
-          profile: true,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
+          commentLike: {
+            select: {
+              authorId: true,
+              id: true,
+            },
+          },
+        },
+        take: Number(take),
+      });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async getCommentsLengthbyActivityId(id: string) {
+    try {
+      return await this.prisma.comment.count({ where: { activityId: id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async createCommentByActivityId({ comment, authorId }: CommentDTO, id: string) {
+    const account = await this.accountService.getAccountByUserId(authorId);
+    try {
+      return await this.prisma.comment.create({
+        data: {
+          profileId: account.id,
+          activityId: id,
+          authorId,
+          comment,
         },
       });
     } catch (error) {
@@ -24,16 +60,19 @@ export class CommentService {
     }
   }
 
-  async createCommentByActivityId(commentDto: CommentDTO, id: string) {
-    const { authorId } = commentDto;
-    const account = await this.accountService.getAccountByUserId(authorId);
+  async deleteCommentByCommentId(id: string) {
     try {
-      return await this.prisma.comment.create({
-        data: {
-          profileId: account.id,
-          activityId: id,
-          ...commentDto,
-        },
+      return await this.prisma.comment.delete({ where: { id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async updateCommentByCommentId(comment: string, id: string) {
+    try {
+      return await this.prisma.comment.update({
+        where: { id },
+        data: { comment },
       });
     } catch (error) {
       prismaErrorHandling(error);
@@ -42,14 +81,6 @@ export class CommentService {
 
   async createCommentLikeByCommentId({ commentId, authorId }: CommentLikeDto) {
     try {
-      const like = await this.prisma.commentLike.findFirst({
-        where: { commentId, authorId },
-      });
-      if (like) {
-        return await this.prisma.commentLike.delete({
-          where: { id: like.id },
-        });
-      }
       const account = await this.accountService.getAccountByUserId(authorId);
       return await this.prisma.commentLike.create({
         data: {
@@ -63,13 +94,17 @@ export class CommentService {
     }
   }
 
+  async deleteCommentLikeByLikeId(id: string) {
+    try {
+      return await this.prisma.commentLike.delete({ where: { id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
   async getCommentLikesLengthByCommentId(id: string) {
     try {
-      return this.prisma.commentLike.findMany({
-        where: {
-          commentId: id,
-        },
-      });
+      return await this.prisma.commentLike.findMany({ where: { commentId: id }, select: { authorId: true, id: true } });
     } catch (error) {
       prismaErrorHandling(error);
     }

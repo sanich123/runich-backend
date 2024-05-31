@@ -2,17 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { ActivityDto } from './activity.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
-import { FriendService } from 'src/friend/friend.service';
 import { AccountService } from 'src/account/account.service';
 import { blurhashFromURL } from 'blurhash-from-url';
 
 @Injectable()
 export class ActivityService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly friendsService: FriendService,
-    private readonly accountService: AccountService,
-  ) {}
+  constructor(private readonly prisma: PrismaService, private readonly accountService: AccountService) {}
 
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
@@ -31,7 +26,7 @@ export class ActivityService {
           user_id: id,
           profileId: account.id,
           ...activityDto,
-          photoVideoUrls: photoVideoUrlsWithBlurhash || [],
+          photoVideoUrls: photoVideoUrlsWithBlurhash || null,
           mapPhotoUrlBlurhash,
         },
       });
@@ -90,12 +85,22 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
-          likes: true,
-          comments: true,
-          profile: true,
           isPublic: true,
           emotion: true,
           kilometresSplit: true,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
+          _count: {
+            select: {
+              comments: true,
+            },
+          },
         },
       });
       return activity;
@@ -104,39 +109,63 @@ export class ActivityService {
     }
   }
 
-  async getMedia(id: string) {
+  async getMedia(id: string, page, take) {
     try {
-      return await this.prisma.activity.findMany({
-        where: { user_id: id },
+      const photos = await this.prisma.activity.findMany({
+        where: { user_id: id, photoVideoUrls: { not: null } },
+        skip: Number(page) * Number(take),
+        take: Number(take),
+        orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
       });
+      const flattedPhotos = photos?.map(({ photoVideoUrls }) => photoVideoUrls).flat();
+      return { photos: flattedPhotos, isLastPage: !photos?.length };
     } catch (error) {
       prismaErrorHandling(error);
     }
   }
 
-  async getActivitesByUserId(id: string) {
+  async getActivitesByUserId(id: string, page = '0', take = '10') {
     try {
-      return await this.prisma.activity.findMany({
+      const activities = await this.prisma.activity.findMany({
         where: { user_id: id },
         orderBy: { date: 'desc' },
+        skip: Number(page) * Number(take),
+        take: Number(take),
         include: {
-          comments: true,
-          profile: true,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
+          _count: {
+            select: {
+              comments: true,
+            },
+          },
         },
       });
+      return { activities, isLastPage: !activities.length };
     } catch (error) {
       prismaErrorHandling(error);
     }
   }
 
-  async getAllActivitiesWithFriends(id: string) {
+  async getAllActivitiesWithFriends(id: string, page = '0', take = '10') {
     try {
-      const friends = await this.friendsService.getFriendsById(id);
+      const friends = await this.prisma.friend.findMany({
+        where: { user_id: id },
+        select: { friendId: true },
+      });
       const ids = friends.map(({ friendId }) => friendId);
-      return await this.prisma.activity.findMany({
+      const activities = await this.prisma.activity.findMany({
         where: { user_id: { in: [...ids, id] }, isPublic: true },
         orderBy: { date: 'desc' },
+        skip: Number(page) * Number(take),
+        take: Number(take),
         select: {
           description: true,
           title: true,
@@ -149,12 +178,22 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
-          likes: true,
-          comments: true,
-          users: true,
-          profile: true,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
+          _count: {
+            select: {
+              comments: true,
+            },
+          },
         },
       });
+      return { activities, isLastPage: !activities.length };
     } catch (error) {
       prismaErrorHandling(error);
     }

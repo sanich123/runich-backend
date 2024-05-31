@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Delete, Patch } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Delete, Patch, Query } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
 import { ParamsId } from 'src/app/params-validation';
@@ -12,12 +12,12 @@ const { activity, id } = PATHS;
 export class ActivityController {
   constructor(private readonly activityService: ActivityService) {}
 
-  @Get(`${id}/photos`)
+  @Get(`${id}/photos?`)
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getMedia(@Param() { id }: ParamsId) {
-    return this.activityService.getMedia(id);
+  async getMedia(@Param() { id }: ParamsId, @Query('page') page: string, @Query('take') take: string) {
+    return this.activityService.getMedia(id, page, take);
   }
 
   @Get(`${id}/locations`)
@@ -41,22 +41,26 @@ export class ActivityController {
     return await this.activityService.updateActivity(activity, id);
   }
 
-  @Get(id)
+  @Get(`${id}?`)
   @ApiOperation({ summary: 'Get activities by userId' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivitiesByUserId(@Param() { id }: ParamsId) {
-    return await this.activityService.getActivitesByUserId(id);
+  async getActivitiesByUserId(@Param() { id }: ParamsId, @Query('page') page: string, @Query('take') take: string) {
+    return await this.activityService.getActivitesByUserId(id, page, take);
   }
 
-  @Get(`${id}/all`)
+  @Get(`${id}/all?`)
   @ApiOperation({ summary: 'Get activities by userId and friends ids' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getAllActivitiesWithFriends(@Param() { id }: ParamsId) {
-    return await this.activityService.getAllActivitiesWithFriends(id);
+  async getAllActivitiesWithFriends(
+    @Param() { id }: ParamsId,
+    @Query('page') page: string,
+    @Query('take') take: string,
+  ) {
+    return await this.activityService.getAllActivitiesWithFriends(id, page, take);
   }
 
   @Get(`/activityId/${id}`)
