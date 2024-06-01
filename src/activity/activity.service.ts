@@ -59,7 +59,7 @@ export class ActivityService {
     }
   }
 
-  async getLocations(id: string) {
+  async getLocationsByActivityId(id: string) {
     return await this.prisma.activity.findUnique({
       where: { id },
       select: {
@@ -109,17 +109,16 @@ export class ActivityService {
     }
   }
 
-  async getMedia(id: string, page, take) {
+  async getMediaByUserId(id: string, take) {
     try {
       const photos = await this.prisma.activity.findMany({
         where: { user_id: id, photoVideoUrls: { not: null } },
-        skip: Number(page) * Number(take),
         take: Number(take),
         orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
       });
       const flattedPhotos = photos?.map(({ photoVideoUrls }) => photoVideoUrls).flat();
-      return { photos: flattedPhotos, isLastPage: !photos?.length };
+      return { photos: flattedPhotos };
     } catch (error) {
       prismaErrorHandling(error);
     }

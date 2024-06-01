@@ -16,13 +16,13 @@ export class ActivityController {
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getMedia(@Param() { id }: ParamsId, @Query('page') page: string, @Query('take') take: string) {
-    return this.activityService.getMedia(id, page, take);
+  async getMediaByUserId(@Param() { id }: ParamsId, @Query('take') take: string) {
+    return this.activityService.getMediaByUserId(id, take);
   }
 
   @Get(`${id}/locations`)
-  async getLocations(@Param() { id }: ParamsId) {
-    return this.activityService.getLocations(id);
+  async getLocationsByActivityId(@Param() { id }: ParamsId) {
+    return this.activityService.getLocationsByActivityId(id);
   }
 
   @Post(id)
