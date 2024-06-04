@@ -117,7 +117,7 @@ export class ActivityService {
         select: { photoVideoUrls: true },
       });
       const flattedPhotos = photos?.map(({ photoVideoUrls }) => photoVideoUrls).flat();
-      const slicedPhotos = flattedPhotos?.slice(0, Number(take)).slice(0, Number(take));
+      const slicedPhotos = flattedPhotos?.slice(0, Number(take));
       return { photos: slicedPhotos, isLastPage: flattedPhotos?.length <= slicedPhotos?.length };
     } catch (error) {
       prismaErrorHandling(error);
