@@ -14,6 +14,7 @@ export interface Filtering {
 
 export const FilteringParams = createParamDecorator((data, ctx: ExecutionContext): Filtering => {
   const req: Request = ctx.switchToHttp().getRequest();
+
   const filterDto = req.query;
   if (!filterDto) return null;
 

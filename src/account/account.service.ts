@@ -36,8 +36,8 @@ export class AccountService {
           OR: [
             { name: { contains: filter.name } },
             { name: { contains: filter.surname } },
-            { email: { contains: filter.name } },
-            { email: { equals: filter.email } },
+            { email: { contains: filter.email } },
+
             { city: { contains: filter.city } },
             { gender: { equals: filter.gender } },
             { sport: { equals: filter.sport } },
@@ -46,13 +46,14 @@ export class AccountService {
         skip: offset,
         take: limit,
       });
+
       if ((page === 0 && profiles.length === limit) || page !== 0) {
         const count = await this.prisma.profile.count({
           where: {
             OR: [
               { name: { contains: filter.name } },
               { name: { contains: filter.surname } },
-              { email: { contains: filter.name } },
+              { email: { contains: filter.email } },
               { email: { equals: filter.email } },
               { city: { contains: filter.city } },
               { gender: { equals: filter.gender } },
