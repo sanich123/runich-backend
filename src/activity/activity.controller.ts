@@ -16,7 +16,6 @@ export class ActivityController {
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-
   async getMediaByUserId(@Param() { id }: ParamsId, @Query('take') take: string) {
     return this.activityService.getMediaByUserId(id, take);
   }

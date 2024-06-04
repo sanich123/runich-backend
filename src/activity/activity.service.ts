@@ -113,12 +113,12 @@ export class ActivityService {
     try {
       const photos = await this.prisma.activity.findMany({
         where: { user_id: id, photoVideoUrls: { not: null } },
-        take: Number(take),
         orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
       });
       const flattedPhotos = photos?.map(({ photoVideoUrls }) => photoVideoUrls).flat();
-      return { photos: flattedPhotos };
+      const slicedPhotos = flattedPhotos?.slice(0, Number(take)).slice(0, Number(take));
+      return { photos: slicedPhotos, isLastPage: flattedPhotos?.length <= slicedPhotos?.length };
     } catch (error) {
       prismaErrorHandling(error);
     }
