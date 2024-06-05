@@ -30,17 +30,17 @@ export class AccountService {
   }
 
   async getFilteredAccounts({ page, limit, size, offset }: Pagination, filter: Filtering) {
+    const { name, surname, email, city, gender, sport } = filter;
     try {
       const profiles = await this.prisma.profile.findMany({
         where: {
           OR: [
-            { name: { contains: filter.name } },
-            { name: { contains: filter.surname } },
-            { email: { contains: filter.email } },
-
-            { city: { contains: filter.city } },
-            { gender: { equals: filter.gender } },
-            { sport: { equals: filter.sport } },
+            { name: { contains: name, mode: 'insensitive' } },
+            { name: { contains: surname, mode: 'insensitive' } },
+            { email: { contains: email, mode: 'insensitive' } },
+            { city: { contains: city, mode: 'insensitive' } },
+            { gender: { equals: gender, mode: 'insensitive' } },
+            { sport: { equals: sport, mode: 'insensitive' } },
           ],
         },
         skip: offset,
@@ -51,13 +51,12 @@ export class AccountService {
         const count = await this.prisma.profile.count({
           where: {
             OR: [
-              { name: { contains: filter.name } },
-              { name: { contains: filter.surname } },
-              { email: { contains: filter.email } },
-              { email: { equals: filter.email } },
-              { city: { contains: filter.city } },
-              { gender: { equals: filter.gender } },
-              { sport: { equals: filter.sport } },
+              { name: { contains: name, mode: 'insensitive' } },
+              { name: { contains: surname, mode: 'insensitive' } },
+              { email: { contains: email, mode: 'insensitive' } },
+              { city: { contains: city, mode: 'insensitive' } },
+              { gender: { equals: gender, mode: 'insensitive' } },
+              { sport: { equals: sport, mode: 'insensitive' } },
             ],
           },
         });
