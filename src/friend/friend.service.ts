@@ -13,7 +13,14 @@ export class FriendService {
       return await this.prismaService.friend.findMany({
         where: { user_id: id },
         include: {
-          profile: true,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
         },
       });
     } catch (error) {
