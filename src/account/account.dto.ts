@@ -27,4 +27,5 @@ export class ProfileDto {
   @ApiPropertyOptional({ type: String, description: 'birthday value (optional)' })
   weight?: string | null;
   emailNotifications: boolean;
+  email: string;
 }

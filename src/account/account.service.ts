@@ -79,12 +79,13 @@ export class AccountService {
     }
   }
 
-  async updateProfileInfo({ emailNotifications }: ProfileDto, id: string) {
+  async updateProfileInfo({ emailNotifications, email }: ProfileDto, id: string) {
     try {
       return await this.prisma.profile.update({
         where: { id },
         data: {
           emailNotifications,
+          email,
         },
       });
     } catch (error) {
