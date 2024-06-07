@@ -28,10 +28,9 @@ export class FriendService {
     }
   }
 
-  async deleteFriendById(id: string, userId: string) {
+  async deleteFriendById(id: string) {
     try {
-      const friend = await this.prismaService.friend.findFirst({ where: { user_id: userId, friendId: id } });
-      return await this.prismaService.friend.delete({ where: { id: friend?.id } });
+      return await this.prismaService.friend.delete({ where: { id } });
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -44,7 +43,14 @@ export class FriendService {
         include: {
           users: {
             include: {
-              profile: true,
+              profile: {
+                select: {
+                  surname: true,
+                  name: true,
+                  profilePhoto: true,
+                  profilePhotoBlurhash: true,
+                },
+              },
             },
           },
         },
