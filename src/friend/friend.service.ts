@@ -8,7 +8,7 @@ import { AccountService } from 'src/account/account.service';
 export class FriendService {
   constructor(private readonly prismaService: PrismaService, private readonly accountService: AccountService) {}
 
-  async getFriendsById(id: string) {
+  async getUsersYouFollowByUserId(id: string) {
     try {
       return await this.prismaService.friend.findMany({
         where: { user_id: id },

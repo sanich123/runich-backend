@@ -18,8 +18,8 @@ export class FriendController {
   @ApiParam({ name: 'userId', required: true, description: 'Whos friends userId' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getFriendsById(@Param() { id }: ParamsId) {
-    return await this.friendService.getFriendsById(id);
+  async getUsersYouFollowByUserId(@Param() { id }: ParamsId) {
+    return await this.friendService.getUsersYouFollowByUserId(id);
   }
 
   @Delete(id)
