@@ -53,9 +53,11 @@ export class PognaliService {
             });
           }),
         );
+
         const flattedItems = tripItemsByRegion.flat();
+
         let result = [];
-        for (let i = 0; i < tripItemsByRegion.length; i++) {
+        for (let i = 0; i < flattedItems.length; i++) {
           let idsCards = Array.from(new Set(flattedItems.map(({ id }) => id)));
           if (idsCards.includes(flattedItems[i].id)) {
             result.push(flattedItems[i]);
