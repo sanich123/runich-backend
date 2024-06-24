@@ -53,7 +53,16 @@ export class PognaliService {
             });
           }),
         );
-        return tripItemsByRegion.flat();
+        const flattedItems = tripItemsByRegion.flat();
+        let result = [];
+        for (let i = 0; i < tripItemsByRegion.length; i++) {
+          let idsCards = Array.from(new Set(flattedItems.map(({ id }) => id)));
+          if (idsCards.includes(flattedItems[i].id)) {
+            result.push(flattedItems[i]);
+            idsCards = idsCards.filter((id) => id !== flattedItems[i].id);
+          }
+        }
+        return result;
       }
     } catch (error) {
       prismaErrorHandling(error);
