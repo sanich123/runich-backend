@@ -5,10 +5,11 @@ import { CommentModule } from 'src/comment/comment.module';
 import { LikeModule } from 'src/like/like.module';
 
 import LoggingService from 'src/logger/logger.middleware';
+import { PognaliModule } from 'src/pognali/pognali.module';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { UserModule } from 'src/user/user.module';
 
-@Module({ imports: [AccountModule, UserModule, PrismaModule, ActivityModule, CommentModule, LikeModule] })
+@Module({ imports: [AccountModule, UserModule, PrismaModule, ActivityModule, CommentModule, LikeModule, PognaliModule] })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(LoggingService).forRoutes('*');
