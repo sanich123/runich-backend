@@ -30,18 +30,32 @@ export class PognaliService {
   }) {
     try {
       if (!country && !regions) {
-        return await this.prisma.tripItem.findMany({
+        const length = await this.prisma.tripItem.count();
+        const tripItems = await this.prisma.tripItem.findMany({
           orderBy: { date: 'desc' },
+          skip: Number(page) * Number(take),
+          take: Number(take),
         });
+        return { tripItems, length: length };
       } else if (country) {
-        return await this.prisma.tripItem.findMany({
-          orderBy: { date: 'desc' },
+        const length = await this.prisma.tripItem.count({
           where: {
             countryNames: {
               has: `${country}`,
             },
           },
         });
+        const tripItems = await this.prisma.tripItem.findMany({
+          orderBy: { date: 'desc' },
+          skip: Number(page) * Number(take),
+          take: Number(take),
+          where: {
+            countryNames: {
+              has: `${country}`,
+            },
+          },
+        });
+        return { tripItems, length: length };
       } else {
         const tripItemsByRegion = await Promise.all(
           [...regions].map(async (region: string) => {
@@ -64,7 +78,7 @@ export class PognaliService {
             idsCards = idsCards.filter((id) => id !== flattedItems[i].id);
           }
         }
-        return result;
+        return { tripItems: result.slice(Number(page), Number(take)), length: result.length };
       }
     } catch (error) {
       prismaErrorHandling(error);
