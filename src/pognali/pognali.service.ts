@@ -29,7 +29,7 @@ export class PognaliService {
     take: string;
   }) {
     try {
-      if ((!country && !regions) || regions.length === 5) {
+      if ((!country && !regions) || regions?.length === 5) {
         const length = await this.prisma.tripItem.count();
         const tripItems = await this.prisma.tripItem.findMany({
           orderBy: { date: 'desc' },
@@ -38,6 +38,7 @@ export class PognaliService {
         });
         return { tripItems, length: length };
       } else if (country) {
+        console.log(country);
         const length = await this.prisma.tripItem.count({
           where: {
             countryNames: {
