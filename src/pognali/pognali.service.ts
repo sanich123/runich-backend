@@ -29,7 +29,7 @@ export class PognaliService {
     take: string;
   }) {
     try {
-      if (!country && !regions) {
+      if ((!country && !regions) || regions.length === 5) {
         const length = await this.prisma.tripItem.count();
         const tripItems = await this.prisma.tripItem.findMany({
           orderBy: { date: 'desc' },
@@ -57,28 +57,63 @@ export class PognaliService {
         });
         return { tripItems, length: length };
       } else {
-        const tripItemsByRegion = await Promise.all(
-          [...regions].map(async (region: string) => {
-            return await this.prisma.tripItem.findMany({
-              orderBy: { date: 'desc' },
-              where: {
-                region: { has: region },
-              },
-            });
-          }),
-        );
+        if (regions.length > 2) {
+          const firstCoupleOfRegions = await Promise.all(
+            [...regions.slice(0, 2)].map(async (region: string) => {
+              return await this.prisma.tripItem.findMany({
+                orderBy: { date: 'desc' },
+                where: {
+                  region: { has: region },
+                },
+              });
+            }),
+          );
+          const otherCoupleOfRegions = await Promise.all(
+            [...regions.slice(2)].map(async (region: string) => {
+              return await this.prisma.tripItem.findMany({
+                orderBy: { date: 'desc' },
+                where: {
+                  region: { has: region },
+                },
+              });
+            }),
+          );
+          const flattedItems = [...firstCoupleOfRegions, ...otherCoupleOfRegions].flat();
 
-        const flattedItems = tripItemsByRegion.flat();
-
-        let result = [];
-        for (let i = 0; i < flattedItems.length; i++) {
-          let idsCards = Array.from(new Set(flattedItems.map(({ id }) => id)));
-          if (idsCards.includes(flattedItems[i].id)) {
-            result.push(flattedItems[i]);
-            idsCards = idsCards.filter((id) => id !== flattedItems[i].id);
+          let result = [];
+          for (let i = 0; i < flattedItems.length; i++) {
+            let idsCards = Array.from(new Set(flattedItems.map(({ id }) => id)));
+            if (idsCards.includes(flattedItems[i].id)) {
+              result.push(flattedItems[i]);
+              idsCards = idsCards.filter((id) => id !== flattedItems[i].id);
+            }
           }
+          const from = Number(page) * Number(take);
+          return { tripItems: result.slice(from, from + 4), length: result.length };
+        } else {
+          const filteredRegions = await Promise.all(
+            [...regions].map(async (region: string) => {
+              return await this.prisma.tripItem.findMany({
+                orderBy: { date: 'desc' },
+                where: {
+                  region: { has: region },
+                },
+              });
+            }),
+          );
+          const flattedItems = [...filteredRegions].flat();
+
+          let result = [];
+          for (let i = 0; i < flattedItems.length; i++) {
+            let idsCards = Array.from(new Set(flattedItems.map(({ id }) => id)));
+            if (idsCards.includes(flattedItems[i].id)) {
+              result.push(flattedItems[i]);
+              idsCards = idsCards.filter((id) => id !== flattedItems[i].id);
+            }
+          }
+          const from = Number(page) * Number(take);
+          return { tripItems: result.slice(from, from + 4), length: result.length };
         }
-        return { tripItems: result.slice(Number(page), Number(take)), length: result.length };
       }
     } catch (error) {
       prismaErrorHandling(error);
