@@ -36,9 +36,8 @@ export class PognaliService {
           skip: Number(page) * Number(take),
           take: Number(take),
         });
-        return { tripItems, length: length };
+        return { tripItems, length};
       } else if (country) {
-        console.log(country);
         const length = await this.prisma.tripItem.count({
           where: {
             countryNames: {
