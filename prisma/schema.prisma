@@ -397,21 +397,21 @@ model CommentLike {
 }
 
 model TripItem {
-    id    String   @id @default(uuid())
-    date  DateTime @default(now())
-    hashTags String[]
-    companions Int?
-    duration Int?
-    kidsEnabled Boolean?
-    dates DateTime[]
-    selectedCountries Json?
-    randomUserPath String
-    countryNames String[]
-    region String[]
-    name String
-    gender String
-
-    @@schema("public")
+  id                String     @id @default(uuid())
+  date              DateTime   @default(now())
+  hashTags          String[]
+  companions        Int?
+  kidsEnabled       Boolean?
+  dates             DateTime[]
+  selectedCountries Json?
+  randomUserPath    String
+  countryNames      String[]
+  region            String[]
+  name              String
+  gender            String
+  duration          Int?
+  clientId          String?
+  @@schema("public")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

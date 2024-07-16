@@ -14,6 +14,6 @@ export class TravelInfo {
 
   @IsNotEmpty()
   name: string;
-
+  clientId: string;
   gender: string;
 }
