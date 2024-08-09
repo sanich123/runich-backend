@@ -411,6 +411,7 @@ model TripItem {
   gender            String
   duration          Int?
   clientId          String?
+
   @@schema("public")
 }
 
