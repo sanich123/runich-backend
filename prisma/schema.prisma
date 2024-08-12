@@ -46,7 +46,7 @@ model flow_state {
 }
 
 model schema_migrations {
-  version String @id @unique(map: "schema_migrations_version_idx") @db.VarChar(14)
+  version String @id @db.VarChar(255)
 
   @@schema("auth")
 }
@@ -101,6 +101,7 @@ model mfa_challenges {
   created_at  DateTime    @db.Timestamptz(6)
   verified_at DateTime?   @db.Timestamptz(6)
   ip_address  String      @db.Inet
+  otp_code    String?
   mfa_factors mfa_factors @relation(fields: [factor_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mfa_challenges_auth_factor_id_fkey")
 
   @@index([created_at(sort: Desc)], map: "mfa_challenge_created_at_idx")
@@ -117,10 +118,12 @@ model mfa_factors {
   created_at         DateTime         @db.Timestamptz(6)
   updated_at         DateTime         @db.Timestamptz(6)
   secret             String?
+  phone              String?          @unique
   last_challenged_at DateTime?        @unique @db.Timestamptz(6)
   mfa_challenges     mfa_challenges[]
   users              users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@unique([user_id, phone], map: "unique_verified_phone_factor")
   @@index([user_id, created_at], map: "factor_id_created_at_idx")
   @@index([user_id])
   @@schema("auth")
@@ -284,11 +287,11 @@ model users {
   activities                  Activity[]
   friends                     Friend[]
   profile                     Profile?
-
   @@index([instance_id])
   @@index([is_anonymous])
   @@schema("auth")
 }
+
 
 model Profile {
   id                   String        @id @default(uuid())
@@ -458,6 +461,7 @@ enum factor_status {
 enum factor_type {
   totp
   webauthn
+  phone
 
   @@schema("auth")
 }
