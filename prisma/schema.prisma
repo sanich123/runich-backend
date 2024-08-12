@@ -287,11 +287,11 @@ model users {
   activities                  Activity[]
   friends                     Friend[]
   profile                     Profile?
+
   @@index([instance_id])
   @@index([is_anonymous])
   @@schema("auth")
 }
-
 
 model Profile {
   id                   String        @id @default(uuid())
