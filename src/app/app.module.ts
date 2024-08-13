@@ -1,15 +1,18 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
-import { AccountModule } from 'src/account/account.module';
+
+import LoggingService from 'src/logger/logger.middleware';
+
+import { PrismaModule } from 'src/prisma/prisma.module';
+import { UserModule } from 'src/user/user.module';
 import { ActivityModule } from 'src/activity/activity.module';
+import { FriendModule } from 'src/friend/friend.module';
+import { AccountModule } from 'src/account/account.module';
 import { CommentModule } from 'src/comment/comment.module';
 import { LikeModule } from 'src/like/like.module';
 
-import LoggingService from 'src/logger/logger.middleware';
-import { PognaliModule } from 'src/pognali/pognali.module';
-import { PrismaModule } from 'src/prisma/prisma.module';
-import { UserModule } from 'src/user/user.module';
-
-@Module({ imports: [AccountModule, UserModule, PrismaModule, ActivityModule, CommentModule, LikeModule, PognaliModule] })
+@Module({
+  imports: [UserModule, PrismaModule, ActivityModule, FriendModule, AccountModule, CommentModule, LikeModule],
+})
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(LoggingService).forRoutes('*');

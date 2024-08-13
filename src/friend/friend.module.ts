@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from 'nestjs-prisma';
 import { FriendController } from './friend.controller';
 import { FriendService } from './friend.service';
-import { AccountModule } from 'src/account/account.module';
+import { AccountModule } from '../account/account.module';
 
 @Module({
   imports: [PrismaModule, AccountModule],
