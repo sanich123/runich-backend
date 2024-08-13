@@ -294,23 +294,23 @@ model users {
 }
 
 model Profile {
-  id                   String        @id @default(uuid())
+  created_at           DateTime      @default(now()) @db.Timestamptz(6)
   name                 String?
   user_id              String        @unique @db.Uuid
   bio                  String?
-  birthday             DateTime?
+  birthday             DateTime?     @db.Date
   city                 String?
-  createdAt            DateTime      @default(now())
   gender               String?
   profilePhoto         String?
   sport                String?
   surname              String?
-  updatedAt            DateTime      @default(now())
+  updatedAt            DateTime?     @db.Timestamptz(6)
   weight               String?
   email                String?
   language             String?
-  emailNotifications   Boolean       @default(true)
+  emailNotifications   Boolean?      @default(false)
   profilePhotoBlurhash String?
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   activities           Activity[]
   comments             Comment[]
   commentLikes         CommentLike[]
@@ -321,21 +321,7 @@ model Profile {
   @@schema("public")
 }
 
-model Friend {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user_id   String   @db.Uuid
-  friendId  String
-  profileId String
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users     users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
 model Activity {
-  id                  String    @id @default(uuid())
   date                DateTime  @default(now())
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -349,11 +335,12 @@ model Activity {
   sport               String?
   title               String?
   kilometresSplit     Json?
-  profileId           String
   mapPhotoUrl         String?
   photoVideoUrls      Json?
   isPublic            Boolean   @default(true)
   mapPhotoUrlBlurhash String?
+  profileId           String    @db.Uuid
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   profile             Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   comments            Comment[]
@@ -362,59 +349,53 @@ model Activity {
   @@schema("public")
 }
 
+model Friend {
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user_id   String   @db.Uuid
+  friendId  String   @db.Uuid
+  profileId String   @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users     users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
 model Comment {
-  id          String        @id @default(uuid())
   date        DateTime      @default(now())
-  activityId  String
   comment     String
   authorId    String
-  profileId   String
-  activity    Activity      @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activityId  String        @db.Uuid
+  profileId   String        @db.Uuid
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activity    Activity      @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   profile     Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   commentLike CommentLike[]
 
   @@schema("public")
 }
 
-model Like {
-  id         String   @id @default(uuid())
-  date       DateTime @default(now())
-  activityId String
-  authorId   String
-  profileId  String
-  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
 model CommentLike {
-  id        String   @id @default(uuid())
   date      DateTime @default(now())
-  commentId String
   authorId  String
-  profileId String
-  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId String   @db.Uuid
+  profileId String   @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }
 
-model TripItem {
-  id                String     @id @default(uuid())
-  date              DateTime   @default(now())
-  hashTags          String[]
-  companions        Int?
-  kidsEnabled       Boolean?
-  dates             DateTime[]
-  selectedCountries Json?
-  randomUserPath    String
-  countryNames      String[]
-  region            String[]
-  name              String
-  gender            String
-  duration          Int?
-  clientId          String?
+model Like {
+  date       DateTime @default(now())
+  authorId   String
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activityId String   @db.Uuid
+  profileId  String   @db.Uuid
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }

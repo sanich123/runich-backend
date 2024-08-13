@@ -1,8 +1,8 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ParamsId } from 'src/app/params-validation';
 import { UserService } from './user.service';
-import { ProfileDto } from 'src/account/account.dto';
+import { ProfileDto } from './user.dto';
 
 @Controller('/user')
 export class UserController {
@@ -15,11 +15,32 @@ export class UserController {
     return await this.userService.getAllUsers();
   }
 
+  @Get(':id/profile')
+  @HttpCode(HttpStatus.OK)
+  async getProfileByUserId(@Param() { id }: ParamsId) {
+    return await this.userService.getProfileByUserId(id);
+  }
+
   @Post(':id/profile')
-  @ApiCreatedResponse({ description: 'Upsert user profile' })
+  @ApiCreatedResponse({ description: 'Create user profile' })
   @ApiBody({ type: ProfileDto })
   @HttpCode(HttpStatus.CREATED)
-  async upsertAccountByUserId(@Param() { id }: ParamsId, @Body() accountDto: ProfileDto) {
-    return await this.userService.upsertAccountByUserId(id, accountDto);
+  async createProfileByUserId(@Param() { id }: ParamsId, @Body() accountDto: ProfileDto) {
+    return await this.userService.createProfileByUserId(id, accountDto);
+  }
+
+  @Patch(':id/profile')
+  @ApiCreatedResponse({ description: 'Update user profile' })
+  @ApiBody({ type: ProfileDto })
+  @HttpCode(HttpStatus.OK)
+  async updateProfileByProfileId(@Param() { id }: ParamsId, @Body() accountDto: ProfileDto) {
+    return await this.userService.updateProfileByProfileId(id, accountDto);
+  }
+
+  @Delete(':id')
+  @ApiCreatedResponse({ description: 'Delete user account' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteUserByUserId(@Param() { id }: ParamsId) {
+    return await this.userService.deleteUserByUserId(id);
   }
 }
