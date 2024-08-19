@@ -326,18 +326,18 @@ model Activity {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   description         String?
-  distance            Int?
+  distance            Int
   duration            Int
   emotion             String?
-  locations           Json
+  locations           Json?
   user_id             String    @db.Uuid
   speed               Int
-  sport               String?
+  sport               String
   title               String?
   kilometresSplit     Json?
   mapPhotoUrl         String?
   photoVideoUrls      Json?
-  isPublic            Boolean   @default(true)
+  isPublic            Boolean?  @default(true)
   mapPhotoUrlBlurhash String?
   profileId           String    @db.Uuid
   id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
