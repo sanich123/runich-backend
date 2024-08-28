@@ -65,8 +65,8 @@
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
     "@we-gold/gpxjs": "^1.0.11",
+    "adm-zip": "^0.5.15",
     "cross-env": "^7.0.3",
-    "decompress": "^4.2.1",
     "eslint": "^8.0.1",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
@@ -106,5 +106,6 @@
   },
   "engines": {
     "node": ">=16"
-  }
+  },
+  "packageManager": "yarn@1.2.22"
 }

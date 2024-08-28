@@ -19,10 +19,7 @@ import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-
-const zlib = require('node:zlib');
-const fs = require('fs');
-const { pipeline } = require('node:stream');
+import * as AdmZip from 'adm-zip';
 
 const { activity, id } = PATHS;
 
@@ -58,6 +55,8 @@ export class ActivityController {
   @HttpCode(HttpStatus.CREATED)
   async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File) {
     console.log(file);
+    const zip = new AdmZip(file.path);
+    zip.extractAllTo('dist/migration');
   }
 
   @Post(id)
