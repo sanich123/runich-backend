@@ -20,6 +20,12 @@ import { PATHS } from 'src/utils/const';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as AdmZip from 'adm-zip';
+import { readFileParseGpx } from 'src/utils/parsers/parse-gpx';
+import { parseCsvToJson } from 'src/utils/parsers/parse-csv';
+import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
+import { createGunzip } from 'zlib';
+import { createReadStream, createWriteStream } from 'fs';
+import { readFile } from 'fs/promises';
 
 const { activity, id } = PATHS;
 
@@ -54,9 +60,32 @@ export class ActivityController {
   )
   @HttpCode(HttpStatus.CREATED)
   async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File) {
-    console.log(file);
-    const zip = new AdmZip(file.path);
-    zip.extractAllTo('dist/migration');
+    unzipTransferArchive(file.path);
+    const activities = await parseCsvToJson();
+
+    const mappedActivities = await Promise.all(
+      activities.map(async (activity) => {
+        const locations = await readFileParseGpx(activity.Filename);
+        return {
+          date: activity.ActivityDate,
+          title: activity.ActivityName,
+          sport: activity.ActivityType,
+          description: activity.ActivityDescription,
+          duration: activity.ElapsedTime,
+          distance: activity.Distance,
+          locations,
+        };
+      }),
+    );
+    console.log(mappedActivities);
+    // readFileParseGpx('activities/4033303911.gpx');
+    // const gunzip = createGunzip();
+    // const input = createReadStream('dist/migration/archiveToSend/activities/4876800522.gpx.gz');
+    // const output = createWriteStream('dist/migration/archiveToSend/activities/4876800522.gpx');
+    // input
+    //   .pipe(gunzip)
+    //   .pipe(output)
+    //   .on('finish', async () => readFileParseGpx('activities/4876800522.gpx'));
   }
 
   @Post(id)
