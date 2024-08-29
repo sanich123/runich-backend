@@ -25,7 +25,7 @@ export async function mapActivitiesWithGpxTcxFitData(
             await ungzipFile(`dist/migration/${activity['Filename']}`, `dist/migration/${fileNameWithoutGz}`);
             locations = await readFileParseGpx(fileNameWithoutGz);
           }
-          console.log('Обрабатываем ', i, ' активность');
+          console.log('Обрабатываем активность номер', i);
           return {
             date: activity['Activity Date'],
             title: activity['Activity Name'],

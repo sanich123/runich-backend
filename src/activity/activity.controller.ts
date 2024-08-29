@@ -58,8 +58,8 @@ export class ActivityController {
   async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File) {
     unzipTransferArchive(file.path);
     const activities = await parseCsvFileIntoArray();
-    const mappedActivities = await mapActivitiesWithGpxTcxFitData(activities.slice(0, 10));
-    console.log(mappedActivities.slice(0, 10));
+    const mappedActivities = await mapActivitiesWithGpxTcxFitData(activities);
+    console.log(mappedActivities.slice(0, 5));
   }
 
   @Post(id)
