@@ -2636,6 +2636,11 @@ assert-plus@1.0.0, assert-plus@^1.0.0:
   resolved "https://registry.yarnpkg.com/assert-plus/-/assert-plus-1.0.0.tgz#f12e0f3c5d77b0b1cdd9146942e4e96c1e4dd525"
   integrity sha512-NfJ4UzBCcQGLDlQq7nHxH+tv3kyZ0hHQqF5BO6J7tNJeP5do1llPr8dZ8zHonfhAu0PHAdMkSo+8o0wxg9lZWw==
 
+async-gzip-gunzip@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/async-gzip-gunzip/-/async-gzip-gunzip-1.0.2.tgz#809fb8e130080abcbca6e01554afaf0ef70be875"
+  integrity sha512-qMOqG4I0DeIMT4I6+H+kct1Qn4Xw4yBp8NdLZlBLaUcYrqA/l4tfWecNt1BUQybpdDz1dcLyE8sqVTbE+K1CBQ==
+
 asynckit@^0.4.0:
   version "0.4.0"
   resolved "https://registry.npmjs.org/asynckit/-/asynckit-0.4.0.tgz"
@@ -5737,6 +5742,11 @@ node-fetch@^2.6.1, node-fetch@^2.6.7:
   integrity sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==
   dependencies:
     whatwg-url "^5.0.0"
+
+node-gzip@^1.1.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/node-gzip/-/node-gzip-1.1.2.tgz#245bd171b31ce7c7f50fc4cd0ca7195534359afb"
+  integrity sha512-ZB6zWpfZHGtxZnPMrJSKHVPrRjURoUzaDbLFj3VO70mpLTW5np96vXyHwft4Id0o+PYIzgDkBUjIzaNHhQ8srw==
 
 node-int64@^0.4.0:
   version "0.4.0"

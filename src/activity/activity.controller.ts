@@ -26,7 +26,8 @@ import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
 import { createGunzip } from 'zlib';
 import { createReadStream, createWriteStream } from 'fs';
 import { readFile } from 'fs/promises';
-
+const { gzip, ungzip } = require('node-gzip');
+const asyncGunzip = require('async-gzip-gunzip').asyncGunzip;
 const { activity, id } = PATHS;
 
 @ApiTags(activity)
@@ -62,22 +63,25 @@ export class ActivityController {
   async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File) {
     unzipTransferArchive(file.path);
     const activities = await parseCsvToJson();
-
-    const mappedActivities = await Promise.all(
-      activities.map(async (activity) => {
-        const locations = await readFileParseGpx(activity.Filename);
-        return {
-          date: activity.ActivityDate,
-          title: activity.ActivityName,
-          sport: activity.ActivityType,
-          description: activity.ActivityDescription,
-          duration: activity.ElapsedTime,
-          distance: activity.Distance,
-          locations,
-        };
-      }),
-    );
-    console.log(mappedActivities);
+    const decompressed = await asyncGunzip('dist/migration/archiveToSend/activities/4876800522.gpx.gz');
+    console.log(decompressed);
+    // const decompressed = await ungzip('dist/migration/archiveToSend/activities/4876800522.gpx.gz');
+    // console.log(decompressed);
+    // const mappedActivities = await Promise.all(
+    //   activities.map(async (activity) => {
+    //     const locations = await readFileParseGpx(activity.Filename);
+    //     return {
+    //       date: activity.ActivityDate,
+    //       title: activity.ActivityName,
+    //       sport: activity.ActivityType,
+    //       description: activity.ActivityDescription,
+    //       duration: activity.ElapsedTime,
+    //       distance: activity.Distance,
+    //       locations,
+    //     };
+    //   }),
+    // );
+    // console.log(mappedActivities);
     // readFileParseGpx('activities/4033303911.gpx');
     // const gunzip = createGunzip();
     // const input = createReadStream('dist/migration/archiveToSend/activities/4876800522.gpx.gz');
