@@ -19,15 +19,10 @@ import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import * as AdmZip from 'adm-zip';
-import { readFileParseGpx } from 'src/utils/parsers/parse-gpx';
-import { parseCsvToJson } from 'src/utils/parsers/parse-csv';
+import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
-import { createGunzip } from 'zlib';
-import { createReadStream, createWriteStream } from 'fs';
-import { readFile } from 'fs/promises';
-const { gzip, ungzip } = require('node-gzip');
-const asyncGunzip = require('async-gzip-gunzip').asyncGunzip;
+import { mapActivitiesWithGpxTcxFitData } from 'src/utils/parsers/map-activities-with-gpx-tcx-fit-files';
+
 const { activity, id } = PATHS;
 
 @ApiTags(activity)
@@ -52,7 +47,7 @@ export class ActivityController {
   @UseInterceptors(
     FileInterceptor('archive', {
       storage: diskStorage({
-        destination: 'public/migration',
+        destination: 'dist/migration/receivedArchive',
         filename: (req, file, cb) => {
           cb(null, file.originalname);
         },
@@ -62,34 +57,9 @@ export class ActivityController {
   @HttpCode(HttpStatus.CREATED)
   async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File) {
     unzipTransferArchive(file.path);
-    const activities = await parseCsvToJson();
-    const decompressed = await asyncGunzip('dist/migration/archiveToSend/activities/4876800522.gpx.gz');
-    console.log(decompressed);
-    // const decompressed = await ungzip('dist/migration/archiveToSend/activities/4876800522.gpx.gz');
-    // console.log(decompressed);
-    // const mappedActivities = await Promise.all(
-    //   activities.map(async (activity) => {
-    //     const locations = await readFileParseGpx(activity.Filename);
-    //     return {
-    //       date: activity.ActivityDate,
-    //       title: activity.ActivityName,
-    //       sport: activity.ActivityType,
-    //       description: activity.ActivityDescription,
-    //       duration: activity.ElapsedTime,
-    //       distance: activity.Distance,
-    //       locations,
-    //     };
-    //   }),
-    // );
-    // console.log(mappedActivities);
-    // readFileParseGpx('activities/4033303911.gpx');
-    // const gunzip = createGunzip();
-    // const input = createReadStream('dist/migration/archiveToSend/activities/4876800522.gpx.gz');
-    // const output = createWriteStream('dist/migration/archiveToSend/activities/4876800522.gpx');
-    // input
-    //   .pipe(gunzip)
-    //   .pipe(output)
-    //   .on('finish', async () => readFileParseGpx('activities/4876800522.gpx'));
+    const activities = await parseCsvFileIntoArray();
+    const mappedActivities = await mapActivitiesWithGpxTcxFitData(activities.slice(0, 10));
+    console.log(mappedActivities.slice(0, 10));
   }
 
   @Post(id)
