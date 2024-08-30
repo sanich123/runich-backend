@@ -12,6 +12,7 @@ export async function mapActivitiesWithGpxTcxFitData(
     'Elapsed Time': number;
     Distance: number;
   }[],
+  userId: string,
 ) {
   try {
     return await Promise.all(
@@ -34,6 +35,7 @@ export async function mapActivitiesWithGpxTcxFitData(
             duration: activity['Elapsed Time'],
             distance: activity.Distance,
             locations,
+            user_id: userId,
           };
         }
       }),

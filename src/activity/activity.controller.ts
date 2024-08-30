@@ -22,7 +22,7 @@ import { diskStorage } from 'multer';
 import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
 import { mapActivitiesWithGpxTcxFitData } from 'src/utils/parsers/map-activities-with-gpx-tcx-fit-files';
-
+import { rm } from 'fs/promises';
 const { activity, id } = PATHS;
 
 @ApiTags(activity)
@@ -43,7 +43,7 @@ export class ActivityController {
     return this.activityService.getLocationsByActivityId(id);
   }
 
-  @Post('migration-strava')
+  @Post('migration-strava/:id')
   @UseInterceptors(
     FileInterceptor('archive', {
       storage: diskStorage({
@@ -55,11 +55,13 @@ export class ActivityController {
     }),
   )
   @HttpCode(HttpStatus.CREATED)
-  async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File) {
-    unzipTransferArchive(file.path);
+  async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File, @Param() { id }: ParamsId) {
+    console.log(file, 'userId', id);
+    await unzipTransferArchive(file.path);
     const activities = await parseCsvFileIntoArray();
-    const mappedActivities = await mapActivitiesWithGpxTcxFitData(activities);
-    console.log(mappedActivities.slice(0, 5));
+    const mappedActivities = await mapActivitiesWithGpxTcxFitData(activities.slice(0, 100), id);
+    console.log(mappedActivities.slice(0, 10));
+    await rm('dist/migration', { recursive: true });
   }
 
   @Post(id)
