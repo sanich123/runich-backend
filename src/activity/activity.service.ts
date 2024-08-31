@@ -43,8 +43,7 @@ export class ActivityService {
     try {
       const account = await this.accountService.getAccountByUserId(userId);
       const data = activities.map((activity) => ({ ...activity, profileId: account.id, user_id: userId }));
-      console.log(data);
-      // return await this.prisma.activity.createMany({ data });
+      return await this.prisma.activity.createMany({ data });
     } catch (error) {
       prismaErrorHandling(error);
     }

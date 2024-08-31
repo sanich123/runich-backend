@@ -33,9 +33,9 @@ export async function mapActivitiesWithGpxTcxFitData(
           const distance = Number(activity.Distance);
 
           return {
-            date: new Date(activity['Activity Date']).toString(),
+            date: new Date(activity['Activity Date']).toISOString(),
             title: activity['Activity Name'],
-            sport: activity['Activity Type'],
+            sport: activity['Activity Type'].toLowerCase(),
             description: activity['Activity Description'],
             duration,
             distance,
