@@ -1,6 +1,8 @@
 import { extname } from 'path';
 import { readFileParseGpx } from './parse-gpx';
 import { ungzipFile } from './ungzip';
+import { getMapBoxImage } from './get-mapbox-image';
+import { getSpeedInMinsInKm } from './get-speed';
 
 export async function mapActivitiesWithGpxTcxFitData(
   parsedActivities: {
@@ -27,15 +29,20 @@ export async function mapActivitiesWithGpxTcxFitData(
             locations = await readFileParseGpx(fileNameWithoutGz);
           }
           console.log('Обрабатываем активность номер', i);
+          const duration = Number(activity['Elapsed Time']) * 1000;
+          const distance = Number(activity.Distance);
+
           return {
-            date: activity['Activity Date'],
+            date: new Date(activity['Activity Date']).toString(),
             title: activity['Activity Name'],
             sport: activity['Activity Type'],
             description: activity['Activity Description'],
-            duration: activity['Elapsed Time'],
-            distance: activity.Distance,
+            duration,
+            distance,
+            speed: getSpeedInMinsInKm(distance, duration).paceAsNumber,
             locations,
             user_id: userId,
+            mapPhotoUrl: getMapBoxImage(locations),
           };
         }
       }),

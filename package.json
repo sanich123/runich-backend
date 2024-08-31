@@ -53,6 +53,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "@mapbox/polyline": "^1.2.1",
     "@nestjs/schematics": "^10",
     "@nestjs/testing": "^10",
     "@types/bcrypt": "^5.0.0",
@@ -70,9 +71,11 @@
     "eslint": "^8.0.1",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
+    "import": "^0.0.6",
     "jest": "^27.2.5",
     "js-yaml": "^4.1.0",
     "node-gzip": "^1.1.2",
+    "polyline": "^0.2.0",
     "prettier": "^2.3.2",
     "prisma": "^5.19.0",
     "source-map-support": "^0.5.20",

@@ -59,9 +59,9 @@ export class ActivityController {
     console.log(file, 'userId', id);
     await unzipTransferArchive(file.path);
     const activities = await parseCsvFileIntoArray();
-    const mappedActivities = await mapActivitiesWithGpxTcxFitData(activities.slice(0, 100), id);
-    console.log(mappedActivities.slice(0, 10));
+    const mappedActivities = await mapActivitiesWithGpxTcxFitData(activities.slice(0, 3), id);
     await rm('dist/migration', { recursive: true });
+    return await this.activityService.createActivitiesFromMigrationArchive(mappedActivities, id);
   }
 
   @Post(id)
