@@ -22,7 +22,6 @@ import { diskStorage } from 'multer';
 import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
 import { mapActivitiesWithCoordinates } from 'src/utils/parsers/map-activities-with-coordinates';
-import { rm } from 'fs/promises';
 const { activity, id } = PATHS;
 
 @ApiTags(activity)
