@@ -47,7 +47,7 @@ export class ActivityController {
   @UseInterceptors(
     FileInterceptor('archive', {
       storage: diskStorage({
-        destination: 'dist/migration/receivedArchive',
+        destination: 'dist/receivedArchive',
         filename: (req, file, cb) => {
           cb(null, file.originalname);
         },
@@ -60,7 +60,6 @@ export class ActivityController {
     const parsedDataFromCsv = await parseCsvFileIntoArray();
     const activitiesWithCoordinates = await mapActivitiesWithCoordinates(parsedDataFromCsv, id);
     console.log(activitiesWithCoordinates);
-    await rm('dist/migration', { recursive: true });
     // return await this.activityService.createActivitiesFromMigrationArchive(mappedActivities, id);
   }
 
