@@ -4,6 +4,7 @@ import { ActivityDto } from './activity.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { blurhashFromURL } from 'blurhash-from-url';
+import { getMapBoxImage } from 'src/utils/parsers/get-mapbox-image';
 
 @Injectable()
 export class ActivityService {
@@ -16,6 +17,9 @@ export class ActivityService {
       let photoVideoUrlsWithBlurhash;
       if (activityDto?.photoVideoUrls.length) {
         photoVideoUrlsWithBlurhash = await this.getPhotoVideoUrlsWithBlurhash(activityDto.photoVideoUrls);
+      }
+      if (activityDto?.locations.length > 1) {
+        activityDto.mapPhotoUrl = getMapBoxImage(activityDto?.locations);
       }
       if (activityDto?.mapPhotoUrl) {
         const blurhash = await blurhashFromURL(activityDto.mapPhotoUrl, { size: 300 });
@@ -30,6 +34,16 @@ export class ActivityService {
           mapPhotoUrlBlurhash,
         },
       });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async createActivitiesFromMigrationArchive(activities: ActivityDto[], userId: string) {
+    try {
+      const account = await this.accountService.getAccountByUserId(userId);
+      const data = activities.map((activity) => ({ ...activity, profileId: account.id, user_id: userId }));
+      return await this.prisma.activity.createMany({ data });
     } catch (error) {
       prismaErrorHandling(error);
     }

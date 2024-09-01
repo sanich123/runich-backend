@@ -1,16 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
-type LocationObject = {
-  latitude: number;
-  longitude: number;
-  altitude?: number;
-  accuracy?: number;
-  altitudeAccuracy?: number;
-  heading?: number;
-  speed: number;
-  timestamp: number;
-  mocked?: boolean;
+export type LocationObject = {
+  coords: {
+    latitude: number;
+    longitude: number;
+    altitude?: number;
+    accuracy?: number;
+    altitudeAccuracy?: number;
+    heading?: number;
+    speed: number;
+    timestamp: number;
+    mocked?: boolean;
+  };
 };
 
 export class ActivityDto {
@@ -57,7 +59,7 @@ export class ActivityDto {
   @ApiPropertyOptional({ isArray: true, description: 'Photo video urls value' })
   @IsOptional()
   @IsArray()
-  photoVideoUrls: { url: string; thumbnail: string | null; blurhash?: string }[];
+  photoVideoUrls?: { url: string; thumbnail: string | null; blurhash?: string }[];
 
   @ApiPropertyOptional({ description: 'Image of map with points of activity' })
   @IsOptional()
@@ -82,7 +84,7 @@ export class ActivityDto {
   @ApiPropertyOptional({ type: Array, description: 'Km splits' })
   @IsArray()
   @IsOptional()
-  kilometresSplit: {
+  kilometresSplit?: {
     lastKilometerDuration: number;
     lastKilometerAltitude: number;
     kilometerPoint: LocationObject;

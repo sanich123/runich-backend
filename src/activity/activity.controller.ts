@@ -1,10 +1,27 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Delete, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Delete,
+  Patch,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
 import { ParamsId } from 'src/app/params-validation';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
-
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
+import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
+import { mapActivitiesWithCoordinates } from 'src/utils/parsers/map-activities-with-coordinates';
 const { activity, id } = PATHS;
 
 @ApiTags(activity)
@@ -23,6 +40,25 @@ export class ActivityController {
   @Get(`${id}/locations`)
   async getLocationsByActivityId(@Param() { id }: ParamsId) {
     return this.activityService.getLocationsByActivityId(id);
+  }
+
+  @Post('migration-strava/:id')
+  @UseInterceptors(
+    FileInterceptor('archive', {
+      storage: diskStorage({
+        destination: 'dist/receivedArchive',
+        filename: (req, file, cb) => {
+          cb(null, file.originalname);
+        },
+      }),
+    }),
+  )
+  @HttpCode(HttpStatus.CREATED)
+  async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File, @Param() { id }: ParamsId) {
+    await unzipTransferArchive(file.path);
+    const parsedDataFromCsv = await parseCsvFileIntoArray();
+    const activitiesWithCoordinates = await mapActivitiesWithCoordinates(parsedDataFromCsv, id);
+    return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates.slice(0, 10), id);
   }
 
   @Post(id)
