@@ -21,7 +21,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
-import { mapActivitiesWithGpxTcxFitData } from 'src/utils/parsers/map-activities-with-gpx-tcx-fit-files';
+import { mapActivitiesWithCoordinates } from 'src/utils/parsers/map-activities-with-coordinates';
 import { rm } from 'fs/promises';
 const { activity, id } = PATHS;
 
@@ -56,12 +56,12 @@ export class ActivityController {
   )
   @HttpCode(HttpStatus.CREATED)
   async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File, @Param() { id }: ParamsId) {
-    console.log(file, 'userId', id);
     await unzipTransferArchive(file.path);
-    const activities = await parseCsvFileIntoArray();
-    const mappedActivities = await mapActivitiesWithGpxTcxFitData(activities.slice(0, 2), id);
+    const parsedDataFromCsv = await parseCsvFileIntoArray();
+    const activitiesWithCoordinates = await mapActivitiesWithCoordinates(parsedDataFromCsv, id);
+    console.log(activitiesWithCoordinates);
     await rm('dist/migration', { recursive: true });
-    return await this.activityService.createActivitiesFromMigrationArchive(mappedActivities, id);
+    // return await this.activityService.createActivitiesFromMigrationArchive(mappedActivities, id);
   }
 
   @Post(id)
