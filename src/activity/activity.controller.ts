@@ -58,8 +58,7 @@ export class ActivityController {
     await unzipTransferArchive(file.path);
     const parsedDataFromCsv = await parseCsvFileIntoArray();
     const activitiesWithCoordinates = await mapActivitiesWithCoordinates(parsedDataFromCsv, id);
-    console.log(activitiesWithCoordinates);
-    // return await this.activityService.createActivitiesFromMigrationArchive(mappedActivities, id);
+    return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates.slice(0, 10), id);
   }
 
   @Post(id)
