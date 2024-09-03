@@ -9,9 +9,19 @@ import { FriendModule } from 'src/friend/friend.module';
 import { AccountModule } from 'src/account/account.module';
 import { CommentModule } from 'src/comment/comment.module';
 import { LikeModule } from 'src/like/like.module';
+import { StatisticModule } from 'src/statistic/statistic.module';
 
 @Module({
-  imports: [UserModule, PrismaModule, ActivityModule, FriendModule, AccountModule, CommentModule, LikeModule],
+  imports: [
+    UserModule,
+    PrismaModule,
+    ActivityModule,
+    FriendModule,
+    AccountModule,
+    CommentModule,
+    LikeModule,
+    StatisticModule,
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

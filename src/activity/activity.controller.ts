@@ -65,6 +65,7 @@ export class ActivityController {
       userId: id,
       profileId: account.id,
     });
+
     return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates);
   }
 

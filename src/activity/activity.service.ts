@@ -6,6 +6,8 @@ import { AccountService } from 'src/account/account.service';
 import { blurhashFromURL } from 'blurhash-from-url';
 import { getMapBoxImage } from 'src/utils/parsers/get-mapbox-image';
 import { chunkArray } from 'src/utils/parsers/chunk-array';
+import { existsSync } from 'fs';
+import { rm } from 'fs/promises';
 
 @Injectable()
 export class ActivityService {
@@ -42,14 +44,19 @@ export class ActivityService {
 
   async createActivitiesFromMigrationArchive(activities: (ActivityDto & { user_id: string; profileId: string })[]) {
     try {
-      const chunkedActivities = chunkArray(activities, 50);
+      const chunkedActivities = chunkArray(activities, 100);
       await Promise.allSettled(
         chunkedActivities.map(async (activities) => {
-          console.log('Записываем 50 активностей');
+          console.log('Записываем 100 активностей');
           return await this.prisma.activity.createMany({ data: activities });
         }),
       );
-      console.timeLog('обработка архива');
+      if (existsSync('dist/migration')) {
+        await rm('dist/migration', { recursive: true });
+      }
+      if (existsSync('dist/receivedArchive')) {
+        await rm('dist/receivedArchive');
+      }
       return { success: true };
     } catch (error) {
       prismaErrorHandling(error);
@@ -172,6 +179,74 @@ export class ActivityService {
     } catch (error) {
       prismaErrorHandling(error);
     }
+  }
+
+  async getYearsAndTypesOfActivities(id: string) {
+    try {
+      const activities = await this.prisma.activity.findMany({ where: { user_id: id }, select: { date: true } });
+      const years = [...new Set(activities.map(({ date }) => date.getFullYear()))];
+      return await Promise.all(
+        years.map(async (year) => {
+          const types = await this.prisma.activity.findMany({
+            where: {
+              date: {
+                gte: new Date(year, 0, 1, 0, 0, 0),
+                lte: new Date(year, 11, 31, 23, 59, 59),
+              },
+            },
+            select: {
+              sport: true,
+            },
+          });
+          return { [year]: [...new Set(types.map(({ sport }) => sport))] };
+        }),
+      );
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async getYearStatisticWithMonthsByCategory(userId: string, year: string, month: string, category: string) {
+    try {
+      const findedActivities = await this.prisma.activity.findMany({
+        where: {
+          user_id: userId,
+          date: {
+            gte: new Date(+year, +month, 1, 0, 0, 0),
+            lte: new Date(+year, +month, 31, 23, 59, 59),
+          },
+          sport: category,
+        },
+        select: {
+          duration: true,
+          distance: true,
+          speed: true,
+        },
+      });
+      const { totalDistance, totalDuration, medianSpeed } = findedActivities.reduce(
+        (accum, { duration, distance, speed }) => {
+          accum.totalDistance += distance;
+          accum.totalDuration += duration;
+          accum.medianSpeed += speed;
+          return accum;
+        },
+        { totalDistance: 0, totalDuration: 0, medianSpeed: 0 },
+      );
+      return {
+        [year]: {
+          [category]: {
+            [month]: {
+              totalDistance,
+              totalDuration,
+              medianSpeed: Math.round(medianSpeed / findedActivities.length),
+            },
+          },
+        },
+      };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+    return { userId, year, month, category };
   }
 
   async getAllActivitiesWithFriends(id: string, page = '0', take = '10') {
