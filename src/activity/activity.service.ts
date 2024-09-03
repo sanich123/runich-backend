@@ -194,9 +194,7 @@ export class ActivityService {
                 lte: new Date(year, 11, 31, 23, 59, 59),
               },
             },
-            select: {
-              sport: true,
-            },
+            select: { sport: true },
           });
           return { [year]: [...new Set(types.map(({ sport }) => sport))] };
         }),
@@ -232,13 +230,15 @@ export class ActivityService {
         },
         { totalDistance: 0, totalDuration: 0, medianSpeed: 0 },
       );
+      const averageSpeed =
+        medianSpeed && findedActivities?.length ? Math.round(medianSpeed / findedActivities?.length) : 0;
       return {
         [year]: {
           [category]: {
             [month]: {
               totalDistance,
               totalDuration,
-              medianSpeed: Math.round(medianSpeed / findedActivities.length),
+              medianSpeed: averageSpeed,
             },
           },
         },
@@ -268,27 +268,52 @@ export class ActivityService {
               speed: true,
             },
           });
-          console.log(findedActivities);
-          const { totalDistance, totalDuration, medianSpeed } = findedActivities.reduce(
-            (accum, { duration, distance, speed }) => {
+
+          const { totalDistance, totalDuration } = findedActivities.reduce(
+            (accum, { duration, distance }) => {
               accum.totalDistance += distance;
               accum.totalDuration += duration;
-              accum.medianSpeed += speed;
               return accum;
             },
-            { totalDistance: 0, totalDuration: 0, medianSpeed: 0 },
+            { totalDistance: 0, totalDuration: 0 },
           );
+          const distanceInKm = Math.round(totalDistance / 1000);
+          const durationInHours = Math.round(totalDuration / 3600000);
           return {
             [month]: {
-              totalDistance,
-              totalDuration,
-              medianSpeed: Math.round(medianSpeed / findedActivities.length),
+              totalDistance: Math.round(totalDistance / 1000),
+              totalDuration: Math.round(totalDuration / 3600000),
+              medianSpeed: distanceInKm / durationInHours,
               items: findedActivities?.length,
             },
           };
         }),
       );
-      return { [year]: activitiesByMonth };
+      const { totalYearDuration, totalYearDistance, totalYearItems } = activitiesByMonth
+        .map((item, i) => item[i])
+        .reduce(
+          (acc, { totalDistance, totalDuration, items }) => {
+            acc.totalYearDuration += totalDuration;
+            acc.totalYearDistance += totalDistance;
+            acc.totalYearItems += items;
+            return acc;
+          },
+          {
+            totalYearDuration: 0,
+            totalYearDistance: 0,
+            totalYearItems: 0,
+          },
+        );
+      const averageYearSpeed = Math.round(totalYearDistance / totalYearDuration);
+      return {
+        [year]: {
+          totalYearDuration,
+          totalYearDistance,
+          totalYearItems,
+          totalMedianSpeed: averageYearSpeed,
+        },
+        months: activitiesByMonth,
+      };
     } catch (error) {
       prismaErrorHandling(error);
     }
