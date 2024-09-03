@@ -43,7 +43,7 @@ export class ActivityService {
   async createActivitiesFromMigrationArchive(activities: (ActivityDto & { user_id: string; profileId: string })[]) {
     try {
       const chunkedActivities = chunkArray(activities, 50);
-      await Promise.all(
+      await Promise.allSettled(
         chunkedActivities.map(async (activities) => {
           console.log('Записываем 50 активностей');
           return await this.prisma.activity.createMany({ data: activities });
