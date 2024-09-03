@@ -22,12 +22,13 @@ import { diskStorage } from 'multer';
 import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
 import { mapActivitiesWithCoordinates } from 'src/utils/parsers/map-activities-with-coordinates';
+import { AccountService } from 'src/account/account.service';
 const { activity, id } = PATHS;
 
 @ApiTags(activity)
 @Controller(activity)
 export class ActivityController {
-  constructor(private readonly activityService: ActivityService) {}
+  constructor(private readonly activityService: ActivityService, private readonly accountService: AccountService) {}
 
   @Get(`${id}/photos?`)
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
@@ -55,10 +56,16 @@ export class ActivityController {
   )
   @HttpCode(HttpStatus.CREATED)
   async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File, @Param() { id }: ParamsId) {
+    console.time('обработка архива');
     await unzipTransferArchive(file.path);
-    const parsedDataFromCsv = await parseCsvFileIntoArray();
-    const activitiesWithCoordinates = await mapActivitiesWithCoordinates(parsedDataFromCsv, id);
-    return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates, id);
+    const parsedActivities = await parseCsvFileIntoArray();
+    const account = await this.accountService.getAccountByUserId(id);
+    const activitiesWithCoordinates = await mapActivitiesWithCoordinates({
+      parsedActivities: parsedActivities,
+      userId: id,
+      profileId: account.id,
+    });
+    return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates);
   }
 
   @Post(id)

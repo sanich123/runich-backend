@@ -5,6 +5,7 @@ import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { blurhashFromURL } from 'blurhash-from-url';
 import { getMapBoxImage } from 'src/utils/parsers/get-mapbox-image';
+import { chunkArray } from 'src/utils/parsers/chunk-array';
 
 @Injectable()
 export class ActivityService {
@@ -39,11 +40,17 @@ export class ActivityService {
     }
   }
 
-  async createActivitiesFromMigrationArchive(activities: ActivityDto[], userId: string) {
+  async createActivitiesFromMigrationArchive(activities: (ActivityDto & { user_id: string; profileId: string })[]) {
     try {
-      const account = await this.accountService.getAccountByUserId(userId);
-      const data = activities.map((activity) => ({ ...activity, profileId: account.id, user_id: userId }));
-      return await this.prisma.activity.createManyAndReturn({ data, select: { date: true } });
+      const chunkedActivities = chunkArray(activities, 50);
+      await Promise.all(
+        chunkedActivities.map(async (activities) => {
+          console.log('Записываем 50 активностей');
+          return await this.prisma.activity.createMany({ data: activities });
+        }),
+      );
+      console.timeLog('обработка архива');
+      return { success: true };
     } catch (error) {
       prismaErrorHandling(error);
     }

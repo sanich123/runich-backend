@@ -4,10 +4,18 @@ import { ungzipFile } from './ungzip';
 import { getMapBoxImage } from './get-mapbox-image';
 import { getSpeedInMinsInKm } from './get-speed';
 import { Extensions, RawStravaCsvColumns } from './types';
-
-export async function mapActivitiesWithCoordinates(parsedActivities: RawStravaCsvColumns[], userId: string) {
+import { v4 } from 'uuid';
+export async function mapActivitiesWithCoordinates({
+  parsedActivities,
+  userId,
+  profileId,
+}: {
+  parsedActivities: RawStravaCsvColumns[];
+  userId: string;
+  profileId: string;
+}) {
   try {
-    return await Promise.all(
+    const results = await Promise.allSettled(
       parsedActivities.map(async (activity, i) => {
         let locations;
         let fileName = activity['Filename'];
@@ -38,6 +46,7 @@ export async function mapActivitiesWithCoordinates(parsedActivities: RawStravaCs
         const mapPhotoUrl = locations?.length > 1 ? getMapBoxImage(locations) : '';
 
         return {
+          id: v4(),
           date,
           title,
           sport,
@@ -48,9 +57,18 @@ export async function mapActivitiesWithCoordinates(parsedActivities: RawStravaCs
           locations,
           user_id: userId,
           mapPhotoUrl,
+          profileId,
         };
       }),
     );
+
+    return results
+      .filter(({ status }) => status === 'fulfilled')
+      .map((result) => {
+        if ('value' in result) {
+          return { ...result.value };
+        }
+      });
   } catch (error) {
     console.log('An error occured while mapping activities with coordinates', error);
   }
