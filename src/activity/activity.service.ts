@@ -249,6 +249,51 @@ export class ActivityService {
     return { userId, year, month, category };
   }
 
+  async getStatisticByYearAndCategory(userId: string, year: string, category: string) {
+    try {
+      const activitiesByMonth = await Promise.all(
+        [...Array(12).keys()].map(async (month) => {
+          const findedActivities = await this.prisma.activity.findMany({
+            where: {
+              user_id: userId,
+              date: {
+                gte: new Date(+year, month, 1, 0, 0, 0),
+                lte: new Date(+year, month, 31, 23, 59, 59),
+              },
+              sport: category,
+            },
+            select: {
+              duration: true,
+              distance: true,
+              speed: true,
+            },
+          });
+          console.log(findedActivities);
+          const { totalDistance, totalDuration, medianSpeed } = findedActivities.reduce(
+            (accum, { duration, distance, speed }) => {
+              accum.totalDistance += distance;
+              accum.totalDuration += duration;
+              accum.medianSpeed += speed;
+              return accum;
+            },
+            { totalDistance: 0, totalDuration: 0, medianSpeed: 0 },
+          );
+          return {
+            [month]: {
+              totalDistance,
+              totalDuration,
+              medianSpeed: Math.round(medianSpeed / findedActivities.length),
+              items: findedActivities?.length,
+            },
+          };
+        }),
+      );
+      return { [year]: activitiesByMonth };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
   async getAllActivitiesWithFriends(id: string, page = '0', take = '10') {
     try {
       const friends = await this.prisma.friend.findMany({

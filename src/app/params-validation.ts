@@ -14,7 +14,6 @@ export class MultipleParams {
   @IsNotEmpty()
   year: string;
 
-  @IsNotEmpty()
   month: string;
 
   @IsNotEmpty()
