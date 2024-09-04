@@ -8,6 +8,7 @@ import { getMapBoxImage } from 'src/utils/parsers/get-mapbox-image';
 import { chunkArray } from 'src/utils/parsers/chunk-array';
 import { existsSync } from 'fs';
 import { rm } from 'fs/promises';
+import { getReducedMetricsFromActivities, getYearMetricsFromActivities } from 'src/utils/statistics/reducers';
 
 @Injectable()
 export class ActivityService {
@@ -204,9 +205,9 @@ export class ActivityService {
     }
   }
 
-  async getYearStatisticWithMonthsByCategory(userId: string, year: string, month: string, category: string) {
+  async getActivitiesByYearMonthCategory(userId: string, year: string, month: string, category: string) {
     try {
-      const findedActivities = await this.prisma.activity.findMany({
+      return await this.prisma.activity.findMany({
         where: {
           user_id: userId,
           date: {
@@ -221,6 +222,13 @@ export class ActivityService {
           speed: true,
         },
       });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+  async getYearStatisticWithMonthsByCategory(userId: string, year: string, month: string, category: string) {
+    try {
+      const findedActivities = await this.getActivitiesByYearMonthCategory(userId, year, month, category);
       const { totalDistance, totalDuration, medianSpeed } = findedActivities.reduce(
         (accum, { duration, distance, speed }) => {
           accum.totalDistance += distance;
@@ -253,58 +261,22 @@ export class ActivityService {
     try {
       const activitiesByMonth = await Promise.all(
         [...Array(12).keys()].map(async (month) => {
-          const findedActivities = await this.prisma.activity.findMany({
-            where: {
-              user_id: userId,
-              date: {
-                gte: new Date(+year, month, 1, 0, 0, 0),
-                lte: new Date(+year, month, 31, 23, 59, 59),
-              },
-              sport: category,
-            },
-            select: {
-              duration: true,
-              distance: true,
-              speed: true,
-            },
-          });
-
-          const { totalDistance, totalDuration } = findedActivities.reduce(
-            (accum, { duration, distance }) => {
-              accum.totalDistance += distance;
-              accum.totalDuration += duration;
-              return accum;
-            },
-            { totalDistance: 0, totalDuration: 0 },
-          );
-          const distanceInKm = Math.round(totalDistance / 1000);
-          const durationInHours = Math.round(totalDuration / 3600000);
+          const findedActivities = await this.getActivitiesByYearMonthCategory(userId, year, `${month}`, category);
+          const { distanceInKm, durationInHours } = getReducedMetricsFromActivities(findedActivities);
           return {
             [month]: {
-              totalDistance: Math.round(totalDistance / 1000),
-              totalDuration: Math.round(totalDuration / 3600000),
+              totalDistance: distanceInKm,
+              totalDuration: durationInHours,
               medianSpeed: distanceInKm / durationInHours,
               items: findedActivities?.length,
             },
           };
         }),
       );
-      const { totalYearDuration, totalYearDistance, totalYearItems } = activitiesByMonth
-        .map((item, i) => item[i])
-        .reduce(
-          (acc, { totalDistance, totalDuration, items }) => {
-            acc.totalYearDuration += totalDuration;
-            acc.totalYearDistance += totalDistance;
-            acc.totalYearItems += items;
-            return acc;
-          },
-          {
-            totalYearDuration: 0,
-            totalYearDistance: 0,
-            totalYearItems: 0,
-          },
-        );
-      const averageYearSpeed = Math.round(totalYearDistance / totalYearDuration);
+      const { totalYearDuration, totalYearDistance, totalYearItems, averageYearSpeed } = getYearMetricsFromActivities(
+        activitiesByMonth.map((item, i) => item[i]),
+      );
+
       return {
         [year]: {
           totalYearDuration,

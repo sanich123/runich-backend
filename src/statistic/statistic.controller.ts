@@ -10,7 +10,7 @@ export class StatisticController {
   constructor(private readonly activityService: ActivityService) {}
 
   @Get(`${PATHS.id}`)
-  @ApiOperation({ summary: 'Gets all user activities' })
+  @ApiOperation({ summary: 'Gets available years and types of activities' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getYearsAndTypesOfActivities(@Param() { id }: ParamsId) {
@@ -18,7 +18,7 @@ export class StatisticController {
   }
 
   @Get(`${PATHS.id}/year-month-category/:year/:month/:category`)
-  @ApiOperation({ summary: 'Gets all user activities' })
+  @ApiOperation({ summary: 'Gets statistics about activities by year, month, category' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getYearStatisticWithMonthsByCategory(@Param() { id, year, month, category }: MultipleParams) {
@@ -26,7 +26,7 @@ export class StatisticController {
   }
 
   @Get(`${PATHS.id}/year-category/:year/:category`)
-  @ApiOperation({ summary: 'Gets all user activities' })
+  @ApiOperation({ summary: 'Gets all statistics by year and by months' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getYearStatisticByYearAndCategory(@Param() { id, year, category }: MultipleParams) {
