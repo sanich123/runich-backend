@@ -197,7 +197,7 @@ export class ActivityService {
             },
             select: { sport: true },
           });
-          return { [year]: [...new Set(types.map(({ sport }) => sport))] };
+          return { year, types: [...new Set(types.map(({ sport }) => sport))] };
         }),
       );
     } catch (error) {
