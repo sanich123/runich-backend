@@ -6,6 +6,7 @@ export class LikeDto {
   @IsNotEmpty()
   @ApiProperty({ description: 'activity identificator', nullable: false, type: String })
   activityId: string;
+
   @IsUUID()
   @IsNotEmpty()
   @ApiProperty({ description: 'Author identificator', nullable: false, type: String })

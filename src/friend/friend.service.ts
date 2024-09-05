@@ -8,18 +8,29 @@ import { AccountService } from 'src/account/account.service';
 export class FriendService {
   constructor(private readonly prismaService: PrismaService, private readonly accountService: AccountService) {}
 
-  async getFriendsById(id: string) {
+  async getUsersYouFollowByUserId(id: string) {
     try {
-      return await this.prismaService.friend.findMany({ where: { user_id: id } });
+      return await this.prismaService.friend.findMany({
+        where: { user_id: id },
+        include: {
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
+        },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }
   }
 
-  async deleteFriendById(id: string, userId: string) {
+  async deleteFriendById(id: string) {
     try {
-      const friend = await this.prismaService.friend.findFirst({ where: { user_id: userId, friendId: id } });
-      return await this.prismaService.friend.delete({ where: { id: friend?.id } });
+      return await this.prismaService.friend.delete({ where: { id } });
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -27,7 +38,23 @@ export class FriendService {
 
   async getFollowers(id: string) {
     try {
-      return await this.prismaService.friend.findMany({ where: { friendId: id } });
+      return await this.prismaService.friend.findMany({
+        where: { friendId: id },
+        include: {
+          users: {
+            include: {
+              profile: {
+                select: {
+                  surname: true,
+                  name: true,
+                  profilePhoto: true,
+                  profilePhotoBlurhash: true,
+                },
+              },
+            },
+          },
+        },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -37,11 +64,11 @@ export class FriendService {
     try {
       const profile = await this.accountService.getAccountByUserId(id);
       if (!profile) throw new NotFoundException('Could not be able to find profile of that user');
-      await this.prismaService.friend.create({
+      return await this.prismaService.friend.create({
         data: {
           user_id: userId,
           friendId: id,
-          friendPhoto: profile.profilePhoto,
+          profileId: profile.id,
         },
       });
     } catch (error) {

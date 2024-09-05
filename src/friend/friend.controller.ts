@@ -18,8 +18,8 @@ export class FriendController {
   @ApiParam({ name: 'userId', required: true, description: 'Whos friends userId' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getFriendsById(@Param() { id }: ParamsId) {
-    return await this.friendService.getFriendsById(id);
+  async getUsersYouFollowByUserId(@Param() { id }: ParamsId) {
+    return await this.friendService.getUsersYouFollowByUserId(id);
   }
 
   @Delete(id)
@@ -28,8 +28,8 @@ export class FriendController {
   @ApiResponse({ status: NO_CONTENT, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(NO_CONTENT)
-  async deleteFriendById(@Param() { id }: ParamsId, @Body() { userId }: FriendDto) {
-    return await this.friendService.deleteFriendById(id, userId);
+  async deleteFriendById(@Param() { id }: ParamsId) {
+    return await this.friendService.deleteFriendById(id);
   }
 
   @Post(id)

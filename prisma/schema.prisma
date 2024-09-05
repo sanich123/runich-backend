@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["clientExtensions", "multiSchema"]
+  previewFeatures = ["multiSchema"]
   binaryTargets   = ["native"]
 }
 
@@ -36,6 +36,8 @@ model flow_state {
   created_at             DateTime?             @db.Timestamptz(6)
   updated_at             DateTime?             @db.Timestamptz(6)
   authentication_method  String
+  auth_code_issued_at    DateTime?             @db.Timestamptz(6)
+  saml_relay_states      saml_relay_states[]
 
   @@index([created_at(sort: Desc)])
   @@index([auth_code], map: "idx_auth_code")
@@ -43,9 +45,15 @@ model flow_state {
   @@schema("auth")
 }
 
+model schema_migrations {
+  version String @id @db.VarChar(255)
+
+  @@schema("auth")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model identities {
-  id              String
+  provider_id     String
   user_id         String    @db.Uuid
   identity_data   Json
   provider        String
@@ -53,9 +61,10 @@ model identities {
   created_at      DateTime? @db.Timestamptz(6)
   updated_at      DateTime? @db.Timestamptz(6)
   email           String?   @default(dbgenerated("lower((identity_data ->> 'email'::text))"))
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@id([provider, id])
+  @@unique([provider_id, provider], map: "identities_provider_id_provider_unique")
   @@index([email])
   @@index([user_id])
   @@schema("auth")
@@ -92,6 +101,7 @@ model mfa_challenges {
   created_at  DateTime    @db.Timestamptz(6)
   verified_at DateTime?   @db.Timestamptz(6)
   ip_address  String      @db.Inet
+  otp_code    String?
   mfa_factors mfa_factors @relation(fields: [factor_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mfa_challenges_auth_factor_id_fkey")
 
   @@index([created_at(sort: Desc)], map: "mfa_challenge_created_at_idx")
@@ -100,18 +110,22 @@ model mfa_challenges {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model mfa_factors {
-  id             String           @id @db.Uuid
-  user_id        String           @db.Uuid
-  friendly_name  String?
-  factor_type    factor_type
-  status         factor_status
-  created_at     DateTime         @db.Timestamptz(6)
-  updated_at     DateTime         @db.Timestamptz(6)
-  secret         String?
-  mfa_challenges mfa_challenges[]
-  users          users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                 String           @id @db.Uuid
+  user_id            String           @db.Uuid
+  friendly_name      String?
+  factor_type        factor_type
+  status             factor_status
+  created_at         DateTime         @db.Timestamptz(6)
+  updated_at         DateTime         @db.Timestamptz(6)
+  secret             String?
+  phone              String?          @unique
+  last_challenged_at DateTime?        @unique @db.Timestamptz(6)
+  mfa_challenges     mfa_challenges[]
+  users              users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@unique([user_id, phone], map: "unique_verified_phone_factor")
   @@index([user_id, created_at], map: "factor_id_created_at_idx")
+  @@index([user_id])
   @@schema("auth")
 }
 
@@ -147,6 +161,7 @@ model saml_providers {
   attribute_mapping Json?
   created_at        DateTime?     @db.Timestamptz(6)
   updated_at        DateTime?     @db.Timestamptz(6)
+  name_id_format    String?
   sso_providers     sso_providers @relation(fields: [sso_provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([sso_provider_id])
@@ -161,21 +176,15 @@ model saml_relay_states {
   request_id      String
   for_email       String?
   redirect_to     String?
-  from_ip_address String?       @db.Inet
   created_at      DateTime?     @db.Timestamptz(6)
   updated_at      DateTime?     @db.Timestamptz(6)
+  flow_state_id   String?       @db.Uuid
+  flow_state      flow_state?   @relation(fields: [flow_state_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   sso_providers   sso_providers @relation(fields: [sso_provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([created_at(sort: Desc)])
   @@index([for_email])
   @@index([sso_provider_id])
-  @@schema("auth")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model schema_migrations {
-  version String @id @db.VarChar(255)
-
   @@schema("auth")
 }
 
@@ -188,6 +197,10 @@ model sessions {
   factor_id      String?          @db.Uuid
   aal            aal_level?
   not_after      DateTime?        @db.Timestamptz(6)
+  refreshed_at   DateTime?        @db.Timestamp(6)
+  user_agent     String?
+  ip             String?          @db.Inet
+  tag            String?
   mfa_amr_claims mfa_amr_claims[]
   refresh_tokens refresh_tokens[]
   users          users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -232,134 +245,176 @@ model sso_providers {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model users {
-  instance_id                 String?       @db.Uuid
-  id                          String        @id @db.Uuid
-  aud                         String?       @db.VarChar(255)
-  role                        String?       @db.VarChar(255)
-  email                       String?       @db.VarChar(255)
-  encrypted_password          String?       @db.VarChar(255)
-  email_confirmed_at          DateTime?     @db.Timestamptz(6)
-  invited_at                  DateTime?     @db.Timestamptz(6)
-  confirmation_token          String?       @db.VarChar(255)
-  confirmation_sent_at        DateTime?     @db.Timestamptz(6)
-  recovery_token              String?       @db.VarChar(255)
-  recovery_sent_at            DateTime?     @db.Timestamptz(6)
-  email_change_token_new      String?       @db.VarChar(255)
-  email_change                String?       @db.VarChar(255)
-  email_change_sent_at        DateTime?     @db.Timestamptz(6)
-  last_sign_in_at             DateTime?     @db.Timestamptz(6)
+  instance_id                 String?           @db.Uuid
+  id                          String            @id @db.Uuid
+  aud                         String?           @db.VarChar(255)
+  role                        String?           @db.VarChar(255)
+  email                       String?           @db.VarChar(255)
+  encrypted_password          String?           @db.VarChar(255)
+  email_confirmed_at          DateTime?         @db.Timestamptz(6)
+  invited_at                  DateTime?         @db.Timestamptz(6)
+  confirmation_token          String?           @db.VarChar(255)
+  confirmation_sent_at        DateTime?         @db.Timestamptz(6)
+  recovery_token              String?           @db.VarChar(255)
+  recovery_sent_at            DateTime?         @db.Timestamptz(6)
+  email_change_token_new      String?           @db.VarChar(255)
+  email_change                String?           @db.VarChar(255)
+  email_change_sent_at        DateTime?         @db.Timestamptz(6)
+  last_sign_in_at             DateTime?         @db.Timestamptz(6)
   raw_app_meta_data           Json?
   raw_user_meta_data          Json?
   is_super_admin              Boolean?
-  created_at                  DateTime?     @db.Timestamptz(6)
-  updated_at                  DateTime?     @db.Timestamptz(6)
-  phone                       String?       @unique
-  phone_confirmed_at          DateTime?     @db.Timestamptz(6)
-  phone_change                String?       @default("")
-  phone_change_token          String?       @default("") @db.VarChar(255)
-  phone_change_sent_at        DateTime?     @db.Timestamptz(6)
-  confirmed_at                DateTime?     @default(dbgenerated("LEAST(email_confirmed_at, phone_confirmed_at)")) @db.Timestamptz(6)
-  email_change_token_current  String?       @default("") @db.VarChar(255)
-  email_change_confirm_status Int?          @default(0) @db.SmallInt
-  banned_until                DateTime?     @db.Timestamptz(6)
-  reauthentication_token      String?       @default("") @db.VarChar(255)
-  reauthentication_sent_at    DateTime?     @db.Timestamptz(6)
-  is_sso_user                 Boolean       @default(false)
-  deleted_at                  DateTime?     @db.Timestamptz(6)
+  created_at                  DateTime?         @db.Timestamptz(6)
+  updated_at                  DateTime?         @db.Timestamptz(6)
+  phone                       String?           @unique
+  phone_confirmed_at          DateTime?         @db.Timestamptz(6)
+  phone_change                String?           @default("")
+  phone_change_token          String?           @default("") @db.VarChar(255)
+  phone_change_sent_at        DateTime?         @db.Timestamptz(6)
+  confirmed_at                DateTime?         @default(dbgenerated("LEAST(email_confirmed_at, phone_confirmed_at)")) @db.Timestamptz(6)
+  email_change_token_current  String?           @default("") @db.VarChar(255)
+  email_change_confirm_status Int?              @default(0) @db.SmallInt
+  banned_until                DateTime?         @db.Timestamptz(6)
+  reauthentication_token      String?           @default("") @db.VarChar(255)
+  reauthentication_sent_at    DateTime?         @db.Timestamptz(6)
+  is_sso_user                 Boolean           @default(false)
+  deleted_at                  DateTime?         @db.Timestamptz(6)
+  is_anonymous                Boolean           @default(false)
   identities                  identities[]
   mfa_factors                 mfa_factors[]
+  one_time_tokens             one_time_tokens[]
   sessions                    sessions[]
-  profile                     Profile?
-  friends                     Friend[]
   activities                  Activity[]
+  friends                     Friend[]
+  profile                     Profile?
+
   @@index([instance_id])
+  @@index([is_anonymous])
   @@schema("auth")
 }
 
 model Profile {
-  id           String    @id @default(uuid())
-  name         String?
-  user_id      String    @unique @db.Uuid
-  bio          String?
-  birthday     DateTime?
-  city         String?
-  createdAt    DateTime  @default(now())
-  gender       String?
-  profilePhoto String?
-  sport        String?
-  surname      String?
-  updatedAt    DateTime  @default(now())
-  weight       String?
-  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-model Friend {
-  id           String     @id @default(uuid())
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  users        users      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user_id      String     @db.Uuid
-  friendId     String
-  friendPhoto  String?
+  created_at           DateTime      @default(now()) @db.Timestamptz(6)
+  name                 String?
+  user_id              String        @unique @db.Uuid
+  bio                  String?
+  birthday             DateTime?     @db.Date
+  city                 String?
+  gender               String?
+  profilePhoto         String?
+  sport                String?
+  surname              String?
+  updatedAt            DateTime?     @db.Timestamptz(6)
+  weight               String?
+  email                String?
+  language             String?
+  emailNotifications   Boolean?      @default(false)
+  profilePhotoBlurhash String?
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activities           Activity[]
+  comments             Comment[]
+  commentLikes         CommentLike[]
+  friends              Friend[]
+  likes                Like[]
+  users                users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 model Activity {
-  id            String   @id @default(uuid())
-  date          DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  description   String?
-  distance      Int?
-  duration      Int
-  emotion       String?
-  isSwitchOn    Boolean
-  locations     Json
-  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user_id       String    @db.Uuid
-  photoUrls     String[]
-  comments      Comment[] 
-  likes         Like[]
-  speed         Int
-  sport         String?
-  title         String?
+  date                DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  description         String?
+  distance            Int
+  duration            Int
+  emotion             String?
+  locations           Json?
+  user_id             String    @db.Uuid
+  speed               Int
+  sport               String
+  title               String?
+  kilometresSplit     Json?
+  mapPhotoUrl         String?
+  photoVideoUrls      Json?
+  isPublic            Boolean?  @default(true)
+  mapPhotoUrlBlurhash String?
+  profileId           String    @db.Uuid
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profile             Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  comments            Comment[]
+  likes               Like[]
+
+  @@schema("public")
+}
+
+model Friend {
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user_id   String   @db.Uuid
+  friendId  String   @db.Uuid
+  profileId String   @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users     users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 model Comment {
-  id            String    @id @default(uuid())
-  date          DateTime  @default(now())
-  activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  activityId    String 
-  comment       String
-  authorId      String
-  commentLike   CommentLike[]
-
-  @@schema("public")
-}
-
-model Like {
-  id            String    @id @default(uuid())
-  date          DateTime  @default(now())
-  activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  activityId    String
-  authorId      String
+  date        DateTime      @default(now())
+  comment     String
+  authorId    String
+  activityId  String        @db.Uuid
+  profileId   String        @db.Uuid
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activity    Activity      @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profile     Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  commentLike CommentLike[]
 
   @@schema("public")
 }
 
 model CommentLike {
-  id            String    @id @default(uuid())
-  date          DateTime  @default(now())
-  comment       Comment   @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  commentId     String
-  authorId      String
+  date      DateTime @default(now())
+  authorId  String
+  commentId String   @db.Uuid
+  profileId String   @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
+}
+
+model Like {
+  date       DateTime @default(now())
+  authorId   String
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activityId String   @db.Uuid
+  profileId  String   @db.Uuid
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model one_time_tokens {
+  id         String              @id @db.Uuid
+  user_id    String              @db.Uuid
+  token_type one_time_token_type
+  token_hash String
+  relates_to String
+  created_at DateTime            @default(now()) @db.Timestamp(6)
+  updated_at DateTime            @default(now()) @db.Timestamp(6)
+  users      users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, token_type])
+  @@index([relates_to], map: "one_time_tokens_relates_to_hash_idx", type: Hash)
+  @@index([token_hash], map: "one_time_tokens_token_hash_hash_idx", type: Hash)
+  @@schema("auth")
 }
 
 enum aal_level {
@@ -387,6 +442,18 @@ enum factor_status {
 enum factor_type {
   totp
   webauthn
+  phone
+
+  @@schema("auth")
+}
+
+enum one_time_token_type {
+  confirmation_token
+  reauthentication_token
+  recovery_token
+  email_change_token_new
+  email_change_token_current
+  phone_change_token
 
   @@schema("auth")
 }

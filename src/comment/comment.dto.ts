@@ -6,6 +6,7 @@ export class CommentDTO {
   @IsString()
   @ApiProperty({ title: 'Text of comment', nullable: false, required: true })
   comment: string;
+
   @IsNotEmpty()
   @IsUUID()
   @ApiProperty({ title: 'Author identifer', nullable: false, required: true })
@@ -17,6 +18,7 @@ export class CommentLikeDto {
   @IsUUID()
   @ApiProperty({ title: 'Author identifer', nullable: false, required: true })
   commentId: string;
+
   @IsNotEmpty()
   @IsUUID()
   @ApiProperty({ title: 'Author identifer', nullable: false, required: true })
