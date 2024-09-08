@@ -107,6 +107,6 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "engines": {
-    "node": ">=16 <22"
+    "node": "20"
   }
 }
