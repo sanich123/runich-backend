@@ -44,4 +44,12 @@ export class StatisticController {
   ) {
     return this.activityService.getCurrentWeekStatistics(id, firstDay, lastDay);
   }
+
+  @Get(`${PATHS.id}/all`)
+  @ApiOperation({ summary: 'Gets all statistics by userId' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
+  async getAllTimeStatistics(@Param() { id }: ParamsId) {
+    return this.activityService.getAllActivitiesStatisticsByUserId(id);
+  }
 }
