@@ -291,6 +291,33 @@ export class ActivityService {
     }
   }
 
+  async getCurrentWeekStatistics(userId: string, firstDay: string, lastDay: string) {
+    const firstDayDate = new Date(firstDay);
+    const lastDayDate = new Date(lastDay);
+    try {
+      const currentWeekActivities = await this.prisma.activity.findMany({
+        where: {
+          user_id: userId,
+          date: {
+            gte: new Date(firstDayDate.getFullYear(), firstDayDate.getMonth(), firstDayDate.getDate(), 0, 0, 0),
+            lte: new Date(lastDayDate.getFullYear(), lastDayDate.getMonth(), lastDayDate.getDate(), 23, 59, 59),
+          },
+        },
+      });
+      const { totalDuration, totalDistance } = currentWeekActivities?.reduce(
+        (acc, { duration, distance }) => {
+          acc.totalDuration += duration;
+          acc.totalDistance += distance;
+          return acc;
+        },
+        { totalDuration: 0, totalDistance: 0 },
+      );
+      return { totalDuration, totalDistance, totalItems: currentWeekActivities.length };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
   async getAllActivitiesWithFriends(id: string, page = '0', take = '10') {
     try {
       const friends = await this.prisma.friend.findMany({

@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Param } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ActivityService } from 'src/activity/activity.service';
 import { MultipleParams, ParamsId } from 'src/app/params-validation';
@@ -31,5 +31,17 @@ export class StatisticController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getYearStatisticByYearAndCategory(@Param() { id, year, category }: MultipleParams) {
     return await this.activityService.getStatisticByYearAndCategory(id, year, category);
+  }
+
+  @Get(`${PATHS.id}/week?`)
+  @ApiOperation({ summary: 'Gets all statistics by current week' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
+  async getCurrentWeekStatistics(
+    @Query('firstDay') firstDay: string,
+    @Query('lastDay') lastDay: string,
+    @Param() { id }: ParamsId,
+  ) {
+    return this.activityService.getCurrentWeekStatistics(id, firstDay, lastDay);
   }
 }
