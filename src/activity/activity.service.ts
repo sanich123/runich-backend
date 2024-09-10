@@ -262,6 +262,8 @@ export class ActivityService {
           distance: true,
           speed: true,
           date: true,
+          id: true,
+          sport: true,
         },
       });
       const { totalDuration, totalDistance } = activities?.reduce(
