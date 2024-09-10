@@ -52,4 +52,12 @@ export class StatisticController {
   async getAllTimeStatistics(@Param() { id }: ParamsId) {
     return this.activityService.getAllActivitiesStatisticsByUserId(id);
   }
+
+  @Get(`${PATHS.id}/year-month?`)
+  @ApiOperation({ summary: 'Gets statistics about activities by year, month, category' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
+  async getMonthStatistics(@Query('year') year: string, @Query('month') month: string, @Param() { id }: ParamsId) {
+    return await this.activityService.getMonthStatisticsByYearMonth(id, year, month);
+  }
 }
