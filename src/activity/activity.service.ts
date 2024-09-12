@@ -381,6 +381,44 @@ export class ActivityService {
     }
   }
 
+  async getActivitiesByTheirIds(ids: string | string[]) {
+    const searchByStringOrArray = typeof ids === 'string' ? ids : { in: ids };
+    try {
+      return await this.prisma.activity.findMany({
+        where: { id: searchByStringOrArray, isPublic: true },
+        orderBy: { date: 'desc' },
+        select: {
+          description: true,
+          title: true,
+          date: true,
+          sport: true,
+          id: true,
+          user_id: true,
+          photoVideoUrls: true,
+          mapPhotoUrl: true,
+          mapPhotoUrlBlurhash: true,
+          duration: true,
+          distance: true,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+            },
+          },
+          _count: {
+            select: {
+              comments: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
   async getAllActivitiesWithFriends(id: string, page = '0', take = '10') {
     try {
       const friends = await this.prisma.friend.findMany({

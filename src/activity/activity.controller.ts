@@ -42,6 +42,14 @@ export class ActivityController {
   async getLocationsByActivityId(@Param() { id }: ParamsId) {
     return this.activityService.getLocationsByActivityId(id);
   }
+  @Get(`activityIds?`)
+  @ApiOperation({ summary: 'Get activities by activities ids' })
+  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
+  async getActivitiesByActivitiesIds(@Query('ids') ids: string) {
+    return this.activityService.getActivitiesByTheirIds(ids);
+  }
 
   @Post('migration-strava/:id')
   @UseInterceptors(
