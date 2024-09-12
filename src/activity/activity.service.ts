@@ -266,6 +266,17 @@ export class ActivityService {
           sport: true,
         },
       });
+      const typesOfSport = [...new Set(activities.map(({ sport }) => sport))];
+      const filteredBySportActivities = typesOfSport.map((type) => {
+        const filteredActivitiesByType = activities.filter(({ sport }) => sport === type);
+        return {
+          [type]: {
+            totalDuration: filteredActivitiesByType.reduce((acc, { duration }) => (acc += duration), 0),
+            totalDistance: filteredActivitiesByType.reduce((acc, { distance }) => (acc += distance), 0),
+            totalItems: filteredActivitiesByType.length,
+          },
+        };
+      });
       const { totalDuration, totalDistance } = activities?.reduce(
         (acc, { duration, distance }) => {
           acc.totalDuration += duration;
@@ -283,6 +294,7 @@ export class ActivityService {
         totalDuration,
         totalDistance,
         totalItems: activities.length,
+        activitiesReducedBySport: filteredBySportActivities,
       };
     } catch (error) {
       prismaErrorHandling(error);
