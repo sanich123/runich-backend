@@ -267,14 +267,13 @@ export class ActivityService {
         },
       });
       const typesOfSport = [...new Set(activities.map(({ sport }) => sport))];
-      const filteredBySportActivities = typesOfSport.map((type) => {
+      const sportsObject = {};
+      typesOfSport.forEach((type) => {
         const filteredActivitiesByType = activities.filter(({ sport }) => sport === type);
-        return {
-          [type]: {
-            totalDuration: filteredActivitiesByType.reduce((acc, { duration }) => (acc += duration), 0),
-            totalDistance: filteredActivitiesByType.reduce((acc, { distance }) => (acc += distance), 0),
-            totalItems: filteredActivitiesByType.length,
-          },
+        sportsObject[type] = {
+          totalDuration: filteredActivitiesByType.reduce((acc, { duration }) => (acc += duration), 0),
+          totalDistance: filteredActivitiesByType.reduce((acc, { distance }) => (acc += distance), 0),
+          totalItems: filteredActivitiesByType.length,
         };
       });
       const { totalDuration, totalDistance } = activities?.reduce(
@@ -291,10 +290,14 @@ export class ActivityService {
 
       return {
         activities,
-        totalDuration,
-        totalDistance,
-        totalItems: activities.length,
-        activitiesReducedBySport: filteredBySportActivities,
+        activitiesReducedBySport: {
+          all: {
+            totalDuration,
+            totalDistance,
+            totalItems: activities.length,
+          },
+          ...sportsObject,
+        },
       };
     } catch (error) {
       prismaErrorHandling(error);
