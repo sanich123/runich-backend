@@ -354,7 +354,7 @@ export class ActivityService {
       const { totalYearDuration, totalYearDistance, totalYearItems, averageYearSpeed } = getYearMetricsFromActivities(
         activitiesByMonth.map((item, i) => item[i]),
       );
-
+      const availableYearsAndTypes = await this.getYearsAndTypesOfActivities(userId);
       return {
         [year]: {
           totalYearDuration,
@@ -363,6 +363,7 @@ export class ActivityService {
           totalMedianSpeed: averageYearSpeed,
         },
         months: activitiesByMonth,
+        availableYearsAndTypes,
       };
     } catch (error) {
       prismaErrorHandling(error);
