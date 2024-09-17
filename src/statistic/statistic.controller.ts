@@ -25,12 +25,12 @@ export class StatisticController {
     return await this.activityService.getYearStatisticWithMonthsByCategory(id, year, month, category);
   }
 
-  @Get(`${PATHS.id}/year-category/:year/:category`)
+  @Get(`${PATHS.id}/year-category`)
   @ApiOperation({ summary: 'Gets all statistics by year and by months' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getYearStatisticByYearAndCategory(@Param() { id, year, category }: MultipleParams) {
-    return await this.activityService.getStatisticByYearAndCategory(id, year, category);
+  async getYearStatisticByYearAndCategory(@Param() { id }: ParamsId) {
+    return await this.activityService.getStatisticByYearAndCategory(id);
   }
 
   @Get(`${PATHS.id}/week?`)

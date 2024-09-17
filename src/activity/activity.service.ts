@@ -335,36 +335,61 @@ export class ActivityService {
     return { userId, year, month, category };
   }
 
-  async getStatisticByYearAndCategory(userId: string, year: string, category: string) {
+  async getStatisticByYearAndCategory(userId: string) {
     try {
-      const activitiesByMonth = await Promise.all(
-        [...Array(12).keys()].map(async (month) => {
-          const findedActivities = await this.getActivitiesByYearMonthCategory(userId, year, `${month}`, category);
-          const { distanceInKm, durationInHours } = getReducedMetricsFromActivities(findedActivities);
-          return {
-            [month]: {
-              totalDistance: distanceInKm,
-              totalDuration: durationInHours,
-              medianSpeed: distanceInKm / durationInHours,
-              items: findedActivities?.length,
-            },
-          };
+      const availableYearsAndTypes = await this.getYearsAndTypesOfActivities(userId);
+      const allYearsAllCategoriesWithMonths = await Promise.all(
+        availableYearsAndTypes.map(async ({ year, types }) => {
+          return await Promise.all(
+            types.map(async (type) => {
+              const activitiesByMonth = await Promise.all(
+                [...Array(12).keys()].map(async (month) => {
+                  const findedActivities = await this.getActivitiesByYearMonthCategory(
+                    userId,
+                    `${year}`,
+                    `${month}`,
+                    type,
+                  );
+                  const { distanceInKm, durationInHours } = getReducedMetricsFromActivities(findedActivities);
+                  return {
+                    [month]: {
+                      totalDistance: distanceInKm,
+                      totalDuration: durationInHours,
+                      medianSpeed: distanceInKm / durationInHours,
+                      items: findedActivities?.length,
+                    },
+                  };
+                }),
+              );
+              const { totalYearDuration, totalYearDistance, totalYearItems, averageYearSpeed } =
+                getYearMetricsFromActivities(activitiesByMonth.map((item, i) => item[i]));
+              return {
+                year,
+                [year]: {
+                  [type]: {
+                    months: activitiesByMonth,
+                    totalYearDuration,
+                    totalYearDistance,
+                    totalYearItems,
+                    totalMedianSpeed: averageYearSpeed,
+                  },
+                },
+              };
+            }),
+          );
         }),
       );
-      const { totalYearDuration, totalYearDistance, totalYearItems, averageYearSpeed } = getYearMetricsFromActivities(
-        activitiesByMonth.map((item, i) => item[i]),
-      );
-      const availableYearsAndTypes = await this.getYearsAndTypesOfActivities(userId);
-      return {
-        [year]: {
-          totalYearDuration,
-          totalYearDistance,
-          totalYearItems,
-          totalMedianSpeed: averageYearSpeed,
-        },
-        months: activitiesByMonth,
-        availableYearsAndTypes,
-      };
+      const mappedObjeWithKeysYearAndType = {};
+      allYearsAllCategoriesWithMonths.map((yearCategory) => {
+        yearCategory.forEach((category) => {
+          const year = category.year;
+          mappedObjeWithKeysYearAndType[year]
+            ? (mappedObjeWithKeysYearAndType[year] = { ...mappedObjeWithKeysYearAndType[year], ...category[year] })
+            : (mappedObjeWithKeysYearAndType[year] = category[year]);
+        });
+      });
+
+      return mappedObjeWithKeysYearAndType;
     } catch (error) {
       prismaErrorHandling(error);
     }
