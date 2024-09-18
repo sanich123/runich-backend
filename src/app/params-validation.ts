@@ -5,17 +5,3 @@ export class ParamsId {
   @IsNotEmpty()
   id: string;
 }
-
-export class MultipleParams {
-  @IsUUID()
-  @IsNotEmpty()
-  id: string;
-
-  @IsNotEmpty()
-  year: string;
-
-  month: string;
-
-  @IsNotEmpty()
-  category: string;
-}
