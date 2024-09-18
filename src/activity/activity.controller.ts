@@ -16,7 +16,7 @@ import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
 import { ParamsId } from 'src/app/params-validation';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { PATHS } from 'src/utils/const';
+import { PATHS, QueryParams } from 'src/utils/const';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
@@ -34,7 +34,7 @@ export class ActivityController {
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getMediaByUserId(@Param() { id }: ParamsId, @Query('take') take: string) {
+  async getMediaByUserId(@Param() { id }: ParamsId, @Query(QueryParams.take) take: string) {
     return this.activityService.getMediaByUserId(id, take);
   }
 
@@ -47,7 +47,7 @@ export class ActivityController {
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivitiesByActivitiesIds(@Query('ids') ids: string) {
+  async getActivitiesByActivitiesIds(@Query(QueryParams.ids) ids: string) {
     return this.activityService.getActivitiesByTheirIds(ids);
   }
 
@@ -98,7 +98,11 @@ export class ActivityController {
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivitiesByUserId(@Param() { id }: ParamsId, @Query('page') page: string, @Query('take') take: string) {
+  async getActivitiesByUserId(
+    @Param() { id }: ParamsId,
+    @Query(QueryParams.page) page: string,
+    @Query(QueryParams.take) take: string,
+  ) {
     return await this.activityService.getActivitesByUserId(id, page, take);
   }
 
@@ -109,8 +113,8 @@ export class ActivityController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getAllActivitiesWithFriends(
     @Param() { id }: ParamsId,
-    @Query('page') page: string,
-    @Query('take') take: string,
+    @Query(QueryParams.page) page: string,
+    @Query(QueryParams.take) take: string,
   ) {
     return await this.activityService.getAllActivitiesWithFriends(id, page, take);
   }

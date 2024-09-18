@@ -53,31 +53,21 @@ export class StatisticService {
       const sportsObject = {};
       typesOfSport.forEach((type) => {
         const filteredActivitiesByType = activities.filter(({ sport }) => sport === type);
+        const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(filteredActivitiesByType);
         sportsObject[type] = {
-          totalDuration: filteredActivitiesByType.reduce((acc, { duration }) => (acc += duration), 0),
-          totalDistance: filteredActivitiesByType.reduce((acc, { distance }) => (acc += distance), 0),
-          totalItems: filteredActivitiesByType.length,
+          totalDuration,
+          totalDistance,
+          totalItems,
         };
       });
-      const { totalDuration, totalDistance } = activities?.reduce(
-        (acc, { duration, distance }) => {
-          acc.totalDuration += duration;
-          acc.totalDistance += distance;
-          return acc;
-        },
-        {
-          totalDuration: 0,
-          totalDistance: 0,
-        },
-      );
-
+      const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(activities);
       return {
         activities,
         activitiesReducedBySport: {
           all: {
             totalDuration,
             totalDistance,
-            totalItems: activities.length,
+            totalItems,
           },
           ...sportsObject,
         },
@@ -153,17 +143,18 @@ export class StatisticService {
           );
         }),
       );
-      const mappedObjeWithKeysYearAndType = {};
+      const mappedObjWithKeysYearAndType = {};
+
       allYearsAllCategoriesWithMonths.map((yearCategory) => {
         yearCategory.forEach((category) => {
           const year = category.year;
-          mappedObjeWithKeysYearAndType[year]
-            ? (mappedObjeWithKeysYearAndType[year] = { ...mappedObjeWithKeysYearAndType[year], ...category[year] })
-            : (mappedObjeWithKeysYearAndType[year] = category[year]);
+          mappedObjWithKeysYearAndType[year]
+            ? (mappedObjWithKeysYearAndType[year] = { ...mappedObjWithKeysYearAndType[year], ...category[year] })
+            : (mappedObjWithKeysYearAndType[year] = category[year]);
         });
       });
 
-      return mappedObjeWithKeysYearAndType;
+      return mappedObjWithKeysYearAndType;
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -182,15 +173,8 @@ export class StatisticService {
           },
         },
       });
-      const { totalDuration, totalDistance } = currentWeekActivities?.reduce(
-        (acc, { duration, distance }) => {
-          acc.totalDuration += duration;
-          acc.totalDistance += distance;
-          return acc;
-        },
-        { totalDuration: 0, totalDistance: 0 },
-      );
-      return { totalDuration, totalDistance, totalItems: currentWeekActivities.length };
+      const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(currentWeekActivities);
+      return { totalDuration, totalDistance, totalItems };
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -202,17 +186,22 @@ export class StatisticService {
         where: { user_id: id },
         select: { duration: true, distance: true },
       });
-      const { totalDistance, totalDuration } = activities?.reduce(
-        (acc, { distance, duration }) => {
-          acc.totalDistance += distance;
-          acc.totalDuration += duration;
-          return acc;
-        },
-        { totalDistance: 0, totalDuration: 0 },
-      );
-      return { totalDistance, totalDuration, totalItems: activities?.length };
+      const { totalDistance, totalDuration, totalItems } = this.reduceMetricsFromActivities(activities);
+      return { totalDistance, totalDuration, totalItems };
     } catch (error) {
       prismaErrorHandling(error);
     }
+  }
+
+  reduceMetricsFromActivities(activities: { duration: number; distance: number }[]) {
+    const { totalDistance, totalDuration } = activities?.reduce(
+      (acc, { distance, duration }) => {
+        acc.totalDistance += distance;
+        acc.totalDuration += duration;
+        return acc;
+      },
+      { totalDistance: 0, totalDuration: 0 },
+    );
+    return { totalDistance, totalDuration, totalItems: activities?.length };
   }
 }

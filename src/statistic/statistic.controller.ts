@@ -1,16 +1,16 @@
 import { Controller, Get, HttpStatus, Param, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ParamsId } from 'src/app/params-validation';
-import { PATHS } from 'src/utils/const';
+import { PATHS, QueryParams } from 'src/utils/const';
 import { StatisticService } from './statistic.service';
 
-@ApiTags('statistics')
-@Controller('statistics')
+@ApiTags(PATHS.statistics)
+@Controller(PATHS.statistics)
 export class StatisticController {
   constructor(private readonly statisticsService: StatisticService) {}
 
   @Get(`${PATHS.id}/year-category`)
-  @ApiOperation({ summary: 'Gets all statistics by year and by months' })
+  @ApiOperation({ summary: 'Gets all statistics by year and categories with months statistics' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getYearStatisticByYearAndCategory(@Param() { id }: ParamsId) {
@@ -21,7 +21,11 @@ export class StatisticController {
   @ApiOperation({ summary: 'Gets statistics about activities by year, month, category' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getMonthStatistics(@Query('year') year: string, @Query('month') month: string, @Param() { id }: ParamsId) {
+  async getMonthStatistics(
+    @Query(QueryParams.year) year: string,
+    @Query(QueryParams.month) month: string,
+    @Param() { id }: ParamsId,
+  ) {
     return await this.statisticsService.getMonthStatisticsByYearMonth(id, year, month);
   }
 
@@ -30,8 +34,8 @@ export class StatisticController {
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getCurrentWeekStatistics(
-    @Query('firstDay') firstDay: string,
-    @Query('lastDay') lastDay: string,
+    @Query(QueryParams.firstDay) firstDay: string,
+    @Query(QueryParams.lastDay) lastDay: string,
     @Param() { id }: ParamsId,
   ) {
     return this.statisticsService.getCurrentWeekStatistics(id, firstDay, lastDay);
