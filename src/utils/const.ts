@@ -11,6 +11,7 @@ export const PATHS = {
   activityId: ':activityId',
   statistics: 'statistics',
 };
+
 export const enum QueryParams {
   firstDay = 'firstDay',
   lastDay = 'lastDay',

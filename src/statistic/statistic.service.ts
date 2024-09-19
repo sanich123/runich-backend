@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { getReducedMetricsFromActivities, getYearMetricsFromActivities } from 'src/utils/statistics/reducers';
+import { YearCategoryProps, reduceAllMetricsToYearCategoryMonths } from './utils';
 
 @Injectable()
 export class StatisticService {
@@ -101,65 +102,25 @@ export class StatisticService {
 
   async getStatisticByYearAndCategory(userId: string) {
     try {
-      const availableYearsAndTypes = await this.getYearsAndTypesOfActivities(userId);
-      const allYearsAllCategoriesWithMonths = await Promise.all(
-        availableYearsAndTypes.map(async ({ year, types }) => {
-          return await Promise.all(
-            types.map(async (type) => {
-              const activitiesByMonth = await Promise.all(
-                [...Array(12).keys()].map(async (month) => {
-                  const findedActivities = await this.getActivitiesByYearMonthCategory(
-                    userId,
-                    `${year}`,
-                    `${month}`,
-                    type,
-                  );
-                  const { distanceInKm, durationInHours } = getReducedMetricsFromActivities(findedActivities);
-                  return {
-                    [month]: {
-                      totalDistance: distanceInKm,
-                      totalDuration: durationInHours,
-                      medianSpeed: distanceInKm / durationInHours,
-                      items: findedActivities?.length,
-                    },
-                  };
-                }),
-              );
-              const { totalYearDuration, totalYearDistance, totalYearItems, averageYearSpeed } =
-                getYearMetricsFromActivities(activitiesByMonth.map((item, i) => item[i]));
-              return {
-                year,
-                [year]: {
-                  [type]: {
-                    months: activitiesByMonth,
-                    totalYearDuration,
-                    totalYearDistance,
-                    totalYearItems,
-                    totalMedianSpeed: averageYearSpeed,
-                  },
-                },
-              };
-            }),
-          );
-        }),
-      );
-      const mappedObjWithKeysYearAndType = {};
-
-      allYearsAllCategoriesWithMonths.map((yearCategory) => {
-        yearCategory.forEach((category) => {
-          const year = category.year;
-          mappedObjWithKeysYearAndType[year]
-            ? (mappedObjWithKeysYearAndType[year] = { ...mappedObjWithKeysYearAndType[year], ...category[year] })
-            : (mappedObjWithKeysYearAndType[year] = category[year]);
-        });
+      const activities = await this.prisma.activity.findMany({
+        where: { user_id: userId },
+        select: {
+          date: true,
+          duration: true,
+          distance: true,
+          speed: true,
+          sport: true,
+        },
       });
-
-      return mappedObjWithKeysYearAndType;
+      if (!activities.length) {
+        return { isUserHasActivities: false };
+      }
+      console.log(activities);
+      return { isUserHasActivities: true, ...activities.reduce(reduceAllMetricsToYearCategoryMonths, {}) };
     } catch (error) {
       prismaErrorHandling(error);
     }
   }
-
   async getCurrentWeekStatistics(userId: string, firstDay: string, lastDay: string) {
     const firstDayDate = new Date(firstDay);
     const lastDayDate = new Date(lastDay);
