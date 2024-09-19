@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
-import { getReducedMetricsFromActivities, getYearMetricsFromActivities } from 'src/utils/statistics/reducers';
-import { YearCategoryProps, reduceAllMetricsToYearCategoryMonths } from './utils';
+import { reduceAllMetricsToYearCategoryMonths } from './utils';
 
 @Injectable()
 export class StatisticService {
