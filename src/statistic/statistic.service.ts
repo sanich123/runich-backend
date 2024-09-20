@@ -114,7 +114,6 @@ export class StatisticService {
       if (!activities.length) {
         return { isUserHasActivities: false };
       }
-      console.log(activities);
       return { isUserHasActivities: true, ...activities.reduce(reduceAllMetricsToYearCategoryMonths, {}) };
     } catch (error) {
       prismaErrorHandling(error);
