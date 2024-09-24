@@ -11,6 +11,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  NotFoundException,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
@@ -65,9 +66,13 @@ export class ActivityController {
   @HttpCode(HttpStatus.CREATED)
   async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File, @Param() { id }: ParamsId) {
     console.time('обработка архива');
+
     await unzipTransferArchive(file.path);
     const parsedActivities = await parseCsvFileIntoArray();
     const account = await this.accountService.getAccountByUserId(id);
+    if (!account) {
+      throw NotFoundException;
+    }
     const activitiesWithCoordinates = await mapActivitiesWithCoordinates({
       parsedActivities: parsedActivities,
       userId: id,

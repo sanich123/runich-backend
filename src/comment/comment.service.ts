@@ -10,7 +10,12 @@ export class CommentService {
 
   async getCommentsbyActivityId(id: string, take: string) {
     try {
-      return await this.prisma.comment.findMany({
+      const allCommentsLength = await this.prisma.comment.count({
+        where: {
+          activityId: id,
+        },
+      });
+      const takenComments = await this.prisma.comment.findMany({
         where: { activityId: id },
         orderBy: { date: 'desc' },
         include: {
@@ -31,6 +36,10 @@ export class CommentService {
         },
         take: Number(take),
       });
+      return {
+        comments: takenComments,
+        allCommentsLength,
+      };
     } catch (error) {
       prismaErrorHandling(error);
     }
