@@ -9,5 +9,6 @@ import { AccountModule } from '../account/account.module';
   imports: [PrismaModule, FriendModule, AccountModule],
   controllers: [ActivityController],
   providers: [ActivityService],
+  exports: [ActivityService],
 })
 export class ActivityModule {}

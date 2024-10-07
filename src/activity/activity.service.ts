@@ -283,4 +283,32 @@ export class ActivityService {
       }),
     );
   }
+
+  async getActivityWithEmailData(activityId: string) {
+    try {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: activityId },
+        select: {
+          users: {
+            select: {
+              email: true,
+            },
+          },
+          profile: {
+            select: {
+              id: true,
+              profilePhoto: true,
+              name: true,
+              surname: true,
+              emailNotifications: true,
+            },
+          },
+          mapPhotoUrl: true,
+        },
+      });
+      return { profile: activity.profile, email: activity.users.email, mapPhotoUrl: activity.mapPhotoUrl };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
 }
