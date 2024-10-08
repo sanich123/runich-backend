@@ -5,6 +5,7 @@ import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { sendEmail } from 'src/utils/email/nodemailer';
 import { ActivityService } from 'src/activity/activity.service';
+import { createHtml } from 'src/utils/email/createHtml';
 
 @Injectable()
 export class LikeService {
@@ -17,33 +18,25 @@ export class LikeService {
   async addLike({ authorId, activityId }: LikeDto) {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
-      if (account?.id) {
-        const createdLike = await this.prismaService.like.create({
-          data: {
-            profileId: account.id,
-            authorId,
-            activityId,
-          },
-        });
-        const {
-          profile: { emailNotifications, name, surname },
-          email,
-          mapPhotoUrl,
-        } = await this.activityService.getActivityWithEmailData(activityId);
+      if (!account?.id) throw new NotFoundException();
+      const createdLike = await this.prismaService.like.create({
+        data: {
+          profileId: account.id,
+          authorId,
+          activityId,
+        },
+      });
+      const {
+        profile: { emailNotifications, name, surname },
+        email,
+        mapPhotoUrl,
+      } = await this.activityService.getActivityWithEmailData(activityId);
 
-        if (emailNotifications && account) {
-          const subject = 'Лайк к вашей активности';
-          const html = `<p>Уважаемый ${name} ${surname}!</p>
-        <img src="${account.profilePhoto}" width="100" height="100" style="object-fit: contain"/>
-        <p>${account.name} ${account.surname} только что лайкнул вашу активность!</p>
-        ${mapPhotoUrl ? `<img src="${mapPhotoUrl}" width="99%"/>` : ''}`;
-          await sendEmail(email, subject, html);
-        }
-
-        return createdLike;
-      } else {
-        throw new NotFoundException();
+      if (emailNotifications && account) {
+        const subject = 'Лайк к вашей активности';
+        await sendEmail(email, subject, createHtml({ name, surname, mapPhotoUrl, account }));
       }
+      return createdLike;
     } catch (error) {
       prismaErrorHandling(error);
     }
