@@ -10,6 +10,7 @@ import { AccountModule } from 'src/account/account.module';
 import { CommentModule } from 'src/comment/comment.module';
 import { LikeModule } from 'src/like/like.module';
 import { StatisticModule } from 'src/statistic/statistic.module';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { StatisticModule } from 'src/statistic/statistic.module';
     CommentModule,
     LikeModule,
     StatisticModule,
+    EmailModule,
   ],
 })
 export class AppModule {

@@ -3,9 +3,7 @@ import { PrismaService } from 'nestjs-prisma';
 import { LikeDto } from './like.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
-import { sendEmail } from 'src/utils/email/nodemailer';
 import { ActivityService } from 'src/activity/activity.service';
-import { createHtml } from 'src/utils/email/createHtml';
 
 @Injectable()
 export class LikeService {
@@ -19,24 +17,13 @@ export class LikeService {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
       if (!account?.id) throw new NotFoundException();
-      const createdLike = await this.prismaService.like.create({
+      return await this.prismaService.like.create({
         data: {
           profileId: account.id,
           authorId,
           activityId,
         },
       });
-      const {
-        profile: { emailNotifications, name, surname },
-        email,
-        mapPhotoUrl,
-      } = await this.activityService.getActivityWithEmailData(activityId);
-
-      if (emailNotifications && account) {
-        const subject = 'Лайк к вашей активности';
-        await sendEmail(email, subject, createHtml({ name, surname, mapPhotoUrl, account }));
-      }
-      return createdLike;
     } catch (error) {
       prismaErrorHandling(error);
     }
