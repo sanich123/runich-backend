@@ -9,5 +9,6 @@ import { ActivityModule } from 'src/activity/activity.module';
   imports: [PrismaModule, AccountModule, ActivityModule],
   controllers: [CommentController],
   providers: [CommentService],
+  exports: [CommentService],
 })
 export class CommentModule {}

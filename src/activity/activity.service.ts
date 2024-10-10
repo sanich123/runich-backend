@@ -122,6 +122,8 @@ export class ActivityService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
+              emailNotifications: true,
+              users: { select: { email: true } },
             },
           },
           _count: {
@@ -166,6 +168,7 @@ export class ActivityService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
+              emailNotifications: true,
             },
           },
           _count: {
@@ -205,6 +208,7 @@ export class ActivityService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
+              emailNotifications: true,
             },
           },
           _count: {
@@ -249,6 +253,8 @@ export class ActivityService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
+              emailNotifications: true,
+              users: { select: { email: true } },
             },
           },
           _count: {

@@ -4,7 +4,6 @@ import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
-import { sendEmail } from 'src/utils/email/nodemailer';
 
 @Injectable()
 export class CommentService {
@@ -16,11 +15,7 @@ export class CommentService {
 
   async getCommentsbyActivityId(id: string, take: string) {
     try {
-      const allCommentsLength = await this.prisma.comment.count({
-        where: {
-          activityId: id,
-        },
-      });
+      const allCommentsLength = await this.prisma.comment.count({ where: { activityId: id } });
       const takenComments = await this.prisma.comment.findMany({
         where: { activityId: id },
         orderBy: { date: 'desc' },
@@ -31,6 +26,8 @@ export class CommentService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
+              emailNotifications: true,
+              users: { select: { email: true } },
             },
           },
           commentLike: {
@@ -63,8 +60,7 @@ export class CommentService {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
       if (!account?.id) throw new NotFoundException();
-
-      const createdComment = await this.prisma.comment.create({
+      await this.prisma.comment.create({
         data: {
           profileId: account.id,
           activityId: id,
@@ -72,24 +68,6 @@ export class CommentService {
           comment,
         },
       });
-
-      const {
-        profile: { emailNotifications, name, surname },
-        email,
-        mapPhotoUrl,
-      } = await this.activityService.getActivityWithEmailData(id);
-
-      if (emailNotifications && account) {
-        const subject = 'Новый комментарий к вашей активности';
-        const html = `<p>Уважаемый ${name} ${surname}!</p>
-        <img src="${account.profilePhoto}" width="100" height="100" style="object-fit: contain"/>
-        <p>${account.name} ${account.surname} только что прокомментировал вашу активность!</p>
-        ${mapPhotoUrl ? `<img src="${mapPhotoUrl}" width="99%"/>` : ''}
-        <blockquote><p>${comment}</p></blockquote>`;
-        await sendEmail(email, subject, html);
-      }
-
-      return createdComment;
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -141,29 +119,13 @@ export class CommentService {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
       if (!account?.id) throw new NotFoundException();
-      const createdCommentLike = await this.prisma.commentLike.create({
+      return await this.prisma.commentLike.create({
         data: {
           profileId: account.id,
           authorId,
           commentId,
         },
       });
-      const {
-        profile: { emailNotifications, name, surname },
-        email,
-        comment,
-      } = await this.getCommentByCommentId(commentId);
-
-      if (emailNotifications && account) {
-        const subject = 'Лайк к вашему комментарию';
-        const html = `<p>Уважаемый ${name} ${surname}!</p>
-        <img src="${account.profilePhoto}" width="100" height="100" style="object-fit: contain"/>
-        <p>${account.name} ${account.surname} только что лайкнул Ваш комментарий!</p>
-        <blockquote><p>${comment}</p></blockquote>`;
-        await sendEmail(email, subject, html);
-      }
-
-      return createdCommentLike;
     } catch (error) {
       prismaErrorHandling(error);
     }

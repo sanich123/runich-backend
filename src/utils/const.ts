@@ -4,12 +4,14 @@ export const PATHS = {
   profile: 'profile',
   activity: 'activity',
   comment: 'comment',
+  commentLike: 'commentLike',
   friend: 'friend',
   like: 'like',
   user: 'user',
   id: ':id',
   activityId: ':activityId',
   statistics: 'statistics',
+  email: 'email',
 };
 
 export const enum QueryParams {
