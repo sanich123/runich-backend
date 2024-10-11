@@ -11,7 +11,11 @@ export class EmailController {
 
   @Post(PATHS.like)
   async sendLikeEmailNotification(@Body() emailDto: LikeEmailDTO) {
-    return await this.emailService.sendLikeEmailNotification(emailDto);
+    try {
+      return await this.emailService.sendLikeEmailNotification(emailDto);
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   @Post(PATHS.comment)

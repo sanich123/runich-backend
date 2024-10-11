@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
 import { ActivityService } from 'src/activity/activity.service';
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
 import { sendEmail } from 'src/utils/email/nodemailer';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { CommentService } from 'src/comment/comment.service';
+import { render } from '@react-email/components';
+import { NotificationEmail } from './templates';
+import { EmailType } from './templates/types';
+import { Injectable } from '@nestjs/common/decorators/core';
 
 @Injectable()
 export class EmailService {
@@ -20,10 +23,17 @@ export class EmailService {
   }: LikeEmailDTO) {
     try {
       const subject = 'Лайк к вашей активности';
-      const html = `<p>Уважаемый ${recepientName} ${recepientSurname}!</p>
-        <img src="${profilePhoto}" width="100" height="100" style="object-fit: contain"/>
-        <p>${name} ${surname} только что лайкнул вашу активность!</p>
-        ${mapPhotoUrl ? `<img src="${mapPhotoUrl}" width="99%"/>` : ''}`;
+      const html = await render(
+        NotificationEmail({
+          type: EmailType.like,
+          mapPhotoUrl,
+          name,
+          surname,
+          profilePhoto,
+          recepientName,
+          recepientSurname,
+        }),
+      );
       await sendEmail(recepientEmail, subject, html);
     } catch (error) {
       prismaErrorHandling(error);
@@ -42,11 +52,18 @@ export class EmailService {
   }: CommentEmailDTO) {
     try {
       const subject = 'Новый комментарий к вашей активности';
-      const html = `<p>Уважаемый ${recepientName} ${recepientSurname}!</p>
-        <img src="${profilePhoto}" width="100" height="100" style="object-fit: contain"/>
-        <p>${name} ${surname} только что прокомментировал вашу активность!</p>
-        ${mapPhotoUrl ? `<img src="${mapPhotoUrl}" width="99%"/>` : ''}
-        <blockquote><p>${comment}</p></blockquote>`;
+      const html = await render(
+        NotificationEmail({
+          type: EmailType.comment,
+          mapPhotoUrl,
+          comment,
+          name,
+          surname,
+          profilePhoto,
+          recepientName,
+          recepientSurname,
+        }),
+      );
       await sendEmail(recepientEmail, subject, html);
     } catch (error) {
       prismaErrorHandling(error);
@@ -64,10 +81,17 @@ export class EmailService {
   }: CommentLikeEmailDTO) {
     try {
       const subject = 'Лайк к вашему комментарию';
-      const html = `<p>Уважаемый ${recepientName} ${recepientSurname}!</p>
-        <img src="${profilePhoto}" width="100" height="100" style="object-fit: contain"/>
-        <p>${name} ${surname} только что лайкнул Ваш комментарий!</p>
-        <blockquote><p>${comment}</p></blockquote>`;
+      const html = await render(
+        NotificationEmail({
+          type: EmailType.commentLike,
+          comment,
+          name,
+          surname,
+          profilePhoto,
+          recepientName,
+          recepientSurname,
+        }),
+      );
       await sendEmail(recepientEmail, subject, html);
     } catch (error) {
       prismaErrorHandling(error);

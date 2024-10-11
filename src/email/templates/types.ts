@@ -1,0 +1,28 @@
+export interface NotificationEmailProps {
+  name?: string;
+  surname?: string;
+  recepientName?: string;
+  recepientSurname?: string;
+  profilePhoto?: string;
+  mapPhotoUrl?: string;
+  comment?: string;
+  type: EmailType;
+}
+
+export enum EmailType {
+  comment = 'comment',
+  commentLike = 'commentLike',
+  like = 'like',
+}
+
+export const HEADING = {
+  [EmailType.comment]: 'Комментарий к активности',
+  [EmailType.like]: 'Лайк к активности',
+  [EmailType.commentLike]: 'Лайк к комментарию',
+};
+
+export const PARAGRAPH = {
+  [EmailType.comment]: 'так прокомментировал Вашу активность:',
+  [EmailType.like]: 'лайкнул Вашу активность',
+  [EmailType.commentLike]: 'Лайкнул комментарий к Вашей активности',
+};
