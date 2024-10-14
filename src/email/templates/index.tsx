@@ -34,14 +34,17 @@ export function NotificationEmail({
         <Body className="bg-white my-auto mx-auto font-sans px-2">
           <Container className="border border-solid border-[#eaeaea] rounded my-[40px] mx-auto p-[20px] max-w-[465px]">
             <Section>
-              <Img src="https://i.postimg.cc/NMB5rvQ4/icon.png" width="60" height="60" alt="Runich" />
+              <Column align="center">
+                <Img src="https://i.postimg.cc/NMB5rvQ4/icon.png" width="60" height="60" alt="Runich" />
+                <Heading as="h2">{HEADING[type]}</Heading>
+                <Text>
+                  Привет, {name} {surname}!
+                </Text>
+              </Column>
             </Section>
-            <Heading>{HEADING[type]}</Heading>
-            <Text>
-              Привет, {name} {surname}!
-            </Text>
+
             <Section>
-              <Column align="center" style={{ margin: 0 }}>
+              <Column align="left" style={{ margin: 0 }}>
                 <Row align="left">
                   <Img
                     style={{ borderRadius: '50%' }}

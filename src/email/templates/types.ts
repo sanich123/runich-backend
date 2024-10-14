@@ -23,6 +23,6 @@ export const HEADING = {
 
 export const PARAGRAPH = {
   [EmailType.comment]: 'так прокомментировал Вашу активность:',
-  [EmailType.like]: 'лайкнул Вашу активность',
-  [EmailType.commentLike]: 'Лайкнул комментарий к Вашей активности',
+  [EmailType.like]: 'лайкнул Вашу активность:',
+  [EmailType.commentLike]: 'Лайкнул комментарий к Вашей активности:',
 };
