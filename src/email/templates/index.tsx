@@ -38,7 +38,7 @@ export function NotificationEmail({
                 <Img src="https://i.postimg.cc/NMB5rvQ4/icon.png" width="60" height="60" alt="Runich" />
                 <Heading as="h2">{HEADING[type]}</Heading>
                 <Text>
-                  Привет, {name} {surname}!
+                  Привет, {recepientName} {recepientSurname}!
                 </Text>
               </Column>
             </Section>
@@ -55,7 +55,7 @@ export function NotificationEmail({
                   />
                   <Text style={{ margin: 0, padding: 0 }}>
                     <strong>
-                      {recepientName} {recepientSurname}
+                      {name} {surname}
                     </strong>
                   </Text>
                 </Row>

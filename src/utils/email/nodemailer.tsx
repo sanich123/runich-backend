@@ -35,6 +35,12 @@ export const createTransporter = async () => {
         clientSecret: process.env.GOOGLE_SECRET,
         refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
       },
+      // service: 'yandex',
+      // auth: {
+      //   user: 'Runich.app@yandex.ru',
+      //   pass: 'pcqmyyykqeqwvieq',
+      //   // pass: 'hwzzuifbvwkxdkle',
+      // },
     });
     return transporter;
   } catch (err) {
