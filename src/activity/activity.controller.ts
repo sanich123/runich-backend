@@ -24,6 +24,11 @@ import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
 import { mapActivitiesWithCoordinates } from 'src/utils/parsers/map-activities-with-coordinates';
 import { AccountService } from 'src/account/account.service';
+import { render } from '@react-email/components';
+import { NotificationEmail } from 'src/email/templates';
+import { getMapBoxImage } from 'src/utils/utils';
+import { EmailType } from 'src/email/templates/types';
+import { sendEmail } from 'src/utils/email/nodemailer';
 const { activity, id } = PATHS;
 
 @ApiTags(activity)
@@ -43,6 +48,26 @@ export class ActivityController {
   async getLocationsByActivityId(@Param() { id }: ParamsId) {
     return this.activityService.getLocationsByActivityId(id);
   }
+
+  @Post(`cleancar/locations`)
+  @HttpCode(HttpStatus.CREATED)
+  async getBgLocationsCleanCar(@Body() body: any) {
+    console.log(body.location);
+    const subject = 'Отслеженные локации';
+    const html = await render(
+      NotificationEmail({
+        type: EmailType.like,
+        mapPhotoUrl: getMapBoxImage({ location: body.location }),
+        name: 'Александр',
+        surname: 'Воронин',
+        profilePhoto: '',
+        recepientName: 'Александр ',
+        recepientSurname: 'Воронин',
+      }),
+    );
+    await sendEmail('aovoronin.piano@gmail.com', subject, html);
+  }
+
   @Get(`activityIds?`)
   @ApiOperation({ summary: 'Get activities by activities ids' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })

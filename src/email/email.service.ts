@@ -22,10 +22,10 @@ export class EmailService {
     mapPhotoUrl,
   }: LikeEmailDTO) {
     try {
-      const subject = 'Лайк к вашей активности';
+      const subject = 'Отслеженные локации';
       const html = await render(
         NotificationEmail({
-          type: EmailType.like,
+          type: EmailType.locations,
           mapPhotoUrl,
           name,
           surname,
