@@ -52,11 +52,10 @@ export class ActivityController {
   @Post(`cleancar/locations`)
   @HttpCode(HttpStatus.CREATED)
   async getBgLocationsCleanCar(@Body() body: any) {
-    console.log(body.location);
     const subject = 'Отслеженные локации';
     const html = await render(
       NotificationEmail({
-        type: EmailType.like,
+        type: EmailType.locations,
         mapPhotoUrl: getMapBoxImage({ location: body.location }),
         name: 'Александр',
         surname: 'Воронин',
