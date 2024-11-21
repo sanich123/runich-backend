@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   UploadedFile,
   NotFoundException,
+  Headers,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
@@ -51,10 +52,11 @@ export class ActivityController {
 
   @Post(`cleancar/locations`)
   @HttpCode(HttpStatus.CREATED)
-  async getBgLocationsCleanCar(@Body() body: any) {
+  async getBgLocationsCleanCar(@Body() body: any, @Headers() headers) {
     const subject = 'Отслеженные локации';
     const html = await render(
       NotificationEmail({
+        comment: `${headers.authorization}${body.location[0].extras.appVersion}`,
         type: EmailType.locations,
         mapPhotoUrl: getMapBoxImage({ location: body.location }),
         name: 'Александр',
