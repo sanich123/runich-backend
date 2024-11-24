@@ -52,11 +52,11 @@ export class ActivityController {
 
   @Post(`cleancar/locations`)
   @HttpCode(HttpStatus.CREATED)
-  async getBgLocationsCleanCar(@Body() body: any, @Headers() headers) {
+  async getBgLocationsCleanCar(@Body() body: any, @Headers() headers: any) {
     const subject = 'Отслеженные локации';
     const html = await render(
       NotificationEmail({
-        comment: `${headers.authorization}${body.location[0].extras.appVersion}`,
+        comment: `${body.location.map((location) => new Date(location.timestamp).toLocaleString())}`,
         type: EmailType.locations,
         mapPhotoUrl: getMapBoxImage({ location: body.location }),
         name: 'Александр',
@@ -67,6 +67,10 @@ export class ActivityController {
       }),
     );
     await sendEmail('aovoronin.piano@gmail.com', subject, html);
+    console.log(body.location[0], headers);
+    return {
+      background_geolocation: [['changePace', true]],
+    };
   }
 
   @Get(`activityIds?`)
