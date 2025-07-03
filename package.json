@@ -1,8 +1,8 @@
 {
-  "name": "home-library",
-  "version": "0.0.1",
+  "name": "runich-backend",
+  "version": "1.0.0",
   "description": "",
-  "author": "",
+  "author": "Alexander Voronin",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -111,7 +111,7 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "packageManager": "yarn@1.22.22"
 }
