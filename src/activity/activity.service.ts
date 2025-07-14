@@ -11,7 +11,10 @@ import { rm } from 'fs/promises';
 
 @Injectable()
 export class ActivityService {
-  constructor(private readonly prisma: PrismaService, private readonly accountService: AccountService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accountService: AccountService,
+  ) {}
 
   async createActivity(activityDto: ActivityDto, id: string) {
     try {

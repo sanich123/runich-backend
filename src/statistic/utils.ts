@@ -6,7 +6,7 @@ export enum YearCategoryProps {
 }
 
 export function reduceAllMetricsToYearCategoryMonths(
-  acc: { },
+  acc: object,
   { date, duration, distance, sport }: { date: Date; duration: number; distance: number; sport: string },
 ) {
   const { all, totalDuration, totalDistance, totalItems } = YearCategoryProps;

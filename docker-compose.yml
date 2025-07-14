@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Nest.js application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    depends_on:
+      - db
+    environment:
+      # Database connection string for Prisma
+      DATABASE_URL: postgresql://user:password@db:5432/mydatabase?schema=public
+    # Optional: Mount a volume for persistent node_modules
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
+
+  # PostgreSQL database service
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydatabase
+    volumes:
+      # Persist database data
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:

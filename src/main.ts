@@ -8,7 +8,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { urlencoded, json } from 'express';
 
 async function bootstrap() {
-  const PORT = Number(process.env.PORT) || 4000;
+  const PORT = Number(process.env.PORT) || 3000;
   const app = await NestFactory.create(AppModule, { logger: getLogLevels(process.env.NODE_ENV === 'production') });
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
@@ -25,6 +25,6 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   console.log(`App is listening on ${PORT}`);
   app.enableCors({ origin: '*', methods: 'GET,HEAD,PUT,PATCH,POST,DELETE' });
-  await app.listen(PORT, '::');
+  await app.listen(PORT);
 }
 bootstrap();

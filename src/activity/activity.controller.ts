@@ -35,7 +35,10 @@ const { activity, id } = PATHS;
 @ApiTags(activity)
 @Controller(activity)
 export class ActivityController {
-  constructor(private readonly activityService: ActivityService, private readonly accountService: AccountService) {}
+  constructor(
+    private readonly activityService: ActivityService,
+    private readonly accountService: AccountService,
+  ) {}
 
   @Get(`${id}/photos?`)
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })

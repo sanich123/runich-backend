@@ -6,7 +6,10 @@ import { AccountService } from 'src/account/account.service';
 
 @Injectable()
 export class FriendService {
-  constructor(private readonly prismaService: PrismaService, private readonly accountService: AccountService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly accountService: AccountService,
+  ) {}
 
   async getUsersYouFollowByUserId(id: string) {
     try {

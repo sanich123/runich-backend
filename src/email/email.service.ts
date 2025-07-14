@@ -10,7 +10,10 @@ import { Injectable } from '@nestjs/common/decorators/core';
 
 @Injectable()
 export class EmailService {
-  constructor(private readonly commentService: CommentService, private readonly activityService: ActivityService) {}
+  constructor(
+    private readonly commentService: CommentService,
+    private readonly activityService: ActivityService,
+  ) {}
 
   async sendLikeEmailNotification({
     profilePhoto,

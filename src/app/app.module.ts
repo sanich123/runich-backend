@@ -1,7 +1,5 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 
-import LoggingService from 'src/logger/logger.middleware';
-
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { UserModule } from 'src/user/user.module';
 import { ActivityModule } from 'src/activity/activity.module';
@@ -11,6 +9,8 @@ import { CommentModule } from 'src/comment/comment.module';
 import { LikeModule } from 'src/like/like.module';
 import { StatisticModule } from 'src/statistic/statistic.module';
 import { EmailModule } from 'src/email/email.module';
+import { AuthModule } from 'src/auth/auth.module';
+import LoggingService from 'src/logger/logger.middleware';
 
 @Module({
   imports: [
@@ -23,6 +23,7 @@ import { EmailModule } from 'src/email/email.module';
     LikeModule,
     StatisticModule,
     EmailModule,
+    AuthModule,
   ],
 })
 export class AppModule {
