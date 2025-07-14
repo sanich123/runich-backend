@@ -9,7 +9,7 @@ export async function getCoordinatesFromFitFile(filePath: string) {
     return activities
       .getPositionData()
       .filter(Boolean)
-      .map((position) => ({ coords: { longitude: position.longitudeDegrees, latitude: position.latitudeDegrees } }));
+      .map((position) => ({ coords: { longitude: position?.longitudeDegrees, latitude: position?.latitudeDegrees } }));
   } catch (error) {
     console.log('error from parsing fit file', error);
   }

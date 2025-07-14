@@ -10,57 +10,60 @@ export async function mapActivitiesWithCoordinates({
   userId,
   profileId,
 }: {
-  parsedActivities: RawStravaCsvColumns[];
+  parsedActivities?: RawStravaCsvColumns[];
   userId: string;
   profileId: string;
 }) {
   try {
-    const results = await Promise.allSettled(
-      parsedActivities.map(async (activity, i) => {
-        let locations;
-        let fileName = activity['Filename'];
+    let results;
+    if (parsedActivities) {
+      results = await Promise.allSettled(
+        parsedActivities.map(async (activity, i) => {
+          let locations;
+          let fileName = activity['Filename'];
 
-        if (extname(fileName) === Extensions.gz) {
-          await ungzipFile(fileName);
-          fileName = fileName.slice(0, -3);
-        }
+          if (extname(fileName) === Extensions.gz) {
+            await ungzipFile(fileName);
+            fileName = fileName.slice(0, -3);
+          }
 
-        if (
-          extname(fileName) === Extensions.gpx ||
-          extname(fileName) === Extensions.tcx ||
-          extname(fileName) === Extensions.fit
-        ) {
-          locations = await parseCoordinatesFromFile(fileName);
-        } else {
-          locations = [];
-        }
-        console.log('Обрабатываем активность номер', i);
+          if (
+            extname(fileName) === Extensions.gpx ||
+            extname(fileName) === Extensions.tcx ||
+            extname(fileName) === Extensions.fit
+          ) {
+            locations = await parseCoordinatesFromFile(fileName);
+          } else {
+            locations = [];
+          }
+          console.log('Обрабатываем активность номер', i);
 
-        const duration = Number(activity['Elapsed Time']) * 1000;
-        const distance = Number(activity.Distance);
-        const title = activity['Activity Name'];
-        const sport = activity['Activity Type'].toLowerCase();
-        const description = activity['Activity Description'];
-        const date = new Date(activity['Activity Date']).toISOString();
-        const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
-        const mapPhotoUrl = locations?.length > 1 ? getMapBoxImage(locations) : '';
+          const duration = Number(activity['Elapsed Time']) * 1000;
+          const distance = Number(activity.Distance);
+          const title = activity['Activity Name'];
+          const sport = activity['Activity Type'].toLowerCase();
+          const description = activity['Activity Description'];
+          const date = new Date(activity['Activity Date']).toISOString();
+          const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
+          const mapPhotoUrl = locations?.length > 1 ? getMapBoxImage(locations) : '';
 
-        return {
-          id: v4(),
-          date,
-          title,
-          sport,
-          description,
-          duration,
-          distance,
-          speed,
-          locations,
-          user_id: userId,
-          mapPhotoUrl,
-          profileId,
-        };
-      }),
-    );
+          return {
+            id: v4(),
+            date,
+            title,
+            sport,
+            description,
+            duration,
+            distance,
+            speed,
+            locations,
+            user_id: userId,
+            mapPhotoUrl,
+            profileId,
+          };
+        }),
+      );
+    }
 
     return results
       .filter(({ status }) => status === 'fulfilled')

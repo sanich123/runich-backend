@@ -70,7 +70,9 @@ export class AccountController {
     @PaginationParams() paginationParams: Pagination,
     @FilteringParams(['name', 'email', 'city', 'gender', 'sport', 'surname']) filter?: Filtering,
   ) {
-    return await this.accountService.getFilteredAccounts(paginationParams, filter);
+    if (filter) {
+      return await this.accountService.getFilteredAccounts(paginationParams, filter);
+    }
   }
 
   @Patch(PATHS.id)

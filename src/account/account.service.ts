@@ -35,11 +35,11 @@ export class AccountService {
       const profiles = await this.prisma.profile.findMany({
         where: {
           OR: [
-            { name: { contains: name, mode: 'insensitive' } },
-            { name: { contains: surname, mode: 'insensitive' } },
-            { email: { contains: email, mode: 'insensitive' } },
-            { city: { contains: city, mode: 'insensitive' } },
-            { gender: { equals: gender, mode: 'insensitive' } },
+            { name: { contains: `${name}`, mode: 'insensitive' } },
+            { name: { contains: `${surname}`, mode: 'insensitive' } },
+            { email: { contains: `${email}`, mode: 'insensitive' } },
+            { city: { contains: `${city}`, mode: 'insensitive' } },
+            { gender: { equals: `${gender}`, mode: 'insensitive' } },
             { sport: { equals: sport, mode: 'insensitive' } },
           ],
         },
@@ -51,10 +51,10 @@ export class AccountService {
         const count = await this.prisma.profile.count({
           where: {
             OR: [
-              { name: { contains: name, mode: 'insensitive' } },
-              { name: { contains: surname, mode: 'insensitive' } },
-              { email: { contains: email, mode: 'insensitive' } },
-              { city: { contains: city, mode: 'insensitive' } },
+              { name: { contains: `${name}`, mode: 'insensitive' } },
+              { name: { contains: `${surname}`, mode: 'insensitive' } },
+              { email: { contains: `${email}`, mode: 'insensitive' } },
+              { city: { contains: `${city}`, mode: 'insensitive' } },
               { gender: { equals: gender, mode: 'insensitive' } },
               { sport: { equals: sport, mode: 'insensitive' } },
             ],

@@ -15,7 +15,7 @@ export async function parseCsvFileIntoArray() {
     parser.on('readable', function () {
       let record;
       while ((record = parser.read()) !== null) {
-        records.push(record);
+        records.push(record as never);
       }
     });
     await finished(parser);

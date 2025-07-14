@@ -21,10 +21,10 @@ export class ActivityService {
       const account = await this.accountService.getAccountByUserId(id);
       let mapPhotoUrlBlurhash;
       let photoVideoUrlsWithBlurhash;
-      if (activityDto?.photoVideoUrls.length) {
+      if (activityDto?.photoVideoUrls?.length) {
         photoVideoUrlsWithBlurhash = await this.getPhotoVideoUrlsWithBlurhash(activityDto.photoVideoUrls);
       }
-      if (activityDto?.locations.length > 1) {
+      if (activityDto?.photoVideoUrls?.length && activityDto?.locations?.length && activityDto?.locations?.length > 1) {
         activityDto.mapPhotoUrl = getMapBoxImage(activityDto?.locations);
       }
       if (activityDto?.mapPhotoUrl) {
@@ -34,7 +34,7 @@ export class ActivityService {
       return await this.prisma.activity.create({
         data: {
           user_id: id,
-          profileId: account.id,
+          profileId: `${account?.id}`,
           ...activityDto,
           photoVideoUrls: photoVideoUrlsWithBlurhash || null,
           mapPhotoUrlBlurhash,
@@ -145,6 +145,7 @@ export class ActivityService {
   async getMediaByUserId(id: string, take) {
     try {
       const photos = await this.prisma.activity.findMany({
+        //@ts-expect-error в доках по призме not: null это валидно, но тайпскрипту это не нравится. Надо подумать в будущем
         where: { user_id: id, photoVideoUrls: { not: null } },
         orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
@@ -315,7 +316,7 @@ export class ActivityService {
           mapPhotoUrl: true,
         },
       });
-      return { profile: activity.profile, email: activity.users.email, mapPhotoUrl: activity.mapPhotoUrl };
+      return { profile: activity?.profile, email: activity?.users.email, mapPhotoUrl: activity?.mapPhotoUrl };
     } catch (error) {
       prismaErrorHandling(error);
     }

@@ -13,5 +13,5 @@ export function prismaErrorHandling(error: unknown) {
   if (error instanceof PrismaClientUnknownRequestError || error instanceof PrismaClientValidationError) {
     throw new PrismaException(error.message);
   }
-  throw new InternalServerErrorException(error.toString());
+  throw new InternalServerErrorException(error?.toString());
 }

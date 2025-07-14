@@ -108,7 +108,7 @@ export class CommentService {
           },
         },
       });
-      return { profile: comment.profile, email: comment.profile.users.email, comment: comment.comment };
+      return { profile: comment?.profile, email: comment?.profile.users.email, comment: comment?.comment };
     } catch (error) {
       console.log(error);
       prismaErrorHandling(error);

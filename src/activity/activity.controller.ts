@@ -107,11 +107,11 @@ export class ActivityController {
       throw NotFoundException;
     }
     const activitiesWithCoordinates = await mapActivitiesWithCoordinates({
-      parsedActivities: parsedActivities,
+      parsedActivities,
       userId: id,
       profileId: account.id,
     });
-
+    if (!activitiesWithCoordinates) return;
     return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates);
   }
 
