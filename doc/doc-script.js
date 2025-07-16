@@ -6,9 +6,10 @@
 
 // Use localStorage to store data about the tree's state: whether or not
 // the tree is visible and which directories are expanded. Unless the state
-var sidebarVisible = (window.localStorage && window.localStorage.docker_showSidebar) ?
-                        window.localStorage.docker_showSidebar == 'yes' :
-                        defaultSidebar;
+var sidebarVisible =
+  window.localStorage && window.localStorage.docker_showSidebar
+    ? window.localStorage.docker_showSidebar == 'yes'
+    : defaultSidebar;
 
 /**
  * ## makeTree
@@ -36,11 +37,14 @@ function makeTree(treeData, root, filename) {
   if (sidebarVisible) document.body.className += ' sidebar';
 
   // Restore scroll position from localStorage if set. And attach scroll handler
-  if (window.localStorage && window.localStorage.docker_treeScroll) treeNode.scrollTop = window.localStorage.docker_treeScroll;
+  if (window.localStorage && window.localStorage.docker_treeScroll)
+    treeNode.scrollTop = window.localStorage.docker_treeScroll;
   treeNode.onscroll = treeScrolled;
 
   // Only set a class to allow CSS transitions after the tree state has been painted
-  setTimeout(function() { document.body.className += ' slidey'; }, 100);
+  setTimeout(function () {
+    document.body.className += ' slidey';
+  }, 100);
 }
 
 /**
@@ -85,7 +89,6 @@ function nodeClicked(e) {
   }
 }
 
-
 /**
  * ## nodeHtml
  *
@@ -110,7 +113,9 @@ function nodeHtml(nodename, node, path, root) {
       if (node.dirs.hasOwnProperty(i)) dirs.push({ name: i, html: nodeHtml(i, node.dirs[i], path + i + '/', root) });
     }
     // Have to store them in an array first and then sort them alphabetically here
-    dirs.sort(function(a, b) { return (a.name > b.name) ? 1 : (a.name == b.name) ? 0 : -1; });
+    dirs.sort(function (a, b) {
+      return a.name > b.name ? 1 : a.name == b.name ? 0 : -1;
+    });
 
     for (var k = 0; k < dirs.length; k += 1) out += dirs[k].html;
   }
@@ -165,9 +170,14 @@ function wireUpTabs() {
   for (var i = 0, l = children.length; i < l; i += 1) {
     // Ignore text nodes
     if (children[i].nodeType !== 1) continue;
-    children[i].addEventListener('click', function(c) {
-      return function() { switchTab(c); };
-    }(children[i].className));
+    children[i].addEventListener(
+      'click',
+      (function (c) {
+        return function () {
+          switchTab(c);
+        };
+      })(children[i].className),
+    );
   }
 }
 
@@ -209,13 +219,14 @@ function switchTab(tab) {
  *
  * When the document is ready, make the sidebar and all that jazz
  */
-(function(init) {
+(function (init) {
   if (window.addEventListener) {
     window.addEventListener('DOMContentLoaded', init);
-  } else { // IE8 and below
+  } else {
+    // IE8 and below
     window.onload = init;
   }
-}(function() {
+})(function () {
   makeTree(tree, relativeDir, thisFile);
   wireUpTabs();
 
@@ -225,4 +236,4 @@ function switchTab(tab) {
   } else {
     switchTab('tree');
   }
-}));
+});
