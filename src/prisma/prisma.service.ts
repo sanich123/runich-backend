@@ -1,11 +1,9 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaService
-  extends PrismaClient<Prisma.PrismaClientOptions, Prisma.LogLevel>
-  implements OnModuleInit, OnModuleDestroy
-{
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
   constructor() {
     super({
@@ -32,13 +30,14 @@ export class PrismaService
   async onModuleInit() {
     await this.$connect();
     this.$use(this.loggingMiddleware);
-    this.$on('error', ({ message }) => this.logger.error(message));
-    this.$on('warn', ({ message }) => this.logger.warn(message));
-    this.$on('info', ({ message }) => this.logger.debug(message));
-    this.$on('query', ({ query, params }) => this.logger.log(`${query}; ${params}`));
+    //@ts-ignore
+    this.$on('error' as never, ({ message }) => this.logger.error(message));
+    this.$on('warn' as never, ({ message }) => this.logger.warn(message));
+    this.$on('info' as never, ({ message }) => this.logger.debug(message));
+    this.$on('query' as never, ({ query, params }) => this.logger.log(`${query}; ${params}`));
   }
 
-  categorySoftDeleteMiddleware: Prisma.Middleware = async (params, next) => {
+  categorySoftDeleteMiddleware = async (params, next) => {
     if (params.action === 'delete') {
       return next({
         ...params,
@@ -54,7 +53,7 @@ export class PrismaService
     return next(params);
   };
 
-  loggingMiddleware: Prisma.Middleware = async (params, next) => {
+  loggingMiddleware = async (params, next) => {
     console.log(`${params.action} ${params.model} ${JSON.stringify(params.args)}`);
     const result = await next(params);
     console.log(result);

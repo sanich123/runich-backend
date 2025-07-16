@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
-
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
-import { blurhashFromURL } from 'blurhash-from-url';
 import { ProfileDto } from './user.dto';
 
 @Injectable()
@@ -29,10 +27,6 @@ export class UserService {
 
   async createProfileByUserId(id: string, accountDto: ProfileDto) {
     try {
-      if (accountDto.profilePhoto) {
-        const blurhash = await blurhashFromURL(accountDto.profilePhoto);
-        accountDto.profilePhotoBlurhash = blurhash.encoded;
-      }
       return this.prisma.profile.create({
         data: { ...accountDto, user_id: id },
       });
@@ -43,10 +37,6 @@ export class UserService {
 
   async updateProfileByProfileId(profileId: string, accountDto: ProfileDto) {
     try {
-      if (accountDto.profilePhoto) {
-        const blurhash = await blurhashFromURL(accountDto.profilePhoto);
-        accountDto.profilePhotoBlurhash = blurhash.encoded;
-      }
       return this.prisma.profile.update({
         where: { id: profileId },
         data: { ...accountDto, updatedAt: new Date() },

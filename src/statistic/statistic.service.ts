@@ -16,8 +16,8 @@ export class StatisticService {
           const types = await this.prisma.activity.findMany({
             where: {
               date: {
-                gte: new Date(year, 0, 1, 0, 0, 0),
-                lte: new Date(year, 11, 31, 23, 59, 59),
+                gte: new Date(year as number, 0, 1, 0, 0, 0),
+                lte: new Date(year as number, 11, 31, 23, 59, 59),
               },
             },
             select: { sport: true },
@@ -54,7 +54,7 @@ export class StatisticService {
       typesOfSport.forEach((type) => {
         const filteredActivitiesByType = activities.filter(({ sport }) => sport === type);
         const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(filteredActivitiesByType);
-        sportsObject[type] = {
+        sportsObject[type as string] = {
           totalDuration,
           totalDistance,
           totalItems,

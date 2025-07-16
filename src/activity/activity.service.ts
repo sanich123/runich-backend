@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { ActivityDto } from './activity.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
-import { blurhashFromURL } from 'blurhash-from-url';
 import { getMapBoxImage } from 'src/utils/parsers/get-mapbox-image';
 import { chunkArray } from 'src/utils/parsers/chunk-array';
 import { existsSync } from 'fs';
@@ -19,25 +19,18 @@ export class ActivityService {
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
       const account = await this.accountService.getAccountByUserId(id);
-      let mapPhotoUrlBlurhash;
-      let photoVideoUrlsWithBlurhash;
-      if (activityDto?.photoVideoUrls?.length) {
-        photoVideoUrlsWithBlurhash = await this.getPhotoVideoUrlsWithBlurhash(activityDto.photoVideoUrls);
-      }
+
       if (activityDto?.photoVideoUrls?.length && activityDto?.locations?.length && activityDto?.locations?.length > 1) {
         activityDto.mapPhotoUrl = getMapBoxImage(activityDto?.locations);
       }
-      if (activityDto?.mapPhotoUrl) {
-        const blurhash = await blurhashFromURL(activityDto.mapPhotoUrl, { size: 300 });
-        mapPhotoUrlBlurhash = blurhash.encoded;
-      }
+
       return await this.prisma.activity.create({
         data: {
           user_id: id,
           profileId: `${account?.id}`,
           ...activityDto,
-          photoVideoUrls: photoVideoUrlsWithBlurhash || null,
-          mapPhotoUrlBlurhash,
+          photoVideoUrls: activityDto.photoVideoUrls,
+          mapPhotoUrlBlurhash: null,
         },
       });
     } catch (error) {
@@ -145,7 +138,7 @@ export class ActivityService {
   async getMediaByUserId(id: string, take) {
     try {
       const photos = await this.prisma.activity.findMany({
-        //@ts-expect-error в доках по призме not: null это валидно, но тайпскрипту это не нравится. Надо подумать в будущем
+        //@ts-ignore
         where: { user_id: id, photoVideoUrls: { not: null } },
         orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
@@ -282,17 +275,17 @@ export class ActivityService {
     }
   }
 
-  async getPhotoVideoUrlsWithBlurhash(photoVideoUrls) {
-    return await Promise.all(
-      photoVideoUrls.map(async (photoVideoUrl) => {
-        const blurhash = await blurhashFromURL(photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url, {
-          size: 300,
-        });
-        photoVideoUrl.blurhash = blurhash.encoded;
-        return photoVideoUrl;
-      }),
-    );
-  }
+  // async getPhotoVideoUrlsWithBlurhash(photoVideoUrls) {
+  //   return await Promise.all(
+  //     photoVideoUrls.map(async (photoVideoUrl) => {
+  //       const blurhash = await blurhashFromURL(photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url, {
+  //         size: 300,
+  //       });
+  //       photoVideoUrl.blurhash = blurhash.encoded;
+  //       return photoVideoUrl;
+  //     }),
+  //   );
+  // }
 
   async getActivityWithEmailData(activityId: string) {
     try {

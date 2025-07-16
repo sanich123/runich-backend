@@ -1,35 +1,29 @@
-# Stage 1: Build the application
-FROM node:20-alpine AS build
+# Use a Node.js base image (e.g., LTS version for stability)
+FROM node:20-alpine AS base
 
-WORKDIR /app
+# Set the working directory inside the container
+WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json first to leverage Docker cache
-COPY package*.json ./
+# Copy package.json and package-lock.json (or yarn.lock/pnpm-lock.yaml)
+# This allows Docker to cache the dependency installation layer
+COPY package.json ./
+COPY package-lock.json ./
+
+# Install project dependencies
 RUN npm install
 
-# Copy the rest of the application code
+# Copy the entire application source code
 COPY . .
 
-# Generate Prisma Client
+# Generate Prisma Client (essential for Prisma to work)
+
 RUN npx prisma generate
 
-# Build the NestJS application
+# Build the NestJS application (transpiles TypeScript to JavaScript)
 RUN npm run build
 
-# Stage 2: Production image
-FROM node:20-alpine AS production
-
-WORKDIR /app
-
-# Copy only necessary files from the build stage
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/prisma ./prisma 
-
-# Expose the port your NestJS app listens on (e.g., 3000)
+# Expose the port your NestJS application listens on (default is 3000)
 EXPOSE 3000
 
-# Run Prisma migrations when the container starts
-# This ensures the database schema is up-to-date
-CMD npx prisma migrate deploy && npm run start:prod
+# Define the command to run your application in production mode
+CMD ["npm", "run", "start:migrate:prod"]
