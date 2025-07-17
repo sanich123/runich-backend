@@ -68,7 +68,7 @@ export class ActivityController {
     }),
   )
   @HttpCode(HttpStatus.CREATED)
-  async getArchiveWithActivitiesFromStrava(@UploadedFile() file: Express.Multer.File, @Param() { id }: ParamsId) {
+  async getArchiveWithActivitiesFromStrava(@UploadedFile() file, @Param() { id }: ParamsId) {
     console.time('обработка архива');
 
     await unzipTransferArchive(file.path);
