@@ -3,9 +3,9 @@ services:
     image: postgres:17.5-alpine
     restart: always
     environment:
-      POSTGRES_USER: ${DATABASE_USER}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: runich
+      POSTGRES_PASSWORD: HfG3@fj0OfjvHdkf234ja
+      POSTGRES_DB: runich_db
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -19,7 +19,7 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_URL: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}?schema=public
+      DATABASE_URL: postgresql://runich:HfG3@fj0OfjvHdkf234ja@localhost:5432/runich_db?schema=public
     ports:
       - '3000:3000'
     volumes:
