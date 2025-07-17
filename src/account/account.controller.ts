@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { ParamsId } from 'src/app/params-validation';
 import { ApiResponse, ApiTags, ApiOperation, ApiParam, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
@@ -7,6 +7,7 @@ import { ProfileDto } from './account.dto';
 import { Pagination, PaginationParams } from 'src/utils/pagination/pagination.decorator';
 import { PaginationResponseDto } from 'src/utils/pagination/pagination.dto';
 import { Filtering, FilteringParams } from './filter.decorator';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @ApiTags(PATHS.profile)
 @Controller(PATHS.profile)
@@ -15,6 +16,7 @@ export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets all profiles' })
   @ApiParam({ name: 'page', required: false, description: 'Page Number' })
   @ApiParam({ name: 'size', required: false, description: 'Count of results per page' })
@@ -38,6 +40,7 @@ export class AccountController {
   }
 
   @Get('/filter')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Search profiles by different fields' })
   @ApiParam({ name: 'page', required: false, description: 'Page Number' })
   @ApiParam({ name: 'size', required: false, description: 'Count of results per page' })
@@ -76,12 +79,14 @@ export class AccountController {
   }
 
   @Patch(PATHS.id)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async updateProfileInfo(@Body() profile: ProfileDto, @Param() { id }: ParamsId) {
     return await this.accountService.updateProfileInfo(profile, id);
   }
 
   @Get(PATHS.id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get user profile by id' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })

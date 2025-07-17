@@ -18,12 +18,14 @@ export class UserController {
   }
 
   @Get(':id/profile')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async getProfileByUserId(@Param() { id }: ParamsId) {
     return await this.userService.getProfileByUserId(id);
   }
 
   @Post(':id/profile')
+  @UseGuards(JwtAuthGuard)
   @ApiCreatedResponse({ description: 'Create user profile' })
   @ApiBody({ type: UserDto })
   @HttpCode(HttpStatus.CREATED)
@@ -32,6 +34,7 @@ export class UserController {
   }
 
   @Patch(':id/profile')
+  @UseGuards(JwtAuthGuard)
   @ApiCreatedResponse({ description: 'Update user profile' })
   @ApiBody({ type: UserDto })
   @HttpCode(HttpStatus.OK)
@@ -40,6 +43,7 @@ export class UserController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @ApiCreatedResponse({ description: 'Delete user account' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteUserByUserId(@Param() { id }: ParamsId) {

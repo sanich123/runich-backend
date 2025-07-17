@@ -13,7 +13,6 @@ export class AuthService {
 
   async signUp(email: string, password: string) {
     try {
-      console.log('this code executed');
       const hashedPassword = await bcrypt.hash(password, 10);
       await this.prisma.users.create({ data: { email, encrypted_password: hashedPassword } });
     } catch (error) {
@@ -33,8 +32,19 @@ export class AuthService {
       }
       return {
         id: user.id,
-        accessToken: this.jwtService.sign({ userId: user.id, email }),
+        accessToken: this.jwtService.sign({ userId: user.id }),
       };
     }
+  }
+
+  async verifyToken(accessToken: string) {
+    const user = await this.jwtService.verify(accessToken);
+    console.log(user);
+    if (!user?.userId) throw new UnauthorizedException('Токен недействителен');
+    return {
+      appVersion: '3.0.0',
+      id: user.id,
+      accessToken: this.jwtService.sign({ userId: user.id }),
+    };
   }
 }

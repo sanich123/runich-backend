@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   UploadedFile,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
@@ -24,6 +25,7 @@ import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
 import { mapActivitiesWithCoordinates } from 'src/utils/parsers/map-activities-with-coordinates';
 import { AccountService } from 'src/account/account.service';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 const { activity, id } = PATHS;
 
 @ApiTags(activity)
@@ -35,6 +37,7 @@ export class ActivityController {
   ) {}
 
   @Get(`${id}/photos{.:take}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
@@ -43,11 +46,13 @@ export class ActivityController {
   }
 
   @Get(`${id}/locations`)
+  @UseGuards(JwtAuthGuard)
   async getLocationsByActivityId(@Param() { id }: ParamsId) {
     return this.activityService.getLocationsByActivityId(id);
   }
 
   @Get(`activityIds{.:ids}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by activities ids' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
@@ -57,6 +62,7 @@ export class ActivityController {
   }
 
   @Post('migration-strava/:id')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('archive', {
       storage: diskStorage({
@@ -87,6 +93,7 @@ export class ActivityController {
   }
 
   @Post(id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Post activity by userId' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Success' })
@@ -97,12 +104,14 @@ export class ActivityController {
   }
 
   @Patch(id)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async patchActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
     return await this.activityService.updateActivity(activity, id);
   }
 
   @Get(`${id}{.:page}{.:take}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by userId' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
@@ -116,6 +125,7 @@ export class ActivityController {
   }
 
   @Get(`${id}/all{.:page}{.:take}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by userId and friends ids' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
@@ -129,6 +139,7 @@ export class ActivityController {
   }
 
   @Get(`/activityId/${id}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activity by activity id' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
@@ -138,6 +149,7 @@ export class ActivityController {
   }
 
   @Delete(id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete activity by activity id' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Success' })

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
@@ -30,7 +29,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async onModuleInit() {
     await this.$connect();
     this.$use(this.loggingMiddleware);
-    //@ts-ignore
     this.$on('error' as never, ({ message }) => this.logger.error(message));
     this.$on('warn' as never, ({ message }) => this.logger.warn(message));
     this.$on('info' as never, ({ message }) => this.logger.debug(message));

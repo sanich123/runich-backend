@@ -1,8 +1,9 @@
-import { Controller, Get, HttpStatus, Param, Query } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ParamsId } from 'src/app/params-validation';
 import { PATHS, QueryParams } from 'src/utils/const';
 import { StatisticService } from './statistic.service';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @ApiTags(PATHS.statistics)
 @Controller(PATHS.statistics)
@@ -10,6 +11,7 @@ export class StatisticController {
   constructor(private readonly statisticsService: StatisticService) {}
 
   @Get(`${PATHS.id}/year-category`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets all statistics by year and categories with months statistics' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
@@ -18,6 +20,7 @@ export class StatisticController {
   }
 
   @Get(`${PATHS.id}/year-month{.:${QueryParams.year}}{.:${QueryParams.month}}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets statistics about activities by year, month, category' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
@@ -30,6 +33,7 @@ export class StatisticController {
   }
 
   @Get(`${PATHS.id}/week{.:${QueryParams.firstDay}}{.:${QueryParams.lastDay}}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets all statistics by current week' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
@@ -42,6 +46,7 @@ export class StatisticController {
   }
 
   @Get(`${PATHS.id}/all`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets all statistics by userId' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })

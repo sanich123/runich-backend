@@ -1,9 +1,22 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { ParamsId } from 'src/app/params-validation';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 const { comment, id, like } = PATHS;
 const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
@@ -14,6 +27,7 @@ export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
   @Get(`${id}{.:take}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get comments by activity id' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: OK, description: 'Success' })
@@ -23,6 +37,7 @@ export class CommentController {
   }
 
   @Get(`${id}/count`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get comments length by activity id' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: OK, description: 'Success' })
@@ -32,6 +47,7 @@ export class CommentController {
   }
 
   @Post(id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Post comment by activity id' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiBody({ type: CommentDTO, required: true })
@@ -43,6 +59,7 @@ export class CommentController {
   }
 
   @Delete(id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete comment by comment id' })
   @ApiParam({ name: 'commentId', required: true, description: 'Comment identifer' })
   @ApiResponse({ status: NO_CONTENT, description: 'Success' })
@@ -53,6 +70,7 @@ export class CommentController {
   }
 
   @Patch(id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update comment by comment id' })
   @ApiParam({ name: 'commentId', required: true, description: 'Comment identifer' })
   @HttpCode(HttpStatus.CREATED)
@@ -63,6 +81,7 @@ export class CommentController {
   }
 
   @Post(`${id}/${like}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Post like to comment by comment id' })
   @ApiParam({ name: 'commentId', required: true, description: 'Activity identifer' })
   @ApiBody({ type: CommentLikeDto, required: true })
@@ -74,6 +93,7 @@ export class CommentController {
   }
 
   @Delete(`${id}/${like}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete like to comment by like id' })
   @ApiParam({ name: 'likeId', required: true, description: 'CommentLike identifer' })
   @ApiResponse({ status: NO_CONTENT, description: 'Success' })
@@ -84,6 +104,7 @@ export class CommentController {
   }
 
   @Get(`${id}/${like}`)
+  @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'commentId', required: true, description: 'Activity identifer' })
   @ApiOperation({ summary: 'Get likes to comment by comment id' })
   @ApiResponse({ status: OK, description: 'Success' })

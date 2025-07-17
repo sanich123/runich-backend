@@ -14,3 +14,10 @@ export class RegisterUserDto {
   @ApiProperty()
   password: string;
 }
+
+export class AccessTokenDto {
+  @ApiProperty({ type: String, description: 'Access Token' })
+  @IsNotEmpty()
+  @IsString()
+  accessToken: string;
+}

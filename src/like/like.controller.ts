@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, HttpStatus, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpStatus, Delete, UseGuards } from '@nestjs/common';
 import { LikeService } from './like.service';
 import { LikeDto } from './like.dto';
 import { ParamsId } from 'src/app/params-validation';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 const { like, id, activityId } = PATHS;
 const { CREATED, BAD_REQUEST, NO_CONTENT } = HttpStatus;
@@ -14,6 +15,7 @@ export class LikeController {
   constructor(private readonly likeService: LikeService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create like' })
   @ApiBody({ type: LikeDto })
   @ApiResponse({ status: CREATED, description: 'Success' })
@@ -23,6 +25,7 @@ export class LikeController {
   }
 
   @Delete(`${id}/${activityId}`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete like' })
   @ApiParam({ name: 'likeId activityId', required: true, description: 'Like identifer, activityId idetifer' })
   @ApiResponse({ status: NO_CONTENT, description: 'Success' })
@@ -32,6 +35,7 @@ export class LikeController {
   }
 
   @Get(id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get likes by activity id' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: CREATED, description: 'Success' })
