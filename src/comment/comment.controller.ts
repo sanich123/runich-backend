@@ -13,7 +13,7 @@ const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
-  @Get(`${id}?`)
+  @Get(`${id}{.:take}`)
   @ApiOperation({ summary: 'Get comments by activity id' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: OK, description: 'Success' })

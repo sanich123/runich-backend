@@ -153,7 +153,8 @@ export class StatisticService {
   }
 
   reduceMetricsFromActivities(activities: { duration: number; distance: number }[]) {
-    const { totalDistance, totalDuration } = activities?.reduce(
+    const safeActivities = Array.isArray(activities) ? activities : [];
+    const { totalDistance, totalDuration } = safeActivities.reduce(
       (acc, { distance, duration }) => {
         acc.totalDistance += distance;
         acc.totalDuration += duration;
@@ -161,6 +162,6 @@ export class StatisticService {
       },
       { totalDistance: 0, totalDuration: 0 },
     );
-    return { totalDistance, totalDuration, totalItems: activities?.length };
+    return { totalDistance, totalDuration, totalItems: safeActivities.length };
   }
 }

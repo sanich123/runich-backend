@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post
 import { ApiBody, ApiCreatedResponse, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ParamsId } from 'src/app/params-validation';
 import { UserService } from './user.service';
-import { ProfileDto } from './user.dto';
+import { UserDto } from './user.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('/user')
@@ -25,17 +25,17 @@ export class UserController {
 
   @Post(':id/profile')
   @ApiCreatedResponse({ description: 'Create user profile' })
-  @ApiBody({ type: ProfileDto })
+  @ApiBody({ type: UserDto })
   @HttpCode(HttpStatus.CREATED)
-  async createProfileByUserId(@Param() { id }: ParamsId, @Body() accountDto: ProfileDto) {
+  async createProfileByUserId(@Param() { id }: ParamsId, @Body() accountDto: UserDto) {
     return await this.userService.createProfileByUserId(id, accountDto);
   }
 
   @Patch(':id/profile')
   @ApiCreatedResponse({ description: 'Update user profile' })
-  @ApiBody({ type: ProfileDto })
+  @ApiBody({ type: UserDto })
   @HttpCode(HttpStatus.OK)
-  async updateProfileByProfileId(@Param() { id }: ParamsId, @Body() accountDto: ProfileDto) {
+  async updateProfileByProfileId(@Param() { id }: ParamsId, @Body() accountDto: UserDto) {
     return await this.userService.updateProfileByProfileId(id, accountDto);
   }
 

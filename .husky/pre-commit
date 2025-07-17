@@ -1,1 +1,1 @@
-npx tsc && npx eslint . --fix && npx ncu --target=semver -u
+npx tsc && npm run lint && npx ncu --target=semver -u

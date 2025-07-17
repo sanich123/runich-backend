@@ -12,7 +12,6 @@ import {
   UseInterceptors,
   UploadedFile,
   NotFoundException,
-  Headers,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
@@ -25,11 +24,6 @@ import { parseCsvFileIntoArray } from 'src/utils/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/utils/parsers/unzip-archive';
 import { mapActivitiesWithCoordinates } from 'src/utils/parsers/map-activities-with-coordinates';
 import { AccountService } from 'src/account/account.service';
-import { render } from '@react-email/components';
-import { NotificationEmail } from 'src/email/templates';
-import { getMapBoxImage } from 'src/utils/utils';
-import { EmailType } from 'src/email/templates/types';
-import { sendEmail } from 'src/utils/email/nodemailer';
 const { activity, id } = PATHS;
 
 @ApiTags(activity)
@@ -40,7 +34,7 @@ export class ActivityController {
     private readonly accountService: AccountService,
   ) {}
 
-  @Get(`${id}/photos?`)
+  @Get(`${id}/photos{.:take}`)
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
@@ -53,30 +47,7 @@ export class ActivityController {
     return this.activityService.getLocationsByActivityId(id);
   }
 
-  @Post(`cleancar/locations`)
-  @HttpCode(HttpStatus.CREATED)
-  async getBgLocationsCleanCar(@Body() body: any, @Headers() headers: any) {
-    const subject = 'Отслеженные локации';
-    const html = await render(
-      NotificationEmail({
-        comment: `${body.location.map((location) => new Date(location.timestamp).toLocaleString())}`,
-        type: EmailType.locations,
-        mapPhotoUrl: getMapBoxImage({ location: body.location }),
-        name: 'Александр',
-        surname: 'Воронин',
-        profilePhoto: '',
-        recepientName: 'Александр ',
-        recepientSurname: 'Воронин',
-      }),
-    );
-    await sendEmail('aovoronin.piano@gmail.com', subject, html);
-    console.log(body.location[0], headers);
-    return {
-      background_geolocation: [['changePace', true]],
-    };
-  }
-
-  @Get(`activityIds?`)
+  @Get(`activityIds{.:ids}`)
   @ApiOperation({ summary: 'Get activities by activities ids' })
   @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
@@ -131,7 +102,7 @@ export class ActivityController {
     return await this.activityService.updateActivity(activity, id);
   }
 
-  @Get(`${id}?`)
+  @Get(`${id}{.:page}{.:take}`)
   @ApiOperation({ summary: 'Get activities by userId' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
@@ -144,7 +115,7 @@ export class ActivityController {
     return await this.activityService.getActivitesByUserId(id, page, take);
   }
 
-  @Get(`${id}/all?`)
+  @Get(`${id}/all{.:page}{.:take}`)
   @ApiOperation({ summary: 'Get activities by userId and friends ids' })
   @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })

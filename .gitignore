@@ -1,8 +1,8 @@
 # compiled output
 /dist
+
 /node_modules
 .env
-package-lock.json
 .yarn
 # Logs
 logs

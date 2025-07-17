@@ -17,7 +17,7 @@ export class StatisticController {
     return await this.statisticsService.getStatisticByYearAndCategory(id);
   }
 
-  @Get(`${PATHS.id}/year-month?`)
+  @Get(`${PATHS.id}/year-month{.:${QueryParams.year}}{.:${QueryParams.month}}`)
   @ApiOperation({ summary: 'Gets statistics about activities by year, month, category' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
@@ -29,7 +29,7 @@ export class StatisticController {
     return await this.statisticsService.getMonthStatisticsByYearMonth(id, year, month);
   }
 
-  @Get(`${PATHS.id}/week?`)
+  @Get(`${PATHS.id}/week{.:${QueryParams.firstDay}}{.:${QueryParams.lastDay}}`)
   @ApiOperation({ summary: 'Gets all statistics by current week' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })

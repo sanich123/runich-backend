@@ -6,10 +6,11 @@ import { PRISMA_ERR_TO_HTTP_CODES } from './utils/const';
 import { getLogLevels } from './utils/log-levels';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { urlencoded, json } from 'express';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
   const PORT = Number(process.env.PORT) || 3000;
-  const app = await NestFactory.create(AppModule, { logger: getLogLevels(process.env.NODE_ENV === 'production') });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: getLogLevels(process.env.NODE_ENV === 'production') });
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
   const config = new DocumentBuilder()

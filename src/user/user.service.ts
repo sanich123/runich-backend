@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
-import { ProfileDto } from './user.dto';
+import { UserDto } from './user.dto';
 
 @Injectable()
 export class UserService {
@@ -25,7 +25,7 @@ export class UserService {
     }
   }
 
-  async createProfileByUserId(id: string, accountDto: ProfileDto) {
+  async createProfileByUserId(id: string, accountDto: UserDto) {
     try {
       return this.prisma.profile.create({
         data: { ...accountDto, user_id: id },
@@ -35,7 +35,7 @@ export class UserService {
     }
   }
 
-  async updateProfileByProfileId(profileId: string, accountDto: ProfileDto) {
+  async updateProfileByProfileId(profileId: string, accountDto: UserDto) {
     try {
       return this.prisma.profile.update({
         where: { id: profileId },

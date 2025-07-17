@@ -20,6 +20,7 @@ export class AuthController {
     return this.authService.signUp(email, password);
   }
 
+  @HttpCode(HttpStatus.OK)
   @Post('login')
   @ApiOkResponse({ type: AuthEntity })
   login(@Body() { email, password }: RegisterUserDto) {
