@@ -1,9 +1,20 @@
-import { Body, ConflictException, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  ConflictException,
+  Controller,
+  Delete,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AccessTokenDto, RegisterUserDto } from './auth.dto';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { AuthEntity } from './auth.entity';
 import { PrismaService } from 'nestjs-prisma';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -30,5 +41,12 @@ export class AuthController {
   @Post(`verify`)
   async verifyTokenAndAppVersion(@Body() { accessToken }: AccessTokenDto) {
     return this.authService.verifyToken(accessToken);
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  @Delete(':userId')
+  async deleteUser(@Param() { userId }: { userId: string }) {
+    return this.authService.deleteUser(userId);
   }
 }
