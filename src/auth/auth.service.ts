@@ -1,20 +1,43 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import * as bcrypt from 'bcrypt';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { JwtService } from '@nestjs/jwt';
+import { EmailService } from 'src/email/email.service';
+import { getRandomInt } from 'src/utils/utils';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async signUp(email: string, password: string) {
     try {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      await this.prisma.users.create({ data: { email, encrypted_password: hashedPassword } });
+      const user = await this.prisma.users.findUnique({ where: { email } });
+      if (user && !user?.email_confirmed_at) {
+        const confirmationCode = getRandomInt(1, 100000);
+        await this.emailService.sendConfirmationCode(email, confirmationCode);
+        return await this.prisma.users.update({
+          where: { email },
+          data: { confirmation_sent_at: new Date(), confirmation_token: `${confirmationCode}` },
+        });
+      } else {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const confirmationCode = getRandomInt(1, 100000);
+        await this.emailService.sendConfirmationCode(email, confirmationCode);
+        await this.prisma.users.create({
+          data: {
+            email,
+            encrypted_password: hashedPassword,
+            confirmation_token: `${confirmationCode}`,
+            confirmation_sent_at: new Date(),
+          },
+        });
+        return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
+      }
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -28,6 +51,9 @@ export class AuthService {
       const isPasswordValid = await bcrypt.compare(password, `${user.encrypted_password}`);
       if (!isPasswordValid) {
         throw new UnauthorizedException('Неправильный пароль');
+      }
+      if (!user.email_confirmed_at) {
+        throw new UnauthorizedException('Данная учетная запись не подтверждена');
       }
       return {
         id: user.id,
@@ -43,7 +69,9 @@ export class AuthService {
         throw new UnauthorizedException('Информация о пользователе не была найдена');
       }
       const user = await this.prisma.users.findUnique({ where: { id: tokenInfo?.userId } });
-      if (!user) throw new NotFoundException('Пользователь не был найден');
+      if (!user) {
+        throw new NotFoundException('Пользователь не был найден');
+      }
 
       return {
         appVersion: '3.0.0',
@@ -58,6 +86,28 @@ export class AuthService {
   async deleteUser(userId: string) {
     try {
       return await this.prisma.users.delete({ where: { id: userId } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async confirmEmailByCode(confirmationCode: string, email: string) {
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      if (!user) {
+        throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
+      }
+      if (confirmationCode !== user?.confirmation_token) {
+        throw new BadRequestException('Код подтверждения не соответствует высланному');
+      } else {
+        await this.prisma.users.update({ where: { email: normalizedEmail }, data: { email_confirmed_at: new Date() } });
+        return {
+          appVersion: '3.0.0',
+          id: user.id,
+          accessToken: this.jwtService.sign({ userId: user.id }),
+        };
+      }
     } catch (error) {
       prismaErrorHandling(error);
     }

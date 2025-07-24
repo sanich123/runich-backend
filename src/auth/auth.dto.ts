@@ -21,3 +21,15 @@ export class AccessTokenDto {
   @IsString()
   accessToken: string;
 }
+
+export class ConfirmationCodeDto {
+  @ApiProperty({ type: String, description: 'Confirmation code' })
+  @IsNotEmpty()
+  @IsString()
+  confirmationCode: string;
+
+  @ApiProperty({ type: String, description: 'Email' })
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
+}

@@ -16,6 +16,10 @@ import * as React from 'react';
 
 import { HEADING, NotificationEmailProps, PARAGRAPH } from './types';
 
+export function SimpleText({ text }: { text: string }) {
+  return <Text>{text}</Text>;
+}
+
 export function NotificationEmail({
   type,
   name,

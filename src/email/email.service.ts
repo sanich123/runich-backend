@@ -1,19 +1,14 @@
-import { ActivityService } from 'src/activity/activity.service';
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
 import { sendEmail } from 'src/utils/email/nodemailer';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
-import { CommentService } from 'src/comment/comment.service';
 import { render } from '@react-email/components';
-import { NotificationEmail } from './templates';
+import { NotificationEmail, SimpleText } from './templates';
 import { EmailType } from './templates/types';
 import { Injectable } from '@nestjs/common/decorators/core';
 
 @Injectable()
 export class EmailService {
-  constructor(
-    private readonly commentService: CommentService,
-    private readonly activityService: ActivityService,
-  ) {}
+  constructor() {}
 
   async sendLikeEmailNotification({
     profilePhoto,
@@ -98,6 +93,15 @@ export class EmailService {
       await sendEmail(recepientEmail, subject, html);
     } catch (error) {
       prismaErrorHandling(error);
+    }
+  }
+  async sendConfirmationCode(emailAddress: string, confirmationCode: number) {
+    try {
+      const subject = 'Подтверждение электронной почты';
+      const html = await render(SimpleText({ text: confirmationCode.toString() }));
+      await sendEmail(emailAddress, subject, html);
+    } catch (error) {
+      console.log(error);
     }
   }
 }
