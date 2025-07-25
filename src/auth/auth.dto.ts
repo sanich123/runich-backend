@@ -33,3 +33,16 @@ export class ConfirmationCodeDto {
   @IsEmail()
   email: string;
 }
+
+export class LoginWithGoogleDto {
+  @ApiProperty({ type: String, description: 'Email' })
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ type: String, description: 'Name' })
+  name: string;
+
+  @ApiProperty({ type: String, description: 'Name' })
+  photo: string;
+}

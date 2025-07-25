@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AccessTokenDto, ConfirmationCodeDto, RegisterUserDto } from './auth.dto';
+import { AccessTokenDto, ConfirmationCodeDto, LoginWithGoogleDto, RegisterUserDto } from './auth.dto';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { AuthEntity } from './auth.entity';
 import { PrismaService } from 'nestjs-prisma';
@@ -40,6 +40,12 @@ export class AuthController {
     return this.authService.login(email, password);
   }
 
+  @HttpCode(HttpStatus.OK)
+  @Post('login-with-google')
+  async loginWithGoogle(@Body() { email, name, photo }: LoginWithGoogleDto) {
+    return this.authService.loginWithGoogle(email, name, photo);
+  }
+
   @Post('verify')
   async verifyTokenAndAppVersion(@Body() { accessToken }: AccessTokenDto) {
     return this.authService.verifyToken(accessToken);
@@ -47,7 +53,6 @@ export class AuthController {
 
   @Post('confirm-email')
   async confirmEmailByCode(@Body() { confirmationCode, email }: ConfirmationCodeDto) {
-    // console.log(confirmationCode, email);
     return this.authService.confirmEmailByCode(confirmationCode, email);
   }
 

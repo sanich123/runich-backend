@@ -1,4 +1,4 @@
-import { InternalServerErrorException } from '@nestjs/common';
+import { HttpException, InternalServerErrorException } from '@nestjs/common';
 import {
   PrismaClientKnownRequestError,
   PrismaClientUnknownRequestError,
@@ -8,6 +8,9 @@ import { PrismaException } from 'src/exceptions/prisma-exceptions';
 import { prismaError } from 'prisma-better-errors';
 
 export function prismaErrorHandling(error: unknown) {
+  if (error instanceof HttpException) {
+    throw error;
+  }
   if (error instanceof PrismaClientKnownRequestError) {
     throw new prismaError(error);
   }

@@ -34,6 +34,7 @@ export class AuthService {
             encrypted_password: hashedPassword,
             confirmation_token: `${confirmationCode}`,
             confirmation_sent_at: new Date(),
+            created_at: new Date(),
           },
         });
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
@@ -44,21 +45,71 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    const user = await this.prisma.users.findUnique({ where: { email } });
-    if (!user) {
-      throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя:${email}`);
-    } else {
-      const isPasswordValid = await bcrypt.compare(password, `${user.encrypted_password}`);
-      if (!isPasswordValid) {
-        throw new UnauthorizedException('Неправильный пароль');
+    try {
+      const user = await this.prisma.users.findUnique({ where: { email } });
+      if (!user) {
+        throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
+      } else {
+        const isPasswordValid = await bcrypt.compare(password, `${user.encrypted_password}`);
+        if (!isPasswordValid) {
+          throw new UnauthorizedException('Неправильный пароль');
+        }
+        if (!user.email_confirmed_at) {
+          throw new UnauthorizedException('Данная учетная запись не подтверждена');
+        }
+        await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
+        return {
+          id: user.id,
+          accessToken: this.jwtService.sign({ userId: user.id }),
+        };
       }
-      if (!user.email_confirmed_at) {
-        throw new UnauthorizedException('Данная учетная запись не подтверждена');
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async loginWithGoogle(email: string, name?: string, photo?: string) {
+    try {
+      const user = await this.prisma.users.findUnique({ where: { email } });
+
+      if (!user) {
+        const user = await this.prisma.users.create({
+          data: {
+            email,
+            email_confirmed_at: new Date(),
+            created_at: new Date(),
+          },
+        });
+        if (user.id) {
+          await this.prisma.profile.create({
+            data: { email, name, profilePhoto: photo, created_at: new Date(), user_id: user.id },
+          });
+          return {
+            id: user.id,
+            accessToken: this.jwtService.sign({ userId: user.id }),
+          };
+        }
+      } else {
+        const userProfile = await this.prisma.profile.findUnique({ where: { user_id: user.id } });
+        if (userProfile) {
+          if (!userProfile?.profilePhoto && photo) {
+            await this.prisma.profile.update({ where: { user_id: user.id }, data: { profilePhoto: photo } });
+          }
+          if (!userProfile?.name && name) {
+            await this.prisma.profile.update({ where: { user_id: user.id }, data: { name } });
+          }
+        } else {
+          await this.prisma.profile.create({
+            data: { email, name, profilePhoto: photo, created_at: new Date(), user_id: user.id },
+          });
+        }
+        return {
+          id: user.id,
+          accessToken: this.jwtService.sign({ userId: user.id }),
+        };
       }
-      return {
-        id: user.id,
-        accessToken: this.jwtService.sign({ userId: user.id }),
-      };
+    } catch (error) {
+      prismaErrorHandling(error);
     }
   }
 
