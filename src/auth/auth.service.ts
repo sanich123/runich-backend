@@ -82,7 +82,7 @@ export class AuthService {
         });
         if (user.id) {
           await this.prisma.profile.create({
-            data: { email, name, profilePhoto: photo, created_at: new Date(), user_id: user.id },
+            data: { email, name: name ?? '', profilePhoto: photo ?? '', created_at: new Date(), user_id: user.id },
           });
           return {
             id: user.id,
