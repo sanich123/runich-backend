@@ -17,12 +17,28 @@ import * as React from 'react';
 
 import { HEADING, NotificationEmailProps, PARAGRAPH } from './types';
 
-export function SimpleText({ text, accessToken }: { text: string; accessToken: string }) {
-  console.log(accessToken);
+export function ConfirmEmailAddressWithLinkAndCode({ text, accessToken }: { text: string; accessToken: string }) {
   return (
     <Html>
-      <Link href={`https://runich.expo.app/sign-in?accessToken=${accessToken}`}>Перейдите по ссылке</Link>
+      <Link
+        href={`http${process.env.IS_DEV ? '' : 's'}://${process.env.IS_DEV ? 'localhost:8081' : 'runich.expo.app'}/sign-in?accessToken=${accessToken}`}
+      >
+        Для подтверждение адреса электронной почты перейдите по ссылке
+      </Link>
+      <Text>Или введите в приложении число ниже</Text>
       <Text>{text}</Text>
+    </Html>
+  );
+}
+
+export function ResetPasswordByLinkAndCode({ accessToken }: { accessToken: string }) {
+  return (
+    <Html>
+      <Link
+        href={`http${process.env.IS_DEV ? '' : 's'}://${process.env.IS_DEV ? 'localhost:8081' : 'runich.expo.app'}/sign-in?accessToken=${accessToken}`}
+      >
+        Для авторизации в приложении без пароля перейдите по ссылке ниже
+      </Link>
     </Html>
   );
 }

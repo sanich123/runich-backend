@@ -59,6 +59,7 @@ export class AuthService {
           throw new UnauthorizedException('Неправильный пароль');
         }
         if (!user.email_confirmed_at) {
+          console.log('account unconfirmed');
           throw new UnauthorizedException('Данная учетная запись не подтверждена');
         }
         await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
@@ -127,6 +128,9 @@ export class AuthService {
       if (!user) {
         throw new NotFoundException('Пользователь не был найден');
       }
+      if (!user?.email_confirmed_at) {
+        await this.prisma.users.update({ where: { id: user.id }, data: { email_confirmed_at: new Date() } });
+      }
 
       return {
         appVersion: '3.0.0',
@@ -163,6 +167,23 @@ export class AuthService {
           accessToken: this.jwtService.sign({ userId: user.id }),
         };
       }
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async authInFromEmailLink(email: string) {
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      if (!user) {
+        throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
+      }
+      if (!user?.email_confirmed_at) {
+        throw new NotFoundException('Данный email не подтвержден. Зарегистрируйтесь и подтвердите email');
+      }
+      const accessToken = this.jwtService.sign({ userId: user.id });
+      await this.emailService.sendResetPasswordLink(email, accessToken);
     } catch (error) {
       prismaErrorHandling(error);
     }

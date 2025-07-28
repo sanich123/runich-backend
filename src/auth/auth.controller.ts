@@ -56,6 +56,11 @@ export class AuthController {
     return this.authService.confirmEmailByCode(confirmationCode, email);
   }
 
+  @Post('reset-password')
+  async resetPassword(@Body() { email }: { email: string }) {
+    return await this.authService.authInFromEmailLink(email);
+  }
+
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAuthGuard)
   @Delete(':userId')

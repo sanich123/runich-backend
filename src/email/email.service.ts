@@ -2,7 +2,7 @@ import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto'
 import { sendEmail } from 'src/utils/email/nodemailer';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { render } from '@react-email/components';
-import { NotificationEmail, SimpleText } from './templates';
+import { NotificationEmail, ConfirmEmailAddressWithLinkAndCode, ResetPasswordByLinkAndCode } from './templates';
 import { EmailType } from './templates/types';
 import { Injectable } from '@nestjs/common/decorators/core';
 
@@ -98,7 +98,17 @@ export class EmailService {
   async sendConfirmationCode(emailAddress: string, confirmationCode: number, accessToken: string) {
     try {
       const subject = 'Подтверждение электронной почты';
-      const html = await render(SimpleText({ text: confirmationCode.toString(), accessToken }));
+      const html = await render(ConfirmEmailAddressWithLinkAndCode({ text: confirmationCode.toString(), accessToken }));
+      await sendEmail(emailAddress, subject, html);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async sendResetPasswordLink(emailAddress: string, accessToken: string) {
+    try {
+      const subject = 'Ссылка для сброса пароля';
+      const html = await render(ResetPasswordByLinkAndCode({ accessToken }));
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
       console.log(error);
