@@ -184,6 +184,7 @@ export class AuthService {
       }
       const accessToken = this.jwtService.sign({ userId: user.id });
       await this.emailService.sendResetPasswordLink(email, accessToken);
+      return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
     } catch (error) {
       prismaErrorHandling(error);
     }
