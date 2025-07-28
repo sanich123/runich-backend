@@ -95,10 +95,10 @@ export class EmailService {
       prismaErrorHandling(error);
     }
   }
-  async sendConfirmationCode(emailAddress: string, confirmationCode: number) {
+  async sendConfirmationCode(emailAddress: string, confirmationCode: number, accessToken: string) {
     try {
       const subject = 'Подтверждение электронной почты';
-      const html = await render(SimpleText({ text: confirmationCode.toString() }));
+      const html = await render(SimpleText({ text: confirmationCode.toString(), accessToken }));
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
       console.log(error);

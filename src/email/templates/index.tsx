@@ -11,13 +11,20 @@ import {
   Text,
   Heading,
   Tailwind,
+  Link,
 } from '@react-email/components';
 import * as React from 'react';
 
 import { HEADING, NotificationEmailProps, PARAGRAPH } from './types';
 
-export function SimpleText({ text }: { text: string }) {
-  return <Text>{text}</Text>;
+export function SimpleText({ text, accessToken }: { text: string; accessToken: string }) {
+  console.log(accessToken);
+  return (
+    <Html>
+      <Link href={`https://runich.expo.app/sign-in?accessToken=${accessToken}`}>Перейдите по ссылке</Link>
+      <Text>{text}</Text>
+    </Html>
+  );
 }
 
 export function NotificationEmail({

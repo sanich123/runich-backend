@@ -17,9 +17,11 @@ export class AuthService {
   async signUp(email: string, password: string) {
     try {
       const user = await this.prisma.users.findUnique({ where: { email } });
+
       if (user && !user?.email_confirmed_at) {
+        const accessToken = this.jwtService.sign({ userId: user.id });
         const confirmationCode = getRandomInt(1, 100000);
-        await this.emailService.sendConfirmationCode(email, confirmationCode);
+        await this.emailService.sendConfirmationCode(email, confirmationCode, accessToken);
         return await this.prisma.users.update({
           where: { email },
           data: { confirmation_sent_at: new Date(), confirmation_token: `${confirmationCode}` },
@@ -27,8 +29,8 @@ export class AuthService {
       } else {
         const hashedPassword = await bcrypt.hash(password, 10);
         const confirmationCode = getRandomInt(1, 100000);
-        await this.emailService.sendConfirmationCode(email, confirmationCode);
-        await this.prisma.users.create({
+
+        const user = await this.prisma.users.create({
           data: {
             email,
             encrypted_password: hashedPassword,
@@ -37,6 +39,8 @@ export class AuthService {
             created_at: new Date(),
           },
         });
+        const accessToken = this.jwtService.sign({ userId: user.id });
+        await this.emailService.sendConfirmationCode(email, confirmationCode, accessToken);
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       }
     } catch (error) {
