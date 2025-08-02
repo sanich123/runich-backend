@@ -108,7 +108,14 @@ export class AuthService {
           }
         } else {
           await this.prisma.profile.create({
-            data: { email, name: name ?? '', profilePhoto: photo ?? '', created_at: new Date(), user_id: user.id },
+            data: {
+              email,
+              name: name ?? '',
+              surname: '',
+              profilePhoto: photo ?? '',
+              created_at: new Date(),
+              user_id: user.id,
+            },
           });
         }
         return {
