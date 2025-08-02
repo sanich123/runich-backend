@@ -1,1 +1,1 @@
-npx tsc && npm run lint && npx npm-check-updates '/^(?!react|react-dom).*$/' --target=semver -u 
+npx tsc && npm run lint && npx npm-check-updates '/^(?!react|react-dom|typescript).*$/' --target=semver -u 
