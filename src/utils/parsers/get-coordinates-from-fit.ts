@@ -4,7 +4,7 @@ import { readFile } from 'fs/promises';
 export async function getCoordinatesFromFitFile(filePath: string) {
   try {
     const fileBuffer = (await readFile(filePath)).buffer;
-    const getSportsLibEventFromBuffer = await SportsLib.importFromFit(fileBuffer);
+    const getSportsLibEventFromBuffer = await SportsLib.importFromFit(fileBuffer as ArrayBuffer);
     const [activities] = getSportsLibEventFromBuffer.getActivities();
     return activities
       .getPositionData()
