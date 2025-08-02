@@ -98,14 +98,17 @@ export class AuthService {
         const userProfile = await this.prisma.profile.findUnique({ where: { user_id: user.id } });
         if (userProfile) {
           if (!userProfile?.profilePhoto && photo) {
-            await this.prisma.profile.update({ where: { user_id: user.id }, data: { profilePhoto: photo } });
+            await this.prisma.profile.update({
+              where: { user_id: user.id },
+              data: { profilePhoto: photo, updatedAt: new Date() },
+            });
           }
           if (!userProfile?.name && name) {
-            await this.prisma.profile.update({ where: { user_id: user.id }, data: { name } });
+            await this.prisma.profile.update({ where: { user_id: user.id }, data: { name, updatedAt: new Date() } });
           }
         } else {
           await this.prisma.profile.create({
-            data: { email, name, profilePhoto: photo, created_at: new Date(), user_id: user.id },
+            data: { email, name: name ?? '', profilePhoto: photo ?? '', created_at: new Date(), user_id: user.id },
           });
         }
         return {
