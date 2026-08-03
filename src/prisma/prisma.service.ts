@@ -28,7 +28,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
   async onModuleInit() {
     await this.$connect();
-    this.$use(this.loggingMiddleware);
     this.$on('error' as never, ({ message }) => this.logger.error(message));
     this.$on('warn' as never, ({ message }) => this.logger.warn(message));
     this.$on('info' as never, ({ message }) => this.logger.debug(message));
