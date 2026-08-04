@@ -2,18 +2,16 @@ FROM node:24-alpine AS base
 
 WORKDIR /usr/src/app
 
-COPY package.json ./
+COPY package.json yarn.lock .yarnrc.yml ./
 
-COPY package-lock.json ./
-
-RUN npm install --omit=dev
+RUN corepack enable && yarn install --immutable
 
 COPY . .
 
-RUN npx prisma generate
+RUN yarn prisma generate
 
-RUN npm run build
+RUN yarn build
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start:migrate:prod"]
+CMD ["yarn", "start:migrate:prod"]
