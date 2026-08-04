@@ -2,10 +2,11 @@ import { parse } from 'csv-parse';
 import { finished } from 'stream/promises';
 import { createReadStream } from 'node:fs';
 import { existsSync } from 'fs';
+import { join } from 'path';
 
 export async function parseCsvFileIntoArray() {
   const records = [];
-  const csvFileToParse = 'dist/migration/activities.csv';
+  const csvFileToParse = join(process.cwd(), 'dist', 'migration', 'activities.csv');
 
   try {
     if (!existsSync(csvFileToParse)) {

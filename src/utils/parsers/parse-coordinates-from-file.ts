@@ -2,10 +2,11 @@ import { getCoordinatesFromFitFile } from './get-coordinates-from-fit';
 import { getCoordinatesFromTcxFile } from './get-coordinates-from-tcx';
 import { getCoordinatesFromGpxFile } from './get-coordinates-from-gpx';
 import { existsSync } from 'node:fs';
+import { join } from 'path';
 
 export async function parseCoordinatesFromFile(filePath: string) {
   let parsedCoordinates;
-  const inputFilePath = `dist/migration/${filePath}`;
+  const inputFilePath = join(process.cwd(), 'dist', 'migration', filePath);
   try {
     if (!existsSync(inputFilePath)) {
       throw new Error('File with coordinates doesnt exist!');

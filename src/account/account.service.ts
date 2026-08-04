@@ -100,4 +100,16 @@ export class AccountService {
       prismaErrorHandling(error);
     }
   }
+
+  async getOrCreateAccountByUserId(id: string) {
+    try {
+      return await this.prisma.profile.upsert({
+        where: { user_id: id },
+        update: {},
+        create: { user_id: id },
+      });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
 }

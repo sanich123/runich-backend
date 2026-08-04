@@ -14,6 +14,9 @@ import {
   NotFoundException,
   UseGuards,
 } from '@nestjs/common';
+import { mkdir, rm } from 'fs/promises';
+import { extname, join } from 'path';
+import { randomUUID } from 'crypto';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
 import { ParamsId } from 'src/app/params-validation';
@@ -27,6 +30,8 @@ import { mapActivitiesWithCoordinates } from 'src/utils/parsers/map-activities-w
 import { AccountService } from 'src/account/account.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 const { activity, id } = PATHS;
+const receivedArchiveDirectory = join(process.cwd(), 'dist', 'receivedArchive');
+const migrationDirectory = join(process.cwd(), 'dist', 'migration');
 
 @ApiTags(activity)
 @Controller(activity)
@@ -66,9 +71,16 @@ export class ActivityController {
   @UseInterceptors(
     FileInterceptor('archive', {
       storage: diskStorage({
-        destination: 'dist/receivedArchive',
+        destination: async (req, file, cb) => {
+          try {
+            await mkdir(receivedArchiveDirectory, { recursive: true });
+            cb(null, receivedArchiveDirectory);
+          } catch (error) {
+            cb(error, receivedArchiveDirectory);
+          }
+        },
         filename: (req, file, cb) => {
-          cb(null, file.originalname);
+          cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`);
         },
       }),
     }),
@@ -77,19 +89,32 @@ export class ActivityController {
   async getArchiveWithActivitiesFromStrava(@UploadedFile() file, @Param() { id }: ParamsId) {
     console.time('обработка архива');
 
-    await unzipTransferArchive(file.path);
-    const parsedActivities = await parseCsvFileIntoArray();
-    const account = await this.accountService.getAccountByUserId(id);
-    if (!account) {
-      throw NotFoundException;
+    try {
+      if (!file) {
+        throw new NotFoundException('Archive file is required');
+      }
+
+      const account = await this.accountService.getOrCreateAccountByUserId(id);
+      if (!account) {
+        throw new NotFoundException(`Profile for user ${id} was not found`);
+      }
+
+      await unzipTransferArchive(file.path);
+      const parsedActivities = await parseCsvFileIntoArray();
+      const activitiesWithCoordinates = await mapActivitiesWithCoordinates({
+        parsedActivities,
+        userId: id,
+        profileId: account.id,
+      });
+      if (!activitiesWithCoordinates) return;
+      return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates);
+    } finally {
+      await Promise.all([
+        file?.path ? rm(file.path, { force: true }) : Promise.resolve(),
+        rm(migrationDirectory, { recursive: true, force: true }),
+      ]);
+      console.timeEnd('обработка архива');
     }
-    const activitiesWithCoordinates = await mapActivitiesWithCoordinates({
-      parsedActivities,
-      userId: id,
-      profileId: account.id,
-    });
-    if (!activitiesWithCoordinates) return;
-    return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates);
   }
 
   @Post(id)

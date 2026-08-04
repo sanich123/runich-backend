@@ -6,8 +6,6 @@ import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/utils/parsers/get-mapbox-image';
 import { chunkArray } from 'src/utils/parsers/chunk-array';
-import { existsSync } from 'fs';
-import { rm } from 'fs/promises';
 
 @Injectable()
 export class ActivityService {
@@ -47,12 +45,6 @@ export class ActivityService {
           return await this.prisma.activity.createMany({ data: activities });
         }),
       );
-      if (existsSync('dist/migration')) {
-        await rm('dist/migration', { recursive: true });
-      }
-      if (existsSync('dist/receivedArchive')) {
-        await rm('dist/receivedArchive');
-      }
       return { success: true };
     } catch (error) {
       prismaErrorHandling(error);
