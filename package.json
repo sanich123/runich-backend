@@ -14,7 +14,7 @@
     "start:dev": "tsx watch src/main.ts",
     "start:debug": "node --inspect --import tsx src/main.ts",
     "start:prod": "node dist/main.js",
-    "start:migrate:prod": "prisma migrate deploy && node dist/src/main",
+    "start:migrate:prod": "prisma migrate deploy && node dist/main.js",
     "start:migrate:dev": "prisma generate && prisma migrate deploy && yarn start:dev",
     "build": "tsup --config tsup.config.ts",
     "test": "jest",
