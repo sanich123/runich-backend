@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { reduceAllMetricsToYearCategoryMonths } from './utils';
 
 @Injectable()
 export class StatisticService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getYearsAndTypesOfActivities(id: string) {
     try {

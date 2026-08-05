@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
@@ -24,7 +25,7 @@ const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
 @ApiTags(comment)
 @Controller(comment)
 export class CommentController {
-  constructor(private readonly commentService: CommentService) {}
+  constructor(@Inject(CommentService) private readonly commentService: CommentService) {}
 
   @Get(`${id}{.:take}`)
   @UseGuards(JwtAuthGuard)

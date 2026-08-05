@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { FriendDto } from './friend.dto';
@@ -7,7 +7,9 @@ import { AccountService } from 'src/account/account.service';
 @Injectable()
 export class FriendService {
   constructor(
+    @Inject(PrismaService)
     private readonly prismaService: PrismaService,
+    @Inject(AccountService)
     private readonly accountService: AccountService,
   ) {}
 

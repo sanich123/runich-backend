@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { ProfileDto } from './account.dto';
@@ -7,7 +7,7 @@ import { Filtering } from './filter.decorator';
 
 @Injectable()
 export class AccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getAllAccounts({ page, limit, size, offset }: Pagination) {
     try {

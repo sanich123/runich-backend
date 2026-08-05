@@ -13,5 +13,6 @@ export function prismaErrorHandling(error: unknown) {
   if (error instanceof Prisma.PrismaClientUnknownRequestError || error instanceof Prisma.PrismaClientValidationError) {
     throw new PrismaException(error.message);
   }
+  console.error('[Prisma] Unhandled database error', error);
   throw new InternalServerErrorException(JSON.stringify(error, null, 2).slice(0, 150));
 }

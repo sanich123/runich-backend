@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
@@ -9,8 +9,11 @@ import { getRandomInt } from 'src/utils/utils';
 @Injectable()
 export class AuthService {
   constructor(
+    @Inject(PrismaService)
     private readonly prisma: PrismaService,
+    @Inject(JwtService)
     private jwtService: JwtService,
+    @Inject(EmailService)
     private emailService: EmailService,
   ) {}
 

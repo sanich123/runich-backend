@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Post,
   Delete,
@@ -37,7 +38,9 @@ const migrationDirectory = join(process.cwd(), 'dist', 'migration');
 @Controller(activity)
 export class ActivityController {
   constructor(
+    @Inject(ActivityService)
     private readonly activityService: ActivityService,
+    @Inject(AccountService)
     private readonly accountService: AccountService,
   ) {}
 

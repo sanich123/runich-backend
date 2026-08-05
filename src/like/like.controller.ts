@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, HttpStatus, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpStatus, Delete, Inject, UseGuards } from '@nestjs/common';
 import { LikeService } from './like.service';
 import { LikeDto } from './like.dto';
 import { ParamsId } from 'src/app/params-validation';
@@ -12,7 +12,7 @@ const { CREATED, BAD_REQUEST, NO_CONTENT } = HttpStatus;
 @ApiTags(like)
 @Controller(like)
 export class LikeController {
-  constructor(private readonly likeService: LikeService) {}
+  constructor(@Inject(LikeService) private readonly likeService: LikeService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)

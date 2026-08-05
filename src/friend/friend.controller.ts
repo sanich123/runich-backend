@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, HttpCode, Param, Delete, Body, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, HttpCode, Inject, Param, Delete, Body, Post, UseGuards } from '@nestjs/common';
 import { FriendService } from './friend.service';
 import { ParamsId } from 'src/app/params-validation';
 import { FriendDto } from './friend.dto';
@@ -12,7 +12,7 @@ const { OK, BAD_REQUEST, NO_CONTENT, CREATED } = HttpStatus;
 @ApiTags(friend)
 @Controller(friend)
 export class FriendController {
-  constructor(private readonly friendService: FriendService) {}
+  constructor(@Inject(FriendService) private readonly friendService: FriendService) {}
 
   @Get(id)
   @UseGuards(JwtAuthGuard)

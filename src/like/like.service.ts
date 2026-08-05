@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { LikeDto } from './like.dto';
 import { prismaErrorHandling } from 'src/utils/prisma-errors';
@@ -8,8 +8,11 @@ import { ActivityService } from 'src/activity/activity.service';
 @Injectable()
 export class LikeService {
   constructor(
+    @Inject(PrismaService)
     private readonly prismaService: PrismaService,
+    @Inject(AccountService)
     private readonly accountService: AccountService,
+    @Inject(ActivityService)
     private readonly activityService: ActivityService,
   ) {}
 

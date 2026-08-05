@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Inject, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { EmailService } from './email.service';
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
@@ -8,7 +8,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 @ApiTags(PATHS.email)
 @Controller(PATHS.email)
 export class EmailController {
-  constructor(private readonly emailService: EmailService) {}
+  constructor(@Inject(EmailService) private readonly emailService: EmailService) {}
 
   @Post(PATHS.like)
   @UseGuards(JwtAuthGuard)

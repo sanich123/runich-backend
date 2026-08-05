@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { ParamsId } from 'src/app/params-validation';
 import { ApiResponse, ApiTags, ApiOperation, ApiParam, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
@@ -13,7 +13,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 @Controller(PATHS.profile)
 @ApiExtraModels(PaginationResponseDto)
 export class AccountController {
-  constructor(private readonly accountService: AccountService) {}
+  constructor(@Inject(AccountService) private readonly accountService: AccountService) {}
 
   @Get()
   @UseGuards(JwtAuthGuard)

@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Inject, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ParamsId } from 'src/app/params-validation';
 import { PATHS, QueryParams } from 'src/utils/const';
@@ -8,7 +8,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 @ApiTags(PATHS.statistics)
 @Controller(PATHS.statistics)
 export class StatisticController {
-  constructor(private readonly statisticsService: StatisticService) {}
+  constructor(@Inject(StatisticService) private readonly statisticsService: StatisticService) {}
 
   @Get(`${PATHS.id}/year-category`)
   @UseGuards(JwtAuthGuard)

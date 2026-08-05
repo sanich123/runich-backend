@@ -5,6 +5,7 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Post,
   UseGuards,
@@ -19,7 +20,9 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 @Controller('auth')
 export class AuthController {
   constructor(
+    @Inject(AuthService)
     private authService: AuthService,
+    @Inject(PrismaService)
     private prismaService: PrismaService,
   ) {}
 
