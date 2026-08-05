@@ -1,4 +1,4 @@
-import { LogLevel } from '@nestjs/common/services/logger.service';
+import type { LogLevel } from '@nestjs/common';
 
 export function getLogLevels(isProduction: boolean): LogLevel[] {
   if (isProduction) {

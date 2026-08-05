@@ -1,10 +1,10 @@
-import { encode } from '@mapbox/polyline';
+import polyline from '@mapbox/polyline';
 import { LocationObject } from 'src/activity/activity.dto';
 
 export function getMapBoxImage(locations: LocationObject[]) {
   if (locations?.length > 1 && 'coords' in locations[0]) {
     const polylineLatLang = locations.map(({ coords }) => [coords.latitude, coords.longitude]);
-    const encodedPolyline = encode(polylineLatLang);
+    const encodedPolyline = polyline.encode(polylineLatLang);
 
     const initialCoordinate = [locations[0].coords.longitude, locations[0].coords.latitude];
     const lastCoordinate = [

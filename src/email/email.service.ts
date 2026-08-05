@@ -4,7 +4,7 @@ import { prismaErrorHandling } from 'src/utils/prisma-errors';
 import { render } from '@react-email/components';
 import { NotificationEmail, ConfirmEmailAddressWithLinkAndCode, ResetPasswordByLinkAndCode } from './templates';
 import { EmailType } from './templates/types';
-import { Injectable } from '@nestjs/common/decorators/core';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class EmailService {

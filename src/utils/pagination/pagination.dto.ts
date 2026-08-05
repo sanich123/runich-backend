@@ -1,14 +1,15 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 
 export class PaginationResponseDto<T> {
-  @ApiProperty({ example: 35 })
+  @ApiProperty({ type: Number, example: 35 })
   totalItems: number;
 
-  @ApiProperty({ example: 0 })
+  @ApiProperty({ type: Number, example: 0 })
   page: number;
 
-  @ApiProperty({ example: 10 })
+  @ApiProperty({ type: Number, example: 10 })
   size: number;
 
+  @ApiHideProperty()
   items: T[];
 }

@@ -4,9 +4,9 @@ import { ParamsId } from 'src/app/params-validation';
 import { ApiResponse, ApiTags, ApiOperation, ApiParam, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
 import { PATHS } from 'src/utils/const';
 import { ProfileDto } from './account.dto';
-import { Pagination, PaginationParams } from 'src/utils/pagination/pagination.decorator';
+import { type Pagination, PaginationParams } from 'src/utils/pagination/pagination.decorator';
 import { PaginationResponseDto } from 'src/utils/pagination/pagination.dto';
-import { Filtering, FilteringParams } from './filter.decorator';
+import { type Filtering, FilteringParams } from './filter.decorator';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @ApiTags(PATHS.profile)
