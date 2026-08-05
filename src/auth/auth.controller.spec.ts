@@ -1,0 +1,24 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+
+describe('AuthController', () => {
+  let controller: AuthController;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [AuthController],
+      providers: [
+        { provide: AuthService, useValue: {} },
+        { provide: PrismaService, useValue: {} },
+      ],
+    }).compile();
+
+    controller = module.get<AuthController>(AuthController);
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+});

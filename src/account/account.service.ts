@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'nestjs-prisma';
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { Inject, Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { ProfileDto } from './account.dto';
-import { Pagination } from 'src/utils/pagination/pagination.decorator';
+import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { Filtering } from './filter.decorator';
 
 @Injectable()
 export class AccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getAllAccounts({ page, limit, size, offset }: Pagination) {
     try {
@@ -35,11 +35,11 @@ export class AccountService {
       const profiles = await this.prisma.profile.findMany({
         where: {
           OR: [
-            { name: { contains: name, mode: 'insensitive' } },
-            { name: { contains: surname, mode: 'insensitive' } },
-            { email: { contains: email, mode: 'insensitive' } },
-            { city: { contains: city, mode: 'insensitive' } },
-            { gender: { equals: gender, mode: 'insensitive' } },
+            { name: { contains: `${name}`, mode: 'insensitive' } },
+            { name: { contains: `${surname}`, mode: 'insensitive' } },
+            { email: { contains: `${email}`, mode: 'insensitive' } },
+            { city: { contains: `${city}`, mode: 'insensitive' } },
+            { gender: { equals: `${gender}`, mode: 'insensitive' } },
             { sport: { equals: sport, mode: 'insensitive' } },
           ],
         },
@@ -51,10 +51,10 @@ export class AccountService {
         const count = await this.prisma.profile.count({
           where: {
             OR: [
-              { name: { contains: name, mode: 'insensitive' } },
-              { name: { contains: surname, mode: 'insensitive' } },
-              { email: { contains: email, mode: 'insensitive' } },
-              { city: { contains: city, mode: 'insensitive' } },
+              { name: { contains: `${name}`, mode: 'insensitive' } },
+              { name: { contains: `${surname}`, mode: 'insensitive' } },
+              { email: { contains: `${email}`, mode: 'insensitive' } },
+              { city: { contains: `${city}`, mode: 'insensitive' } },
               { gender: { equals: gender, mode: 'insensitive' } },
               { sport: { equals: sport, mode: 'insensitive' } },
             ],
@@ -96,6 +96,18 @@ export class AccountService {
   async getAccountByUserId(id: string) {
     try {
       return await this.prisma.profile.findUnique({ where: { user_id: id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async getOrCreateAccountByUserId(id: string) {
+    try {
+      return await this.prisma.profile.upsert({
+        where: { user_id: id },
+        update: {},
+        create: { user_id: id },
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }

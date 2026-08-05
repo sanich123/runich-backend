@@ -1,16 +1,25 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'nestjs-prisma';
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
 import { AccountService } from 'src/account/account.service';
+import { ActivityService } from 'src/activity/activity.service';
 
 @Injectable()
 export class CommentService {
-  constructor(private readonly prisma: PrismaService, private readonly accountService: AccountService) {}
+  constructor(
+    @Inject(PrismaService)
+    private readonly prisma: PrismaService,
+    @Inject(AccountService)
+    private readonly accountService: AccountService,
+    @Inject(ActivityService)
+    private readonly activityService: ActivityService,
+  ) {}
 
   async getCommentsbyActivityId(id: string, take: string) {
     try {
-      return await this.prisma.comment.findMany({
+      const allCommentsLength = await this.prisma.comment.count({ where: { activityId: id } });
+      const takenComments = await this.prisma.comment.findMany({
         where: { activityId: id },
         orderBy: { date: 'desc' },
         include: {
@@ -20,6 +29,8 @@ export class CommentService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
+              emailNotifications: true,
+              users: { select: { email: true } },
             },
           },
           commentLike: {
@@ -31,6 +42,10 @@ export class CommentService {
         },
         take: Number(take),
       });
+      return {
+        comments: takenComments,
+        allCommentsLength,
+      };
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -45,9 +60,10 @@ export class CommentService {
   }
 
   async createCommentByActivityId({ comment, authorId }: CommentDTO, id: string) {
-    const account = await this.accountService.getAccountByUserId(authorId);
     try {
-      return await this.prisma.comment.create({
+      const account = await this.accountService.getAccountByUserId(authorId);
+      if (!account?.id) throw new NotFoundException();
+      await this.prisma.comment.create({
         data: {
           profileId: account.id,
           activityId: id,
@@ -79,9 +95,33 @@ export class CommentService {
     }
   }
 
+  async getCommentByCommentId(id: string) {
+    try {
+      const comment = await this.prisma.comment.findUnique({
+        where: { id },
+        include: {
+          profile: {
+            include: {
+              users: {
+                select: {
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      return { profile: comment?.profile, email: comment?.profile.users.email, comment: comment?.comment };
+    } catch (error) {
+      console.log(error);
+      prismaErrorHandling(error);
+    }
+  }
+
   async createCommentLikeByCommentId({ commentId, authorId }: CommentLikeDto) {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
+      if (!account?.id) throw new NotFoundException();
       return await this.prisma.commentLike.create({
         data: {
           profileId: account.id,

@@ -1,41 +1,36 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'nestjs-prisma';
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+import { Inject, Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ActivityDto } from './activity.dto';
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
-import { blurhashFromURL } from 'blurhash-from-url';
-import { getMapBoxImage } from 'src/utils/parsers/get-mapbox-image';
-import { chunkArray } from 'src/utils/parsers/chunk-array';
-import { existsSync } from 'fs';
-import { rm } from 'fs/promises';
-import { getReducedMetricsFromActivities, getYearMetricsFromActivities } from 'src/utils/statistics/reducers';
+import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
+import { chunkArray } from 'src/common/parsers/chunk-array';
 
 @Injectable()
 export class ActivityService {
-  constructor(private readonly prisma: PrismaService, private readonly accountService: AccountService) {}
+  constructor(
+    @Inject(PrismaService)
+    private readonly prisma: PrismaService,
+    @Inject(AccountService)
+    private readonly accountService: AccountService,
+  ) {}
 
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
       const account = await this.accountService.getAccountByUserId(id);
-      let mapPhotoUrlBlurhash;
-      let photoVideoUrlsWithBlurhash;
-      if (activityDto?.photoVideoUrls.length) {
-        photoVideoUrlsWithBlurhash = await this.getPhotoVideoUrlsWithBlurhash(activityDto.photoVideoUrls);
-      }
-      if (activityDto?.locations.length > 1) {
+
+      if (activityDto?.photoVideoUrls?.length && activityDto?.locations?.length && activityDto?.locations?.length > 1) {
         activityDto.mapPhotoUrl = getMapBoxImage(activityDto?.locations);
       }
-      if (activityDto?.mapPhotoUrl) {
-        const blurhash = await blurhashFromURL(activityDto.mapPhotoUrl, { size: 300 });
-        mapPhotoUrlBlurhash = blurhash.encoded;
-      }
+
       return await this.prisma.activity.create({
         data: {
           user_id: id,
-          profileId: account.id,
+          profileId: `${account?.id}`,
           ...activityDto,
-          photoVideoUrls: photoVideoUrlsWithBlurhash || null,
-          mapPhotoUrlBlurhash,
+          photoVideoUrls: activityDto.photoVideoUrls,
+          mapPhotoUrlBlurhash: null,
         },
       });
     } catch (error) {
@@ -52,12 +47,6 @@ export class ActivityService {
           return await this.prisma.activity.createMany({ data: activities });
         }),
       );
-      if (existsSync('dist/migration')) {
-        await rm('dist/migration', { recursive: true });
-      }
-      if (existsSync('dist/receivedArchive')) {
-        await rm('dist/receivedArchive');
-      }
       return { success: true };
     } catch (error) {
       prismaErrorHandling(error);
@@ -123,6 +112,8 @@ export class ActivityService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
+              emailNotifications: true,
+              users: { select: { email: true } },
             },
           },
           _count: {
@@ -138,9 +129,10 @@ export class ActivityService {
     }
   }
 
-  async getMediaByUserId(id: string, take) {
+  async getMediaByUserId(id: string, take: string) {
     try {
       const photos = await this.prisma.activity.findMany({
+        //@ts-ignore
         where: { user_id: id, photoVideoUrls: { not: null } },
         orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
@@ -167,6 +159,7 @@ export class ActivityService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
+              emailNotifications: true,
             },
           },
           _count: {
@@ -182,110 +175,40 @@ export class ActivityService {
     }
   }
 
-  async getYearsAndTypesOfActivities(id: string) {
-    try {
-      const activities = await this.prisma.activity.findMany({ where: { user_id: id }, select: { date: true } });
-      const years = [...new Set(activities.map(({ date }) => date.getFullYear()))];
-      return await Promise.all(
-        years.map(async (year) => {
-          const types = await this.prisma.activity.findMany({
-            where: {
-              date: {
-                gte: new Date(year, 0, 1, 0, 0, 0),
-                lte: new Date(year, 11, 31, 23, 59, 59),
-              },
-            },
-            select: { sport: true },
-          });
-          return { year, types: [...new Set(types.map(({ sport }) => sport))] };
-        }),
-      );
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
-  async getActivitiesByYearMonthCategory(userId: string, year: string, month: string, category: string) {
+  async getActivitiesByTheirIds(ids: string | string[]) {
+    const searchByStringOrArray = typeof ids === 'string' ? ids : { in: ids };
     try {
       return await this.prisma.activity.findMany({
-        where: {
-          user_id: userId,
-          date: {
-            gte: new Date(+year, +month, 1, 0, 0, 0),
-            lte: new Date(+year, +month, 31, 23, 59, 59),
-          },
-          sport: category,
-        },
+        where: { id: searchByStringOrArray, isPublic: true },
+        orderBy: { date: 'desc' },
         select: {
+          description: true,
+          title: true,
+          date: true,
+          sport: true,
+          id: true,
+          user_id: true,
+          photoVideoUrls: true,
+          mapPhotoUrl: true,
+          mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
-          speed: true,
-        },
-      });
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-  async getYearStatisticWithMonthsByCategory(userId: string, year: string, month: string, category: string) {
-    try {
-      const findedActivities = await this.getActivitiesByYearMonthCategory(userId, year, month, category);
-      const { totalDistance, totalDuration, medianSpeed } = findedActivities.reduce(
-        (accum, { duration, distance, speed }) => {
-          accum.totalDistance += distance;
-          accum.totalDuration += duration;
-          accum.medianSpeed += speed;
-          return accum;
-        },
-        { totalDistance: 0, totalDuration: 0, medianSpeed: 0 },
-      );
-      const averageSpeed =
-        medianSpeed && findedActivities?.length ? Math.round(medianSpeed / findedActivities?.length) : 0;
-      return {
-        [year]: {
-          [category]: {
-            [month]: {
-              totalDistance,
-              totalDuration,
-              medianSpeed: averageSpeed,
+          profile: {
+            select: {
+              surname: true,
+              name: true,
+              profilePhoto: true,
+              profilePhotoBlurhash: true,
+              emailNotifications: true,
+            },
+          },
+          _count: {
+            select: {
+              comments: true,
             },
           },
         },
-      };
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-    return { userId, year, month, category };
-  }
-
-  async getStatisticByYearAndCategory(userId: string, year: string, category: string) {
-    try {
-      const activitiesByMonth = await Promise.all(
-        [...Array(12).keys()].map(async (month) => {
-          const findedActivities = await this.getActivitiesByYearMonthCategory(userId, year, `${month}`, category);
-          const { distanceInKm, durationInHours } = getReducedMetricsFromActivities(findedActivities);
-          return {
-            [month]: {
-              totalDistance: distanceInKm,
-              totalDuration: durationInHours,
-              medianSpeed: distanceInKm / durationInHours,
-              items: findedActivities?.length,
-            },
-          };
-        }),
-      );
-      const { totalYearDuration, totalYearDistance, totalYearItems, averageYearSpeed } = getYearMetricsFromActivities(
-        activitiesByMonth.map((item, i) => item[i]),
-      );
-
-      return {
-        [year]: {
-          totalYearDuration,
-          totalYearDistance,
-          totalYearItems,
-          totalMedianSpeed: averageYearSpeed,
-        },
-        months: activitiesByMonth,
-      };
+      });
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -321,6 +244,8 @@ export class ActivityService {
               name: true,
               profilePhoto: true,
               profilePhotoBlurhash: true,
+              emailNotifications: true,
+              users: { select: { email: true } },
             },
           },
           _count: {
@@ -344,15 +269,43 @@ export class ActivityService {
     }
   }
 
-  async getPhotoVideoUrlsWithBlurhash(photoVideoUrls) {
-    return await Promise.all(
-      photoVideoUrls.map(async (photoVideoUrl) => {
-        const blurhash = await blurhashFromURL(photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url, {
-          size: 300,
-        });
-        photoVideoUrl.blurhash = blurhash.encoded;
-        return photoVideoUrl;
-      }),
-    );
+  // async getPhotoVideoUrlsWithBlurhash(photoVideoUrls) {
+  //   return await Promise.all(
+  //     photoVideoUrls.map(async (photoVideoUrl) => {
+  //       const blurhash = await blurhashFromURL(photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url, {
+  //         size: 300,
+  //       });
+  //       photoVideoUrl.blurhash = blurhash.encoded;
+  //       return photoVideoUrl;
+  //     }),
+  //   );
+  // }
+
+  async getActivityWithEmailData(activityId: string) {
+    try {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: activityId },
+        select: {
+          users: {
+            select: {
+              email: true,
+            },
+          },
+          profile: {
+            select: {
+              id: true,
+              profilePhoto: true,
+              name: true,
+              surname: true,
+              emailNotifications: true,
+            },
+          },
+          mapPhotoUrl: true,
+        },
+      });
+      return { profile: activity?.profile, email: activity?.users.email, mapPhotoUrl: activity?.mapPhotoUrl };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
   }
 }

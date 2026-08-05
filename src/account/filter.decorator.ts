@@ -16,11 +16,11 @@ export const FilteringParams = createParamDecorator((data, ctx: ExecutionContext
   const req: Request = ctx.switchToHttp().getRequest();
 
   const filterDto = req.query;
-  if (!filterDto) return null;
+  if (!filterDto) return {};
 
-  if (typeof filterDto != 'object') throw new BadRequestException('Invalid filter parameter');
+  if (typeof filterDto !== 'object') throw new BadRequestException('Invalid filter parameter');
 
-  if (typeof data != 'object') throw new BadRequestException('Invalid filter parameter');
+  if (typeof data !== 'object') throw new BadRequestException('Invalid filter parameter');
 
   const filteredObj = Object.fromEntries(Object.entries(filterDto).filter(([key]) => data.includes(key)));
 

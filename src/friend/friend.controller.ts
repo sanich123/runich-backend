@@ -1,9 +1,10 @@
-import { Controller, Get, HttpStatus, HttpCode, Param, Delete, Body, Post } from '@nestjs/common';
+import { Controller, Get, HttpStatus, HttpCode, Inject, Param, Delete, Body, Post, UseGuards } from '@nestjs/common';
 import { FriendService } from './friend.service';
-import { ParamsId } from 'src/app/params-validation';
+import { ParamsId } from 'src/common/dto/params-validation';
 import { FriendDto } from './friend.dto';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
-import { PATHS } from 'src/utils/const';
+import { PATHS } from 'src/common/constants';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 const { friend, id } = PATHS;
 const { OK, BAD_REQUEST, NO_CONTENT, CREATED } = HttpStatus;
@@ -11,9 +12,10 @@ const { OK, BAD_REQUEST, NO_CONTENT, CREATED } = HttpStatus;
 @ApiTags(friend)
 @Controller(friend)
 export class FriendController {
-  constructor(private readonly friendService: FriendService) {}
+  constructor(@Inject(FriendService) private readonly friendService: FriendService) {}
 
   @Get(id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets list of friends' })
   @ApiParam({ name: 'userId', required: true, description: 'Whos friends userId' })
   @ApiResponse({ status: OK, description: 'Success' })
@@ -23,6 +25,7 @@ export class FriendController {
   }
 
   @Delete(id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete friend by friendId' })
   @ApiParam({ name: 'friendId', required: true, description: 'Friend identificator' })
   @ApiResponse({ status: NO_CONTENT, description: 'Success' })
@@ -33,6 +36,7 @@ export class FriendController {
   }
 
   @Post(id)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create friend by friendId' })
   @ApiParam({ name: 'friendId', required: true, description: 'Friend identificator' })
   @ApiBody({ description: 'Create friend body', type: FriendDto })
@@ -43,6 +47,7 @@ export class FriendController {
   }
 
   @Get(`${id}/followers`)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get followers (profiles, where friendId === userId' })
   @ApiParam({ name: 'userId', required: true, description: 'User identificator' })
   @ApiResponse({ status: CREATED, description: 'Success' })

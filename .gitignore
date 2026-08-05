@@ -1,8 +1,8 @@
 # compiled output
 /dist
+
 /node_modules
 .env
-package-lock.json
 .yarn
 # Logs
 logs
@@ -35,3 +35,6 @@ lerna-debug.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+.vercel
+
+/src/infrastructure/database/generated/prisma

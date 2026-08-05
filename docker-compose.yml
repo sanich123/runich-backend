@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:17.5-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: runich
+      POSTGRES_PASSWORD: HfG3@fj0OfjvHdkf234ja
+      POSTGRES_DB: runich_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
+  nestjs_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://runich:HfG3@fj0OfjvHdkf234ja@db:5432/runich_db?schema=public
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app # Mount local directory for development (optional)
+      - /app/node_modules # Exclude node_modules from host mount
+
+volumes:
+  pgdata:

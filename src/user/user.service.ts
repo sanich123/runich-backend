@@ -1,13 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'nestjs-prisma';
-
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
-import { blurhashFromURL } from 'blurhash-from-url';
-import { ProfileDto } from './user.dto';
+import { Inject, Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { UserDto } from './user.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getAllUsers() {
     try {
@@ -27,12 +25,8 @@ export class UserService {
     }
   }
 
-  async createProfileByUserId(id: string, accountDto: ProfileDto) {
+  async createProfileByUserId(id: string, accountDto: UserDto) {
     try {
-      if (accountDto.profilePhoto) {
-        const blurhash = await blurhashFromURL(accountDto.profilePhoto);
-        accountDto.profilePhotoBlurhash = blurhash.encoded;
-      }
       return this.prisma.profile.create({
         data: { ...accountDto, user_id: id },
       });
@@ -41,12 +35,8 @@ export class UserService {
     }
   }
 
-  async updateProfileByProfileId(profileId: string, accountDto: ProfileDto) {
+  async updateProfileByProfileId(profileId: string, accountDto: UserDto) {
     try {
-      if (accountDto.profilePhoto) {
-        const blurhash = await blurhashFromURL(accountDto.profilePhoto);
-        accountDto.profilePhotoBlurhash = blurhash.encoded;
-      }
       return this.prisma.profile.update({
         where: { id: profileId },
         data: { ...accountDto, updatedAt: new Date() },

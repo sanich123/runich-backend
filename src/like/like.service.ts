@@ -1,46 +1,25 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'nestjs-prisma';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { LikeDto } from './like.dto';
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
-// import { sendEmail } from 'src/utils/email/email';
+import { ActivityService } from 'src/activity/activity.service';
 
 @Injectable()
 export class LikeService {
-  constructor(private readonly prismaService: PrismaService, private readonly accountService: AccountService) {}
+  constructor(
+    @Inject(PrismaService)
+    private readonly prismaService: PrismaService,
+    @Inject(AccountService)
+    private readonly accountService: AccountService,
+    @Inject(ActivityService)
+    private readonly activityService: ActivityService,
+  ) {}
 
   async addLike({ authorId, activityId }: LikeDto) {
     try {
-      // const activity = await this.prismaService.activity.findUnique({
-      //   where: { id: activityId },
-      //   select: {
-      //     users: {
-      //       select: {
-      //         email: true,
-      //       },
-      //     },
-      //     profile: {
-      //       select: {
-      //         id: true,
-      //         profilePhoto: true,
-      //         name: true,
-      //         emailNotifications: true,
-      //       },
-      //     },
-      //     mapPhotoUrl: true,
-      //   },
-      // });
       const account = await this.accountService.getAccountByUserId(authorId);
-      // if (activity.profile.emailNotifications && account) {
-      //   const receiverEmailAddress = activity.users?.email;
-      //   const subject = 'Лайк к активности';
-      //   const message = `<p>Уважаемый ${activity.profile.name}!</p>
-      //   <img src="${activity.profile.profilePhoto}"/>
-      //   <p>${activity.profile.name} только что лайкнул вашу активность!</p>
-      //   ${activity.mapPhotoUrl ? `<img src="${activity.mapPhotoUrl}" width="350px" height="200px"/>` : ''}`;
-      //   sendEmail([receiverEmailAddress], subject, message);
-      // }
-
+      if (!account?.id) throw new NotFoundException();
       return await this.prismaService.like.create({
         data: {
           profileId: account.id,

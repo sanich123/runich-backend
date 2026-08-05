@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'nestjs-prisma';
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { FriendDto } from './friend.dto';
 import { AccountService } from 'src/account/account.service';
 
 @Injectable()
 export class FriendService {
-  constructor(private readonly prismaService: PrismaService, private readonly accountService: AccountService) {}
+  constructor(
+    @Inject(PrismaService)
+    private readonly prismaService: PrismaService,
+    @Inject(AccountService)
+    private readonly accountService: AccountService,
+  ) {}
 
   async getUsersYouFollowByUserId(id: string) {
     try {
