@@ -51,8 +51,7 @@ function EmailLayout({ preview, children }: { preview: string; children: React.R
           fontFamily,
           margin: 0,
           padding: '32px 16px',
-        }}
-      >
+        }}>
         <Container style={{ margin: '0 auto', maxWidth: '560px', width: '100%' }}>
           <Section style={{ padding: '0 0 24px' }}>
             <Row>
@@ -69,8 +68,7 @@ function EmailLayout({ preview, children }: { preview: string; children: React.R
                     letterSpacing: '0.5px',
                     lineHeight: '44px',
                     margin: 0,
-                  }}
-                >
+                  }}>
                   Runich
                 </Text>
               </Column>
@@ -83,8 +81,7 @@ function EmailLayout({ preview, children }: { preview: string; children: React.R
               border: `1px solid ${colors.border}`,
               borderRadius: '20px',
               padding: '32px 32px 28px',
-            }}
-          >
+            }}>
             {children}
           </Section>
 
@@ -162,8 +159,7 @@ export function ConfirmEmailAddressWithLinkAndCode({ text, accessToken }: { text
           margin: 0,
           padding: '12px 16px',
           textAlign: 'center',
-        }}
-      >
+        }}>
         {text}
       </Text>
     </EmailLayout>
@@ -208,7 +204,8 @@ export function NotificationEmail({
         Привет, {recepientName} {recepientSurname}!
       </Text>
 
-      <Section style={{ backgroundColor: colors.softAccent, borderRadius: '14px', padding: '16px', marginBottom: '22px' }}>
+      <Section
+        style={{ backgroundColor: colors.softAccent, borderRadius: '14px', padding: '16px', marginBottom: '22px' }}>
         <Row>
           <Column style={{ width: '52px' }}>
             {profilePhoto ? (
@@ -231,8 +228,7 @@ export function NotificationEmail({
                   lineHeight: '40px',
                   textAlign: 'center',
                   width: '40px',
-                }}
-              >
+                }}>
                 {(name || 'R').slice(0, 1).toUpperCase()}
               </Section>
             )}
@@ -260,8 +256,7 @@ export function NotificationEmail({
             lineHeight: '25px',
             margin: '0 0 22px',
             padding: '2px 0 2px 16px',
-          }}
-        >
+          }}>
           «{comment}»
         </Text>
       )}

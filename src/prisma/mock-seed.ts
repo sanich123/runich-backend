@@ -8,31 +8,136 @@ const TARGET_EMAIL = 'aovoronin.piano@gmail.com';
 const TARGET_EMAIL_TYPO = 'aovoronin.piano@gmaill.com';
 
 const runners = [
-  ['Eliud', 'Kipchoge', 'Kaptagat', 'https://commons.wikimedia.org/wiki/Special:FilePath/Eliud%20Kipchoge%202018.jpg?width=256'],
-  ['Kenenisa', 'Bekele', 'Addis Ababa', 'https://commons.wikimedia.org/wiki/Special:FilePath/Kenenisa%20Bekele.jpg?width=256'],
-  ['Mo', 'Farah', 'London', 'https://commons.wikimedia.org/wiki/Special:FilePath/Mo%20Farah%20Rio%202016.jpg?width=256'],
-  ['Haile', 'Gebrselassie', 'Addis Ababa', 'https://commons.wikimedia.org/wiki/Special:FilePath/Haile%20Gebrselassie%202009.jpg?width=256'],
-  ['Faith', 'Kipyegon', 'Eldoret', 'https://commons.wikimedia.org/wiki/Special:FilePath/Faith%20Kipyegon%202023.jpg?width=256'],
-  ['Sifan', 'Hassan', 'Arnhem', 'https://commons.wikimedia.org/wiki/Special:FilePath/Sifan%20Hassan%202021.jpg?width=256'],
-  ['Jakob', 'Ingebrigtsen', 'Sandnes', 'https://commons.wikimedia.org/wiki/Special:FilePath/Jakob%20Ingebrigtsen%202022.jpg?width=256'],
-  ['Brigid', 'Kosgei', 'Nairobi', 'https://commons.wikimedia.org/wiki/Special:FilePath/Brigid%20Kosgei%202019.jpg?width=256'],
-  ['Tigst', 'Assefa', 'Addis Ababa', 'https://commons.wikimedia.org/wiki/Special:FilePath/Tigst%20Assefa%202023.jpg?width=256'],
-  ['Kelvin', 'Kiptum', 'Chepkorio', 'https://commons.wikimedia.org/wiki/Special:FilePath/Kelvin%20Kiptum%202023.jpg?width=256'],
-  ['Ruth', 'Chepngetich', 'Nairobi', 'https://commons.wikimedia.org/wiki/Special:FilePath/Ruth%20Chepngetich%202022.jpg?width=256'],
-  ['Shelly-Ann', 'Fraser-Pryce', 'Kingston', 'https://commons.wikimedia.org/wiki/Special:FilePath/Shelly-Ann%20Fraser-Pryce%202021.jpg?width=256'],
-  ['Allyson', 'Felix', 'Los Angeles', 'https://commons.wikimedia.org/wiki/Special:FilePath/Allyson%20Felix%202012.jpg?width=256'],
-  ['Yulimar', 'Rojas', 'Caracas', 'https://commons.wikimedia.org/wiki/Special:FilePath/Yulimar%20Rojas%202021.jpg?width=256'],
-  ['Sydney', 'McLaughlin-Levrone', 'Los Angeles', 'https://commons.wikimedia.org/wiki/Special:FilePath/Sydney%20McLaughlin%202021.jpg?width=256'],
-  ['Genzebe', 'Dibaba', 'Addis Ababa', 'https://commons.wikimedia.org/wiki/Special:FilePath/Genzebe%20Dibaba%202016.jpg?width=256'],
-  ['Letesenbet', 'Gidey', 'Tigray', 'https://commons.wikimedia.org/wiki/Special:FilePath/Letesenbet%20Gidey%202021.jpg?width=256'],
-  ['Joshua', 'Cheptegei', 'Kampala', 'https://commons.wikimedia.org/wiki/Special:FilePath/Joshua%20Cheptegei%202021.jpg?width=256'],
-  ['Yomif', 'Kejelcha', 'Addis Ababa', 'https://commons.wikimedia.org/wiki/Special:FilePath/Yomif%20Kejelcha%202019.jpg?width=256'],
-  ['Paula', 'Radcliffe', 'London', 'https://commons.wikimedia.org/wiki/Special:FilePath/Paula%20Radcliffe%202007.jpg?width=256'],
+  [
+    'Eliud',
+    'Kipchoge',
+    'Kaptagat',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Eliud%20Kipchoge%202018.jpg?width=256',
+  ],
+  [
+    'Kenenisa',
+    'Bekele',
+    'Addis Ababa',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Kenenisa%20Bekele.jpg?width=256',
+  ],
+  [
+    'Mo',
+    'Farah',
+    'London',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Mo%20Farah%20Rio%202016.jpg?width=256',
+  ],
+  [
+    'Haile',
+    'Gebrselassie',
+    'Addis Ababa',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Haile%20Gebrselassie%202009.jpg?width=256',
+  ],
+  [
+    'Faith',
+    'Kipyegon',
+    'Eldoret',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Faith%20Kipyegon%202023.jpg?width=256',
+  ],
+  [
+    'Sifan',
+    'Hassan',
+    'Arnhem',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Sifan%20Hassan%202021.jpg?width=256',
+  ],
+  [
+    'Jakob',
+    'Ingebrigtsen',
+    'Sandnes',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Jakob%20Ingebrigtsen%202022.jpg?width=256',
+  ],
+  [
+    'Brigid',
+    'Kosgei',
+    'Nairobi',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Brigid%20Kosgei%202019.jpg?width=256',
+  ],
+  [
+    'Tigst',
+    'Assefa',
+    'Addis Ababa',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Tigst%20Assefa%202023.jpg?width=256',
+  ],
+  [
+    'Kelvin',
+    'Kiptum',
+    'Chepkorio',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Kelvin%20Kiptum%202023.jpg?width=256',
+  ],
+  [
+    'Ruth',
+    'Chepngetich',
+    'Nairobi',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Ruth%20Chepngetich%202022.jpg?width=256',
+  ],
+  [
+    'Shelly-Ann',
+    'Fraser-Pryce',
+    'Kingston',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Shelly-Ann%20Fraser-Pryce%202021.jpg?width=256',
+  ],
+  [
+    'Allyson',
+    'Felix',
+    'Los Angeles',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Allyson%20Felix%202012.jpg?width=256',
+  ],
+  [
+    'Yulimar',
+    'Rojas',
+    'Caracas',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Yulimar%20Rojas%202021.jpg?width=256',
+  ],
+  [
+    'Sydney',
+    'McLaughlin-Levrone',
+    'Los Angeles',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Sydney%20McLaughlin%202021.jpg?width=256',
+  ],
+  [
+    'Genzebe',
+    'Dibaba',
+    'Addis Ababa',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Genzebe%20Dibaba%202016.jpg?width=256',
+  ],
+  [
+    'Letesenbet',
+    'Gidey',
+    'Tigray',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Letesenbet%20Gidey%202021.jpg?width=256',
+  ],
+  [
+    'Joshua',
+    'Cheptegei',
+    'Kampala',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Joshua%20Cheptegei%202021.jpg?width=256',
+  ],
+  [
+    'Yomif',
+    'Kejelcha',
+    'Addis Ababa',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Yomif%20Kejelcha%202019.jpg?width=256',
+  ],
+  [
+    'Paula',
+    'Radcliffe',
+    'London',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Paula%20Radcliffe%202007.jpg?width=256',
+  ],
 ] as const;
 
-const activityPhoto =
-  'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=80';
-const commentTexts = ['Сильная тренировка!', 'Отличный темп и красивый маршрут.', 'Так держать!', 'Вдохновляет на свою пробежку.', 'Классный результат.'];
+const activityPhoto = 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=80';
+const commentTexts = [
+  'Сильная тренировка!',
+  'Отличный темп и красивый маршрут.',
+  'Так держать!',
+  'Вдохновляет на свою пробежку.',
+  'Классный результат.',
+];
 
 type MockUser = Prisma.UsersGetPayload<{ include: { profile: true } }>;
 type SeedUser = { id: string; profile: NonNullable<MockUser['profile']> };
@@ -62,9 +167,10 @@ function fallbackLocations(userIndex: number, activityIndex: number) {
   ];
 }
 
-const stableRunnerPhotos = [
-  3764014, 3763879, 2402777, 3621185, 2774556, 3768114, 2526878, 1128317,
-].map((photoId) => `https://images.pexels.com/photos/${photoId}/pexels-photo-${photoId}.jpeg?auto=compress&cs=tinysrgb&w=256`);
+const stableRunnerPhotos = [3764014, 3763879, 2402777, 3621185, 2774556, 3768114, 2526878, 1128317].map(
+  (photoId) =>
+    `https://images.pexels.com/photos/${photoId}/pexels-photo-${photoId}.jpeg?auto=compress&cs=tinysrgb&w=256`,
+);
 
 function profileImageUrl(index: number) {
   return stableRunnerPhotos[index % stableRunnerPhotos.length];
@@ -96,14 +202,23 @@ export async function seedMockData(prisma: PrismaClient) {
       data: {
         email: TARGET_EMAIL,
         email_confirmed_at: new Date(),
-        profile: { create: { email: TARGET_EMAIL, name: 'Alexander', surname: 'Voronin', sport: 'RUNNING', city: 'Moscow' } },
+        profile: {
+          create: { email: TARGET_EMAIL, name: 'Alexander', surname: 'Voronin', sport: 'RUNNING', city: 'Moscow' },
+        },
       },
     }));
 
   const targetProfile =
     (await prisma.profile.findUnique({ where: { user_id: target.id } })) ??
     (await prisma.profile.create({
-      data: { user_id: target.id, email: target.email, name: 'Alexander', surname: 'Voronin', sport: 'RUNNING', city: 'Moscow' },
+      data: {
+        user_id: target.id,
+        email: target.email,
+        name: 'Alexander',
+        surname: 'Voronin',
+        sport: 'RUNNING',
+        city: 'Moscow',
+      },
     }));
 
   const sourceActivities = await prisma.activity.findMany({
@@ -149,7 +264,10 @@ export async function seedMockData(prisma: PrismaClient) {
     mockUsers.push(user);
   }
 
-  const allUsers: SeedUser[] = [{ id: target.id, profile: targetProfile }, ...mockUsers.map((user) => ({ id: user.id, profile: user.profile! }))];
+  const allUsers: SeedUser[] = [
+    { id: target.id, profile: targetProfile },
+    ...mockUsers.map((user) => ({ id: user.id, profile: user.profile! })),
+  ];
 
   for (const [userIndex, user] of mockUsers.entries()) {
     const profile = user.profile!;
@@ -201,7 +319,9 @@ export async function seedMockData(prisma: PrismaClient) {
         const likeCount = random((userIndex + 1) * 10_000 + activityIndex * 100 + commentIndex, 10);
         for (let likeIndex = 0; likeIndex < likeCount; likeIndex += 1) {
           const liker = allUsers[(likeIndex + commentIndex + activityIndex + 1) % allUsers.length];
-          await prisma.commentLike.create({ data: { commentId: comment.id, profileId: liker.profile!.id, authorId: liker.id } });
+          await prisma.commentLike.create({
+            data: { commentId: comment.id, profileId: liker.profile!.id, authorId: liker.id },
+          });
         }
       }
     }
@@ -215,7 +335,8 @@ export async function seedMockData(prisma: PrismaClient) {
       if (candidate.id !== user.id) followIds.add(candidate.id);
     }
     for (const friendId of followIds) {
-      const friendProfile = friendId === target.id ? targetProfile : mockUsers.find((item) => item.id === friendId)!.profile!;
+      const friendProfile =
+        friendId === target.id ? targetProfile : mockUsers.find((item) => item.id === friendId)!.profile!;
       await prisma.friend.create({ data: { user_id: user.id, friendId, profileId: friendProfile.id } });
     }
   }
