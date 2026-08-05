@@ -4,7 +4,8 @@ WORKDIR /usr/src/app
 
 COPY package.json yarn.lock .yarnrc.yml ./
 
-RUN corepack enable && yarn install --immutable
+RUN npm install --global yarn@4.18.0 \
+  && yarn install --immutable
 
 COPY . .
 
