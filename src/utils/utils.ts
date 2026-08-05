@@ -1,4 +1,4 @@
-import * as polyline from '@mapbox/polyline';
+import polyline from '@mapbox/polyline';
 
 export function getTimeStampFromTime(date: Date) {
   return new Date(date).getTime() / 1000;

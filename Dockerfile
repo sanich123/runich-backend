@@ -4,7 +4,7 @@ WORKDIR /usr/src/app
 
 COPY package.json yarn.lock .yarnrc.yml ./
 
-RUN npm install --global yarn@4.18.0 \
+RUN npm install --global @yarnpkg/cli-dist@4.18.0 \
   && yarn install --immutable
 
 COPY . .

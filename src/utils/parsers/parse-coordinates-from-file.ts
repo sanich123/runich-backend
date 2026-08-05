@@ -3,9 +3,10 @@ import { getCoordinatesFromTcxFile } from './get-coordinates-from-tcx';
 import { getCoordinatesFromGpxFile } from './get-coordinates-from-gpx';
 import { existsSync } from 'node:fs';
 import { join } from 'path';
+import { LocationObject } from 'src/activity/activity.dto';
 
-export async function parseCoordinatesFromFile(filePath: string) {
-  let parsedCoordinates;
+export async function parseCoordinatesFromFile(filePath: string): Promise<LocationObject[]> {
+  let parsedCoordinates: LocationObject[] = [];
   const inputFilePath = join(process.cwd(), 'dist', 'migration', filePath);
   try {
     if (!existsSync(inputFilePath)) {
@@ -26,5 +27,6 @@ export async function parseCoordinatesFromFile(filePath: string) {
     return parsedCoordinates || [];
   } catch (error) {
     console.log('An error occured during parse file', error);
+    return [];
   }
 }

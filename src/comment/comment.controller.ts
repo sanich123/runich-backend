@@ -76,7 +76,7 @@ export class CommentController {
   @HttpCode(HttpStatus.CREATED)
   @ApiResponse({ status: CREATED, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async updateCommentById(@Body() { comment }: { comment: string }, @Param() { id }) {
+  async updateCommentById(@Body() { comment }: { comment: string }, @Param() { id }: ParamsId) {
     return await this.commentService.updateCommentByCommentId(comment, id);
   }
 

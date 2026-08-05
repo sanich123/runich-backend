@@ -9,8 +9,8 @@ export type LocationObject = {
     accuracy?: number;
     altitudeAccuracy?: number;
     heading?: number;
-    speed: number;
-    timestamp: number;
+    speed?: number;
+    timestamp?: number;
     mocked?: boolean;
   };
 };

@@ -71,7 +71,7 @@ export class ActivityController {
   @UseInterceptors(
     FileInterceptor('archive', {
       storage: diskStorage({
-        destination: async (req, file, cb) => {
+        destination: async (req, file: Express.Multer.File, cb) => {
           try {
             await mkdir(receivedArchiveDirectory, { recursive: true });
             cb(null, receivedArchiveDirectory);
@@ -79,14 +79,17 @@ export class ActivityController {
             cb(error instanceof Error ? error : new Error(String(error)), receivedArchiveDirectory);
           }
         },
-        filename: (req, file, cb) => {
+        filename: (req, file: Express.Multer.File, cb) => {
           cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`);
         },
       }),
     }),
   )
   @HttpCode(HttpStatus.CREATED)
-  async getArchiveWithActivitiesFromStrava(@UploadedFile() file, @Param() { id }: ParamsId) {
+  async getArchiveWithActivitiesFromStrava(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Param() { id }: ParamsId,
+  ) {
     console.time('обработка архива');
 
     try {

@@ -42,29 +42,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     this.$on('query' as never, ({ query, params }) => this.logger.log(`${query}; ${params}`));
   }
 
-  categorySoftDeleteMiddleware = async (params, next) => {
-    if (params.action === 'delete') {
-      return next({
-        ...params,
-        action: 'update',
-        args: {
-          ...params.args,
-          data: {
-            deletedAt: new Date(),
-          },
-        },
-      });
-    }
-    return next(params);
-  };
-
-  loggingMiddleware = async (params, next) => {
-    console.log(`${params.action} ${params.model} ${JSON.stringify(params.args)}`);
-    const result = await next(params);
-    console.log(result);
-    return result;
-  };
-
   async onModuleDestroy() {
     await this.$disconnect();
   }

@@ -50,7 +50,7 @@ export class StatisticService {
         },
       });
       const typesOfSport = [...new Set(activities.map(({ sport }) => sport))];
-      const sportsObject = {};
+      const sportsObject: Record<string, { totalDuration: number; totalDistance: number; totalItems: number }> = {};
       typesOfSport.forEach((type) => {
         const filteredActivitiesByType = activities.filter(({ sport }) => sport === type);
         const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(filteredActivitiesByType);

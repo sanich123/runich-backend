@@ -127,7 +127,7 @@ export class ActivityService {
     }
   }
 
-  async getMediaByUserId(id: string, take) {
+  async getMediaByUserId(id: string, take: string) {
     try {
       const photos = await this.prisma.activity.findMany({
         //@ts-ignore
