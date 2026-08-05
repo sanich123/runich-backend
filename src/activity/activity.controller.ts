@@ -76,7 +76,7 @@ export class ActivityController {
             await mkdir(receivedArchiveDirectory, { recursive: true });
             cb(null, receivedArchiveDirectory);
           } catch (error) {
-            cb(error, receivedArchiveDirectory);
+            cb(error instanceof Error ? error : new Error(String(error)), receivedArchiveDirectory);
           }
         },
         filename: (req, file, cb) => {

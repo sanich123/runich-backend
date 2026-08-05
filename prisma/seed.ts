@@ -1,17 +1,24 @@
-import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../src/generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL!,
+  }),
+});
 
 async function main() {
   const password1 = await bcrypt.hash('7FWD&rlm', 10);
   const password2 = await bcrypt.hash('7FWD&rlm', 10);
+  const seedUserEmail = process.env.SEED_USER_EMAIL ?? 'demo@runich.app';
 
   const user1 = await prisma.users.upsert({
-    where: { email: 'aovoronin.piano@gmail.com' },
+    where: { email: seedUserEmail },
     update: { encrypted_password: password1 },
     create: {
-      email: 'aovoronin.piano@gmail.com',
+      email: seedUserEmail,
       encrypted_password: password1,
     },
   });

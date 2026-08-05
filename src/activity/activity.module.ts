@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from 'nestjs-prisma';
+import { PrismaModule } from 'src/prisma/prisma.module';
 import { ActivityController } from './activity.controller';
 import { ActivityService } from './activity.service';
 import { FriendModule } from '../friend/friend.module';

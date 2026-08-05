@@ -18,6 +18,8 @@ services:
     restart: always
     depends_on:
       - db
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://runich:HfG3@fj0OfjvHdkf234ja@db:5432/runich_db?schema=public
     ports:

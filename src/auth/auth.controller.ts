@@ -13,7 +13,7 @@ import { AuthService } from './auth.service';
 import { AccessTokenDto, ConfirmationCodeDto, LoginWithGoogleDto, RegisterUserDto } from './auth.dto';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { AuthEntity } from './auth.entity';
-import { PrismaService } from 'nestjs-prisma';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from 'nestjs-prisma';
+import { PrismaModule } from 'src/prisma/prisma.module';
 import { LikeController } from './like.controller';
 import { LikeService } from './like.service';
 import { AccountModule } from 'src/account/account.module';
