@@ -7,7 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { EmailService } from 'src/email/email.service';
 
-export const jwtSecret = '~Gze3V,9+e1FWV';
+import { jwtSecret } from './jwt.constants';
 
 @Module({
   imports: [

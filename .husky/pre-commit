@@ -1,1 +1,20 @@
-npx tsc && npm run lint && yarn format && npx npm-check-updates '/^(?!react|react-dom|typescript).*$/' --target=semver -u
+# 1. Проверка TypeScript
+yarn typecheck
+
+# 2. Линтинг и автофикс
+yarn lint
+
+# 3. Форматирование исходного кода
+yarn format
+
+# 4. Тесты
+yarn test:ci
+
+# 5. Проверка circular dependencies
+yarn madge
+
+# 6. Проверка неиспользуемых экспортов
+yarn ts-prune
+
+# 7. Проверка неиспользуемых зависимостей (диагностическая)
+yarn depcheck || true
