@@ -3,7 +3,7 @@ import * as bcrypt from 'bcrypt';
 import { Prisma, PrismaClient } from '../generated/prisma/client';
 
 const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
-const MOCK_SEED_VERSION = 'runich-mock-v4';
+const MOCK_SEED_VERSION = 'runich-mock-v5';
 const TARGET_EMAIL = 'aovoronin.piano@gmail.com';
 const TARGET_EMAIL_TYPO = 'aovoronin.piano@gmaill.com';
 
@@ -304,6 +304,14 @@ export async function seedMockData(prisma: PrismaClient) {
                 ],
         },
       });
+
+      const activityLikeCount = random((userIndex + 1) * 20_000 + activityIndex, 20);
+      for (let likeIndex = 0; likeIndex < activityLikeCount; likeIndex += 1) {
+        const liker = allUsers[(likeIndex + userIndex + activityIndex + 1) % allUsers.length];
+        await prisma.like.create({
+          data: { activityId: activity.id, profileId: liker.profile.id, authorId: liker.id },
+        });
+      }
 
       const commentCount = random((userIndex + 1) * 1000 + activityIndex, 20);
       for (let commentIndex = 0; commentIndex < commentCount; commentIndex += 1) {
