@@ -17,7 +17,7 @@ import {
 import * as React from 'react';
 
 import { HEADING, NotificationEmailProps, PARAGRAPH } from './types';
-import { RUNICH_LOGO_CID } from '../../utils/email/constants';
+import { RUNICH_LOGO_CID } from '../../common/email/constants';
 
 const colors = {
   accent: '#F66767',

@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Inject, Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ActivityDto } from './activity.dto';
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
-import { getMapBoxImage } from 'src/utils/parsers/get-mapbox-image';
-import { chunkArray } from 'src/utils/parsers/chunk-array';
+import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
+import { chunkArray } from 'src/common/parsers/chunk-array';
 
 @Injectable()
 export class ActivityService {

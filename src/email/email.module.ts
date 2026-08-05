@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { EmailController } from './email.controller';
 import { EmailService } from './email.service';
 import { AccountModule } from 'src/account/account.module';

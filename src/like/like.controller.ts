@@ -1,9 +1,9 @@
 import { Controller, Get, Post, Body, Param, HttpStatus, Delete, Inject, UseGuards } from '@nestjs/common';
 import { LikeService } from './like.service';
 import { LikeDto } from './like.dto';
-import { ParamsId } from 'src/app/params-validation';
+import { ParamsId } from 'src/common/dto/params-validation';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
-import { PATHS } from 'src/utils/const';
+import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 const { like, id, activityId } = PATHS;

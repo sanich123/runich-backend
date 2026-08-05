@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { StatisticController } from './statistic.controller';
 import { StatisticService } from './statistic.service';
 import { ActivityService } from 'src/activity/activity.service';

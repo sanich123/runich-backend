@@ -1,11 +1,11 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { AccountService } from './account.service';
-import { ParamsId } from 'src/app/params-validation';
+import { ParamsId } from 'src/common/dto/params-validation';
 import { ApiResponse, ApiTags, ApiOperation, ApiParam, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
-import { PATHS } from 'src/utils/const';
+import { PATHS } from 'src/common/constants';
 import { ProfileDto } from './account.dto';
-import { type Pagination, PaginationParams } from 'src/utils/pagination/pagination.decorator';
-import { PaginationResponseDto } from 'src/utils/pagination/pagination.dto';
+import { type Pagination, PaginationParams } from 'src/common/decorators/pagination.decorator';
+import { PaginationResponseDto } from 'src/common/dto/pagination.dto';
 import { type Filtering, FilteringParams } from './filter.decorator';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 

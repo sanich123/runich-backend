@@ -1,9 +1,9 @@
 import { Controller, Get, HttpStatus, HttpCode, Inject, Param, Delete, Body, Post, UseGuards } from '@nestjs/common';
 import { FriendService } from './friend.service';
-import { ParamsId } from 'src/app/params-validation';
+import { ParamsId } from 'src/common/dto/params-validation';
 import { FriendDto } from './friend.dto';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
-import { PATHS } from 'src/utils/const';
+import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 const { friend, id } = PATHS;

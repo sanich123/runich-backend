@@ -13,10 +13,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CommentService } from './comment.service';
-import { ParamsId } from 'src/app/params-validation';
+import { ParamsId } from 'src/common/dto/params-validation';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
-import { PATHS } from 'src/utils/const';
+import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 const { comment, id, like } = PATHS;

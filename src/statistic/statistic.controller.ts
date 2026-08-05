@@ -1,7 +1,7 @@
 import { Controller, Get, HttpStatus, Inject, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ParamsId } from 'src/app/params-validation';
-import { PATHS, QueryParams } from 'src/utils/const';
+import { ParamsId } from 'src/common/dto/params-validation';
+import { PATHS, QueryParams } from 'src/common/constants';
 import { StatisticService } from './statistic.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 

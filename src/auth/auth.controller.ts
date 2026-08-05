@@ -11,10 +11,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AccessTokenDto, ConfirmationCodeDto, LoginWithGoogleDto, RegisterUserDto } from './auth.dto';
+import { AccessTokenDto, ConfirmationCodeDto, RegisterUserDto } from './auth.dto';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { AuthEntity } from './auth.entity';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
@@ -41,12 +41,6 @@ export class AuthController {
   @ApiOkResponse({ type: AuthEntity })
   async login(@Body() { email, password }: RegisterUserDto) {
     return this.authService.login(email, password);
-  }
-
-  @HttpCode(HttpStatus.OK)
-  @Post('login-with-google')
-  async loginWithGoogle(@Body() { email, name, photo }: LoginWithGoogleDto) {
-    return this.authService.loginWithGoogle(email, name, photo);
   }
 
   @Post('verify')

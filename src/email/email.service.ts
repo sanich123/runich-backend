@@ -1,6 +1,6 @@
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
-import { sendEmail } from 'src/utils/email/nodemailer';
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { sendEmail } from 'src/common/email/nodemailer';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { render } from '@react-email/components';
 import { NotificationEmail, ConfirmEmailAddressWithLinkAndCode, ResetPasswordByLinkAndCode } from './templates';
 import { EmailType } from './templates/types';

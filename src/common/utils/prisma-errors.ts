@@ -1,6 +1,6 @@
 import { HttpException, InternalServerErrorException } from '@nestjs/common';
-import { Prisma } from '../generated/prisma/client';
-import { PrismaException } from 'src/exceptions/prisma-exceptions';
+import { Prisma } from '../../infrastructure/database/generated/prisma/client';
+import { PrismaException } from 'src/common/filters/prisma-exceptions';
 import { prismaError } from 'prisma-better-errors';
 
 export function prismaErrorHandling(error: unknown) {

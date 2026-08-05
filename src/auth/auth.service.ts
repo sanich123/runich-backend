@@ -1,10 +1,10 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { JwtService } from '@nestjs/jwt';
 import { EmailService } from 'src/email/email.service';
-import { getRandomInt } from 'src/utils/utils';
+import { getRandomInt } from 'src/common/utils/utils';
 
 @Injectable()
 export class AuthService {
@@ -66,61 +66,6 @@ export class AuthService {
           throw new UnauthorizedException('Данная учетная запись не подтверждена');
         }
         await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
-        return {
-          id: user.id,
-          accessToken: this.jwtService.sign({ userId: user.id }),
-        };
-      }
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
-  async loginWithGoogle(email: string, name?: string, photo?: string) {
-    try {
-      const user = await this.prisma.users.findUnique({ where: { email } });
-
-      if (!user) {
-        const user = await this.prisma.users.create({
-          data: {
-            email,
-            email_confirmed_at: new Date(),
-            created_at: new Date(),
-          },
-        });
-        if (user.id) {
-          await this.prisma.profile.create({
-            data: { email, name: name ?? '', profilePhoto: photo ?? '', created_at: new Date(), user_id: user.id },
-          });
-          return {
-            id: user.id,
-            accessToken: this.jwtService.sign({ userId: user.id }),
-          };
-        }
-      } else {
-        const userProfile = await this.prisma.profile.findUnique({ where: { user_id: user.id } });
-        if (userProfile) {
-          if (!userProfile?.profilePhoto && photo) {
-            await this.prisma.profile.update({
-              where: { user_id: user.id },
-              data: { profilePhoto: photo, updatedAt: new Date() },
-            });
-          }
-          if (!userProfile?.name && name) {
-            await this.prisma.profile.update({ where: { user_id: user.id }, data: { name, updatedAt: new Date() } });
-          }
-        } else {
-          await this.prisma.profile.create({
-            data: {
-              email,
-              name: name ?? '',
-              surname: '',
-              profilePhoto: photo ?? '',
-              created_at: new Date(),
-              user_id: user.id,
-            },
-          });
-        }
         return {
           id: user.id,
           accessToken: this.jwtService.sign({ userId: user.id }),

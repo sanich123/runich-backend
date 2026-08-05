@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { PRISMA_ERR_TO_HTTP_CODES } from 'src/utils/const';
+import { PRISMA_ERR_TO_HTTP_CODES } from 'src/common/constants';
 
 export class PrismaException extends HttpException {
   constructor(message: string, code?: string) {

@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { prismaErrorHandling } from 'src/utils/prisma-errors';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { ProfileDto } from './account.dto';
-import { Pagination } from 'src/utils/pagination/pagination.decorator';
+import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { Filtering } from './filter.decorator';
 
 @Injectable()
