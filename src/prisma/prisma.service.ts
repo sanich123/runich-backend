@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
+import { seedMockData } from './mock-seed';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -32,6 +33,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
   async onModuleInit() {
     await this.$connect();
+    if (process.env.SEED_MOCK_DATA === 'true') {
+      await seedMockData(this);
+    }
     this.$on('error' as never, ({ message }) => this.logger.error(message));
     this.$on('warn' as never, ({ message }) => this.logger.warn(message));
     this.$on('info' as never, ({ message }) => this.logger.debug(message));

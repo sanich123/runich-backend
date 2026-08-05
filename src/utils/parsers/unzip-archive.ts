@@ -1,4 +1,4 @@
-import * as AdmZip from 'adm-zip';
+import AdmZip from 'adm-zip';
 import { existsSync } from 'fs';
 import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';

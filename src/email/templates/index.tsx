@@ -15,10 +15,9 @@ import {
   Text,
 } from '@react-email/components';
 import * as React from 'react';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 
 import { HEADING, NotificationEmailProps, PARAGRAPH } from './types';
+import { RUNICH_LOGO_CID } from '../../utils/email/constants';
 
 const colors = {
   accent: '#F66767',
@@ -32,7 +31,7 @@ const colors = {
 };
 
 const fontFamily = "'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif";
-const logoUrl = `data:image/png;base64,${readFileSync(join(process.cwd(), 'assets/images/runich-logo.png')).toString('base64')}`;
+const logoUrl = `cid:${RUNICH_LOGO_CID}`;
 
 function getAuthLink(accessToken: string) {
   const protocol = process.env.IS_DEV ? 'http' : 'https';
