@@ -23,15 +23,11 @@ Create a local, ignored .env file:
     DATABASE_URL=postgresql://user:password@localhost:5432/runich_db?schema=public
     PORT=3000
     NODE_ENV=development
-    SMTP_HOST=smtp.example.com
-    SMTP_PORT=465
-    SMTP_SECURE=true
-    SMTP_USER=your-user
-    SMTP_PASSWORD=your-password
-    SMTP_FROM=Runich <your-user>
-    SMTP_CONNECTION_TIMEOUT=15000
-    SMTP_GREETING_TIMEOUT=15000
-    SMTP_SOCKET_TIMEOUT=20000
+    GOOGLE_CLIENT_ID=your-google-oauth-client-id
+    GOOGLE_SECRET=your-google-oauth-client-secret
+    GOOGLE_REFRESH_TOKEN=your-google-oauth-refresh-token
+    USER_EMAIL=your-gmail-address
+    EMAIL_API_TIMEOUT=15000
     IS_DEV=true
     SEED_MOCK_DATA=false
 
@@ -56,9 +52,10 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | DATABASE_URL | PostgreSQL connection string |
 | PORT | HTTP port, default 3000 |
 | NODE_ENV | Runtime environment |
-| SMTP_HOST, SMTP_PORT, SMTP_SECURE | SMTP connection |
-| SMTP_USER, SMTP_PASSWORD, SMTP_FROM | Email credentials and sender |
-| SMTP_CONNECTION_TIMEOUT, SMTP_GREETING_TIMEOUT, SMTP_SOCKET_TIMEOUT | SMTP timeouts in milliseconds |
+| GOOGLE_CLIENT_ID, GOOGLE_SECRET | Google OAuth client credentials |
+| GOOGLE_REFRESH_TOKEN | Offline OAuth token with Gmail Send permission |
+| USER_EMAIL | Gmail sender address |
+| EMAIL_API_TIMEOUT | Google OAuth and Gmail API timeout in milliseconds, default 15000 |
 | MAPBOX_ACCESS_TOKEN | Mapbox Static Images API access token |
 | JWT_SECRET | Secret used to sign and verify JWT tokens |
 | IS_DEV | Development URL selection in email templates |

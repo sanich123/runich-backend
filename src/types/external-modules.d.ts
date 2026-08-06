@@ -12,6 +12,7 @@ declare module 'nodemailer' {
     accepted: string[];
     rejected: string[];
     response: string;
+    message?: Buffer;
   };
 
   type Transporter = {
