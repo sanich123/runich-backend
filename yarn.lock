@@ -10269,10 +10269,10 @@ __metadata:
     ts-node: "npm:^10.9.2"
     ts-prune: "npm:^0.10.3"
     tsup: "npm:^8.5.1"
-    tsx: "npm:^4.23.7"
+    tsx: "npm:^4.23.9"
     typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.66.0"
-    uuid: "npm:^11.1.1"
+    uuid: "npm:^14.0.1"
     xmldom-qsa: "npm:^1.1.3"
   languageName: unknown
   linkType: soft
@@ -11335,9 +11335,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsx@npm:^4.23.7":
-  version: 4.23.7
-  resolution: "tsx@npm:4.23.7"
+"tsx@npm:^4.23.9":
+  version: 4.23.9
+  resolution: "tsx@npm:4.23.9"
   dependencies:
     esbuild: "npm:~0.28.0"
     fsevents: "npm:~2.3.3"
@@ -11346,7 +11346,7 @@ __metadata:
       optional: true
   bin:
     tsx: dist/cli.mjs
-  checksum: 10c0/984fe7a63b0197d2d703fe68939006a83f52f986edc4e56034705e612d766f22df503c56bf0822ae7998c54891cafde2699baf1a198e43dd43cca320e1d1e986
+  checksum: 10c0/47e3634c5c39bc3cce6b0518452e47135fc37e91582fac7611de35573fdf564ee28ffc7b3751058131cb80e786f9c83f92e713bee602406b2a46d237b5ddcad5
   languageName: node
   linkType: hard
 
@@ -11657,21 +11657,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:*":
+"uuid@npm:*, uuid@npm:^14.0.1":
   version: 14.0.1
   resolution: "uuid@npm:14.0.1"
   bin:
     uuid: dist-node/bin/uuid
   checksum: 10c0/2d961289097cb68c37d93d1da0b5c3aafc1eb9948a455cca8d0ae53a099b2fe583b8933254a84097f700e6bac2e23033364904df0467c22551d5d9611febcaf6
-  languageName: node
-  linkType: hard
-
-"uuid@npm:^11.1.1":
-  version: 11.1.1
-  resolution: "uuid@npm:11.1.1"
-  bin:
-    uuid: dist/esm/bin/uuid
-  checksum: 10c0/9e3af58eba872ece5a5e76f4773a94fc78a0ef2c2444c38dbe6b42f41dadf76c01850fd783604f27986f6195e6286aef064d45987d401b2a33127b98ddf7c0c5
   languageName: node
   linkType: hard
 
