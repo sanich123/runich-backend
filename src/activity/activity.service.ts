@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ActivityDto } from './activity.dto';
 import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
@@ -9,6 +9,8 @@ import { chunkArray } from 'src/common/parsers/chunk-array';
 
 @Injectable()
 export class ActivityService {
+  private readonly logger = new Logger(ActivityService.name);
+
   constructor(
     @Inject(PrismaService)
     private readonly prisma: PrismaService,
@@ -41,9 +43,9 @@ export class ActivityService {
   async createActivitiesFromMigrationArchive(activities: (ActivityDto & { user_id: string; profileId: string })[]) {
     try {
       const chunkedActivities = chunkArray(activities, 100);
-      await Promise.allSettled(
+      await Promise.all(
         chunkedActivities.map(async (activities) => {
-          console.log('Записываем 100 активностей');
+          this.logger.debug(`Writing activity batch (${activities.length} records)`);
           return await this.prisma.activity.createMany({ data: activities });
         }),
       );

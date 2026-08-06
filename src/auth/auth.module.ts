@@ -7,14 +7,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { EmailService } from 'src/email/email.service';
 
-import { jwtSecret } from './jwt.constants';
-
 @Module({
   imports: [
     PrismaModule,
     PassportModule,
     JwtModule.register({
-      secret: jwtSecret,
+      secret: process.env.JWT_SECRET!,
       signOptions: { expiresIn: '1y' },
     }),
   ],

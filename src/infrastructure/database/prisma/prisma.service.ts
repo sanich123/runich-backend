@@ -32,17 +32,28 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     });
   }
   async onModuleInit() {
-    await this.$connect();
-    if (process.env.SEED_MOCK_DATA === 'true') {
-      await seedMockData(this);
-    }
     this.$on('error' as never, ({ message }) => this.logger.error(message));
     this.$on('warn' as never, ({ message }) => this.logger.warn(message));
     this.$on('info' as never, ({ message }) => this.logger.debug(message));
-    this.$on('query' as never, ({ query, params }) => this.logger.log(`${query}; ${params}`));
+    this.$on('query' as never, () => this.logger.debug('Prisma query executed'));
+
+    try {
+      await this.$connect();
+      if (process.env.SEED_MOCK_DATA === 'true') {
+        await seedMockData(this);
+      }
+    } catch (error) {
+      this.logger.error('Database initialization failed', error instanceof Error ? error.stack : String(error));
+      throw error;
+    }
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
+    try {
+      await this.$disconnect();
+    } catch (error) {
+      this.logger.error('Database disconnect failed', error instanceof Error ? error.stack : String(error));
+      throw error;
+    }
   }
 }

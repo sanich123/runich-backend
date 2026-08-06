@@ -1,18 +1,24 @@
-import { HttpException, InternalServerErrorException } from '@nestjs/common';
+import { HttpException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { Prisma } from '../../infrastructure/database/generated/prisma/client';
 import { PrismaException } from 'src/common/filters/prisma-exceptions';
-import { prismaError } from 'prisma-better-errors';
+
+const logger = new Logger('Prisma');
 
 export function prismaErrorHandling(error: unknown) {
   if (error instanceof HttpException) {
     throw error;
   }
+
+  const errorDetails =
+    error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error;
+  logger.error('Database operation failed', errorDetails);
+
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    throw new prismaError(error);
+    throw new PrismaException('Database operation failed', error.code);
   }
   if (error instanceof Prisma.PrismaClientUnknownRequestError || error instanceof Prisma.PrismaClientValidationError) {
-    throw new PrismaException(error.message);
+    throw new PrismaException('Database operation failed');
   }
-  console.error('[Prisma] Unhandled database error', error);
-  throw new InternalServerErrorException(JSON.stringify(error, null, 2).slice(0, 150));
+
+  throw new InternalServerErrorException('Internal server error');
 }

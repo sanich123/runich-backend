@@ -1,6 +1,9 @@
 import { SportsLib } from '@ardentcode/sports-lib';
 import { readFile } from 'fs/promises';
 import { LocationObject } from 'src/activity/activity.dto';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('FitParser');
 
 export async function getCoordinatesFromFitFile(filePath: string): Promise<LocationObject[]> {
   try {
@@ -14,7 +17,7 @@ export async function getCoordinatesFromFitFile(filePath: string): Promise<Locat
       )
       .map((position) => ({ coords: { longitude: position.longitudeDegrees, latitude: position.latitudeDegrees } }));
   } catch (error) {
-    console.log('error from parsing fit file', error);
-    return [];
+    logger.error(`Failed to parse FIT file ${filePath}`, error instanceof Error ? error.stack : String(error));
+    throw error;
   }
 }

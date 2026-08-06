@@ -1,5 +1,8 @@
 import * as Tcx from 'tcx-js';
 import { LocationObject } from 'src/activity/activity.dto';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('TcxParser');
 
 export async function getCoordinatesFromTcxFile(filePath: string): Promise<LocationObject[]> {
   try {
@@ -9,7 +12,7 @@ export async function getCoordinatesFromTcxFile(filePath: string): Promise<Locat
       .map(({ latitude, longitude }) => ({ coords: { latitude: Number(latitude), longitude: Number(longitude) } }));
     return coordinates;
   } catch (error) {
-    console.log('error during parse tcx file', error);
-    return [];
+    logger.error(`Failed to parse TCX file ${filePath}`, error instanceof Error ? error.stack : String(error));
+    throw error;
   }
 }

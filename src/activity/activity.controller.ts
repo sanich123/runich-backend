@@ -14,6 +14,7 @@ import {
   UploadedFile,
   NotFoundException,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { mkdir, rm } from 'fs/promises';
 import { extname, join } from 'path';
@@ -37,6 +38,8 @@ const migrationDirectory = join(process.cwd(), 'dist', 'migration');
 @ApiTags(activity)
 @Controller(activity)
 export class ActivityController {
+  private readonly logger = new Logger(ActivityController.name);
+
   constructor(
     @Inject(ActivityService)
     private readonly activityService: ActivityService,
@@ -93,7 +96,7 @@ export class ActivityController {
     @UploadedFile() file: Express.Multer.File | undefined,
     @Param() { id }: ParamsId,
   ) {
-    console.time('обработка архива');
+    const startedAt = Date.now();
 
     try {
       if (!file) {
@@ -115,11 +118,19 @@ export class ActivityController {
       if (!activitiesWithCoordinates) return;
       return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates);
     } finally {
-      await Promise.all([
+      const cleanupResults = await Promise.allSettled([
         file?.path ? rm(file.path, { force: true }) : Promise.resolve(),
         rm(migrationDirectory, { recursive: true, force: true }),
       ]);
-      console.timeEnd('обработка архива');
+      cleanupResults.forEach((result) => {
+        if (result.status === 'rejected') {
+          this.logger.error(
+            'Failed to clean up migration files',
+            result.reason instanceof Error ? result.reason.stack : String(result.reason),
+          );
+        }
+      });
+      this.logger.log(`Migration archive processed in ${Date.now() - startedAt}ms`);
     }
   }
 

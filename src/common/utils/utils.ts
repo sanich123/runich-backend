@@ -5,6 +5,11 @@ export function getTimeStampFromTime(date: Date) {
 }
 
 export function getMapBoxImage({ location }: { location: { coords: { latitude: number; longitude: number } }[] }) {
+  const accessToken = process.env.MAPBOX_ACCESS_TOKEN;
+  if (!accessToken) {
+    throw new Error('MAPBOX_ACCESS_TOKEN must be configured');
+  }
+
   if (location.length) {
     const polylineLatLang = location.map(({ coords }) => [coords.latitude, coords.longitude]);
     const encodedPolyline = polyline.encode(polylineLatLang);
@@ -22,14 +27,12 @@ export function getMapBoxImage({ location }: { location: { coords: { latitude: n
     const doublePixels = '@2x';
     return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s-a+9ed4bd(${initialCoordinate[0]},${
       initialCoordinate[1]
-    }),pin-s-b+000(${lastCoordinate[0]},${
-      lastCoordinate[1]
-    }),path-${lineWidth}+${lineColor}-${lineOpacity}(${encodeURIComponent(
+    }),pin-s-b+000(${lastCoordinate[0]},${lastCoordinate[1]}),path-${lineWidth}+${lineColor}-${lineOpacity}(${encodeURIComponent(
       encodedPolyline,
-    )})/auto/${width}x${height}${doublePixels}?access_token=pk.eyJ1Ijoic2FuaWNoMTIzIiwiYSI6ImNsaWFkNmptaDAyaTczcm11NHF0cmp3d2sifQ.ZKH9THateIfnZ7zC23f3-g`;
-  } else {
-    return '';
+    )})/auto/${width}x${height}${doublePixels}?access_token=${accessToken}`;
   }
+
+  return '';
 }
 
 export function getRandomInt(min: number, max: number): number {

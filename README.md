@@ -29,6 +29,9 @@ Create a local, ignored .env file:
     SMTP_USER=your-user
     SMTP_PASSWORD=your-password
     SMTP_FROM=Runich <your-user>
+    SMTP_CONNECTION_TIMEOUT=15000
+    SMTP_GREETING_TIMEOUT=15000
+    SMTP_SOCKET_TIMEOUT=20000
     IS_DEV=true
     SEED_MOCK_DATA=false
 
@@ -55,6 +58,9 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | NODE_ENV | Runtime environment |
 | SMTP_HOST, SMTP_PORT, SMTP_SECURE | SMTP connection |
 | SMTP_USER, SMTP_PASSWORD, SMTP_FROM | Email credentials and sender |
+| SMTP_CONNECTION_TIMEOUT, SMTP_GREETING_TIMEOUT, SMTP_SOCKET_TIMEOUT | SMTP timeouts in milliseconds |
+| MAPBOX_ACCESS_TOKEN | Mapbox Static Images API access token |
+| JWT_SECRET | Secret used to sign and verify JWT tokens |
 | IS_DEV | Development URL selection in email templates |
 | SEED_MOCK_DATA | Create mock users and activities at startup |
 | SEED_USER_EMAIL | Optional email used by Prisma seed |

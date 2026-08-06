@@ -2,20 +2,22 @@ import { Logger } from '@nestjs/common';
 import { writeLogs } from './logs';
 
 export function uncaughtErrorHandler({ message, stack }: Error): void {
-  console.error(`${new Date().toUTCString()} uncaughtException: `, message);
-  console.error(stack);
+  const logger = new Logger('Process');
+  logger.error(`uncaughtException: ${message}`, stack);
+  void writeLogs(`${new Date().toISOString()} uncaughtException: ${message}\n${stack ?? ''}`);
   process.exitCode = 1;
 }
 
 export function unhandledRejectionHandler({ message, stack }: Error): void {
-  console.error(`${new Date().toUTCString()} uncaughtRejection: `, message);
-  console.error(stack);
+  const logger = new Logger('Process');
+  logger.error(`unhandledRejection: ${message}`, stack);
+  void writeLogs(`${new Date().toISOString()} unhandledRejection: ${message}\n${stack ?? ''}`);
   process.exitCode = 1;
 }
 
 export function processStdinHandler(data: Buffer) {
   const logs = data.toString();
   Logger.log(logs);
-  writeLogs(`Process stdin ${logs}`);
+  void writeLogs(`Process stdin ${logs}`);
   process.stdout.write(logs);
 }

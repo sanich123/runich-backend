@@ -13,11 +13,7 @@ export class EmailController {
   @Post(PATHS.like)
   @UseGuards(JwtAuthGuard)
   async sendLikeEmailNotification(@Body() emailDto: LikeEmailDTO) {
-    try {
-      return await this.emailService.sendLikeEmailNotification(emailDto);
-    } catch (error) {
-      console.log(error);
-    }
+    return await this.emailService.sendLikeEmailNotification(emailDto);
   }
 
   @Post(PATHS.comment)

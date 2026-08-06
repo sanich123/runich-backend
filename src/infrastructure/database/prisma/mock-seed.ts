@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcrypt';
+import { Logger } from '@nestjs/common';
 
 import { Prisma, PrismaClient } from '../generated/prisma/client';
 
@@ -6,6 +7,7 @@ const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
 const MOCK_SEED_VERSION = 'runich-mock-v5';
 const TARGET_EMAIL = 'aovoronin.piano@gmail.com';
 const TARGET_EMAIL_TYPO = 'aovoronin.piano@gmaill.com';
+const logger = new Logger('MockSeed');
 
 const runners = [
   [
@@ -353,5 +355,5 @@ export async function seedMockData(prisma: PrismaClient) {
     await prisma.friend.create({ data: { user_id: target.id, friendId: user.id, profileId: user.profile!.id } });
   }
 
-  console.log(`[Mock seed] created ${mockUsers.length} users, ${mockUsers.length * 20} activities`);
+  logger.log(`Created ${mockUsers.length} users and ${mockUsers.length * 20} activities`);
 }

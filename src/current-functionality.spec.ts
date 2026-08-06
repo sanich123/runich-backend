@@ -17,6 +17,8 @@ import { getSpeedInMinsInKm } from './common/parsers/get-speed';
 import { chunkArray } from './common/parsers/chunk-array';
 import { getReducedMetricsFromActivities, getYearMetricsFromActivities } from './common/statistics/reducers';
 
+process.env.JWT_SECRET = 'test-jwt-secret';
+
 type MockDb = Record<string, Record<string, jest.Mock<() => Promise<unknown>>>>;
 
 const createMock = () => jest.fn<() => Promise<unknown>>();
@@ -159,6 +161,14 @@ describe('account, user and social services', () => {
     await expect(service.createProfileByUserId('u1', { name: 'Ann' })).resolves.toEqual({ id: 'p1' });
     await expect(service.updateProfileByProfileId('p1', { name: 'Ann' })).resolves.toEqual({ id: 'p1' });
     await expect(service.deleteUserByUserId('u1')).resolves.toEqual({ id: 'u1' });
+  });
+
+  it('propagates asynchronous profile write failures', async () => {
+    const prisma = db();
+    const service = new UserService(prisma as never);
+    prisma.profile.create.mockRejectedValue(new Error('database unavailable'));
+
+    await expect(service.createProfileByUserId('u1', { name: 'Ann' })).rejects.toThrow('Internal server error');
   });
 
   it('creates and deletes friends and likes', async () => {

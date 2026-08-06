@@ -1,4 +1,11 @@
-import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
@@ -8,6 +15,8 @@ import { getRandomInt } from 'src/common/utils/utils';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @Inject(PrismaService)
     private readonly prisma: PrismaService,
@@ -62,7 +71,7 @@ export class AuthService {
           throw new UnauthorizedException('Неправильный пароль');
         }
         if (!user.email_confirmed_at) {
-          console.log('account unconfirmed');
+          this.logger.warn(`Login rejected for unconfirmed account ${email}`);
           throw new UnauthorizedException('Данная учетная запись не подтверждена');
         }
         await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
