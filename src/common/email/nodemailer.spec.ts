@@ -24,7 +24,9 @@ describe('sendEmail through Gmail API', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'access-token' }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'message-id', threadId: 'thread-id' }), { status: 200 }));
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'message-id', threadId: 'thread-id' }), { status: 200 }),
+      );
     global.fetch = fetchMock;
 
     await sendEmail('runner@example.com', 'Тест', '<img src="cid:runich-logo@runich.app" />');
@@ -51,9 +53,9 @@ describe('sendEmail through Gmail API', () => {
   });
 
   it('reports an OAuth rejection without making the Gmail request', async () => {
-    global.fetch = jest.fn<typeof fetch>().mockResolvedValue(
-      new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 }),
-    );
+    global.fetch = jest
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 }));
 
     await expect(sendEmail('runner@example.com', 'Subject', '<p>Body</p>')).rejects.toThrow(
       'Google OAuth returned 400: {"error":"invalid_grant"}',
