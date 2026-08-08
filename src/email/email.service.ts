@@ -1,14 +1,13 @@
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
 import { sendEmail } from 'src/common/email/nodemailer';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { render } from '@react-email/components';
 import { NotificationEmail, ConfirmEmailAddressWithLinkAndCode, ResetPasswordByLinkAndCode } from './templates';
 import { EmailType } from './templates/types';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class EmailService {
-  constructor() {}
+  private readonly logger = new Logger(EmailService.name);
 
   async sendLikeEmailNotification({
     profilePhoto,
@@ -19,23 +18,19 @@ export class EmailService {
     recepientSurname,
     mapPhotoUrl,
   }: LikeEmailDTO) {
-    try {
-      const subject = 'Лайк к активности';
-      const html = await render(
-        NotificationEmail({
-          type: EmailType.like,
-          mapPhotoUrl,
-          name,
-          surname,
-          profilePhoto,
-          recepientName,
-          recepientSurname,
-        }),
-      );
-      await sendEmail(recepientEmail, subject, html);
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
+    const subject = 'Лайк к активности';
+    const html = await render(
+      NotificationEmail({
+        type: EmailType.like,
+        mapPhotoUrl,
+        name,
+        surname,
+        profilePhoto,
+        recepientName,
+        recepientSurname,
+      }),
+    );
+    await sendEmail(recepientEmail, subject, html);
   }
 
   async sendCommentEmailNotification({
@@ -48,24 +43,20 @@ export class EmailService {
     recepientSurname,
     mapPhotoUrl,
   }: CommentEmailDTO) {
-    try {
-      const subject = 'Новый комментарий к вашей активности';
-      const html = await render(
-        NotificationEmail({
-          type: EmailType.comment,
-          mapPhotoUrl,
-          comment,
-          name,
-          surname,
-          profilePhoto,
-          recepientName,
-          recepientSurname,
-        }),
-      );
-      await sendEmail(recepientEmail, subject, html);
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
+    const subject = 'Новый комментарий к вашей активности';
+    const html = await render(
+      NotificationEmail({
+        type: EmailType.comment,
+        mapPhotoUrl,
+        comment,
+        name,
+        surname,
+        profilePhoto,
+        recepientName,
+        recepientSurname,
+      }),
+    );
+    await sendEmail(recepientEmail, subject, html);
   }
 
   async sendCommentLikeEmailNotification({
@@ -77,23 +68,19 @@ export class EmailService {
     recepientName,
     recepientSurname,
   }: CommentLikeEmailDTO) {
-    try {
-      const subject = 'Лайк к вашему комментарию';
-      const html = await render(
-        NotificationEmail({
-          type: EmailType.commentLike,
-          comment,
-          name,
-          surname,
-          profilePhoto,
-          recepientName,
-          recepientSurname,
-        }),
-      );
-      await sendEmail(recepientEmail, subject, html);
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
+    const subject = 'Лайк к вашему комментарию';
+    const html = await render(
+      NotificationEmail({
+        type: EmailType.commentLike,
+        comment,
+        name,
+        surname,
+        profilePhoto,
+        recepientName,
+        recepientSurname,
+      }),
+    );
+    await sendEmail(recepientEmail, subject, html);
   }
   async sendConfirmationCode(emailAddress: string, confirmationCode: number, accessToken: string) {
     try {
@@ -101,7 +88,8 @@ export class EmailService {
       const html = await render(ConfirmEmailAddressWithLinkAndCode({ text: confirmationCode.toString(), accessToken }));
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
-      console.log(error);
+      this.logger.error(`Failed to send confirmation email to ${emailAddress}`, error);
+      throw error;
     }
   }
 
@@ -111,7 +99,8 @@ export class EmailService {
       const html = await render(ResetPasswordByLinkAndCode({ accessToken }));
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
-      console.log(error);
+      this.logger.error(`Failed to send password reset email to ${emailAddress}`, error);
+      throw error;
     }
   }
 }

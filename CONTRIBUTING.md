@@ -1,0 +1,101 @@
+# Contributing to Runich Backend
+
+Thank you for contributing. This document describes the local workflow, code organization and checks expected before review.
+
+## Before you start
+
+1. Read README.md and identify the affected feature module.
+2. Never commit .env, credentials, JWT secrets, SMTP passwords, database URLs or API tokens.
+3. For security-sensitive changes, describe the threat model and affected endpoints in the pull request.
+
+## Local setup
+
+    corepack enable
+    yarn install
+    yarn prisma generate
+    yarn prisma migrate deploy
+    yarn start:dev
+
+Use SEED_MOCK_DATA=true only with a disposable development database.
+
+## Branches and commits
+
+Create a topic branch from develop:
+
+    git switch develop
+    git pull --ff-only
+    git switch -c feature/short-description
+
+Use focused Conventional Commit-style prefixes:
+
+- feat: new behavior
+- fix: bug fix
+- refactor: behavior-preserving code change
+- test: tests only
+- docs: documentation
+- chore: tooling, dependencies or maintenance
+
+Keep commits small enough to review. Explain breaking changes in the commit body and pull request description.
+
+## Code organization
+
+- Put domain code in its feature directory: auth, activity, comment, friend, like, account, user, statistic or email.
+- Keep shared DTOs, decorators, filters, parsers, logging and utilities in src/common.
+- Keep Prisma integration in src/infrastructure/database/prisma.
+- Use DTOs with class-validator for request input.
+- Do not access Prisma directly from controllers.
+- Do not log secrets, passwords, bearer tokens or full request bodies.
+- Prefer Nest Logger over console.log in application code.
+- Return safe client-facing errors and retain details only in server logs.
+- Commit database migrations together with schema changes.
+
+## Adding an endpoint
+
+1. Add or update the feature DTO with explicit validation decorators.
+2. Implement business logic in the feature service.
+3. Add the controller route and authentication/authorization requirements.
+4. Add Swagger metadata when the endpoint is public API.
+5. Add success, validation and failure tests.
+6. Update doc/api.yaml when the contract changes.
+7. Verify resource ownership using the authenticated user.
+
+## Database changes
+
+    yarn prisma migrate dev --name describe_change
+    yarn prisma generate
+
+Review the generated migration, schema and affected queries. Do not edit generated Prisma Client files manually. Test destructive or high-volume migrations against representative data.
+
+## Testing and checks
+
+Run the full quality gate before pushing:
+
+    yarn typecheck
+    yarn eslint src
+    yarn build
+    yarn test:ci
+    yarn madge
+
+Tests should be deterministic and isolated from production services.
+
+## Pull requests
+
+PRs should target main unless agreed otherwise and explain:
+
+- what changed and why;
+- migrations, API contract changes and operational impact;
+- test commands and results;
+- known limitations and follow-up work.
+
+Keep the PR focused. Avoid mixing unrelated formatting, dependency upgrades or generated-file changes into a feature change.
+
+## Review checklist
+
+- [ ] No secrets or local files are committed.
+- [ ] Input validation is present.
+- [ ] Authentication and resource ownership are enforced.
+- [ ] Errors map to safe HTTP responses.
+- [ ] Logs contain context without sensitive data.
+- [ ] Tests cover changed behavior and failure paths.
+- [ ] Database migrations are included when needed.
+- [ ] Typecheck, ESLint, build, tests and Madge pass.

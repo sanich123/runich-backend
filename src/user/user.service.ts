@@ -27,7 +27,7 @@ export class UserService {
 
   async createProfileByUserId(id: string, accountDto: UserDto) {
     try {
-      return this.prisma.profile.create({
+      return await this.prisma.profile.create({
         data: { ...accountDto, user_id: id },
       });
     } catch (error) {
@@ -37,7 +37,7 @@ export class UserService {
 
   async updateProfileByProfileId(profileId: string, accountDto: UserDto) {
     try {
-      return this.prisma.profile.update({
+      return await this.prisma.profile.update({
         where: { id: profileId },
         data: { ...accountDto, updatedAt: new Date() },
       });

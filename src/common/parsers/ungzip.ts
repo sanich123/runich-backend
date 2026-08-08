@@ -3,6 +3,9 @@ import { pipeline } from 'node:stream';
 import { promisify } from 'node:util';
 import { createGunzip } from 'node:zlib';
 import { join } from 'path';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('GzipParser');
 
 export async function ungzipFile(sourcePath: string) {
   try {
@@ -12,6 +15,7 @@ export async function ungzipFile(sourcePath: string) {
     const destination = createWriteStream(join(process.cwd(), 'dist', 'migration', sourcePath.slice(0, -3)));
     await pipe(source, gzip, destination);
   } catch (error) {
-    console.log('An error during ungzipping file', error);
+    logger.error(`Failed to unpack gzip file ${sourcePath}`, error instanceof Error ? error.stack : String(error));
+    throw error;
   }
 }

@@ -1,1 +1,1 @@
-export const jwtSecret = '~Gze3V,9+e1FWV';
+export const jwtSecret = process.env.JWT_SECRET!;

@@ -8,7 +8,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   constructor(@Inject(HttpAdapterHost) private readonly httpAdapterHost: HttpAdapterHost) {}
 
-  catch(exception: unknown, host: ArgumentsHost): void {
+  async catch(exception: unknown, host: ArgumentsHost): Promise<void> {
     const { httpAdapter } = this.httpAdapterHost;
 
     const ctx = host.switchToHttp();
@@ -28,8 +28,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       date: new Date().toISOString(),
       path: httpAdapter.getRequestUrl(ctx.getRequest()),
     };
-    writeLogs(JSON.stringify(responseBody));
-    this.logger.error(responseBody);
+    const errorDetails = exception instanceof Error ? exception.stack : String(exception);
+    const logMessage = `${statusCode} ${responseBody.path}: ${message}`;
+    if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error(logMessage, errorDetails);
+    } else {
+      this.logger.warn(logMessage);
+    }
+    await writeLogs(JSON.stringify({ ...responseBody, error: errorDetails }));
 
     httpAdapter.reply(ctx.getResponse(), responseBody, statusCode);
   }

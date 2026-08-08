@@ -33,7 +33,11 @@ export class LikeService {
   }
 
   async deleteLikeById(id: string) {
-    return await this.prismaService.like.delete({ where: { id } });
+    try {
+      return await this.prismaService.like.delete({ where: { id } });
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
   }
 
   async getLikesByActivityId(id: string) {

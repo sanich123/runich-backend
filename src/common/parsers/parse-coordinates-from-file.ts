@@ -4,6 +4,9 @@ import { getCoordinatesFromGpxFile } from './get-coordinates-from-gpx';
 import { existsSync } from 'node:fs';
 import { join } from 'path';
 import { LocationObject } from 'src/activity/activity.dto';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('CoordinatesParser');
 
 export async function parseCoordinatesFromFile(filePath: string): Promise<LocationObject[]> {
   let parsedCoordinates: LocationObject[] = [];
@@ -26,7 +29,7 @@ export async function parseCoordinatesFromFile(filePath: string): Promise<Locati
     }
     return parsedCoordinates || [];
   } catch (error) {
-    console.log('An error occured during parse file', error);
-    return [];
+    logger.error(`Failed to parse coordinates file ${filePath}`, error instanceof Error ? error.stack : String(error));
+    throw error;
   }
 }

@@ -6,6 +6,9 @@ import { getSpeedInMinsInKm } from './get-speed';
 import { Extensions, RawStravaCsvColumns } from './types';
 import { v4 } from 'uuid';
 import { ActivityDto, LocationObject } from 'src/activity/activity.dto';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('ActivityMapper');
 
 type MigratedActivity = ActivityDto & { id: string; user_id: string; profileId: string };
 export async function mapActivitiesWithCoordinates({
@@ -37,7 +40,7 @@ export async function mapActivitiesWithCoordinates({
         ) {
           locations = await parseCoordinatesFromFile(fileName);
         }
-        console.log('Обрабатываем активность номер', i);
+        logger.debug(`Processing activity ${i + 1}`);
 
         const duration = Number(activity['Elapsed Time']) * 1000;
         const distance = Number(activity.Distance);
@@ -65,11 +68,22 @@ export async function mapActivitiesWithCoordinates({
       }),
     );
 
-    return results
+    const failedResults = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+    failedResults.forEach((result) => {
+      logger.warn(`Skipping activity that could not be mapped: ${String(result.reason)}`);
+    });
+
+    const successfulResults = results
       .filter((result): result is PromiseFulfilledResult<MigratedActivity> => result.status === 'fulfilled')
       .map((result) => result.value);
+
+    if (parsedActivities.length > 0 && successfulResults.length === 0 && failedResults.length > 0) {
+      throw new Error('Could not map any activities from migration archive');
+    }
+
+    return successfulResults;
   } catch (error) {
-    console.log('An error occured while mapping activities with coordinates', error);
-    return [];
+    logger.error('Failed to map activities with coordinates', error instanceof Error ? error.stack : String(error));
+    throw error;
   }
 }
