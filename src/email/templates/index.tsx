@@ -5,7 +5,6 @@ import {
   Container,
   Head,
   Heading,
-  Hr,
   Html,
   Img,
   Link,
@@ -20,17 +19,20 @@ import { HEADING, NotificationEmailProps, PARAGRAPH } from './types';
 import { RUNICH_LOGO_CID } from '../../common/email/constants';
 
 const colors = {
-  accent: '#F66767',
-  accentDark: '#D94E59',
-  background: '#FFF7F5',
+  accent: '#F15A3E',
+  accentDark: '#C63A32',
+  background: '#F2F2F0',
+  ink: '#242424',
+  inkMuted: '#B9B9B1',
   surface: '#FFFFFF',
-  text: '#4D4D4D',
-  muted: '#8A8585',
-  border: '#F1DEDB',
-  softAccent: '#FFF0EE',
+  surfaceSoft: '#FAFAF7',
+  text: '#262626',
+  muted: '#73736C',
+  border: '#E6E6E0',
+  softAccent: '#FFF2E3',
 };
 
-const fontFamily = "'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif";
+const fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
 const logoUrl = `cid:${RUNICH_LOGO_CID}`;
 
 function getAuthLink(accessToken: string) {
@@ -50,26 +52,48 @@ function EmailLayout({ preview, children }: { preview: string; children: React.R
           color: colors.text,
           fontFamily,
           margin: 0,
-          padding: '32px 16px',
+          padding: '28px 14px',
         }}>
         <Container style={{ margin: '0 auto', maxWidth: '560px', width: '100%' }}>
-          <Section style={{ padding: '0 0 24px' }}>
+          <Section
+            style={{
+              backgroundColor: colors.ink,
+              borderRadius: '22px 22px 0 0',
+              padding: '22px 24px',
+            }}>
             <Row>
-              <Column style={{ width: '52px' }}>
-                <Img src={logoUrl} width="44" height="44" alt="Runich" style={{ display: 'block' }} />
+              <Column style={{ verticalAlign: 'middle', width: '56px' }}>
+                <Img
+                  src={logoUrl}
+                  width="48"
+                  height="48"
+                  alt="Runich"
+                  style={{ borderRadius: '14px', display: 'block' }}
+                />
               </Column>
-              <Column>
+              <Column style={{ verticalAlign: 'middle' }}>
                 <Text
                   style={{
-                    color: colors.accent,
+                    color: colors.surface,
                     fontFamily,
-                    fontSize: '25px',
+                    fontSize: '20px',
                     fontWeight: 700,
-                    letterSpacing: '0.5px',
-                    lineHeight: '44px',
+                    letterSpacing: '1.8px',
+                    lineHeight: '24px',
                     margin: 0,
+                    textTransform: 'uppercase',
                   }}>
-                  Runich
+                  RUNICH
+                </Text>
+                <Text
+                  style={{
+                    color: colors.inkMuted,
+                    fontFamily,
+                    fontSize: '12px',
+                    lineHeight: '18px',
+                    margin: '2px 0 0',
+                  }}>
+                  Активности, которые хочется запомнить
                 </Text>
               </Column>
             </Row>
@@ -79,15 +103,16 @@ function EmailLayout({ preview, children }: { preview: string; children: React.R
             style={{
               backgroundColor: colors.surface,
               border: `1px solid ${colors.border}`,
-              borderRadius: '20px',
-              padding: '32px 32px 28px',
+              borderRadius: '0 0 22px 22px',
+              borderTop: 'none',
+              padding: '34px 32px 30px',
             }}>
             {children}
           </Section>
 
-          <Section style={{ padding: '24px 12px 0', textAlign: 'center' }}>
-            <Text style={{ color: colors.muted, fontFamily, fontSize: '13px', lineHeight: '20px', margin: 0 }}>
-              Runich — активности, которые хочется запомнить
+          <Section style={{ padding: '22px 12px 0', textAlign: 'center' }}>
+            <Text style={{ color: colors.muted, fontFamily, fontSize: '12px', lineHeight: '18px', margin: 0 }}>
+              Вы получили это письмо, потому что использовали Runich.
             </Text>
           </Section>
         </Container>
@@ -99,10 +124,11 @@ function EmailLayout({ preview, children }: { preview: string; children: React.R
 const titleStyle = {
   color: colors.text,
   fontFamily,
-  fontSize: '26px',
+  fontSize: '30px',
   fontWeight: 700,
-  lineHeight: '32px',
-  margin: '0 0 12px',
+  letterSpacing: '-0.4px',
+  lineHeight: '36px',
+  margin: '0 0 14px',
 };
 
 const paragraphStyle = {
@@ -110,11 +136,12 @@ const paragraphStyle = {
   fontFamily,
   fontSize: '16px',
   lineHeight: '25px',
-  margin: '0 0 18px',
+  margin: '0 0 22px',
 };
 
 const buttonStyle = {
   backgroundColor: colors.accent,
+  border: `1px solid ${colors.accent}`,
   borderRadius: '12px',
   color: colors.surface,
   display: 'inline-block',
@@ -122,34 +149,51 @@ const buttonStyle = {
   fontSize: '16px',
   fontWeight: 700,
   lineHeight: '22px',
-  padding: '13px 22px',
+  padding: '14px 24px',
   textDecoration: 'none',
 };
 
-export function ConfirmEmailAddressWithLinkAndCode({ text, accessToken }: { text: string; accessToken: string }) {
-  const authLink = getAuthLink(accessToken);
+const eyebrowStyle = {
+  color: colors.accentDark,
+  fontFamily,
+  fontSize: '11px',
+  fontWeight: 700,
+  letterSpacing: '1.6px',
+  lineHeight: '16px',
+  margin: '0 0 10px',
+  textTransform: 'uppercase' as const,
+};
 
+const securityNoteStyle = {
+  backgroundColor: colors.surfaceSoft,
+  borderLeft: `3px solid ${colors.border}`,
+  color: colors.muted,
+  fontFamily,
+  fontSize: '13px',
+  lineHeight: '20px',
+  margin: '24px 0 0',
+  padding: '10px 14px',
+  textAlign: 'left' as const,
+};
+
+export function ConfirmEmailAddressWithLinkAndCode({ text }: { text: string; accessToken: string }) {
   return (
     <EmailLayout preview="Подтвердите адрес электронной почты в Runich">
+      <Text style={eyebrowStyle}>RUNICH • РЕГИСТРАЦИЯ</Text>
       <Heading as="h1" style={titleStyle}>
         Подтвердите email
       </Heading>
       <Text style={paragraphStyle}>
-        Перейдите по ссылке, чтобы подтвердить адрес электронной почты и продолжить пользоваться Runich.
+        Ваш аккаунт почти готов. Введите код ниже в приложении Runich, чтобы подтвердить адрес электронной почты.
       </Text>
-      <Section style={{ padding: '4px 0 24px', textAlign: 'center' }}>
-        <Button href={authLink} style={buttonStyle}>
-          Подтвердить email
-        </Button>
-      </Section>
-      <Hr style={{ borderColor: colors.border, margin: '0 0 22px' }} />
-      <Text style={{ color: colors.muted, fontFamily, fontSize: '14px', lineHeight: '21px', margin: '0 0 10px' }}>
-        Или введите этот код в приложении:
+      <Text style={{ color: colors.muted, fontFamily, fontSize: '13px', lineHeight: '20px', margin: '0 0 10px' }}>
+        Код подтверждения:
       </Text>
       <Text
         style={{
           backgroundColor: colors.softAccent,
-          borderRadius: '12px',
+          border: `1px solid ${colors.border}`,
+          borderRadius: '14px',
           color: colors.accentDark,
           fontFamily,
           fontSize: '30px',
@@ -157,29 +201,33 @@ export function ConfirmEmailAddressWithLinkAndCode({ text, accessToken }: { text
           letterSpacing: '8px',
           lineHeight: '42px',
           margin: 0,
-          padding: '12px 16px',
+          padding: '14px 16px',
           textAlign: 'center',
         }}>
         {text}
       </Text>
+      <Text style={securityNoteStyle}>Если вы не регистрировались в Runich, просто проигнорируйте это письмо.</Text>
     </EmailLayout>
   );
 }
 
 export function ResetPasswordByLinkAndCode({ accessToken }: { accessToken: string }) {
   return (
-    <EmailLayout preview="Ссылка для входа в Runich">
+    <EmailLayout preview="Восстановление доступа к Runich">
+      <Text style={eyebrowStyle}>RUNICH • ДОСТУП</Text>
       <Heading as="h1" style={titleStyle}>
-        Вход в Runich
+        Восстановление доступа
       </Heading>
       <Text style={paragraphStyle}>
-        Используйте кнопку ниже, чтобы войти в приложение без пароля. Если вы не запрашивали эту ссылку, просто
-        проигнорируйте письмо.
+        Мы получили запрос на восстановление доступа к Runich. Нажмите кнопку ниже, чтобы войти в приложение без пароля.
       </Text>
-      <Section style={{ padding: '4px 0 8px', textAlign: 'center' }}>
+      <Section style={{ padding: '2px 0 0', textAlign: 'center' }}>
         <Button href={getAuthLink(accessToken)} style={buttonStyle}>
-          Войти в приложение
+          Восстановить доступ
         </Button>
+        <Text style={securityNoteStyle}>
+          Если вы не запрашивали восстановление доступа, просто проигнорируйте это письмо.
+        </Text>
       </Section>
     </EmailLayout>
   );
