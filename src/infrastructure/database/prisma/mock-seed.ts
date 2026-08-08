@@ -5,7 +5,7 @@ import { Logger } from '@nestjs/common';
 import { Prisma, PrismaClient } from '../generated/prisma/client';
 
 const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
-const MOCK_SEED_VERSION = 'runich-mock-v7';
+const MOCK_SEED_VERSION = 'runich-mock-v8';
 const MOCK_SEED_IN_PROGRESS = `${MOCK_SEED_VERSION}:in-progress`;
 const MOCK_USER_COUNT = 100;
 const MAX_MOCK_RELATION_COUNT = 40;
@@ -413,15 +413,22 @@ export async function seedMockData(prisma: PrismaClient) {
   }
 
   const usersById = new Map(allUsers.map((user) => [user.id, user]));
+  const followerCapacity = new Map(
+    allUsers.map((user, userIndex) => [user.id, random(600_000 + userIndex, MAX_MOCK_RELATION_COUNT)]),
+  );
   const friendRows: Prisma.FriendCreateManyInput[] = [];
 
   for (const [userIndex, user] of allUsers.entries()) {
     const followCount = random(500_000 + userIndex, MAX_MOCK_RELATION_COUNT);
     const followedIds = new Set<string>();
 
-    for (let offset = 1; followedIds.size < followCount; offset += 1) {
+    for (let offset = 1; offset <= allUsers.length && followedIds.size < followCount; offset += 1) {
       const candidate = allUsers[(userIndex + offset) % allUsers.length];
-      if (candidate.id !== user.id) followedIds.add(candidate.id);
+      const capacity = followerCapacity.get(candidate.id) ?? 0;
+      if (candidate.id !== user.id && capacity > 0) {
+        followedIds.add(candidate.id);
+        followerCapacity.set(candidate.id, capacity - 1);
+      }
     }
 
     for (const friendId of followedIds) {
