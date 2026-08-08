@@ -5,10 +5,10 @@ import { Logger } from '@nestjs/common';
 import { Prisma, PrismaClient } from '../generated/prisma/client';
 
 const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
-const MOCK_SEED_VERSION = 'runich-mock-v6';
+const MOCK_SEED_VERSION = 'runich-mock-v7';
 const MOCK_SEED_IN_PROGRESS = `${MOCK_SEED_VERSION}:in-progress`;
 const MOCK_USER_COUNT = 100;
-const MAX_MOCK_RELATION_COUNT = 100;
+const MAX_MOCK_RELATION_COUNT = 40;
 const CREATE_MANY_BATCH_SIZE = 1_000;
 const DAY_IN_MS = 86_400_000;
 const MINUTE_IN_MS = 60_000;
