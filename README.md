@@ -91,7 +91,7 @@ The schema is in prisma/schema.prisma, and committed migrations are in prisma/mi
     yarn prisma migrate deploy
     yarn prisma db seed
 
-Setting SEED_MOCK_DATA=true creates deterministic mock runners, 20 activities per mock user, comments, comment likes, friends and 0–20 distinct likes per activity. The mock seed version is bumped when fixtures need recreation. Use only with a disposable development database.
+Setting SEED_MOCK_DATA=true creates 100 deterministic mock runners. Each user gets 0–100 activities, each activity gets 0–100 comments and likes, each comment gets 0–100 likes, and each user follows 0–100 other users. Comment, like and activity timestamps are varied. The mock seed version is bumped when fixtures need recreation. Use only with a disposable development database because this fixture can create a large amount of data.
 
 ## Project structure
 

@@ -1,10 +1,17 @@
+import { randomUUID } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 import { Logger } from '@nestjs/common';
 
 import { Prisma, PrismaClient } from '../generated/prisma/client';
 
 const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
-const MOCK_SEED_VERSION = 'runich-mock-v5';
+const MOCK_SEED_VERSION = 'runich-mock-v6';
+const MOCK_SEED_IN_PROGRESS = `${MOCK_SEED_VERSION}:in-progress`;
+const MOCK_USER_COUNT = 100;
+const MAX_MOCK_RELATION_COUNT = 100;
+const CREATE_MANY_BATCH_SIZE = 1_000;
+const DAY_IN_MS = 86_400_000;
+const MINUTE_IN_MS = 60_000;
 const TARGET_EMAIL = 'aovoronin.piano@gmail.com';
 const TARGET_EMAIL_TYPO = 'aovoronin.piano@gmaill.com';
 const logger = new Logger('MockSeed');
@@ -178,20 +185,46 @@ function profileImageUrl(index: number) {
   return stableRunnerPhotos[index % stableRunnerPhotos.length];
 }
 
+function mockRunner(index: number) {
+  const [baseName, baseSurname, city] = runners[index % runners.length];
+  const batch = Math.floor(index / runners.length);
+  const suffix = batch === 0 ? '' : ` ${batch + 1}`;
+
+  return { name: `${baseName}${suffix}`, surname: `${baseSurname}${suffix}`, city };
+}
+
+function mockActivityCount(userIndex: number) {
+  return random(100_000 + userIndex, MAX_MOCK_RELATION_COUNT);
+}
+
+async function createManyInBatches<T>(items: T[], createMany: (data: T[]) => Promise<unknown>) {
+  for (let offset = 0; offset < items.length; offset += CREATE_MANY_BATCH_SIZE) {
+    await createMany(items.slice(offset, offset + CREATE_MANY_BATCH_SIZE));
+  }
+}
+
 export async function seedMockData(prisma: PrismaClient) {
   const existingMocks = await prisma.users.findMany({
     where: { email: { startsWith: MOCK_EMAIL_PREFIX } },
     select: {
       id: true,
+      email: true,
       profile: { select: { bio: true } },
       _count: { select: { activities: true } },
     },
   });
 
-  if (existingMocks.length === runners.length) {
-    const isComplete = existingMocks.every(
-      (mock) => mock.profile?.bio === MOCK_SEED_VERSION && mock._count.activities === 20,
-    );
+  if (existingMocks.length === MOCK_USER_COUNT) {
+    const isComplete = existingMocks.every((mock) => {
+      const localPart = mock.email.slice(MOCK_EMAIL_PREFIX.length, mock.email.indexOf('@'));
+      const userIndex = Number(localPart) - 1;
+      return (
+        userIndex >= 0 &&
+        userIndex < MOCK_USER_COUNT &&
+        mock.profile?.bio === MOCK_SEED_VERSION &&
+        mock._count.activities === mockActivityCount(userIndex)
+      );
+    });
     if (isComplete) return;
   }
   if (existingMocks.length > 0) {
@@ -236,8 +269,9 @@ export async function seedMockData(prisma: PrismaClient) {
   const password = await bcrypt.hash('RunichMock123!', 10);
   const mockUsers: MockUser[] = [];
 
-  for (const [index, [name, surname, city]] of runners.entries()) {
-    const email = `${MOCK_EMAIL_PREFIX}${String(index + 1).padStart(2, '0')}@runich.app`;
+  for (let index = 0; index < MOCK_USER_COUNT; index += 1) {
+    const { name, surname, city } = mockRunner(index);
+    const email = `${MOCK_EMAIL_PREFIX}${String(index + 1).padStart(3, '0')}@runich.app`;
     const user = await prisma.users.create({
       data: {
         email,
@@ -254,7 +288,7 @@ export async function seedMockData(prisma: PrismaClient) {
             gender: index % 2 === 0 ? 'MALE' : 'FEMALE',
             sport: 'RUNNING',
             language: 'en',
-            bio: MOCK_SEED_VERSION,
+            bio: MOCK_SEED_IN_PROGRESS,
             profilePhoto: profileImageUrl(index),
             emailNotifications: false,
           },
@@ -271,89 +305,141 @@ export async function seedMockData(prisma: PrismaClient) {
     ...mockUsers.map((user) => ({ id: user.id, profile: user.profile! })),
   ];
 
+  let activityTotal = 0;
+  let commentTotal = 0;
+  let activityLikeTotal = 0;
+  let commentLikeTotal = 0;
+
   for (const [userIndex, user] of mockUsers.entries()) {
     const profile = user.profile!;
-    for (let activityIndex = 0; activityIndex < 20; activityIndex += 1) {
-      const activity = await prisma.activity.create({
-        data: {
-          user_id: user.id,
-          profileId: profile.id,
-          title: `${['Morning run', 'Tempo run', 'Long run', 'Recovery run'][activityIndex % 4]} #${activityIndex + 1}`,
-          description: 'Mock activity for the Runich feed',
-          sport: ['run', 'walk', 'ride'][(userIndex * 20 + activityIndex) % 3],
-          distance: 5000 + random((userIndex + 1) * 100 + activityIndex, 25000),
-          duration: 1500 + random((userIndex + 1) * 200 + activityIndex, 9000),
-          speed: 8 + random((userIndex + 1) * 300 + activityIndex, 8),
-          date: new Date(Date.now() - (userIndex * 20 + activityIndex) * 86_400_000),
-          emotion: ['ENERGETIC', 'HAPPY', 'CALM'][activityIndex % 3],
-          isPublic: true,
-          photoVideoUrls: (() => {
-            const photo = sourcePhotoUrls.length
-              ? sourcePhotoUrls[(userIndex * 20 + activityIndex) % sourcePhotoUrls.length]
-              : activityPhoto;
-            return [{ url: photo, thumbnail: photo }];
-          })(),
-          locations:
-            sourceActivities.length && sourceActivities[activityIndex % sourceActivities.length].locations
-              ? (sourceActivities[activityIndex % sourceActivities.length].locations as Prisma.InputJsonValue)
-              : fallbackLocations(userIndex, activityIndex),
-          kilometresSplit:
-            sourceActivities.length && sourceActivities[activityIndex % sourceActivities.length].kilometresSplit
-              ? (sourceActivities[activityIndex % sourceActivities.length].kilometresSplit as Prisma.InputJsonValue)
-              : [
-                  { kilometre: 1, pace: 280 + random(userIndex + activityIndex, 45) },
-                  { kilometre: 2, pace: 285 + random(userIndex + activityIndex + 20, 45) },
-                ],
-        },
-      });
+    const activityCount = mockActivityCount(userIndex);
+    const activityRows: Prisma.ActivityCreateManyInput[] = [];
 
-      const activityLikeCount = random((userIndex + 1) * 20_000 + activityIndex, 20);
+    for (let activityIndex = 0; activityIndex < activityCount; activityIndex += 1) {
+      const sourceActivity = sourceActivities.length
+        ? sourceActivities[activityIndex % sourceActivities.length]
+        : undefined;
+      const photo = sourcePhotoUrls.length
+        ? sourcePhotoUrls[(userIndex * MAX_MOCK_RELATION_COUNT + activityIndex) % sourcePhotoUrls.length]
+        : activityPhoto;
+
+      activityRows.push({
+        id: randomUUID(),
+        user_id: user.id,
+        profileId: profile.id,
+        title: `${['Morning run', 'Tempo run', 'Long run', 'Recovery run'][activityIndex % 4]} #${activityIndex + 1}`,
+        description: 'Mock activity for the Runich feed',
+        sport: ['run', 'walk', 'ride'][(userIndex * MAX_MOCK_RELATION_COUNT + activityIndex) % 3],
+        distance: 5000 + random((userIndex + 1) * 100 + activityIndex, 25000),
+        duration: 1500 + random((userIndex + 1) * 200 + activityIndex, 9000),
+        speed: 8 + random((userIndex + 1) * 300 + activityIndex, 8),
+        date: new Date(
+          Date.now() - (userIndex * MAX_MOCK_RELATION_COUNT + activityIndex + MAX_MOCK_RELATION_COUNT) * DAY_IN_MS,
+        ),
+        emotion: ['ENERGETIC', 'HAPPY', 'CALM'][activityIndex % 3],
+        isPublic: true,
+        photoVideoUrls: [{ url: photo, thumbnail: photo }],
+        locations: sourceActivity?.locations
+          ? (sourceActivity.locations as Prisma.InputJsonValue)
+          : (fallbackLocations(userIndex, activityIndex) as Prisma.InputJsonValue),
+        kilometresSplit: sourceActivity?.kilometresSplit
+          ? (sourceActivity.kilometresSplit as Prisma.InputJsonValue)
+          : ([
+              { kilometre: 1, pace: 280 + random(userIndex + activityIndex, 45) },
+              { kilometre: 2, pace: 285 + random(userIndex + activityIndex + 20, 45) },
+            ] as Prisma.InputJsonValue),
+      });
+    }
+
+    await createManyInBatches(activityRows, (data) => prisma.activity.createMany({ data }));
+    activityTotal += activityRows.length;
+
+    for (const [activityIndex, activity] of activityRows.entries()) {
+      const activityDate = new Date(activity.date ?? Date.now());
+      const activityLikeRows: Prisma.LikeCreateManyInput[] = [];
+      const commentRows: Prisma.CommentCreateManyInput[] = [];
+      const commentLikeRows: Prisma.CommentLikeCreateManyInput[] = [];
+      const activityLikeCount = random((userIndex + 1) * 20_000 + activityIndex, MAX_MOCK_RELATION_COUNT);
+
       for (let likeIndex = 0; likeIndex < activityLikeCount; likeIndex += 1) {
         const liker = allUsers[(likeIndex + userIndex + activityIndex + 1) % allUsers.length];
-        await prisma.like.create({
-          data: { activityId: activity.id, profileId: liker.profile.id, authorId: liker.id },
+        activityLikeRows.push({
+          id: randomUUID(),
+          activityId: activity.id!,
+          profileId: liker.profile.id,
+          authorId: liker.id,
+          date: new Date(activityDate.getTime() + (likeIndex + 1) * MINUTE_IN_MS),
         });
       }
 
-      const commentCount = random((userIndex + 1) * 1000 + activityIndex, 20);
+      const commentCount = random((userIndex + 1) * 1000 + activityIndex, MAX_MOCK_RELATION_COUNT);
       for (let commentIndex = 0; commentIndex < commentCount; commentIndex += 1) {
         const author = allUsers[(userIndex + activityIndex + commentIndex + 1) % allUsers.length];
-        const comment = await prisma.comment.create({
-          data: {
-            activityId: activity.id,
-            profileId: author.profile!.id,
-            authorId: author.id,
-            comment: commentTexts[(userIndex + activityIndex + commentIndex) % commentTexts.length],
-          },
+        const commentId = randomUUID();
+        const commentDate = new Date(activityDate.getTime() + (commentIndex + 1) * 15 * MINUTE_IN_MS);
+
+        commentRows.push({
+          id: commentId,
+          date: commentDate,
+          activityId: activity.id!,
+          profileId: author.profile.id,
+          authorId: author.id,
+          comment: commentTexts[(userIndex + activityIndex + commentIndex) % commentTexts.length],
         });
-        const likeCount = random((userIndex + 1) * 10_000 + activityIndex * 100 + commentIndex, 10);
-        for (let likeIndex = 0; likeIndex < likeCount; likeIndex += 1) {
-          const liker = allUsers[(likeIndex + commentIndex + activityIndex + 1) % allUsers.length];
-          await prisma.commentLike.create({
-            data: { commentId: comment.id, profileId: liker.profile!.id, authorId: liker.id },
+
+        const commentLikeCount = random(
+          (userIndex + 1) * 10_000 + activityIndex * MAX_MOCK_RELATION_COUNT + commentIndex,
+          MAX_MOCK_RELATION_COUNT,
+        );
+        for (let likeIndex = 0; likeIndex < commentLikeCount; likeIndex += 1) {
+          const liker = allUsers[(likeIndex + commentIndex + activityIndex + userIndex + 1) % allUsers.length];
+          commentLikeRows.push({
+            id: randomUUID(),
+            date: new Date(commentDate.getTime() + (likeIndex + 1) * MINUTE_IN_MS),
+            commentId,
+            profileId: liker.profile.id,
+            authorId: liker.id,
           });
         }
       }
+
+      await createManyInBatches(activityLikeRows, (data) => prisma.like.createMany({ data }));
+      await createManyInBatches(commentRows, (data) => prisma.comment.createMany({ data }));
+      await createManyInBatches(commentLikeRows, (data) => prisma.commentLike.createMany({ data }));
+      activityLikeTotal += activityLikeRows.length;
+      commentTotal += commentRows.length;
+      commentLikeTotal += commentLikeRows.length;
     }
   }
 
-  for (const [userIndex, user] of mockUsers.entries()) {
-    const followIds = new Set<string>([target.id]);
-    const followCount = random(userIndex + 500, 15);
-    for (let offset = 0; followIds.size < followCount + 1; offset += 1) {
-      const candidate = mockUsers[(userIndex + offset + 1) % mockUsers.length];
-      if (candidate.id !== user.id) followIds.add(candidate.id);
+  const usersById = new Map(allUsers.map((user) => [user.id, user]));
+  const friendRows: Prisma.FriendCreateManyInput[] = [];
+
+  for (const [userIndex, user] of allUsers.entries()) {
+    const followCount = random(500_000 + userIndex, MAX_MOCK_RELATION_COUNT);
+    const followedIds = new Set<string>();
+
+    for (let offset = 1; followedIds.size < followCount; offset += 1) {
+      const candidate = allUsers[(userIndex + offset) % allUsers.length];
+      if (candidate.id !== user.id) followedIds.add(candidate.id);
     }
-    for (const friendId of followIds) {
-      const friendProfile =
-        friendId === target.id ? targetProfile : mockUsers.find((item) => item.id === friendId)!.profile!;
-      await prisma.friend.create({ data: { user_id: user.id, friendId, profileId: friendProfile.id } });
+
+    for (const friendId of followedIds) {
+      const friend = usersById.get(friendId);
+      if (!friend) throw new Error(`Could not find mock profile for followed user ${friendId}`);
+      friendRows.push({ id: randomUUID(), user_id: user.id, friendId, profileId: friend.profile.id });
     }
   }
 
-  for (const user of mockUsers.slice(0, 10)) {
-    await prisma.friend.create({ data: { user_id: target.id, friendId: user.id, profileId: user.profile!.id } });
-  }
+  await createManyInBatches(friendRows, (data) => prisma.friend.createMany({ data }));
 
-  logger.log(`Created ${mockUsers.length} users and ${mockUsers.length * 20} activities`);
+  await prisma.profile.updateMany({
+    where: { user_id: { in: mockUsers.map((user) => user.id) } },
+    data: { bio: MOCK_SEED_VERSION },
+  });
+
+  logger.log(
+    `Created ${mockUsers.length} users, ${activityTotal} activities, ${commentTotal} comments, ` +
+      `${activityLikeTotal} activity likes, ${commentLikeTotal} comment likes and ${friendRows.length} follows`,
+  );
 }
