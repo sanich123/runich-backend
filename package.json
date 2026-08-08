@@ -16,7 +16,7 @@
     "start:prod": "node dist/main.js",
     "start:migrate:prod": "prisma migrate deploy && node dist/main.js",
     "start:migrate:dev": "prisma generate && prisma migrate deploy && yarn start:dev",
-    "build": "tsup --config tsup.config.ts",
+    "build": "tsup --config tsup.config.json",
     "test": "jest",
     "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --passWithNoTests --no-watchman",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
