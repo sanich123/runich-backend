@@ -22,6 +22,13 @@ export class AccessTokenDto {
   accessToken: string;
 }
 
+export class RefreshTokenDto {
+  @ApiProperty({ type: String, description: 'Refresh Token' })
+  @IsNotEmpty()
+  @IsString()
+  refreshToken: string;
+}
+
 export class ConfirmationCodeDto {
   @ApiProperty({ type: String, description: 'Confirmation code' })
   @IsNotEmpty()

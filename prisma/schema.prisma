@@ -91,12 +91,16 @@ model Activity {
   photoVideoUrls      Json?
   isPublic            Boolean?  @default(true)
   mapPhotoUrlBlurhash String?
+  source              String?  @db.VarChar(32)
+  sourceActivityId    String?  @db.VarChar(128)
   profileId           String    @db.Uuid
   id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   profile             Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users               Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   comments            Comment[]
   likes               Like[]
+
+  @@unique([user_id, source, sourceActivityId])
 }
 
 model Friend {

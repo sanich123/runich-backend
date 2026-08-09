@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import polyline from '@mapbox/polyline';
 
 export function getTimeStampFromTime(date: Date) {
@@ -38,5 +39,5 @@ export function getMapBoxImage({ location }: { location: { coords: { latitude: n
 export function getRandomInt(min: number, max: number): number {
   min = Math.ceil(min);
   max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return randomInt(min, max + 1);
 }

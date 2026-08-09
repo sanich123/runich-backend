@@ -1,4 +1,5 @@
 export type RawStravaCsvColumns = {
+  'Activity ID': string;
   Filename: string;
   'Activity Date': string;
   'Activity Name': string;

@@ -109,6 +109,24 @@ export class AuthService {
     }
   }
 
+  refreshAccessToken(refreshToken: string) {
+    try {
+      const tokenInfo = this.jwtService.verify<{ userId?: string }>(refreshToken);
+      if (typeof tokenInfo?.userId !== 'string' || !tokenInfo.userId) {
+        throw new UnauthorizedException('Информация о пользователе не была найдена');
+      }
+
+      return {
+        accessToken: this.jwtService.sign({ userId: tokenInfo.userId }),
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Недействительный refresh token');
+    }
+  }
+
   async deleteUser(userId: string) {
     try {
       return await this.prisma.users.delete({ where: { id: userId } });

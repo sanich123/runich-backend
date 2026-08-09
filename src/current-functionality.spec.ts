@@ -224,6 +224,25 @@ describe('activity, comments and statistics', () => {
     await expect(service.deleteActivityById('a1')).resolves.toEqual({ id: 'a1' });
   });
 
+  it('skips duplicate activities during archive migration', async () => {
+    const prisma = db();
+    const service = new ActivityService(prisma as never, {} as never);
+    const activity = {
+      duration: 100,
+      distance: 1000,
+      speed: 10,
+      sport: 'run',
+      user_id: 'u1',
+      profileId: 'p1',
+      source: 'strava' as const,
+      sourceActivityId: 'strava-activity-1',
+    };
+    prisma.activity.createMany.mockResolvedValue({ count: 1 });
+
+    await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual({ success: true });
+    expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: [activity], skipDuplicates: true });
+  });
+
   it('creates comments, likes and returns comment collections', async () => {
     const prisma = db();
     const account = { getAccountByUserId: createMock().mockResolvedValue({ id: 'p1' }) };
@@ -303,8 +322,8 @@ describe('utility functions and configuration', () => {
   });
 
   it('returns a random integer inside the requested inclusive range', () => {
-    jest.spyOn(Math, 'random').mockReturnValue(0.5);
-    expect(getRandomInt(1, 10)).toBe(6);
-    jest.restoreAllMocks();
+    const value = getRandomInt(1, 10);
+    expect(value).toBeGreaterThanOrEqual(1);
+    expect(value).toBeLessThanOrEqual(10);
   });
 });

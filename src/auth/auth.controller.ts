@@ -3,6 +3,7 @@ import {
   ConflictException,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Inject,
@@ -11,9 +12,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AccessTokenDto, ConfirmationCodeDto, RegisterUserDto } from './auth.dto';
+import { AccessTokenDto, ConfirmationCodeDto, RefreshTokenDto, RegisterUserDto } from './auth.dto';
 import { ApiOkResponse } from '@nestjs/swagger';
-import { AuthEntity } from './auth.entity';
+import { AppConfigEntity, AuthEntity } from './auth.entity';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -25,6 +26,12 @@ export class AuthController {
     @Inject(PrismaService)
     private prismaService: PrismaService,
   ) {}
+
+  @Get('config')
+  @ApiOkResponse({ type: AppConfigEntity })
+  getConfig() {
+    return { minAppVersion: '4.0.0' };
+  }
 
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
@@ -41,6 +48,13 @@ export class AuthController {
   @ApiOkResponse({ type: AuthEntity })
   async login(@Body() { email, password }: RegisterUserDto) {
     return this.authService.login(email, password);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('refresh')
+  @ApiOkResponse({ type: AuthEntity })
+  async refresh(@Body() { refreshToken }: RefreshTokenDto) {
+    return this.authService.refreshAccessToken(refreshToken);
   }
 
   @Post('verify')

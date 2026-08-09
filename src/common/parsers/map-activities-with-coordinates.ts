@@ -10,7 +10,13 @@ import { Logger } from '@nestjs/common';
 
 const logger = new Logger('ActivityMapper');
 
-type MigratedActivity = ActivityDto & { id: string; user_id: string; profileId: string };
+type MigratedActivity = ActivityDto & {
+  id: string;
+  user_id: string;
+  profileId: string;
+  source: 'strava';
+  sourceActivityId: string;
+};
 export async function mapActivitiesWithCoordinates({
   parsedActivities,
   userId,
@@ -25,6 +31,11 @@ export async function mapActivitiesWithCoordinates({
 
     const results = await Promise.allSettled(
       parsedActivities.map(async (activity, i): Promise<MigratedActivity> => {
+        const sourceActivityId = String(activity['Activity ID'] ?? '').trim();
+        if (!sourceActivityId) {
+          throw new Error('Strava activity ID is missing');
+        }
+
         let locations: LocationObject[] = [];
         let fileName = activity['Filename'];
 
@@ -53,6 +64,8 @@ export async function mapActivitiesWithCoordinates({
 
         return {
           id: v4(),
+          source: 'strava',
+          sourceActivityId,
           date,
           title,
           sport,

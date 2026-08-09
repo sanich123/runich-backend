@@ -40,13 +40,20 @@ export class ActivityService {
     }
   }
 
-  async createActivitiesFromMigrationArchive(activities: (ActivityDto & { user_id: string; profileId: string })[]) {
+  async createActivitiesFromMigrationArchive(
+    activities: (ActivityDto & {
+      user_id: string;
+      profileId: string;
+      source: 'strava';
+      sourceActivityId: string;
+    })[],
+  ) {
     try {
       const chunkedActivities = chunkArray(activities, 100);
       await Promise.all(
         chunkedActivities.map(async (activities) => {
           this.logger.debug(`Writing activity batch (${activities.length} records)`);
-          return await this.prisma.activity.createMany({ data: activities });
+          return await this.prisma.activity.createMany({ data: activities, skipDuplicates: true });
         }),
       );
       return { success: true };
