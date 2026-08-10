@@ -97,7 +97,7 @@ describe('AuthService', () => {
       accessToken: 'access-token',
       refreshToken: 'access-token',
     });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '5m' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '1d' });
     expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '180d' });
     expect(dependencies.prisma.users.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
@@ -148,7 +148,7 @@ describe('AuthService', () => {
     dependencies.jwt.verify.mockReturnValue({ userId: 'user-1' });
 
     await expect(service.refreshAccessToken('refresh-token')).resolves.toEqual({ accessToken: 'access-token' });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '5m' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '1d' });
 
     dependencies.jwt.verify.mockReturnValue({});
     await expect(service.refreshAccessToken('refresh-token')).rejects.toBeInstanceOf(UnauthorizedException);
@@ -199,14 +199,14 @@ describe('AuthService', () => {
     const accessPayload = jwtService.decode<{ iat: number; exp: number }>(loginResult.accessToken);
     const refreshPayload = jwtService.decode<{ iat: number; exp: number }>(loginResult.refreshToken);
 
-    expect(accessPayload.exp - accessPayload.iat).toBe(5 * 60);
+    expect(accessPayload.exp - accessPayload.iat).toBe(86400);
     expect(refreshPayload.exp - refreshPayload.iat).toBe(180 * 24 * 60 * 60);
 
     const refreshedResult = await service.refreshAccessToken(loginResult.refreshToken);
     const refreshedAccessPayload = jwtService.decode<{ iat: number; exp: number }>(refreshedResult.accessToken);
 
     expect(refreshedResult).toEqual({ accessToken: expect.any(String) });
-    expect(refreshedAccessPayload.exp - refreshedAccessPayload.iat).toBe(5 * 60);
+    expect(refreshedAccessPayload.exp - refreshedAccessPayload.iat).toBe(86400);
   });
 
   it('sends a reset link only to a confirmed user', async () => {
