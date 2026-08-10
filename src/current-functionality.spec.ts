@@ -81,7 +81,11 @@ describe('authentication', () => {
       email_confirmed_at: new Date(),
     });
     prisma.users.update.mockResolvedValue({});
-    await expect(service.login('user@example.com', 'secret')).resolves.toEqual({ id: 'user-1', accessToken: 'jwt' });
+    await expect(service.login('user@example.com', 'secret')).resolves.toEqual({
+      userId: 'user-1',
+      accessToken: 'jwt',
+      refreshToken: 'jwt',
+    });
     expect(prisma.users.update).toHaveBeenCalled();
 
     prisma.users.findUnique.mockResolvedValue({ id: 'user-1', encrypted_password: await bcrypt.hash('secret', 4) });
@@ -92,15 +96,13 @@ describe('authentication', () => {
     prisma.users.findUnique.mockResolvedValue({ id: 'user-1', confirmation_token: '1234' });
     prisma.users.update.mockResolvedValue({});
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
-      appVersion: '3.0.0',
-      id: 'user-1',
       accessToken: 'jwt',
     });
     await expect(service.confirmEmailByCode('bad', 'user@example.com')).rejects.toBeInstanceOf(BadRequestException);
 
     jwtMock.verify = jest.fn().mockReturnValue({ userId: 'user-1' });
     prisma.users.findUnique.mockResolvedValue({ id: 'user-1', email_confirmed_at: null });
-    await expect(service.verifyToken('token')).resolves.toMatchObject({ id: 'user-1', accessToken: 'jwt' });
+    await expect(service.verifyToken('token')).resolves.toMatchObject({ userId: 'user-1', accessToken: 'jwt' });
     expect(prisma.users.update).toHaveBeenCalled();
   });
 

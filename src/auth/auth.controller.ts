@@ -14,7 +14,7 @@ import {
 import { AuthService } from './auth.service';
 import { AccessTokenDto, ConfirmationCodeDto, RefreshTokenDto, RegisterUserDto } from './auth.dto';
 import { ApiOkResponse } from '@nestjs/swagger';
-import { AppConfigEntity, AuthEntity } from './auth.entity';
+import { AppConfigEntity, AuthEntity, LoginEntity } from './auth.entity';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -45,7 +45,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  @ApiOkResponse({ type: AuthEntity })
+  @ApiOkResponse({ type: LoginEntity })
   async login(@Body() { email, password }: RegisterUserDto) {
     return this.authService.login(email, password);
   }

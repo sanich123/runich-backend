@@ -93,9 +93,12 @@ describe('AuthService', () => {
     });
     dependencies.prisma.users.update.mockResolvedValue({ id: 'user-1' });
     await expect(service.login('user@example.com', 'secret123')).resolves.toEqual({
-      id: 'user-1',
+      userId: 'user-1',
       accessToken: 'access-token',
+      refreshToken: 'access-token',
     });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '5m' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '180d' });
     expect(dependencies.prisma.users.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
       data: { last_sign_in_at: expect.any(Date) },
@@ -120,8 +123,7 @@ describe('AuthService', () => {
     dependencies.prisma.users.findUnique.mockResolvedValueOnce({ id: 'user-1', email_confirmed_at: null });
     dependencies.prisma.users.update.mockResolvedValue({});
     await expect(service.verifyToken('token')).resolves.toEqual({
-      appVersion: '3.0.0',
-      id: 'user-1',
+      userId: 'user-1',
       accessToken: 'access-token',
     });
     expect(dependencies.prisma.users.update).toHaveBeenCalledWith({
@@ -130,7 +132,10 @@ describe('AuthService', () => {
     });
 
     dependencies.prisma.users.findUnique.mockResolvedValueOnce({ id: 'user-1', email_confirmed_at: new Date() });
-    await expect(service.verifyToken('token')).resolves.toMatchObject({ id: 'user-1', accessToken: 'access-token' });
+    await expect(service.verifyToken('token')).resolves.toMatchObject({
+      userId: 'user-1',
+      accessToken: 'access-token',
+    });
   });
 
   it('refreshes a valid access token and rejects invalid token payloads', async () => {
@@ -142,15 +147,15 @@ describe('AuthService', () => {
     );
     dependencies.jwt.verify.mockReturnValue({ userId: 'user-1' });
 
-    expect(service.refreshAccessToken('refresh-token')).toEqual({ accessToken: 'access-token' });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' });
+    await expect(service.refreshAccessToken('refresh-token')).resolves.toEqual({ accessToken: 'access-token' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '5m' });
 
     dependencies.jwt.verify.mockReturnValue({});
-    expect(() => service.refreshAccessToken('refresh-token')).toThrow(UnauthorizedException);
+    await expect(service.refreshAccessToken('refresh-token')).rejects.toBeInstanceOf(UnauthorizedException);
     dependencies.jwt.verify.mockImplementation(() => {
       throw new Error('invalid token');
     });
-    expect(() => service.refreshAccessToken('refresh-token')).toThrow('Недействительный refresh token');
+    await expect(service.refreshAccessToken('refresh-token')).rejects.toThrow('Недействительный refresh token');
   });
 
   it('confirms email by code with normalization and handles invalid codes', async () => {
@@ -170,11 +175,38 @@ describe('AuthService', () => {
     dependencies.prisma.users.findUnique.mockResolvedValueOnce({ id: 'user-1', confirmation_token: '1234' });
     dependencies.prisma.users.update.mockResolvedValue({});
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
-      appVersion: '3.0.0',
-      id: 'user-1',
       accessToken: 'access-token',
     });
     expect(dependencies.prisma.users.findUnique).toHaveBeenLastCalledWith({ where: { email: 'user@example.com' } });
+  });
+
+  it('sets the required expiration claims on login and refreshed access tokens', async () => {
+    const dependencies = createDependencies();
+    const jwtService = new JwtService({ secret: 'test-jwt-secret' });
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      jwtService,
+      dependencies.email as unknown as EmailService,
+    );
+    dependencies.prisma.users.findUnique.mockResolvedValue({
+      id: 'user-1',
+      encrypted_password: await (await import('bcrypt')).hash('secret123', 4),
+      email_confirmed_at: new Date(),
+    });
+    dependencies.prisma.users.update.mockResolvedValue({ id: 'user-1' });
+
+    const loginResult = (await service.login('user@example.com', 'secret123'))!;
+    const accessPayload = jwtService.decode<{ iat: number; exp: number }>(loginResult.accessToken);
+    const refreshPayload = jwtService.decode<{ iat: number; exp: number }>(loginResult.refreshToken);
+
+    expect(accessPayload.exp - accessPayload.iat).toBe(5 * 60);
+    expect(refreshPayload.exp - refreshPayload.iat).toBe(180 * 24 * 60 * 60);
+
+    const refreshedResult = await service.refreshAccessToken(loginResult.refreshToken);
+    const refreshedAccessPayload = jwtService.decode<{ iat: number; exp: number }>(refreshedResult.accessToken);
+
+    expect(refreshedResult).toEqual({ accessToken: expect.any(String) });
+    expect(refreshedAccessPayload.exp - refreshedAccessPayload.iat).toBe(5 * 60);
   });
 
   it('sends a reset link only to a confirmed user', async () => {

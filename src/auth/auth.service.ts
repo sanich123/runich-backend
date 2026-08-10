@@ -12,6 +12,7 @@ import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { JwtService } from '@nestjs/jwt';
 import { EmailService } from 'src/email/email.service';
 import { getRandomInt } from 'src/common/utils/utils';
+import { accessTokenExpiresIn, refreshTokenExpiresIn } from './jwt.constants';
 
 @Injectable()
 export class AuthService {
@@ -76,8 +77,9 @@ export class AuthService {
         }
         await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
         return {
-          id: user.id,
-          accessToken: this.jwtService.sign({ userId: user.id }),
+          userId: user.id,
+          accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
+          refreshToken: this.jwtService.sign({ userId: user.id }, { expiresIn: refreshTokenExpiresIn }),
         };
       }
     } catch (error) {
@@ -100,16 +102,15 @@ export class AuthService {
       }
 
       return {
-        appVersion: '3.0.0',
-        id: user.id,
-        accessToken: this.jwtService.sign({ userId: user.id }),
+        userId: user.id,
+        accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
       };
     } catch (error) {
       prismaErrorHandling(error);
     }
   }
 
-  refreshAccessToken(refreshToken: string) {
+  async refreshAccessToken(refreshToken: string) {
     try {
       const tokenInfo = this.jwtService.verify<{ userId?: string }>(refreshToken);
       if (typeof tokenInfo?.userId !== 'string' || !tokenInfo.userId) {
@@ -117,7 +118,7 @@ export class AuthService {
       }
 
       return {
-        accessToken: this.jwtService.sign({ userId: tokenInfo.userId }),
+        accessToken: this.jwtService.sign({ userId: tokenInfo.userId }, { expiresIn: accessTokenExpiresIn }),
       };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
@@ -147,9 +148,7 @@ export class AuthService {
       } else {
         await this.prisma.users.update({ where: { email: normalizedEmail }, data: { email_confirmed_at: new Date() } });
         return {
-          appVersion: '3.0.0',
-          id: user.id,
-          accessToken: this.jwtService.sign({ userId: user.id }),
+          accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
         };
       }
     } catch (error) {
