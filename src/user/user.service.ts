@@ -7,16 +7,6 @@ import { UserDto } from './user.dto';
 export class UserService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async getAllUsers() {
-    try {
-      return await this.prisma.users.findMany({
-        select: { profile: true },
-      });
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
   async getProfileByUserId(userId: string) {
     try {
       return await this.prisma.profile.findUnique({ where: { user_id: userId } });

@@ -21,8 +21,8 @@ import {
   RefreshTokenDto,
   RegisterUserDto,
 } from './auth.dto';
-import { ApiOkResponse } from '@nestjs/swagger';
-import { AppConfigEntity, AuthEntity, LoginEntity } from './auth.entity';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
+import { AppConfigEntity, AuthEntity, LoginEntity, MessageEntity, UserAuthEntity } from './auth.entity';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -43,6 +43,8 @@ export class AuthController {
 
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
+  @ApiOkResponse({ type: MessageEntity })
+  @ApiCreatedResponse({ type: MessageEntity })
   async registerUser(@Body() { email, password }: RegisterUserDto) {
     const user = await this.prismaService.users.findUnique({ where: { email } });
     if (user?.email_confirmed_at) {
@@ -66,38 +68,46 @@ export class AuthController {
   }
 
   @Post('verify')
+  @ApiOkResponse({ type: UserAuthEntity })
+  @ApiCreatedResponse({ type: UserAuthEntity })
   async verifyTokenAndAppVersion(@Body() { accessToken }: AccessTokenDto) {
     return this.authService.verifyToken(accessToken);
   }
 
   @Post('confirm-email')
+  @ApiOkResponse({ type: UserAuthEntity })
+  @ApiCreatedResponse({ type: UserAuthEntity })
   async confirmEmailByCode(@Body() { confirmationCode, email }: ConfirmationCodeDto) {
     return this.authService.confirmEmailByCode(confirmationCode, email);
   }
 
-  @Post('reset-password')
-  async resetPassword(@Body() { email }: { email: string }) {
-    return await this.authService.authInFromEmailLink(email);
-  }
-
   @Post('get-email-code-for-password')
+  @ApiOkResponse({ type: MessageEntity })
+  @ApiCreatedResponse({ type: MessageEntity })
   async getEmailCodeForPassword(@Body() { email }: GetEmailCodeForPasswordDto) {
     return this.authService.getEmailCodeForPassword(email);
   }
 
   @Post('verify-password-change-code')
+  @ApiOkResponse({ type: MessageEntity })
+  @ApiCreatedResponse({ type: MessageEntity })
   async verifyPasswordChangeCode(@Body() { confirmationCode, email }: PasswordChangeCodeDto) {
     return this.authService.verifyPasswordChangeCode(confirmationCode, email);
   }
 
   @Post('change-password')
+  @ApiOkResponse({ type: UserAuthEntity })
+  @ApiCreatedResponse({ type: UserAuthEntity })
   async changePassword(@Body() { password1, password2, email }: ChangePasswordDto) {
     return this.authService.changePassword(password1, password2, email);
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
   @Delete(':userId')
+  @ApiOkResponse({ schema: { type: 'null' }, description: 'No response body' })
+  @ApiResponse({ status: HttpStatus.NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
   async deleteUser(@Param() { userId }: { userId: string }) {
     return this.authService.deleteUser(userId);
   }

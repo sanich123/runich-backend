@@ -56,17 +56,29 @@ export class ActivityDto {
   @IsOptional()
   isPublic?: boolean;
 
-  @ApiPropertyOptional({ isArray: true, description: 'Photo video urls value' })
+  @ApiPropertyOptional({
+    type: 'array',
+    description: 'Photo and video URLs',
+    items: {
+      type: 'object',
+      properties: {
+        url: { type: 'string' },
+        thumbnail: { type: 'string', nullable: true },
+        blurhash: { type: 'string' },
+      },
+      required: ['url', 'thumbnail'],
+    },
+  })
   @IsOptional()
   @IsArray()
   photoVideoUrls?: { url: string; thumbnail: string | null; blurhash?: string }[];
 
-  @ApiPropertyOptional({ description: 'Image of map with points of activity' })
+  @ApiPropertyOptional({ type: String, description: 'Image of map with points of activity' })
   @IsOptional()
   @IsString()
   mapPhotoUrl?: string;
 
-  @ApiPropertyOptional({ description: 'Image of map with points of activity' })
+  @ApiPropertyOptional({ type: String, description: 'Blurhash for the map image' })
   @IsOptional()
   @IsString()
   mapPhotoUrlBlurhash?: string;
@@ -76,12 +88,48 @@ export class ActivityDto {
   @IsOptional()
   title?: string;
 
-  @ApiProperty({ type: Array, description: 'Location data' })
+  @ApiPropertyOptional({
+    type: 'array',
+    description: 'Location data',
+    items: {
+      type: 'object',
+      properties: {
+        coords: {
+          type: 'object',
+          properties: {
+            latitude: { type: 'number' },
+            longitude: { type: 'number' },
+            altitude: { type: 'number' },
+            accuracy: { type: 'number' },
+            altitudeAccuracy: { type: 'number' },
+            heading: { type: 'number' },
+            speed: { type: 'number' },
+            timestamp: { type: 'number' },
+            mocked: { type: 'boolean' },
+          },
+          required: ['latitude', 'longitude'],
+        },
+      },
+      required: ['coords'],
+    },
+  })
   @IsArray()
   @IsOptional()
   locations?: LocationObject[];
 
-  @ApiPropertyOptional({ type: Array, description: 'Km splits' })
+  @ApiPropertyOptional({
+    type: 'array',
+    description: 'Kilometre splits',
+    items: {
+      type: 'object',
+      properties: {
+        lastKilometerDuration: { type: 'number' },
+        lastKilometerAltitude: { type: 'number' },
+        kilometerPoint: { type: 'object' },
+      },
+      required: ['lastKilometerDuration', 'lastKilometerAltitude', 'kilometerPoint'],
+    },
+  })
   @IsArray()
   @IsOptional()
   kilometresSplit?: {

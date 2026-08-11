@@ -50,7 +50,7 @@ describe('authentication', () => {
   const prisma = db();
   const jwtMock = { sign: jest.fn(() => 'jwt'), verify: jest.fn() };
   const jwt = jwtMock as unknown as JwtService;
-  const email = { sendConfirmationCode: jest.fn(), sendResetPasswordLink: jest.fn() };
+  const email = { sendConfirmationCode: jest.fn() };
   const service = new AuthService(prisma as never, jwt, email as never);
 
   beforeEach(() => jest.clearAllMocks());
@@ -97,6 +97,7 @@ describe('authentication', () => {
     prisma.users.update.mockResolvedValue({});
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
       accessToken: 'jwt',
+      userId: 'user-1',
     });
     await expect(service.confirmEmailByCode('bad', 'user@example.com')).rejects.toBeInstanceOf(BadRequestException);
 
@@ -122,12 +123,6 @@ describe('account, user and social services', () => {
     const prisma = db();
     prisma.$transaction = createMock().mockResolvedValue([2, [{ id: 'profile-1' }]]) as never;
     const service = new AccountService(prisma as never);
-    await expect(service.getAllAccounts({ page: 0, limit: 10, size: 10, offset: 0 })).resolves.toEqual({
-      totalItems: 2,
-      items: [{ id: 'profile-1' }],
-      page: 0,
-      size: 10,
-    });
     prisma.profile.findMany.mockResolvedValue([{ id: 'profile-1' }]);
     prisma.profile.count.mockResolvedValue(1);
     await expect(
@@ -140,12 +135,8 @@ describe('account, user and social services', () => {
   it('updates, finds and upserts profiles', async () => {
     const prisma = db();
     const service = new AccountService(prisma as never);
-    prisma.profile.update.mockResolvedValue({ id: 'p1' });
     prisma.profile.findUnique.mockResolvedValue({ id: 'p1' });
     prisma.profile.upsert.mockResolvedValue({ id: 'p1' });
-    await expect(
-      service.updateProfileInfo({ email: 'a@example.com', emailNotifications: true }, 'p1'),
-    ).resolves.toEqual({ id: 'p1' });
     await expect(service.getAccountByUserId('u1')).resolves.toEqual({ id: 'p1' });
     await expect(service.getOrCreateAccountByUserId('u1')).resolves.toEqual({ id: 'p1' });
   });
@@ -153,11 +144,9 @@ describe('account, user and social services', () => {
   it('performs user profile CRUD through Prisma', async () => {
     const prisma = db();
     const service = new UserService(prisma as never);
-    prisma.users.findMany.mockResolvedValue([{ profile: { id: 'p1' } }]);
     prisma.profile.findUnique.mockResolvedValue({ id: 'p1' });
     prisma.profile.create.mockResolvedValue({ id: 'p1' });
     prisma.profile.update.mockResolvedValue({ id: 'p1' });
-    await expect(service.getAllUsers()).resolves.toEqual([{ profile: { id: 'p1' } }]);
     await expect(service.getProfileByUserId('u1')).resolves.toEqual({ id: 'p1' });
     await expect(service.createProfileByUserId('u1', { name: 'Ann' })).resolves.toEqual({ id: 'p1' });
     await expect(service.updateProfileByProfileId('p1', { name: 'Ann' })).resolves.toEqual({ id: 'p1' });

@@ -12,7 +12,6 @@ describe('AuthController', () => {
     refreshAccessToken: syncMock(),
     verifyToken: asyncMock(),
     confirmEmailByCode: asyncMock(),
-    authInFromEmailLink: asyncMock(),
     getEmailCodeForPassword: asyncMock(),
     verifyPasswordChangeCode: asyncMock(),
     changePassword: asyncMock(),
@@ -38,7 +37,6 @@ describe('AuthController', () => {
     authService.refreshAccessToken.mockReturnValue({ accessToken: 'new-access-token' });
     authService.verifyToken.mockResolvedValue(auth);
     authService.confirmEmailByCode.mockResolvedValue(auth);
-    authService.authInFromEmailLink.mockResolvedValue({ message: 'sent' });
     authService.getEmailCodeForPassword.mockResolvedValue({ message: 'sent' });
     authService.verifyPasswordChangeCode.mockResolvedValue({ message: 'verified' });
     authService.changePassword.mockResolvedValue({ userId: 'user-1', accessToken: 'access-token' });
@@ -55,7 +53,6 @@ describe('AuthController', () => {
     await expect(
       controller.confirmEmailByCode({ confirmationCode: '1234', email: 'user@example.com' }),
     ).resolves.toEqual(auth);
-    await expect(controller.resetPassword({ email: 'user@example.com' })).resolves.toEqual({ message: 'sent' });
     await expect(controller.getEmailCodeForPassword({ email: 'user@example.com' })).resolves.toEqual({
       message: 'sent',
     });
@@ -99,7 +96,6 @@ describe('AuthController', () => {
     });
     authService.verifyToken.mockRejectedValue(error);
     authService.confirmEmailByCode.mockRejectedValue(error);
-    authService.authInFromEmailLink.mockRejectedValue(error);
     authService.getEmailCodeForPassword.mockRejectedValue(error);
     authService.verifyPasswordChangeCode.mockRejectedValue(error);
     authService.changePassword.mockRejectedValue(error);
@@ -112,7 +108,6 @@ describe('AuthController', () => {
     await expect(controller.confirmEmailByCode({ confirmationCode: '1234', email: 'user@example.com' })).rejects.toBe(
       error,
     );
-    await expect(controller.resetPassword({ email: 'user@example.com' })).rejects.toBe(error);
     await expect(controller.getEmailCodeForPassword({ email: 'user@example.com' })).rejects.toBe(error);
     await expect(
       controller.verifyPasswordChangeCode({ email: 'user@example.com', confirmationCode: '123456' }),

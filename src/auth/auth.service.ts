@@ -171,24 +171,6 @@ export class AuthService {
     }
   }
 
-  async authInFromEmailLink(email: string) {
-    try {
-      const normalizedEmail = email.toLowerCase().trim();
-      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
-      if (!user) {
-        throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
-      }
-      if (!user?.email_confirmed_at) {
-        throw new NotFoundException('Данный email не подтвержден. Зарегистрируйтесь и подтвердите email');
-      }
-      const accessToken = this.jwtService.sign({ userId: user.id });
-      await this.emailService.sendResetPasswordLink(email, accessToken);
-      return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
   async getEmailCodeForPassword(email: string) {
     try {
       const normalizedEmail = email.toLowerCase().trim();

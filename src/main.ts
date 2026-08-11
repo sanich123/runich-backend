@@ -37,6 +37,7 @@ async function bootstrap() {
     .setTitle('Runich')
     .setDescription('Runich API')
     .setVersion('1.0')
+    .addBearerAuth(undefined, 'bearerAuth')
     .addTag('runich')
     .build();
   const document = SwaggerModule.createDocument(app, config);

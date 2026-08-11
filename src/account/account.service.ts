@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
-import { ProfileDto } from './account.dto';
 import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { Filtering } from './filter.decorator';
 import { Prisma } from 'src/infrastructure/database/generated/prisma/client';
@@ -34,26 +33,6 @@ function buildProfileWhere(filter: Filtering): Prisma.ProfileWhereInput {
 export class AccountService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async getAllAccounts({ page, limit, size, offset }: Pagination) {
-    try {
-      const [count, profiles] = await this.prisma.$transaction([
-        this.prisma.profile.count(),
-        this.prisma.profile.findMany({
-          skip: offset,
-          take: limit,
-        }),
-      ]);
-      return {
-        totalItems: count,
-        items: profiles,
-        page: page,
-        size: size,
-      };
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
   async getFilteredAccounts({ page, limit, size, offset }: Pagination, filter: Filtering) {
     const where = buildProfileWhere(filter);
 
@@ -69,20 +48,6 @@ export class AccountService {
         page,
         size,
       };
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
-
-  async updateProfileInfo({ emailNotifications, email }: ProfileDto, id: string) {
-    try {
-      return await this.prisma.profile.update({
-        where: { id },
-        data: {
-          emailNotifications,
-          email,
-        },
-      });
     } catch (error) {
       prismaErrorHandling(error);
     }

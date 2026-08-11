@@ -5,7 +5,12 @@ export class AuthEntity {
   accessToken: string;
 }
 
-export class LoginEntity extends AuthEntity {
+export class UserAuthEntity extends AuthEntity {
+  @ApiProperty({ type: String, description: 'User identifier' })
+  userId: string;
+}
+
+export class LoginEntity extends UserAuthEntity {
   @ApiProperty({ type: String, description: 'Refresh Token' })
   refreshToken: string;
 }
@@ -13,4 +18,9 @@ export class LoginEntity extends AuthEntity {
 export class AppConfigEntity {
   @ApiProperty({ type: String, description: 'Application version' })
   appVersion: string;
+}
+
+export class MessageEntity {
+  @ApiProperty({ type: String, description: 'Result message' })
+  message: string;
 }

@@ -21,8 +21,27 @@ import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
+import {
+  ActivityCardResponseDto,
+  ActivityDetailsResponseDto,
+  ActivityImportResponseDto,
+  ActivityListResponseDto,
+  ActivityLocationsResponseDto,
+  ActivityMediaResponseDto,
+  ActivityResponseDto,
+} from './activity.response.dto';
 import { ParamsId } from 'src/common/dto/params-validation';
-import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiOkResponse,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PATHS, QueryParams } from 'src/common/constants';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -36,6 +55,7 @@ const receivedArchiveDirectory = join(process.cwd(), 'dist', 'receivedArchive');
 const migrationDirectory = join(process.cwd(), 'dist', 'migration');
 
 @ApiTags(activity)
+@ApiBearerAuth('bearerAuth')
 @Controller(activity)
 export class ActivityController {
   private readonly logger = new Logger(ActivityController.name);
@@ -47,9 +67,12 @@ export class ActivityController {
     private readonly accountService: AccountService,
   ) {}
 
-  @Get(`${id}/photos{.:take}`)
+  @Get(`${id}/photos`)
+  @ApiOkResponse({ type: ActivityMediaResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiQuery({ name: 'take', required: false, description: 'Maximum number of photos' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getMediaByUserId(@Param() { id }: ParamsId, @Query(QueryParams.take) take: string) {
@@ -57,15 +80,20 @@ export class ActivityController {
   }
 
   @Get(`${id}/locations`)
+  @ApiOkResponse({ type: ActivityLocationsResponseDto })
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get locations by activity id' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   async getLocationsByActivityId(@Param() { id }: ParamsId) {
     return this.activityService.getLocationsByActivityId(id);
   }
 
-  @Get(`activityIds{.:ids}`)
+  @Get('activityIds')
+  @ApiOkResponse({ type: [ActivityCardResponseDto] })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by activities ids' })
-  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
+  @ApiQuery({ name: 'ids', required: true, description: 'Comma-separated activity ids' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getActivitiesByActivitiesIds(@Query(QueryParams.ids) ids: string) {
@@ -73,7 +101,13 @@ export class ActivityController {
   }
 
   @Post('migration-strava/:id')
+  @ApiOkResponse({ type: ActivityImportResponseDto })
+  @ApiResponse({ status: HttpStatus.CREATED, type: ActivityImportResponseDto, description: 'Success' })
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Import activities from a Strava archive' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', properties: { archive: { type: 'string', format: 'binary' } } } })
   @UseInterceptors(
     FileInterceptor('archive', {
       storage: diskStorage({
@@ -135,10 +169,12 @@ export class ActivityController {
   }
 
   @Post(id)
+  @ApiOkResponse({ type: ActivityResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Post activity by userId' })
-  @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Success' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiBody({ type: ActivityDto })
+  @ApiResponse({ status: HttpStatus.CREATED, type: ActivityResponseDto, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(HttpStatus.CREATED)
   async createActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
@@ -146,16 +182,24 @@ export class ActivityController {
   }
 
   @Patch(id)
+  @ApiOkResponse({ type: ActivityResponseDto })
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update activity' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiBody({ type: ActivityDto })
+  @ApiResponse({ status: HttpStatus.CREATED, type: ActivityResponseDto, description: 'Success' })
   @HttpCode(HttpStatus.CREATED)
   async patchActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
     return await this.activityService.updateActivity(activity, id);
   }
 
-  @Get(`${id}{.:page}{.:take}`)
+  @Get(id)
+  @ApiOkResponse({ type: ActivityListResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by userId' })
-  @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getActivitiesByUserId(
@@ -166,10 +210,13 @@ export class ActivityController {
     return await this.activityService.getActivitesByUserId(id, page, take);
   }
 
-  @Get(`${id}/all{.:page}{.:take}`)
+  @Get(`${id}/all`)
+  @ApiOkResponse({ type: ActivityListResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by userId and friends ids' })
-  @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getAllActivitiesWithFriends(
@@ -181,9 +228,10 @@ export class ActivityController {
   }
 
   @Get(`/activityId/${id}`)
+  @ApiOkResponse({ type: ActivityDetailsResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activity by activity id' })
-  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getActivityByActivityId(@Param() { id }: ParamsId) {
@@ -191,10 +239,11 @@ export class ActivityController {
   }
 
   @Delete(id)
+  @ApiOkResponse({ schema: { type: 'null' }, description: 'No response body' })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete activity by activity id' })
-  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
-  @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Success' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiResponse({ status: HttpStatus.NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteActivityById(@Param() { id }: ParamsId) {

@@ -58,8 +58,6 @@ describe('EmailService', () => {
     mockEmailApi();
     await expect(service.sendConfirmationCode('bob@example.com', 1234, 'access-token')).resolves.toBeUndefined();
     mockEmailApi();
-    await expect(service.sendResetPasswordLink('bob@example.com', 'access-token')).resolves.toBeUndefined();
-    mockEmailApi();
     await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).resolves.toBeUndefined();
   });
 
@@ -81,8 +79,6 @@ describe('EmailService', () => {
     await expect(service.sendConfirmationCode('bob@example.com', 1234, 'token')).rejects.toThrow(
       'Gmail API returned 500',
     );
-    mockEmailApi(500);
-    await expect(service.sendResetPasswordLink('bob@example.com', 'token')).rejects.toThrow('Gmail API returned 500');
     mockEmailApi(500);
     await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).rejects.toThrow('Gmail API returned 500');
   });

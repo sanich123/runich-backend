@@ -47,41 +47,41 @@ Use secret management and rotated credentials in production. Never commit .env, 
 
 ## Configuration
 
-| Variable | Purpose |
-| --- | --- |
-| DATABASE_URL | PostgreSQL connection string |
-| PORT | HTTP port, default 3000 |
-| NODE_ENV | Runtime environment |
-| GOOGLE_CLIENT_ID, GOOGLE_SECRET | Google OAuth client credentials |
-| GOOGLE_REFRESH_TOKEN | Offline OAuth token with Gmail Send permission |
-| USER_EMAIL | Gmail sender address |
-| EMAIL_API_TIMEOUT | Google OAuth and Gmail API timeout in milliseconds, default 15000 |
-| MAPBOX_ACCESS_TOKEN | Mapbox Static Images API access token |
-| JWT_SECRET | Secret used to sign and verify JWT tokens |
-| IS_DEV | Development URL selection in email templates |
-| SEED_MOCK_DATA | Create mock users and activities at startup |
-| SEED_USER_EMAIL | Optional email used by Prisma seed |
+| Variable                        | Purpose                                                           |
+| ------------------------------- | ----------------------------------------------------------------- |
+| DATABASE_URL                    | PostgreSQL connection string                                      |
+| PORT                            | HTTP port, default 3000                                           |
+| NODE_ENV                        | Runtime environment                                               |
+| GOOGLE_CLIENT_ID, GOOGLE_SECRET | Google OAuth client credentials                                   |
+| GOOGLE_REFRESH_TOKEN            | Offline OAuth token with Gmail Send permission                    |
+| USER_EMAIL                      | Gmail sender address                                              |
+| EMAIL_API_TIMEOUT               | Google OAuth and Gmail API timeout in milliseconds, default 15000 |
+| MAPBOX_ACCESS_TOKEN             | Mapbox Static Images API access token                             |
+| JWT_SECRET                      | Secret used to sign and verify JWT tokens                         |
+| IS_DEV                          | Development URL selection in email templates                      |
+| SEED_MOCK_DATA                  | Create mock users and activities at startup                       |
+| SEED_USER_EMAIL                 | Optional email used by Prisma seed                                |
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| yarn start:dev | Development server with watch mode |
-| yarn start:debug | Development server with Node inspector |
-| yarn build | Build with tsup |
-| yarn start:prod | Run compiled application |
-| yarn start:migrate:prod | Apply migrations and start compiled app |
-| yarn typecheck | TypeScript check |
-| yarn eslint src | ESLint check without auto-fix |
-| yarn test:ci | Serial CI test run |
-| yarn test:cov | Jest coverage run |
-| yarn format | Format TypeScript files |
-| yarn prisma generate | Generate Prisma Client |
-| yarn prisma migrate dev | Create a development migration |
-| yarn prisma migrate deploy | Apply committed migrations |
-| yarn madge | Check circular dependencies |
-| yarn ts-prune | Find unused exports |
-| yarn depcheck | Inspect dependencies |
+| Command                    | Description                             |
+| -------------------------- | --------------------------------------- |
+| yarn start:dev             | Development server with watch mode      |
+| yarn start:debug           | Development server with Node inspector  |
+| yarn build                 | Build with tsup                         |
+| yarn start:prod            | Run compiled application                |
+| yarn start:migrate:prod    | Apply migrations and start compiled app |
+| yarn typecheck             | TypeScript check                        |
+| yarn eslint src            | ESLint check without auto-fix           |
+| yarn test:ci               | Serial CI test run                      |
+| yarn test:cov              | Jest coverage run                       |
+| yarn format                | Format TypeScript files                 |
+| yarn prisma generate       | Generate Prisma Client                  |
+| yarn prisma migrate dev    | Create a development migration          |
+| yarn prisma migrate deploy | Apply committed migrations              |
+| yarn madge                 | Check circular dependencies             |
+| yarn ts-prune              | Find unused exports                     |
+| yarn depcheck              | Inspect dependencies                    |
 
 ## Database and seed data
 
@@ -111,9 +111,9 @@ Setting SEED_MOCK_DATA=true creates 100 deterministic mock runners. Each user ge
 
 ## API
 
-Route groups are /auth, /user, /profile, /activity, /comment, /friend, /like, /statistics and /email. Most routes require Authorization: Bearer <token>.
+The API currently exposes 46 operations in the `/auth`, `/user`, `/profile`, `/activity`, `/comment`, `/friend`, `/like`, `/statistics` and `/email` groups. Most routes require `Authorization: Bearer <token>`.
 
-The complete contract is in doc/api.yaml; Swagger is available at /api.
+The endpoint inventory is in `doc/api.yaml`; Swagger at `/api` is the authoritative source for request and response schemas.
 
 ## Quality gates
 

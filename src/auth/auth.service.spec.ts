@@ -15,7 +15,6 @@ function createDependencies() {
     jwt: { sign: syncMock().mockReturnValue('access-token'), verify: syncMock() },
     email: {
       sendConfirmationCode: asyncMock(),
-      sendResetPasswordLink: asyncMock(),
       sendPasswordChangeCode: asyncMock(),
     },
   };
@@ -184,6 +183,7 @@ describe('AuthService', () => {
     dependencies.prisma.users.update.mockResolvedValue({});
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
       accessToken: 'access-token',
+      userId: 'user-1',
     });
     expect(dependencies.prisma.users.findUnique).toHaveBeenLastCalledWith({ where: { email: 'user@example.com' } });
   });
@@ -215,27 +215,6 @@ describe('AuthService', () => {
 
     expect(refreshedResult).toEqual({ accessToken: expect.any(String) });
     expect(refreshedAccessPayload.exp - refreshedAccessPayload.iat).toBe(86400);
-  });
-
-  it('sends a reset link only to a confirmed user', async () => {
-    const dependencies = createDependencies();
-    const service = new AuthService(
-      dependencies.prisma as unknown as PrismaService,
-      dependencies.jwt as unknown as JwtService,
-      dependencies.email as unknown as EmailService,
-    );
-
-    dependencies.prisma.users.findUnique.mockResolvedValueOnce(null);
-    await expect(service.authInFromEmailLink('missing@example.com')).rejects.toBeInstanceOf(NotFoundException);
-
-    dependencies.prisma.users.findUnique.mockResolvedValueOnce({ id: 'user-1', email_confirmed_at: null });
-    await expect(service.authInFromEmailLink('user@example.com')).rejects.toBeInstanceOf(NotFoundException);
-
-    dependencies.prisma.users.findUnique.mockResolvedValueOnce({ id: 'user-1', email_confirmed_at: new Date() });
-    await expect(service.authInFromEmailLink(' USER@EXAMPLE.COM ')).resolves.toEqual({
-      message: 'Код подтверждения был выслан на Вашу электронную почту',
-    });
-    expect(dependencies.email.sendResetPasswordLink).toHaveBeenCalledWith(' USER@EXAMPLE.COM ', 'access-token');
   });
 
   it('sends a six-digit password change code and stores it for the user', async () => {
@@ -378,7 +357,6 @@ describe('AuthService', () => {
     dependencies.jwt.verify.mockReturnValue({ userId: 'user-1' });
     await expectInternalServerError(service.verifyToken('token'));
     await expectInternalServerError(service.confirmEmailByCode('1234', 'user@example.com'));
-    await expectInternalServerError(service.authInFromEmailLink('user@example.com'));
     await expectInternalServerError(service.getEmailCodeForPassword('user@example.com'));
     await expectInternalServerError(service.verifyPasswordChangeCode('123456', 'user@example.com'));
     await expectInternalServerError(service.changePassword('NewPassword1', 'NewPassword1', 'user@example.com'));

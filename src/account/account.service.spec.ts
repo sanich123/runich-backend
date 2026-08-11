@@ -17,7 +17,6 @@ function createPrismaMock() {
     profile: {
       count: asyncMock(),
       findMany: asyncMock(),
-      update: asyncMock(),
       findUnique: asyncMock(),
       upsert: asyncMock(),
     },
@@ -25,20 +24,6 @@ function createPrismaMock() {
 }
 
 describe('AccountService', () => {
-  it('returns all accounts with pagination metadata', async () => {
-    const prisma = createPrismaMock();
-    const profiles = [{ id: 'profile-1' }];
-    prisma.$transaction.mockResolvedValue([1, profiles]);
-
-    await expect(new AccountService(prisma as never).getAllAccounts(pagination)).resolves.toEqual({
-      totalItems: 1,
-      items: profiles,
-      page: 0,
-      size: 2,
-    });
-    expect(prisma.$transaction).toHaveBeenCalled();
-  });
-
   it('searches by name, surname and partial email using the same query', async () => {
     const prisma = createPrismaMock();
     const service = new AccountService(prisma as never);
@@ -120,19 +105,12 @@ describe('AccountService', () => {
     expect(prisma.profile.count).toHaveBeenLastCalledWith({ where: {} });
   });
 
-  it('updates, finds and upserts accounts', async () => {
+  it('finds and upserts accounts', async () => {
     const prisma = createPrismaMock();
     const service = new AccountService(prisma as never);
-    prisma.profile.update.mockResolvedValue({ id: 'profile-1', email: 'new@example.com' });
     prisma.profile.findUnique.mockResolvedValue({ id: 'profile-1' });
     prisma.profile.upsert.mockResolvedValue({ id: 'profile-1' });
 
-    await expect(
-      service.updateProfileInfo({ email: 'new@example.com', emailNotifications: true }, 'profile-1'),
-    ).resolves.toEqual({
-      id: 'profile-1',
-      email: 'new@example.com',
-    });
     await expect(service.getAccountByUserId('user-1')).resolves.toEqual({ id: 'profile-1' });
     await expect(service.getOrCreateAccountByUserId('user-1')).resolves.toEqual({ id: 'profile-1' });
   });
@@ -143,14 +121,7 @@ describe('AccountService', () => {
     prisma.$transaction.mockRejectedValue(error);
     const service = new AccountService(prisma as never);
 
-    await expectInternalServerError(service.getAllAccounts(pagination));
-
-    prisma.$transaction.mockRejectedValue(error);
     await expectInternalServerError(service.getFilteredAccounts(pagination, filter));
-    prisma.profile.update.mockRejectedValue(error);
-    await expectInternalServerError(
-      service.updateProfileInfo({ email: 'a@example.com', emailNotifications: true }, 'p1'),
-    );
     prisma.profile.findUnique.mockRejectedValue(error);
     await expectInternalServerError(service.getAccountByUserId('u1'));
     prisma.profile.upsert.mockRejectedValue(error);

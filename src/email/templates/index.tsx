@@ -1,6 +1,5 @@
 import {
   Body,
-  Button,
   Column,
   Container,
   Head,
@@ -34,12 +33,6 @@ const colors = {
 
 const fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
 const logoUrl = `cid:${RUNICH_LOGO_CID}`;
-
-function getAuthLink(accessToken: string) {
-  const protocol = process.env.IS_DEV ? 'http' : 'https';
-  const host = process.env.IS_DEV ? 'localhost:8081' : 'runich.expo.app';
-  return `${protocol}://${host}/sign-in?accessToken=${accessToken}`;
-}
 
 function EmailLayout({ preview, children }: { preview: string; children: React.ReactNode }) {
   return (
@@ -139,20 +132,6 @@ const paragraphStyle = {
   margin: '0 0 22px',
 };
 
-const buttonStyle = {
-  backgroundColor: colors.accent,
-  border: `1px solid ${colors.accent}`,
-  borderRadius: '12px',
-  color: colors.surface,
-  display: 'inline-block',
-  fontFamily,
-  fontSize: '16px',
-  fontWeight: 700,
-  lineHeight: '22px',
-  padding: '14px 24px',
-  textDecoration: 'none',
-};
-
 const eyebrowStyle = {
   color: colors.accentDark,
   fontFamily,
@@ -212,28 +191,6 @@ export function ConfirmEmailAddressWithLinkAndCode({ text }: { text: string; acc
       <Text style={codeLabelStyle}>Код подтверждения:</Text>
       <Text style={codeStyle}>{text}</Text>
       <Text style={securityNoteStyle}>Если вы не регистрировались в Runich, просто проигнорируйте это письмо.</Text>
-    </EmailLayout>
-  );
-}
-
-export function ResetPasswordByLinkAndCode({ accessToken }: { accessToken: string }) {
-  return (
-    <EmailLayout preview="Восстановление доступа к Runich">
-      <Text style={eyebrowStyle}>RUNICH • ДОСТУП</Text>
-      <Heading as="h1" style={titleStyle}>
-        Восстановление доступа
-      </Heading>
-      <Text style={paragraphStyle}>
-        Мы получили запрос на восстановление доступа к Runich. Нажмите кнопку ниже, чтобы войти в приложение без пароля.
-      </Text>
-      <Section style={{ padding: '2px 0 0', textAlign: 'center' }}>
-        <Button href={getAuthLink(accessToken)} style={buttonStyle}>
-          Восстановить доступ
-        </Button>
-        <Text style={securityNoteStyle}>
-          Если вы не запрашивали восстановление доступа, просто проигнорируйте это письмо.
-        </Text>
-      </Section>
     </EmailLayout>
   );
 }
