@@ -98,6 +98,7 @@ describe('authentication', () => {
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
       accessToken: 'jwt',
       userId: 'user-1',
+      refreshToken: 'jwt',
     });
     await expect(service.confirmEmailByCode('bad', 'user@example.com')).rejects.toBeInstanceOf(BadRequestException);
 

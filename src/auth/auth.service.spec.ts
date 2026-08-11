@@ -133,6 +133,7 @@ describe('AuthService', () => {
     await expect(service.verifyToken('token')).resolves.toEqual({
       userId: 'user-1',
       accessToken: 'access-token',
+      refreshToken: 'access-token',
     });
     expect(dependencies.prisma.users.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
@@ -217,6 +218,7 @@ describe('AuthService', () => {
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
       accessToken: 'access-token',
       userId: 'user-1',
+      refreshToken: 'access-token',
     });
     expect(dependencies.prisma.users.findUnique).toHaveBeenLastCalledWith({ where: { email: 'user@example.com' } });
   });

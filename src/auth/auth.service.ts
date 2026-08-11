@@ -121,6 +121,7 @@ export class AuthService {
       return {
         userId: user.id,
         accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
+        refreshToken: this.jwtService.sign({ userId: user.id }, { expiresIn: refreshTokenExpiresIn }),
       };
     } catch (error) {
       prismaErrorHandling(error);
@@ -181,6 +182,7 @@ export class AuthService {
         return {
           userId: user.id,
           accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
+          refreshToken: this.jwtService.sign({ userId: user.id }, { expiresIn: refreshTokenExpiresIn }),
         };
       }
     } catch (error) {
