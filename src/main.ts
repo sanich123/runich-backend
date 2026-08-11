@@ -12,6 +12,14 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AllExceptionsFilter } from './common/filters/all-exceptions';
 import { uncaughtErrorHandler, unhandledRejectionHandler } from './common/utils/handling-process';
 
+const CORS_ORIGINS = [
+  'https://runich.netlify.app',
+  'https://stage--runich.netlify.app',
+  /^https?:\/\/localhost(?::\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
+  /^https?:\/\/\[::1\](?::\d+)?$/,
+];
+
 process.on('uncaughtException', uncaughtErrorHandler);
 process.on('unhandledRejection', (reason) => {
   const error = reason instanceof Error ? reason : new Error(String(reason));
@@ -36,7 +44,7 @@ async function bootstrap() {
   app.useGlobalFilters(new PrismaClientExceptionFilter(PRISMA_ERR_TO_HTTP_CODES));
   app.useGlobalPipes(new ValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost)));
-  app.enableCors({ origin: '*', methods: 'GET,HEAD,PUT,PATCH,POST,DELETE' });
+  app.enableCors({ origin: CORS_ORIGINS, methods: 'GET,HEAD,PUT,PATCH,POST,DELETE' });
   await app.listen(PORT);
   Logger.log(`App is listening on ${PORT}`, 'Bootstrap');
 }
