@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { ParamsId } from 'src/common/dto/params-validation';
-import { ApiResponse, ApiTags, ApiOperation, ApiParam, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
+import { ApiResponse, ApiTags, ApiOperation, ApiParam, ApiQuery, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
 import { PATHS } from 'src/common/constants';
 import { ProfileDto } from './account.dto';
 import { type Pagination, PaginationParams } from 'src/common/decorators/pagination.decorator';
@@ -42,18 +42,15 @@ export class AccountController {
   @Get('/filter')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Search profiles by different fields' })
-  @ApiParam({ name: 'page', required: false, description: 'Page Number' })
-  @ApiParam({ name: 'size', required: false, description: 'Count of results per page' })
-  @ApiParam({ name: 'name', required: false, description: 'Name of user, can be a part of email' })
-  @ApiParam({
+  @ApiQuery({ name: 'page', required: false, description: 'Page Number' })
+  @ApiQuery({ name: 'size', required: false, description: 'Count of results per page' })
+  @ApiQuery({ name: 'name', required: false, description: 'Search by name, surname or email' })
+  @ApiQuery({
     name: 'surname',
     required: false,
-    description: 'Second name, if name consist of two parts, put it separately',
+    description: 'Search by name, surname or email',
   })
-  @ApiParam({ name: 'email', required: false, description: 'email, must be full and correct' })
-  @ApiParam({ name: 'city', required: false, description: 'City' })
-  @ApiParam({ name: 'gender', required: false, description: 'Gender' })
-  @ApiParam({ name: 'sport', required: false, description: 'Sport' })
+  @ApiQuery({ name: 'email', required: false, description: 'Search by name, surname or email' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Success',
@@ -71,7 +68,7 @@ export class AccountController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getFilteredAccounts(
     @PaginationParams() paginationParams: Pagination,
-    @FilteringParams(['name', 'email', 'city', 'gender', 'sport', 'surname']) filter?: Filtering,
+    @FilteringParams(['name', 'email', 'surname']) filter?: Filtering,
   ) {
     if (filter) {
       return await this.accountService.getFilteredAccounts(paginationParams, filter);

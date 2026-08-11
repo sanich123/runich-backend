@@ -39,37 +39,84 @@ describe('AccountService', () => {
     expect(prisma.$transaction).toHaveBeenCalled();
   });
 
-  it('handles filtered account pagination branches', async () => {
+  it('searches by name, surname and partial email using the same query', async () => {
     const prisma = createPrismaMock();
     const service = new AccountService(prisma as never);
-    const profiles = [{ id: 'profile-1' }, { id: 'profile-2' }];
-    prisma.profile.findMany.mockResolvedValue(profiles);
-    prisma.profile.count.mockResolvedValue(7);
+    const profile = { id: 'profile-1' };
+    const searchFields = [
+      { filter: { name: 'Alexander' }, term: 'Alexander' },
+      { filter: { surname: 'Voronin' }, term: 'Voronin' },
+      { filter: { email: 'aovoronin.piano' }, term: 'aovoronin.piano' },
+    ];
 
-    await expect(service.getFilteredAccounts(pagination, filter)).resolves.toEqual({
-      totalItems: 7,
-      items: profiles,
-      page: 0,
-      size: 2,
-    });
-    expect(prisma.profile.count).toHaveBeenCalledTimes(1);
+    for (const { filter, term } of searchFields) {
+      prisma.$transaction.mockResolvedValue([1, [profile]]);
 
-    prisma.profile.findMany.mockResolvedValue([{ id: 'profile-1' }]);
-    prisma.profile.count.mockClear();
-    await expect(service.getFilteredAccounts(pagination, filter)).resolves.toEqual({
-      totalItems: 1,
-      items: [{ id: 'profile-1' }],
-      page: 0,
-      size: 2,
-    });
-    expect(prisma.profile.count).not.toHaveBeenCalled();
+      await expect(service.getFilteredAccounts(pagination, filter)).resolves.toEqual({
+        totalItems: 1,
+        items: [profile],
+        page: 0,
+        size: 2,
+      });
 
-    prisma.profile.findMany.mockResolvedValue(profiles);
-    prisma.profile.count.mockResolvedValue(9);
-    await expect(service.getFilteredAccounts({ ...pagination, page: 1, offset: 2 }, filter)).resolves.toMatchObject({
-      totalItems: 9,
-      page: 1,
+      const expectedWhere = {
+        AND: [
+          {
+            OR: [
+              { name: { contains: term, mode: 'insensitive' } },
+              { surname: { contains: term, mode: 'insensitive' } },
+              { email: { contains: term, mode: 'insensitive' } },
+              { users: { email: { contains: term, mode: 'insensitive' } } },
+            ],
+          },
+        ],
+      };
+      expect(prisma.profile.count).toHaveBeenLastCalledWith({ where: expectedWhere });
+      expect(prisma.profile.findMany).toHaveBeenLastCalledWith({
+        where: expectedWhere,
+        skip: 0,
+        take: 2,
+      });
+    }
+  });
+
+  it('requires every word of a full-name search and ignores blank values', async () => {
+    const prisma = createPrismaMock();
+    const service = new AccountService(prisma as never);
+    prisma.$transaction.mockResolvedValue([0, []]);
+
+    await expect(service.getFilteredAccounts(pagination, { name: '  Alexander   Voronin  ' })).resolves.toMatchObject(
+      { totalItems: 0, items: [] },
+    );
+
+    expect(prisma.profile.count).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          {
+            OR: [
+              { name: { contains: 'Alexander', mode: 'insensitive' } },
+              { surname: { contains: 'Alexander', mode: 'insensitive' } },
+              { email: { contains: 'Alexander', mode: 'insensitive' } },
+              { users: { email: { contains: 'Alexander', mode: 'insensitive' } } },
+            ],
+          },
+          {
+            OR: [
+              { name: { contains: 'Voronin', mode: 'insensitive' } },
+              { surname: { contains: 'Voronin', mode: 'insensitive' } },
+              { email: { contains: 'Voronin', mode: 'insensitive' } },
+              { users: { email: { contains: 'Voronin', mode: 'insensitive' } } },
+            ],
+          },
+        ],
+      },
     });
+
+    prisma.$transaction.mockResolvedValue([3, [{ id: 'profile-1' }]]);
+    await expect(service.getFilteredAccounts(pagination, { name: '   ' })).resolves.toMatchObject({
+      totalItems: 3,
+    });
+    expect(prisma.profile.count).toHaveBeenLastCalledWith({ where: {} });
   });
 
   it('updates, finds and upserts accounts', async () => {
@@ -97,10 +144,8 @@ describe('AccountService', () => {
 
     await expectInternalServerError(service.getAllAccounts(pagination));
 
-    prisma.profile.findMany.mockRejectedValue(error);
+    prisma.$transaction.mockRejectedValue(error);
     await expectInternalServerError(service.getFilteredAccounts(pagination, filter));
-    prisma.profile.findMany.mockReset();
-    prisma.profile.findMany.mockResolvedValue([]);
     prisma.profile.update.mockRejectedValue(error);
     await expectInternalServerError(
       service.updateProfileInfo({ email: 'a@example.com', emailNotifications: true }, 'p1'),

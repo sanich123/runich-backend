@@ -4,25 +4,23 @@ import { Request } from 'express';
 export interface Filtering {
   name?: string | null;
   email?: string | null;
-  birthday?: Date | string | null;
-  city?: string | null;
-  gender?: string | null;
-  profilePhoto?: string | null;
-  sport?: string | null;
   surname?: string | null;
 }
 
-export const FilteringParams = createParamDecorator((data, ctx: ExecutionContext): Filtering => {
+export const FilteringParams = createParamDecorator((data: unknown, ctx: ExecutionContext): Filtering => {
   const req: Request = ctx.switchToHttp().getRequest();
 
-  const filterDto = req.query;
-  if (!filterDto) return {};
+  if (!Array.isArray(data)) throw new BadRequestException('Invalid filter parameter');
 
-  if (typeof filterDto !== 'object') throw new BadRequestException('Invalid filter parameter');
+  const allowedFields = new Set(data.filter((field): field is string => typeof field === 'string'));
+  const filteredObj: Filtering = {};
 
-  if (typeof data !== 'object') throw new BadRequestException('Invalid filter parameter');
+  for (const [key, value] of Object.entries(req.query)) {
+    if (!allowedFields.has(key)) continue;
+    if (typeof value !== 'string') throw new BadRequestException(`Invalid filter value for ${key}`);
 
-  const filteredObj = Object.fromEntries(Object.entries(filterDto).filter(([key]) => data.includes(key)));
+    filteredObj[key as keyof Filtering] = value;
+  }
 
   return filteredObj;
 });
