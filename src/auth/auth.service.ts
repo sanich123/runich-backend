@@ -87,6 +87,23 @@ export class AuthService {
     }
   }
 
+  async sendLoginLinkByEmail(email: string) {
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      if (!user) {
+        throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
+      }
+
+      const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn });
+      await this.emailService.sendLoginLink(normalizedEmail, accessToken, user.id);
+
+      return { message: 'Ссылка для входа в Runich отправлена на указанную почту' };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
   async verifyToken(accessToken: string) {
     try {
       const tokenInfo = await this.jwtService.verify(accessToken);

@@ -48,6 +48,13 @@ export class GetEmailCodeForPasswordDto {
   email: string;
 }
 
+export class EmailLoginLinkDto {
+  @ApiProperty({ type: String, description: 'Email пользователя' })
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
+}
+
 export class ChangePasswordDto {
   @ApiProperty({ type: String, description: 'New password' })
   @IsString()

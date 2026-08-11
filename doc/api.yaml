@@ -22,6 +22,10 @@ paths:
     post:
       summary: Log in
       security: []
+  /auth/by-email-link:
+    post:
+      summary: Send a passwordless login link
+      security: []
   /auth/refresh:
     post:
       summary: Refresh access token

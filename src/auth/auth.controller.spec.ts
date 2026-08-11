@@ -9,6 +9,7 @@ describe('AuthController', () => {
   const authService = {
     signUp: asyncMock(),
     login: asyncMock(),
+    sendLoginLinkByEmail: asyncMock(),
     refreshAccessToken: syncMock(),
     verifyToken: asyncMock(),
     confirmEmailByCode: asyncMock(),
@@ -34,6 +35,7 @@ describe('AuthController', () => {
     prismaService.users.findUnique.mockResolvedValue(null);
     authService.signUp.mockResolvedValue({ message: 'sent' });
     authService.login.mockResolvedValue(auth);
+    authService.sendLoginLinkByEmail.mockResolvedValue({ message: 'sent' });
     authService.refreshAccessToken.mockReturnValue({ accessToken: 'new-access-token' });
     authService.verifyToken.mockResolvedValue(auth);
     authService.confirmEmailByCode.mockResolvedValue(auth);
@@ -46,6 +48,7 @@ describe('AuthController', () => {
       message: 'sent',
     });
     await expect(controller.login({ email: 'user@example.com', password: 'secret123' })).resolves.toEqual(auth);
+    await expect(controller.sendLoginLinkByEmail({ email: 'user@example.com' })).resolves.toEqual({ message: 'sent' });
     await expect(controller.refresh({ refreshToken: 'refresh-token' })).resolves.toEqual({
       accessToken: 'new-access-token',
     });
@@ -68,6 +71,7 @@ describe('AuthController', () => {
     ).resolves.toEqual({ userId: 'user-1', accessToken: 'access-token' });
     await expect(controller.deleteUser({ userId: 'user-1' })).resolves.toBeUndefined();
     expect(authService.signUp).toHaveBeenCalledWith('user@example.com', 'secret123');
+    expect(authService.sendLoginLinkByEmail).toHaveBeenCalledWith('user@example.com');
     expect(authService.refreshAccessToken).toHaveBeenCalledWith('refresh-token');
     expect(authService.getEmailCodeForPassword).toHaveBeenCalledWith('user@example.com');
     expect(authService.verifyPasswordChangeCode).toHaveBeenCalledWith('123456', 'user@example.com');
@@ -91,6 +95,7 @@ describe('AuthController', () => {
     prismaService.users.findUnique.mockResolvedValue(null);
     authService.signUp.mockRejectedValue(error);
     authService.login.mockRejectedValue(error);
+    authService.sendLoginLinkByEmail.mockRejectedValue(error);
     authService.refreshAccessToken.mockImplementation(() => {
       throw error;
     });
@@ -103,6 +108,7 @@ describe('AuthController', () => {
 
     await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
     await expect(controller.login({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
+    await expect(controller.sendLoginLinkByEmail({ email: 'user@example.com' })).rejects.toBe(error);
     await expect(controller.refresh({ refreshToken: 'refresh-token' })).rejects.toBe(error);
     await expect(controller.verifyTokenAndAppVersion({ accessToken: 'access-token' })).rejects.toBe(error);
     await expect(controller.confirmEmailByCode({ confirmationCode: '1234', email: 'user@example.com' })).rejects.toBe(

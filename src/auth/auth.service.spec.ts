@@ -16,6 +16,7 @@ function createDependencies() {
     email: {
       sendConfirmationCode: asyncMock(),
       sendPasswordChangeCode: asyncMock(),
+      sendLoginLink: asyncMock(),
     },
   };
 }
@@ -143,6 +144,38 @@ describe('AuthService', () => {
       userId: 'user-1',
       accessToken: 'access-token',
     });
+  });
+
+  it('sends a passwordless login link for an existing user', async () => {
+    const dependencies = createDependencies();
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+    );
+    dependencies.prisma.users.findUnique.mockResolvedValue({ id: 'user-1' });
+
+    await expect(service.sendLoginLinkByEmail(' USER@EXAMPLE.COM ')).resolves.toEqual({
+      message: 'Ссылка для входа в Runich отправлена на указанную почту',
+    });
+
+    expect(dependencies.prisma.users.findUnique).toHaveBeenCalledWith({ where: { email: 'user@example.com' } });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '1d' });
+    expect(dependencies.email.sendLoginLink).toHaveBeenCalledWith('user@example.com', 'access-token', 'user-1');
+  });
+
+  it('does not send a passwordless login link for an unknown user', async () => {
+    const dependencies = createDependencies();
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+    );
+    dependencies.prisma.users.findUnique.mockResolvedValue(null);
+
+    await expect(service.sendLoginLinkByEmail('missing@example.com')).rejects.toBeInstanceOf(NotFoundException);
+    expect(dependencies.email.sendLoginLink).not.toHaveBeenCalled();
+    expect(dependencies.jwt.sign).not.toHaveBeenCalled();
   });
 
   it('refreshes a valid access token and rejects invalid token payloads', async () => {
@@ -354,6 +387,7 @@ describe('AuthService', () => {
     dependencies.prisma.users.findUnique.mockRejectedValue(error);
     await expectInternalServerError(service.signUp('user@example.com', 'secret123'));
     await expectInternalServerError(service.login('user@example.com', 'secret123'));
+    await expectInternalServerError(service.sendLoginLinkByEmail('user@example.com'));
     dependencies.jwt.verify.mockReturnValue({ userId: 'user-1' });
     await expectInternalServerError(service.verifyToken('token'));
     await expectInternalServerError(service.confirmEmailByCode('1234', 'user@example.com'));

@@ -1,7 +1,12 @@
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
 import { sendEmail } from 'src/common/email/nodemailer';
 import { render } from '@react-email/components';
-import { NotificationEmail, ConfirmEmailAddressWithLinkAndCode, PasswordChangeCode } from './templates';
+import {
+  NotificationEmail,
+  ConfirmEmailAddressWithLinkAndCode,
+  LoginByEmailLink,
+  PasswordChangeCode,
+} from './templates';
 import { EmailType } from './templates/types';
 import { Injectable, Logger } from '@nestjs/common';
 
@@ -100,6 +105,21 @@ export class EmailService {
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
       this.logger.error(`Failed to send password change code to ${emailAddress}`, error);
+      throw error;
+    }
+  }
+
+  async sendLoginLink(emailAddress: string, accessToken: string, userId: string) {
+    try {
+      const loginUrl = new URL('https://runich.netlify.app/sign-in');
+      loginUrl.searchParams.set('accessToken', accessToken);
+      loginUrl.searchParams.set('userId', userId);
+
+      const subject = 'Вход в Runich по ссылке';
+      const html = await render(LoginByEmailLink({ loginUrl: loginUrl.toString() }));
+      await sendEmail(emailAddress, subject, html);
+    } catch (error) {
+      this.logger.error(`Failed to send login link to ${emailAddress}`, error);
       throw error;
     }
   }

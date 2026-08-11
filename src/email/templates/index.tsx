@@ -178,6 +178,28 @@ const codeStyle = {
   textAlign: 'center' as const,
 };
 
+const loginButtonStyle = {
+  backgroundColor: colors.accent,
+  borderRadius: '14px',
+  color: colors.surface,
+  display: 'inline-block',
+  fontFamily,
+  fontSize: '16px',
+  fontWeight: 700,
+  lineHeight: '22px',
+  padding: '14px 22px',
+  textDecoration: 'none',
+};
+
+const linkFallbackStyle = {
+  color: colors.accentDark,
+  fontFamily,
+  fontSize: '12px',
+  lineHeight: '18px',
+  overflowWrap: 'anywhere' as const,
+  wordBreak: 'break-all' as const,
+};
+
 export function ConfirmEmailAddressWithLinkAndCode({ text }: { text: string; accessToken: string }) {
   return (
     <EmailLayout preview="Подтвердите адрес электронной почты в Runich">
@@ -210,6 +232,37 @@ export function PasswordChangeCode({ text }: { text: string }) {
       <Text style={codeStyle}>{text}</Text>
       <Text style={{ ...securityNoteStyle, marginTop: '18px' }}>
         Никому не сообщайте этот код. Если вы не запрашивали смену пароля, просто проигнорируйте это письмо.
+      </Text>
+    </EmailLayout>
+  );
+}
+
+export function LoginByEmailLink({ loginUrl }: { loginUrl: string }) {
+  return (
+    <EmailLayout preview="Вход в Runich по ссылке">
+      <Text style={eyebrowStyle}>RUNICH • БЫСТРЫЙ ВХОД</Text>
+      <Heading as="h1" style={titleStyle}>
+        Войдите в Runich одним нажатием
+      </Heading>
+      <Text style={paragraphStyle}>
+        Вы запросили вход в приложение Runich по ссылке. Нажмите кнопку ниже — пароль и код подтверждения не нужны.
+      </Text>
+      <Section style={{ margin: '4px 0 26px', textAlign: 'center' }}>
+        <Link href={loginUrl} style={loginButtonStyle}>
+          Войти в Runich
+        </Link>
+      </Section>
+      <Text style={{ ...securityNoteStyle, marginTop: 0 }}>
+        Ссылка действительна 24 часа и предназначена только для вас. Не пересылайте это письмо другим людям.
+      </Text>
+      <Text style={{ ...codeLabelStyle, marginTop: '24px' }}>
+        Если кнопка не открывается, скопируйте эту ссылку в браузер:
+      </Text>
+      <Link href={loginUrl} style={linkFallbackStyle}>
+        {loginUrl}
+      </Link>
+      <Text style={{ ...securityNoteStyle, marginTop: '24px' }}>
+        Если вы не запрашивали вход, просто проигнорируйте это письмо. Ваш аккаунт в безопасности.
       </Text>
     </EmailLayout>
   );

@@ -111,7 +111,7 @@ Setting SEED_MOCK_DATA=true creates 100 deterministic mock runners. Each user ge
 
 ## API
 
-The API currently exposes 46 operations in the `/auth`, `/user`, `/profile`, `/activity`, `/comment`, `/friend`, `/like`, `/statistics` and `/email` groups. Most routes require `Authorization: Bearer <token>`.
+The API currently exposes 47 operations in the `/auth`, `/user`, `/profile`, `/activity`, `/comment`, `/friend`, `/like`, `/statistics` and `/email` groups. Most routes require `Authorization: Bearer <token>`.
 
 The endpoint inventory is in `doc/api.yaml`; Swagger at `/api` is the authoritative source for request and response schemas.
 
