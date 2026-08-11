@@ -111,7 +111,7 @@ export class EmailService {
 
   async sendLoginLink(emailAddress: string, accessToken: string, userId: string) {
     try {
-      const loginUrl = new URL('https://runich.netlify.app/sign-in');
+      const loginUrl = new URL('https://stage--runich.netlify.app/sign-in');
       loginUrl.searchParams.set('accessToken', accessToken);
       loginUrl.searchParams.set('userId', userId);
 
