@@ -85,9 +85,10 @@ describe('AccountService', () => {
     const service = new AccountService(prisma as never);
     prisma.$transaction.mockResolvedValue([0, []]);
 
-    await expect(service.getFilteredAccounts(pagination, { name: '  Alexander   Voronin  ' })).resolves.toMatchObject(
-      { totalItems: 0, items: [] },
-    );
+    await expect(service.getFilteredAccounts(pagination, { name: '  Alexander   Voronin  ' })).resolves.toMatchObject({
+      totalItems: 0,
+      items: [],
+    });
 
     expect(prisma.profile.count).toHaveBeenCalledWith({
       where: {
