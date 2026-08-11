@@ -176,6 +176,29 @@ const securityNoteStyle = {
   textAlign: 'left' as const,
 };
 
+const codeLabelStyle = {
+  color: colors.muted,
+  fontFamily,
+  fontSize: '13px',
+  lineHeight: '20px',
+  margin: '0 0 10px',
+};
+
+const codeStyle = {
+  backgroundColor: colors.softAccent,
+  border: `1px solid ${colors.border}`,
+  borderRadius: '14px',
+  color: colors.accentDark,
+  fontFamily,
+  fontSize: '30px',
+  fontWeight: 700,
+  letterSpacing: '8px',
+  lineHeight: '42px',
+  margin: 0,
+  padding: '14px 16px',
+  textAlign: 'center' as const,
+};
+
 export function ConfirmEmailAddressWithLinkAndCode({ text }: { text: string; accessToken: string }) {
   return (
     <EmailLayout preview="Подтвердите адрес электронной почты в Runich">
@@ -186,26 +209,8 @@ export function ConfirmEmailAddressWithLinkAndCode({ text }: { text: string; acc
       <Text style={paragraphStyle}>
         Ваш аккаунт почти готов. Введите код ниже в приложении Runich, чтобы подтвердить адрес электронной почты.
       </Text>
-      <Text style={{ color: colors.muted, fontFamily, fontSize: '13px', lineHeight: '20px', margin: '0 0 10px' }}>
-        Код подтверждения:
-      </Text>
-      <Text
-        style={{
-          backgroundColor: colors.softAccent,
-          border: `1px solid ${colors.border}`,
-          borderRadius: '14px',
-          color: colors.accentDark,
-          fontFamily,
-          fontSize: '30px',
-          fontWeight: 700,
-          letterSpacing: '8px',
-          lineHeight: '42px',
-          margin: 0,
-          padding: '14px 16px',
-          textAlign: 'center',
-        }}>
-        {text}
-      </Text>
+      <Text style={codeLabelStyle}>Код подтверждения:</Text>
+      <Text style={codeStyle}>{text}</Text>
       <Text style={securityNoteStyle}>Если вы не регистрировались в Runich, просто проигнорируйте это письмо.</Text>
     </EmailLayout>
   );
@@ -229,6 +234,26 @@ export function ResetPasswordByLinkAndCode({ accessToken }: { accessToken: strin
           Если вы не запрашивали восстановление доступа, просто проигнорируйте это письмо.
         </Text>
       </Section>
+    </EmailLayout>
+  );
+}
+
+export function PasswordChangeCode({ text }: { text: string }) {
+  return (
+    <EmailLayout preview="Код для смены пароля в Runich">
+      <Text style={eyebrowStyle}>RUNICH • БЕЗОПАСНОСТЬ</Text>
+      <Heading as="h1" style={titleStyle}>
+        Код для смены пароля
+      </Heading>
+      <Text style={paragraphStyle}>
+        Мы получили запрос на смену пароля для вашего аккаунта. Введите код ниже в приложении Runich, чтобы подтвердить
+        запрос и установить новый пароль.
+      </Text>
+      <Text style={codeLabelStyle}>Код для смены пароля:</Text>
+      <Text style={codeStyle}>{text}</Text>
+      <Text style={{ ...securityNoteStyle, marginTop: '18px' }}>
+        Никому не сообщайте этот код. Если вы не запрашивали смену пароля, просто проигнорируйте это письмо.
+      </Text>
     </EmailLayout>
   );
 }

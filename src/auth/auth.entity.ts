@@ -11,6 +11,6 @@ export class LoginEntity extends AuthEntity {
 }
 
 export class AppConfigEntity {
-  @ApiProperty({ type: String, description: 'Minimum supported application version' })
-  minAppVersion: string;
+  @ApiProperty({ type: String, description: 'Application version' })
+  appVersion: string;
 }

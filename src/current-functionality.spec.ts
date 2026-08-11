@@ -157,12 +157,10 @@ describe('account, user and social services', () => {
     prisma.profile.findUnique.mockResolvedValue({ id: 'p1' });
     prisma.profile.create.mockResolvedValue({ id: 'p1' });
     prisma.profile.update.mockResolvedValue({ id: 'p1' });
-    prisma.users.delete.mockResolvedValue({ id: 'u1' });
     await expect(service.getAllUsers()).resolves.toEqual([{ profile: { id: 'p1' } }]);
     await expect(service.getProfileByUserId('u1')).resolves.toEqual({ id: 'p1' });
     await expect(service.createProfileByUserId('u1', { name: 'Ann' })).resolves.toEqual({ id: 'p1' });
     await expect(service.updateProfileByProfileId('p1', { name: 'Ann' })).resolves.toEqual({ id: 'p1' });
-    await expect(service.deleteUserByUserId('u1')).resolves.toEqual({ id: 'u1' });
   });
 
   it('propagates asynchronous profile write failures', async () => {

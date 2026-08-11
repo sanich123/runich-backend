@@ -13,6 +13,9 @@ describe('AuthController', () => {
     verifyToken: asyncMock(),
     confirmEmailByCode: asyncMock(),
     authInFromEmailLink: asyncMock(),
+    getEmailCodeForPassword: asyncMock(),
+    verifyPasswordChangeCode: asyncMock(),
+    changePassword: asyncMock(),
     deleteUser: asyncMock(),
   };
   const prismaService = { users: { findUnique: asyncMock() } };
@@ -24,7 +27,7 @@ describe('AuthController', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('returns the minimum supported app version', () => {
-    expect(controller.getConfig()).toEqual({ minAppVersion: '4.0.0' });
+    expect(controller.getConfig()).toEqual({ appVersion: '4.0.0' });
   });
 
   it('returns service results for every auth endpoint', async () => {
@@ -36,6 +39,9 @@ describe('AuthController', () => {
     authService.verifyToken.mockResolvedValue(auth);
     authService.confirmEmailByCode.mockResolvedValue(auth);
     authService.authInFromEmailLink.mockResolvedValue({ message: 'sent' });
+    authService.getEmailCodeForPassword.mockResolvedValue({ message: 'sent' });
+    authService.verifyPasswordChangeCode.mockResolvedValue({ message: 'verified' });
+    authService.changePassword.mockResolvedValue({ userId: 'user-1', accessToken: 'access-token' });
     authService.deleteUser.mockResolvedValue(undefined);
 
     await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).resolves.toEqual({
@@ -50,9 +56,25 @@ describe('AuthController', () => {
       controller.confirmEmailByCode({ confirmationCode: '1234', email: 'user@example.com' }),
     ).resolves.toEqual(auth);
     await expect(controller.resetPassword({ email: 'user@example.com' })).resolves.toEqual({ message: 'sent' });
+    await expect(controller.getEmailCodeForPassword({ email: 'user@example.com' })).resolves.toEqual({
+      message: 'sent',
+    });
+    await expect(
+      controller.verifyPasswordChangeCode({ email: 'user@example.com', confirmationCode: '123456' }),
+    ).resolves.toEqual({ message: 'verified' });
+    await expect(
+      controller.changePassword({
+        email: 'user@example.com',
+        password1: 'NewPassword1',
+        password2: 'NewPassword1',
+      }),
+    ).resolves.toEqual({ userId: 'user-1', accessToken: 'access-token' });
     await expect(controller.deleteUser({ userId: 'user-1' })).resolves.toBeUndefined();
     expect(authService.signUp).toHaveBeenCalledWith('user@example.com', 'secret123');
     expect(authService.refreshAccessToken).toHaveBeenCalledWith('refresh-token');
+    expect(authService.getEmailCodeForPassword).toHaveBeenCalledWith('user@example.com');
+    expect(authService.verifyPasswordChangeCode).toHaveBeenCalledWith('123456', 'user@example.com');
+    expect(authService.changePassword).toHaveBeenCalledWith('NewPassword1', 'NewPassword1', 'user@example.com');
   });
 
   it('rejects registration for an already confirmed email', async () => {
@@ -78,6 +100,9 @@ describe('AuthController', () => {
     authService.verifyToken.mockRejectedValue(error);
     authService.confirmEmailByCode.mockRejectedValue(error);
     authService.authInFromEmailLink.mockRejectedValue(error);
+    authService.getEmailCodeForPassword.mockRejectedValue(error);
+    authService.verifyPasswordChangeCode.mockRejectedValue(error);
+    authService.changePassword.mockRejectedValue(error);
     authService.deleteUser.mockRejectedValue(error);
 
     await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
@@ -88,6 +113,17 @@ describe('AuthController', () => {
       error,
     );
     await expect(controller.resetPassword({ email: 'user@example.com' })).rejects.toBe(error);
+    await expect(controller.getEmailCodeForPassword({ email: 'user@example.com' })).rejects.toBe(error);
+    await expect(
+      controller.verifyPasswordChangeCode({ email: 'user@example.com', confirmationCode: '123456' }),
+    ).rejects.toBe(error);
+    await expect(
+      controller.changePassword({
+        email: 'user@example.com',
+        password1: 'NewPassword1',
+        password2: 'NewPassword1',
+      }),
+    ).rejects.toBe(error);
     await expect(controller.deleteUser({ userId: 'user-1' })).rejects.toBe(error);
   });
 });

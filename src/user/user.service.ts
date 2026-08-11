@@ -45,11 +45,4 @@ export class UserService {
       prismaErrorHandling(error);
     }
   }
-  async deleteUserByUserId(userId: string) {
-    try {
-      return await this.prisma.users.delete({ where: { id: userId } });
-    } catch (error) {
-      prismaErrorHandling(error);
-    }
-  }
 }

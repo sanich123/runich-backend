@@ -130,7 +130,21 @@ export class AuthService {
 
   async deleteUser(userId: string) {
     try {
-      return await this.prisma.users.delete({ where: { id: userId } });
+      const deletedUser = await this.prisma.$transaction(
+        async (transaction) => {
+          await transaction.friend.deleteMany({
+            where: {
+              OR: [{ user_id: userId }, { friendId: userId }],
+            },
+          });
+          return transaction.users.delete({ where: { id: userId } });
+        },
+        {
+          maxWait: 10_000,
+          timeout: 30_000,
+        },
+      );
+      return deletedUser;
     } catch (error) {
       prismaErrorHandling(error);
     }
@@ -169,6 +183,89 @@ export class AuthService {
       const accessToken = this.jwtService.sign({ userId: user.id });
       await this.emailService.sendResetPasswordLink(email, accessToken);
       return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async getEmailCodeForPassword(email: string) {
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      if (!user) {
+        throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
+      }
+
+      const recoveryCode = getRandomInt(100000, 999999);
+      await this.emailService.sendPasswordChangeCode(normalizedEmail, recoveryCode);
+      await this.prisma.users.update({
+        where: { id: user.id },
+        data: {
+          recovery_token: `${recoveryCode}`,
+          recovery_sent_at: new Date(),
+        },
+      });
+
+      return { message: 'Код для смены email был выслан на указанную почту' };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async verifyPasswordChangeCode(confirmationCode: string, email: string) {
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      if (!user) {
+        throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
+      }
+      if (confirmationCode !== user.recovery_token) {
+        throw new BadRequestException('Код для смены пароля не соответствует высланному');
+      }
+
+      await this.prisma.users.update({
+        where: { id: user.id },
+        data: { recovery_token: null },
+      });
+
+      return { message: 'Код для смены пароля подтверждён' };
+    } catch (error) {
+      prismaErrorHandling(error);
+    }
+  }
+
+  async changePassword(password1: string, password2: string, email: string) {
+    try {
+      if (password1 !== password2) {
+        throw new BadRequestException('Пароли не совпадают');
+      }
+      if (password1.length < 8 || !/[A-Z]/.test(password1) || !/\d/.test(password1)) {
+        throw new BadRequestException('Пароль должен содержать минимум 8 символов, одну заглавную букву и одну цифру');
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      if (!user) {
+        throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
+      }
+      if (user.recovery_token !== null || !user.recovery_sent_at) {
+        throw new BadRequestException('Сначала подтвердите код для смены пароля');
+      }
+
+      const encryptedPassword = await bcrypt.hash(password1, 10);
+      await this.prisma.users.update({
+        where: { id: user.id },
+        data: {
+          encrypted_password: encryptedPassword,
+          recovery_token: null,
+          recovery_sent_at: null,
+        },
+      });
+
+      return {
+        accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
+        userId: user.id,
+      };
     } catch (error) {
       prismaErrorHandling(error);
     }

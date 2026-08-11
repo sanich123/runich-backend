@@ -1,7 +1,12 @@
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
 import { sendEmail } from 'src/common/email/nodemailer';
 import { render } from '@react-email/components';
-import { NotificationEmail, ConfirmEmailAddressWithLinkAndCode, ResetPasswordByLinkAndCode } from './templates';
+import {
+  NotificationEmail,
+  ConfirmEmailAddressWithLinkAndCode,
+  PasswordChangeCode,
+  ResetPasswordByLinkAndCode,
+} from './templates';
 import { EmailType } from './templates/types';
 import { Injectable, Logger } from '@nestjs/common';
 
@@ -100,6 +105,17 @@ export class EmailService {
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
       this.logger.error(`Failed to send password reset email to ${emailAddress}`, error);
+      throw error;
+    }
+  }
+
+  async sendPasswordChangeCode(emailAddress: string, recoveryCode: number) {
+    try {
+      const subject = 'Код для смены пароля';
+      const html = await render(PasswordChangeCode({ text: recoveryCode.toString() }));
+      await sendEmail(emailAddress, subject, html);
+    } catch (error) {
+      this.logger.error(`Failed to send password change code to ${emailAddress}`, error);
       throw error;
     }
   }

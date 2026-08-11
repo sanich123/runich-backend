@@ -1,16 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Inject,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { UserService } from './user.service';
@@ -52,13 +40,5 @@ export class UserController {
   @HttpCode(HttpStatus.OK)
   async updateProfileByProfileId(@Param() { id }: ParamsId, @Body() accountDto: UserDto) {
     return await this.userService.updateProfileByProfileId(id, accountDto);
-  }
-
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiCreatedResponse({ description: 'Delete user account' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteUserByUserId(@Param() { id }: ParamsId) {
-    return await this.userService.deleteUserByUserId(id);
   }
 }

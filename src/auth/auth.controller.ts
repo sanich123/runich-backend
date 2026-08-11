@@ -12,7 +12,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AccessTokenDto, ConfirmationCodeDto, RefreshTokenDto, RegisterUserDto } from './auth.dto';
+import {
+  AccessTokenDto,
+  ChangePasswordDto,
+  ConfirmationCodeDto,
+  GetEmailCodeForPasswordDto,
+  PasswordChangeCodeDto,
+  RefreshTokenDto,
+  RegisterUserDto,
+} from './auth.dto';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { AppConfigEntity, AuthEntity, LoginEntity } from './auth.entity';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -30,7 +38,7 @@ export class AuthController {
   @Get('config')
   @ApiOkResponse({ type: AppConfigEntity })
   getConfig() {
-    return { minAppVersion: '4.0.0' };
+    return { appVersion: '4.0.0' };
   }
 
   @HttpCode(HttpStatus.CREATED)
@@ -70,6 +78,21 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() { email }: { email: string }) {
     return await this.authService.authInFromEmailLink(email);
+  }
+
+  @Post('get-email-code-for-password')
+  async getEmailCodeForPassword(@Body() { email }: GetEmailCodeForPasswordDto) {
+    return this.authService.getEmailCodeForPassword(email);
+  }
+
+  @Post('verify-password-change-code')
+  async verifyPasswordChangeCode(@Body() { confirmationCode, email }: PasswordChangeCodeDto) {
+    return this.authService.verifyPasswordChangeCode(confirmationCode, email);
+  }
+
+  @Post('change-password')
+  async changePassword(@Body() { password1, password2, email }: ChangePasswordDto) {
+    return this.authService.changePassword(password1, password2, email);
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
