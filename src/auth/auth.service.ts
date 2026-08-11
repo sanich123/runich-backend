@@ -162,6 +162,7 @@ export class AuthService {
       } else {
         await this.prisma.users.update({ where: { email: normalizedEmail }, data: { email_confirmed_at: new Date() } });
         return {
+          userId: user.id,
           accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
         };
       }
