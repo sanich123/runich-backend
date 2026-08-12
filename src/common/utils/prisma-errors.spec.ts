@@ -20,14 +20,14 @@ describe('prismaErrorHandling', () => {
 
     expect(() => prismaErrorHandling(error)).toThrow(InternalServerErrorException);
     expect(loggerError).toHaveBeenCalledWith(
-      'Database operation failed',
+      'Ошибка операции с базой данных',
       expect.objectContaining({ name: 'Error', message: 'database unavailable', stack: error.stack }),
     );
   });
 
   it('writes non-Error database failures without assuming an Error shape', () => {
     expect(() => prismaErrorHandling('connection closed')).toThrow(InternalServerErrorException);
-    expect(loggerError).toHaveBeenCalledWith('Database operation failed', 'connection closed');
+    expect(loggerError).toHaveBeenCalledWith('Ошибка операции с базой данных', 'connection closed');
   });
 
   it('maps known Prisma errors after logging them', () => {
@@ -38,7 +38,7 @@ describe('prismaErrorHandling', () => {
 
     expect(() => prismaErrorHandling(error)).toThrow(PrismaException);
     expect(loggerError).toHaveBeenCalledWith(
-      'Database operation failed',
+      'Ошибка операции с базой данных',
       expect.objectContaining({ name: error.name, message: error.message, stack: error.stack }),
     );
     let thrown: unknown;

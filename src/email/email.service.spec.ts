@@ -67,25 +67,27 @@ describe('EmailService', () => {
     const service = new EmailService();
     mockEmailApi(500);
     await expect(service.sendLikeEmailNotification({ ...baseEmail, mapPhotoUrl: 'map' })).rejects.toThrow(
-      'Gmail API returned 500',
+      'Ошибка Gmail API (код 500)',
     );
     mockEmailApi(500);
     await expect(
       service.sendCommentEmailNotification({ ...baseEmail, comment: 'Comment', mapPhotoUrl: 'map' }),
-    ).rejects.toThrow('Gmail API returned 500');
+    ).rejects.toThrow('Ошибка Gmail API (код 500)');
     mockEmailApi(500);
     await expect(service.sendCommentLikeEmailNotification({ ...baseEmail, comment: 'Comment' })).rejects.toThrow(
-      'Gmail API returned 500',
+      'Ошибка Gmail API (код 500)',
     );
     mockEmailApi(500);
     await expect(service.sendConfirmationCode('bob@example.com', 1234, 'token')).rejects.toThrow(
-      'Gmail API returned 500',
+      'Ошибка Gmail API (код 500)',
     );
     mockEmailApi(500);
-    await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).rejects.toThrow('Gmail API returned 500');
+    await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).rejects.toThrow(
+      'Ошибка Gmail API (код 500)',
+    );
     mockEmailApi(500);
     await expect(service.sendLoginLink('bob@example.com', 'access-token', 'user-1')).rejects.toThrow(
-      'Gmail API returned 500',
+      'Ошибка Gmail API (код 500)',
     );
   });
 
@@ -94,7 +96,7 @@ describe('EmailService', () => {
     const service = new EmailService();
 
     await expect(service.sendConfirmationCode('bob@example.com', 1234, 'token')).rejects.toThrow(
-      'GOOGLE_CLIENT_ID must be configured',
+      'Не настроена обязательная переменная окружения: GOOGLE_CLIENT_ID',
     );
   });
 });

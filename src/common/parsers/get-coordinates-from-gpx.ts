@@ -19,7 +19,7 @@ export async function getCoordinatesFromGpxFile(filePath: string): Promise<Locat
     }));
     return coordinates || [];
   } catch (error) {
-    logger.error(`Failed to parse GPX file ${filePath}`, error instanceof Error ? error.stack : String(error));
+    logger.error(`Не удалось обработать GPX-файл ${filePath}`, error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

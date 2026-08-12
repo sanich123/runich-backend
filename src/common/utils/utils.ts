@@ -8,7 +8,7 @@ export function getTimeStampFromTime(date: Date) {
 export function getMapBoxImage({ location }: { location: { coords: { latitude: number; longitude: number } }[] }) {
   const accessToken = process.env.MAPBOX_ACCESS_TOKEN;
   if (!accessToken) {
-    throw new Error('MAPBOX_ACCESS_TOKEN must be configured');
+    throw new Error('Не настроен токен Mapbox: MAPBOX_ACCESS_TOKEN');
   }
 
   if (location.length) {

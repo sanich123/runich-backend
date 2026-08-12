@@ -4,7 +4,7 @@ import { LocationObject } from 'src/activity/activity.dto';
 export function getMapBoxImage(locations: LocationObject[]) {
   const accessToken = process.env.MAPBOX_ACCESS_TOKEN;
   if (!accessToken) {
-    throw new Error('MAPBOX_ACCESS_TOKEN must be configured');
+    throw new Error('Не настроен токен Mapbox: MAPBOX_ACCESS_TOKEN');
   }
 
   if (locations?.length > 1 && 'coords' in locations[0]) {

@@ -12,7 +12,7 @@ export async function getCoordinatesFromTcxFile(filePath: string): Promise<Locat
       .map(({ latitude, longitude }) => ({ coords: { latitude: Number(latitude), longitude: Number(longitude) } }));
     return coordinates;
   } catch (error) {
-    logger.error(`Failed to parse TCX file ${filePath}`, error instanceof Error ? error.stack : String(error));
+    logger.error(`Не удалось обработать TCX-файл ${filePath}`, error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

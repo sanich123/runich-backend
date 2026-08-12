@@ -17,7 +17,7 @@ export async function getCoordinatesFromFitFile(filePath: string): Promise<Locat
       )
       .map((position) => ({ coords: { longitude: position.longitudeDegrees, latitude: position.latitudeDegrees } }));
   } catch (error) {
-    logger.error(`Failed to parse FIT file ${filePath}`, error instanceof Error ? error.stack : String(error));
+    logger.error(`Не удалось обработать FIT-файл ${filePath}`, error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

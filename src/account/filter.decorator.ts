@@ -8,14 +8,14 @@ export interface Filtering {
 }
 
 export function parseFiltering(data: unknown, query: Request['query']): Filtering {
-  if (!Array.isArray(data)) throw new BadRequestException('Invalid filter parameter');
+  if (!Array.isArray(data)) throw new BadRequestException('Некорректно настроен параметр фильтрации: filter');
 
   const allowedFields = new Set(data.filter((field): field is string => typeof field === 'string'));
   const filteredObj: Filtering = {};
 
   for (const [key, value] of Object.entries(query)) {
     if (!allowedFields.has(key)) continue;
-    if (typeof value !== 'string') throw new BadRequestException(`Invalid filter value for ${key}`);
+    if (typeof value !== 'string') throw new BadRequestException(`Значение фильтра должно быть строкой: ${key}`);
 
     filteredObj[key as keyof Filtering] = value;
   }

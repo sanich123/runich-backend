@@ -68,7 +68,7 @@ export class FriendService {
   async addFriendByFriendId(id: string, { userId }: FriendDto) {
     try {
       const profile = await this.accountService.getAccountByUserId(id);
-      if (!profile) throw new NotFoundException('Could not be able to find profile of that user');
+      if (!profile) throw new NotFoundException('Профиль пользователя не найден: userId');
       return await this.prismaService.friend.create({
         data: {
           user_id: userId,

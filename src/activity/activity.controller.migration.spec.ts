@@ -81,7 +81,7 @@ describe('ActivityController Strava migration', () => {
       success: true,
     });
     expect(loggerError).toHaveBeenCalledWith(
-      'Failed to clean up migration files',
+      'Не удалось удалить временные файлы миграции',
       expect.stringContaining('cleanup failed'),
     );
     loggerError.mockRestore();

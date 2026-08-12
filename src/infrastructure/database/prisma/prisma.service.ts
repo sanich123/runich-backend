@@ -32,8 +32,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     });
   }
   async onModuleInit() {
-    this.$on('error' as never, ({ message }) => this.logger.error(message));
-    this.$on('warn' as never, ({ message }) => this.logger.warn(message));
+    this.$on('error' as never, ({ message }) => this.logger.error(`Ошибка Prisma: ${message}`));
+    this.$on('warn' as never, ({ message }) => this.logger.warn(`Предупреждение Prisma: ${message}`));
     this.$on('info' as never, ({ message }) => this.logger.debug(message));
     this.$on('query' as never, () => this.logger.debug('Prisma query executed'));
 
@@ -43,7 +43,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         await seedMockData(this);
       }
     } catch (error) {
-      this.logger.error('Database initialization failed', error instanceof Error ? error.stack : String(error));
+      this.logger.error('Не удалось подключиться к базе данных', error instanceof Error ? error.stack : String(error));
       throw error;
     }
   }
@@ -52,7 +52,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     try {
       await this.$disconnect();
     } catch (error) {
-      this.logger.error('Database disconnect failed', error instanceof Error ? error.stack : String(error));
+      this.logger.error('Не удалось отключиться от базы данных', error instanceof Error ? error.stack : String(error));
       throw error;
     }
   }

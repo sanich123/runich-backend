@@ -62,7 +62,7 @@ export class CommentService {
   async createCommentByActivityId({ comment, authorId }: CommentDTO, id: string) {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
-      if (!account?.id) throw new NotFoundException();
+      if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       await this.prisma.comment.create({
         data: {
           profileId: account.id,
@@ -120,7 +120,7 @@ export class CommentService {
   async createCommentLikeByCommentId({ commentId, authorId }: CommentLikeDto) {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
-      if (!account?.id) throw new NotFoundException();
+      if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       return await this.prisma.commentLike.create({
         data: {
           profileId: account.id,

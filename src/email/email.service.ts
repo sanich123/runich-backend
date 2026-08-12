@@ -93,7 +93,7 @@ export class EmailService {
       const html = await render(ConfirmEmailAddressWithLinkAndCode({ text: confirmationCode.toString(), accessToken }));
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
-      this.logger.error(`Failed to send confirmation email to ${emailAddress}`, error);
+      this.logger.error(`Не удалось отправить письмо с кодом подтверждения на ${emailAddress}`, error);
       throw error;
     }
   }
@@ -104,7 +104,7 @@ export class EmailService {
       const html = await render(PasswordChangeCode({ text: recoveryCode.toString() }));
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
-      this.logger.error(`Failed to send password change code to ${emailAddress}`, error);
+      this.logger.error(`Не удалось отправить код смены пароля на ${emailAddress}`, error);
       throw error;
     }
   }
@@ -119,7 +119,7 @@ export class EmailService {
       const html = await render(LoginByEmailLink({ loginUrl: loginUrl.toString() }));
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
-      this.logger.error(`Failed to send login link to ${emailAddress}`, error);
+      this.logger.error(`Не удалось отправить ссылку для входа на ${emailAddress}`, error);
       throw error;
     }
   }

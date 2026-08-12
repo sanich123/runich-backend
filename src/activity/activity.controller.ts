@@ -111,7 +111,7 @@ export class ActivityController {
           ids.length > 0 &&
           ids.every((activityId) => typeof activityId === 'string' && Boolean(activityId.trim()));
     if (!isValidIds) {
-      throw new BadRequestException('Activity ids are required');
+      throw new BadRequestException('Не указаны идентификаторы активностей: ids');
     }
     return this.activityService.getActivitiesByTheirIds(ids);
   }
@@ -150,12 +150,12 @@ export class ActivityController {
 
     try {
       if (!file) {
-        throw new NotFoundException('Archive file is required');
+        throw new NotFoundException('Не указан файл архива: archive');
       }
 
       const account = await this.accountService.getOrCreateAccountByUserId(id);
       if (!account) {
-        throw new NotFoundException(`Profile for user ${id} was not found`);
+        throw new NotFoundException(`Профиль пользователя не найден: ${id}`);
       }
 
       await unzipTransferArchive(file.path);
@@ -175,7 +175,7 @@ export class ActivityController {
       cleanupResults.forEach((result) => {
         if (result.status === 'rejected') {
           this.logger.error(
-            'Failed to clean up migration files',
+            'Не удалось удалить временные файлы миграции',
             result.reason instanceof Error ? result.reason.stack : String(result.reason),
           );
         }

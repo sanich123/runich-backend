@@ -33,7 +33,7 @@ export async function mapActivitiesWithCoordinates({
       parsedActivities.map(async (activity, i): Promise<MigratedActivity> => {
         const sourceActivityId = String(activity['Activity ID'] ?? '').trim();
         if (!sourceActivityId) {
-          throw new Error('Strava activity ID is missing');
+          throw new Error('Не указан идентификатор активности Strava: Activity ID');
         }
 
         let locations: LocationObject[] = [];
@@ -83,7 +83,7 @@ export async function mapActivitiesWithCoordinates({
 
     const failedResults = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
     failedResults.forEach((result) => {
-      logger.warn(`Skipping activity that could not be mapped: ${String(result.reason)}`);
+      logger.warn(`Активность пропущена: не удалось обработать координаты. Причина: ${String(result.reason)}`);
     });
 
     const successfulResults = results
@@ -91,12 +91,12 @@ export async function mapActivitiesWithCoordinates({
       .map((result) => result.value);
 
     if (parsedActivities.length > 0 && successfulResults.length === 0 && failedResults.length > 0) {
-      throw new Error('Could not map any activities from migration archive');
+      throw new Error('Не удалось обработать ни одной активности из архива миграции');
     }
 
     return successfulResults;
   } catch (error) {
-    logger.error('Failed to map activities with coordinates', error instanceof Error ? error.stack : String(error));
+    logger.error('Не удалось обработать активности и координаты', error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

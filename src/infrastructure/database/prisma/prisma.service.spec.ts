@@ -37,12 +37,12 @@ describe('PrismaService', () => {
     const connectError = new Error('connect failed');
     jest.spyOn(service, '$connect').mockRejectedValue(connectError);
     await expect(service.onModuleInit()).rejects.toBe(connectError);
-    expect(loggerError).toHaveBeenCalledWith('Database initialization failed', connectError.stack);
+    expect(loggerError).toHaveBeenCalledWith('Не удалось подключиться к базе данных', connectError.stack);
 
     const disconnectError = new Error('disconnect failed');
     jest.spyOn(service, '$disconnect').mockRejectedValue(disconnectError);
     await expect(service.onModuleDestroy()).rejects.toBe(disconnectError);
-    expect(loggerError).toHaveBeenCalledWith('Database disconnect failed', disconnectError.stack);
+    expect(loggerError).toHaveBeenCalledWith('Не удалось отключиться от базы данных', disconnectError.stack);
     loggerError.mockRestore();
   });
 

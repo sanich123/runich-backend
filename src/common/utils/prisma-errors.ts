@@ -11,14 +11,14 @@ export function prismaErrorHandling(error: unknown) {
 
   const errorDetails =
     error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error;
-  logger.error('Database operation failed', errorDetails);
+  logger.error('Ошибка операции с базой данных', errorDetails);
 
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    throw new PrismaException('Database operation failed', error.code);
+    throw new PrismaException('Ошибка операции с базой данных', error.code);
   }
   if (error instanceof Prisma.PrismaClientUnknownRequestError || error instanceof Prisma.PrismaClientValidationError) {
-    throw new PrismaException('Database operation failed');
+    throw new PrismaException('Ошибка операции с базой данных');
   }
 
-  throw new InternalServerErrorException('Internal server error');
+  throw new InternalServerErrorException('Внутренняя ошибка сервера');
 }

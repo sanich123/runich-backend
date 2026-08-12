@@ -13,7 +13,7 @@ export async function parseCoordinatesFromFile(filePath: string): Promise<Locati
   const inputFilePath = join(process.cwd(), 'dist', 'migration', filePath);
   try {
     if (!existsSync(inputFilePath)) {
-      throw new Error('File with coordinates doesnt exist!');
+      throw new Error(`Файл с координатами не найден: ${filePath}`);
     }
     if (filePath.includes('.gpx')) {
       parsedCoordinates = await getCoordinatesFromGpxFile(inputFilePath);
@@ -29,7 +29,10 @@ export async function parseCoordinatesFromFile(filePath: string): Promise<Locati
     }
     return parsedCoordinates || [];
   } catch (error) {
-    logger.error(`Failed to parse coordinates file ${filePath}`, error instanceof Error ? error.stack : String(error));
+    logger.error(
+      `Не удалось обработать файл с координатами ${filePath}`,
+      error instanceof Error ? error.stack : String(error),
+    );
     throw error;
   }
 }

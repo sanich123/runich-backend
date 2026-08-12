@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { PrismaClientExceptionFilter } from './common/filters/prisma-client-exception.filter';
 import { PRISMA_ERR_TO_HTTP_CODES } from './common/constants';
@@ -11,6 +11,7 @@ import { urlencoded, json } from 'express';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AllExceptionsFilter } from './common/filters/all-exceptions';
 import { uncaughtErrorHandler, unhandledRejectionHandler } from './common/utils/handling-process';
+import { formatValidationErrors } from './common/utils/validation-errors';
 
 const CORS_ORIGINS = [
   'https://runich.netlify.app',
@@ -43,7 +44,15 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
   app.useGlobalFilters(new PrismaClientExceptionFilter(PRISMA_ERR_TO_HTTP_CODES));
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      exceptionFactory: (errors) => {
+        const messages = formatValidationErrors(errors);
+        return new BadRequestException(messages.length ? messages : ['Некорректные входные данные']);
+      },
+    }),
+  );
   app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost)));
   app.enableCors({ origin: CORS_ORIGINS, methods: 'GET,HEAD,PUT,PATCH,POST,DELETE' });
   await app.listen(PORT);
@@ -51,6 +60,6 @@ async function bootstrap() {
 }
 void bootstrap().catch((error: unknown) => {
   const logger = new Logger('Bootstrap');
-  logger.error('Application failed to start', error instanceof Error ? error.stack : String(error));
+  logger.error('Приложение не удалось запустить', error instanceof Error ? error.stack : String(error));
   process.exitCode = 1;
 });

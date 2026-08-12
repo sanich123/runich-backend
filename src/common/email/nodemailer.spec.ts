@@ -58,7 +58,7 @@ describe('sendEmail through Gmail API', () => {
       .mockResolvedValue(new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 }));
 
     await expect(sendEmail('runner@example.com', 'Subject', '<p>Body</p>')).rejects.toThrow(
-      'Google OAuth returned 400: {"error":"invalid_grant"}',
+      'Ошибка авторизации Google (код 400): {"error":"invalid_grant"}',
     );
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });

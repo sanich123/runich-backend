@@ -7,12 +7,12 @@ export function validateOptionalIntegerQuery(
 ): string | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== 'string' || !/^\d+$/.test(value)) {
-    throw new BadRequestException(`Invalid ${field}`);
+    throw new BadRequestException(`Некорректное значение свойства: ${field}`);
   }
 
   const numberValue = Number(value);
   if (!Number.isSafeInteger(numberValue) || numberValue < min || (max !== undefined && numberValue > max)) {
-    throw new BadRequestException(`Invalid ${field}`);
+    throw new BadRequestException(`Некорректное значение свойства: ${field}`);
   }
 
   return value;
@@ -21,7 +21,7 @@ export function validateOptionalIntegerQuery(
 export function validateOptionalDateQuery(value: unknown, field: string): string | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
-    throw new BadRequestException(`Invalid ${field}`);
+    throw new BadRequestException(`Некорректная дата в свойстве: ${field}`);
   }
 
   return value;

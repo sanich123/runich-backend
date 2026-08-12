@@ -19,7 +19,7 @@ export class LikeService {
   async addLike({ authorId, activityId }: LikeDto) {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
-      if (!account?.id) throw new NotFoundException();
+      if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       return await this.prismaService.like.create({
         data: {
           profileId: account.id,

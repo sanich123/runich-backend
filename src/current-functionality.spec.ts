@@ -158,7 +158,7 @@ describe('account, user and social services', () => {
     const service = new UserService(prisma as never);
     prisma.profile.create.mockRejectedValue(new Error('database unavailable'));
 
-    await expect(service.createProfileByUserId('u1', { name: 'Ann' })).rejects.toThrow('Internal server error');
+    await expect(service.createProfileByUserId('u1', { name: 'Ann' })).rejects.toThrow('Внутренняя ошибка сервера');
   });
 
   it('creates and deletes friends and likes', async () => {

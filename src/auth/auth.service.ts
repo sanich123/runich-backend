@@ -72,7 +72,7 @@ export class AuthService {
           throw new UnauthorizedException('Неправильный пароль');
         }
         if (!user.email_confirmed_at) {
-          this.logger.warn(`Login rejected for unconfirmed account ${email}`);
+          this.logger.warn(`Вход отклонён: учётная запись не подтверждена (${email})`);
           throw new UnauthorizedException('Данная учетная запись не подтверждена');
         }
         await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
