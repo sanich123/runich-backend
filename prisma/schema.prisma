@@ -78,12 +78,12 @@ model Activity {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   description         String?
-  distance            Int
+  distance            Float
   duration            Int
   emotion             String?
   locations           Json?
   user_id             String    @db.Uuid
-  speed               Int
+  speed               Float
   sport               String
   title               String?
   kilometresSplit     Json?

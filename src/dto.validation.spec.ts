@@ -93,6 +93,12 @@ describe('request DTO validation', () => {
   it('validates activity scalar fields and every nested activity collection', async () => {
     await expectValid(ActivityDto, { duration: 100, distance: 1000, speed: 10, sport: 'run' });
     await expectValid(ActivityDto, {
+      duration: 33374,
+      distance: 5.029430600013118,
+      speed: 110.36,
+      sport: 'run',
+    });
+    await expectValid(ActivityDto, {
       duration: 100,
       distance: 1000,
       speed: 10,

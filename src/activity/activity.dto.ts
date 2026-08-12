@@ -135,12 +135,12 @@ export class ActivityDto {
 
   @ApiProperty({ type: Number, description: 'Distance' })
   @IsNotEmpty()
-  @IsInt()
+  @IsNumber({ allowInfinity: false, allowNaN: false })
   distance: number;
 
   @ApiProperty({ type: Number, description: 'Speed' })
   @IsNotEmpty()
-  @IsInt()
+  @IsNumber({ allowInfinity: false, allowNaN: false })
   speed: number;
 
   @ApiProperty({ type: String, description: 'Sport value' })
