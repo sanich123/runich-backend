@@ -55,12 +55,37 @@ describe('ActivityService', () => {
     });
   });
 
+  it('generates a title from the activity time and sport when title is missing', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new ActivityService(prisma as never, account as never);
+
+    await service.createActivity({ ...activityDto, date: '2026-08-12T07:15:00', title: '   ' }, 'user-1');
+    expect(prisma.activity.create).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({ title: 'Утренний бег' }),
+    });
+
+    await service.createActivity(
+      { ...activityDto, sport: 'ride', date: '2026-08-12T23:15:00', title: undefined },
+      'user-1',
+    );
+    expect(prisma.activity.create).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({ title: 'Вечерний велозаезд' }),
+    });
+
+    await service.createActivity({ ...activityDto, title: 'Моя пробежка' }, 'user-1');
+    expect(prisma.activity.create).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({ title: 'Моя пробежка' }),
+    });
+  });
+
   it('writes migration activities in chunks and skips duplicate records', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.createMany.mockResolvedValue({ count: 100 });
     const activities = Array.from({ length: 101 }, (_, index) => ({
       ...activityDto,
+      title: 'Импортированная активность',
       user_id: 'user-1',
       profileId: 'profile-1',
       source: 'strava' as const,

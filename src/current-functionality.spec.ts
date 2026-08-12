@@ -222,6 +222,7 @@ describe('activity, comments and statistics', () => {
       distance: 1000,
       speed: 10,
       sport: 'run',
+      title: 'Imported activity',
       user_id: 'u1',
       profileId: 'p1',
       source: 'strava' as const,

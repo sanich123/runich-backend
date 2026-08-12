@@ -6,6 +6,7 @@ import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { chunkArray } from 'src/common/parsers/chunk-array';
+import { generateActivityTitle } from './activity-title';
 
 @Injectable()
 export class ActivityService {
@@ -30,6 +31,9 @@ export class ActivityService {
         user_id: id,
         profileId: `${account?.id}`,
         ...activityDto,
+        title: activityDto.title?.trim()
+          ? activityDto.title
+          : generateActivityTitle(activityDto.sport, activityDto.date),
         photoVideoUrls: activityDto.photoVideoUrls,
         mapPhotoUrlBlurhash: null,
       };
@@ -51,7 +55,11 @@ export class ActivityService {
     })[],
   ) {
     try {
-      const chunkedActivities = chunkArray(activities, 100);
+      const activitiesWithTitles = activities.map((activity) => ({
+        ...activity,
+        title: activity.title?.trim() ? activity.title : generateActivityTitle(activity.sport, activity.date),
+      }));
+      const chunkedActivities = chunkArray(activitiesWithTitles, 100);
       await Promise.all(
         chunkedActivities.map(async (activities) => {
           this.logger.debug(`Writing activity batch (${activities.length} records)`);
