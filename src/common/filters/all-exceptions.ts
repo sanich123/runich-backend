@@ -1,5 +1,6 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Inject, Logger } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import type { Request } from 'express';
 import { writeLogs } from 'src/common/utils/logs';
 
 type ExceptionResponse = string | { message?: unknown };
@@ -73,6 +74,22 @@ function getUnknownExceptionMessage(exception: unknown, statusCode: number) {
   return defaultMessages[statusCode] ?? 'Внутренняя ошибка сервера';
 }
 
+function isCreateActivityRequest(request: Request) {
+  const path = (request.originalUrl ?? request.url).split('?')[0];
+  return request.method === 'POST' && /^\/activity\/[^/]+\/?$/.test(path);
+}
+
+function serializeRequestBody(body: unknown) {
+  if (body === undefined) return 'тело запроса отсутствует';
+
+  try {
+    const serializedBody = JSON.stringify(body);
+    return serializedBody?.replace(/([?&]access_token=)[^&"]+/gi, '$1[скрыт]') ?? 'тело запроса отсутствует';
+  } catch {
+    return 'не удалось сериализовать тело запроса';
+  }
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -100,7 +117,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       path: httpAdapter.getRequestUrl(ctx.getRequest()),
     };
     const errorDetails = exception instanceof Error ? exception.stack : String(exception);
-    const logMessage = `${statusCode} ${responseBody.path}: ${JSON.stringify(message)}`;
+    const request = ctx.getRequest<Request>();
+    const activityRequestDetails =
+      isCreateActivityRequest(request) && statusCode >= HttpStatus.BAD_REQUEST
+        ? `; Данные создания активности: ${serializeRequestBody(request.body)}`
+        : '';
+    const logMessage = `${statusCode} ${responseBody.path}: ${JSON.stringify(message)}${activityRequestDetails}`;
     if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(logMessage, errorDetails);
     } else {

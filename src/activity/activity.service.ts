@@ -26,15 +26,17 @@ export class ActivityService {
         activityDto.mapPhotoUrl = getMapBoxImage(activityDto?.locations);
       }
 
-      return await this.prisma.activity.create({
-        data: {
-          user_id: id,
-          profileId: `${account?.id}`,
-          ...activityDto,
-          photoVideoUrls: activityDto.photoVideoUrls,
-          mapPhotoUrlBlurhash: null,
-        },
-      });
+      const data = {
+        user_id: id,
+        profileId: `${account?.id}`,
+        ...activityDto,
+        photoVideoUrls: activityDto.photoVideoUrls,
+        mapPhotoUrlBlurhash: null,
+      };
+      const serializedData = JSON.stringify(data).replace(/([?&]access_token=)[^&"]+/gi, '$1[скрыт]');
+      this.logger.log(`Структура активности перед сохранением: ${serializedData}`);
+
+      return await this.prisma.activity.create({ data });
     } catch (error) {
       prismaErrorHandling(error);
     }
