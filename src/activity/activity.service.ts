@@ -138,7 +138,7 @@ export class ActivityService {
     }
   }
 
-  async getMediaByUserId(id: string, take: string) {
+  async getMediaByUserId(id: string, take = '10') {
     try {
       const photos = await this.prisma.activity.findMany({
         //@ts-ignore
@@ -184,8 +184,14 @@ export class ActivityService {
     }
   }
 
-  async getActivitiesByTheirIds(ids: string | string[]) {
-    const searchByStringOrArray = typeof ids === 'string' ? ids : { in: ids };
+  async getActivitiesByTheirIds(ids?: string | string[]) {
+    const normalizedIds = (Array.isArray(ids) ? ids : [ids ?? ''])
+      .flatMap((activityId) => activityId.split(','))
+      .map((activityId) => activityId.trim())
+      .filter(Boolean);
+    if (!normalizedIds.length) return [];
+
+    const searchByStringOrArray = normalizedIds.length === 1 ? normalizedIds[0] : { in: normalizedIds };
     try {
       return await this.prisma.activity.findMany({
         where: { id: searchByStringOrArray, isPublic: true },

@@ -1,4 +1,4 @@
-import { InternalServerErrorException } from '@nestjs/common';
+import { InternalServerErrorException, Logger } from '@nestjs/common';
 import { jest } from '@jest/globals';
 
 export function asyncMock() {
@@ -10,7 +10,13 @@ export function syncMock() {
 }
 
 export async function expectInternalServerError(operation: Promise<unknown>) {
-  await expect(operation).rejects.toBeInstanceOf(InternalServerErrorException);
+  const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  try {
+    await expect(operation).rejects.toBeInstanceOf(InternalServerErrorException);
+    expect(loggerError).toHaveBeenCalledWith('Database operation failed', expect.anything());
+  } finally {
+    loggerError.mockRestore();
+  }
 }
 
 export function rejectWithDatabaseError(message = 'database unavailable') {

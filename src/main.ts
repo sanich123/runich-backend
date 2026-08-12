@@ -43,7 +43,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
   app.useGlobalFilters(new PrismaClientExceptionFilter(PRISMA_ERR_TO_HTTP_CODES));
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost)));
   app.enableCors({ origin: CORS_ORIGINS, methods: 'GET,HEAD,PUT,PATCH,POST,DELETE' });
   await app.listen(PORT);

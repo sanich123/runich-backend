@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ActivityController } from './activity.controller';
 import { ActivityService } from './activity.service';
 import { AccountService } from 'src/account/account.service';
@@ -41,6 +41,8 @@ describe('ActivityController', () => {
     await expect(controller.getMediaByUserId({ id: 'u1' }, '10')).resolves.toEqual({ photos: [] });
     await expect(controller.getLocationsByActivityId({ id: 'a1' })).resolves.toEqual({ locations: [] });
     await expect(controller.getActivitiesByActivitiesIds('a1,a2')).resolves.toEqual([result]);
+    await expect(controller.getActivitiesByActivitiesIds(['a1', 'a2'])).resolves.toEqual([result]);
+    expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(['a1', 'a2']);
     await expect(
       controller.createActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'u1' }),
     ).resolves.toEqual(result);
@@ -67,6 +69,26 @@ describe('ActivityController', () => {
     await expect(
       controller.getArchiveWithActivitiesFromStrava({ path: '/tmp/archive.zip' } as Express.Multer.File, { id: 'u1' }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('rejects activity id queries that are missing despite the required API contract', async () => {
+    await expect(controller.getActivitiesByActivitiesIds(undefined)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getActivitiesByActivitiesIds('')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getActivitiesByActivitiesIds('   ')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getActivitiesByActivitiesIds([])).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getActivitiesByActivitiesIds(['a1', '   '])).rejects.toBeInstanceOf(BadRequestException);
+    expect(activityService.getActivitiesByTheirIds).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed pagination queries before calling the activity service', async () => {
+    await expect(controller.getMediaByUserId({ id: 'u1' }, 'not-a-number')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getActivitiesByUserId({ id: 'u1' }, '-1', '10')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(controller.getActivitiesByUserId({ id: 'u1' }, '0', '0')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getAllActivitiesWithFriends({ id: 'u1' }, '1.5', '10')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
   it('propagates service errors from every non-migration endpoint', async () => {

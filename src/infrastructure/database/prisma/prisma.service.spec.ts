@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { jest } from '@jest/globals';
+import { Logger } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 
 describe('PrismaService', () => {
@@ -32,13 +33,17 @@ describe('PrismaService', () => {
   });
 
   it('propagates connection and disconnection failures', async () => {
+    const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const connectError = new Error('connect failed');
     jest.spyOn(service, '$connect').mockRejectedValue(connectError);
     await expect(service.onModuleInit()).rejects.toBe(connectError);
+    expect(loggerError).toHaveBeenCalledWith('Database initialization failed', connectError.stack);
 
     const disconnectError = new Error('disconnect failed');
     jest.spyOn(service, '$disconnect').mockRejectedValue(disconnectError);
     await expect(service.onModuleDestroy()).rejects.toBe(disconnectError);
+    expect(loggerError).toHaveBeenCalledWith('Database disconnect failed', disconnectError.stack);
+    loggerError.mockRestore();
   });
 
   it('disconnects during module destruction', async () => {

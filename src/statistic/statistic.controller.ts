@@ -5,6 +5,7 @@ import { PATHS, QueryParams } from 'src/common/constants';
 import { StatisticService } from './statistic.service';
 import { MonthStatisticsResponseDto, StatisticMetricResponseDto } from './statistic.response.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { validateOptionalDateQuery, validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 
 @ApiTags(PATHS.statistics)
 @ApiBearerAuth('bearerAuth')
@@ -54,11 +55,13 @@ export class StatisticController {
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getMonthStatistics(
-    @Query(QueryParams.year) year: string,
-    @Query(QueryParams.month) month: string,
     @Param() { id }: ParamsId,
+    @Query(QueryParams.year) year?: string,
+    @Query(QueryParams.month) month?: string,
   ) {
-    return await this.statisticsService.getMonthStatisticsByYearMonth(id, year, month);
+    const validatedYear = validateOptionalIntegerQuery(year, QueryParams.year, { min: 0 });
+    const validatedMonth = validateOptionalIntegerQuery(month, QueryParams.month, { min: 0, max: 11 });
+    return await this.statisticsService.getMonthStatisticsByYearMonth(id, validatedYear, validatedMonth);
   }
 
   @Get(`${PATHS.id}/week`)
@@ -71,11 +74,13 @@ export class StatisticController {
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getCurrentWeekStatistics(
-    @Query(QueryParams.firstDay) firstDay: string,
-    @Query(QueryParams.lastDay) lastDay: string,
     @Param() { id }: ParamsId,
+    @Query(QueryParams.firstDay) firstDay?: string,
+    @Query(QueryParams.lastDay) lastDay?: string,
   ) {
-    return this.statisticsService.getCurrentWeekStatistics(id, firstDay, lastDay);
+    const validatedFirstDay = validateOptionalDateQuery(firstDay, QueryParams.firstDay);
+    const validatedLastDay = validateOptionalDateQuery(lastDay, QueryParams.lastDay);
+    return this.statisticsService.getCurrentWeekStatistics(id, validatedFirstDay, validatedLastDay);
   }
 
   @Get(`${PATHS.id}/all`)

@@ -39,10 +39,8 @@ export class AccountController {
   @ApiResponse({ status: 400, description: 'Bad Request' })
   async getFilteredAccounts(
     @PaginationParams() paginationParams: Pagination,
-    @FilteringParams(['name', 'email', 'surname']) filter?: Filtering,
+    @FilteringParams(['name', 'email', 'surname']) filter: Filtering,
   ) {
-    if (filter) {
-      return await this.accountService.getFilteredAccounts(paginationParams, filter);
-    }
+    return await this.accountService.getFilteredAccounts(paginationParams, filter);
   }
 }

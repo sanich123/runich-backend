@@ -97,6 +97,14 @@ describe('ActivityService', () => {
     await expect(service.getActivitiesByTheirIds(['activity-1', 'activity-2'])).resolves.toEqual([
       { id: 'activity-1', photoVideoUrls: ['photo'] },
     ]);
+    expect(prisma.activity.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: { in: ['activity-1', 'activity-2'] } }) }),
+    );
+    await service.getActivitiesByTheirIds(' activity-1, activity-2 ');
+    expect(prisma.activity.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: { in: ['activity-1', 'activity-2'] } }) }),
+    );
+    await expect(service.getActivitiesByTheirIds(' , ')).resolves.toEqual([]);
     await expect(service.getAllActivitiesWithFriends('user-1', '1', '5')).resolves.toEqual({
       activities: [{ id: 'activity-1', photoVideoUrls: ['photo'] }],
       isLastPage: false,

@@ -1,10 +1,13 @@
 import { jest } from '@jest/globals';
+import { Logger } from '@nestjs/common';
 import { asyncMock } from 'src/__tests__/helpers';
 
 const unzipTransferArchive = asyncMock();
 const parseCsvFileIntoArray = asyncMock();
 const mapActivitiesWithCoordinates = asyncMock();
+const rm = asyncMock();
 
+jest.unstable_mockModule('fs/promises', () => ({ mkdir: asyncMock(), rm }));
 jest.unstable_mockModule('src/common/parsers/unzip-archive', () => ({ unzipTransferArchive }));
 jest.unstable_mockModule('src/common/parsers/parse-csv', () => ({ parseCsvFileIntoArray }));
 jest.unstable_mockModule('src/common/parsers/map-activities-with-coordinates', () => ({
@@ -31,6 +34,7 @@ describe('ActivityController Strava migration', () => {
     parseCsvFileIntoArray.mockResolvedValue([{ 'Activity ID': 'strava-1' }]);
     mapActivitiesWithCoordinates.mockResolvedValue([{ id: 'activity-1', sourceActivityId: 'strava-1' }]);
     activityService.createActivitiesFromMigrationArchive.mockResolvedValue({ success: true });
+    rm.mockResolvedValue(undefined);
   });
 
   it('unpacks, parses, maps and persists a migration archive', async () => {
@@ -67,5 +71,19 @@ describe('ActivityController Strava migration', () => {
 
     activityService.createActivitiesFromMigrationArchive.mockRejectedValueOnce(new Error('write failed'));
     await expect(controller.getArchiveWithActivitiesFromStrava(file, { id: 'user-1' })).rejects.toThrow('write failed');
+  });
+
+  it('logs cleanup failures while preserving the migration result', async () => {
+    const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    rm.mockRejectedValueOnce(new Error('cleanup failed')).mockResolvedValue(undefined);
+
+    await expect(controller.getArchiveWithActivitiesFromStrava(file, { id: 'user-1' })).resolves.toEqual({
+      success: true,
+    });
+    expect(loggerError).toHaveBeenCalledWith(
+      'Failed to clean up migration files',
+      expect.stringContaining('cleanup failed'),
+    );
+    loggerError.mockRestore();
   });
 });

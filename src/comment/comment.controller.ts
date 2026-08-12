@@ -20,7 +20,7 @@ import {
   CommentsResponseDto,
 } from './comment.response.dto';
 import { ParamsId } from 'src/common/dto/params-validation';
-import { CommentDTO, CommentLikeDto } from './comment.dto';
+import { CommentDTO, CommentLikeDto, CommentUpdateDto } from './comment.dto';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -33,6 +33,7 @@ import {
 } from '@nestjs/swagger';
 import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 
 const { comment, id, like } = PATHS;
 const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
@@ -51,8 +52,8 @@ export class CommentController {
   @ApiQuery({ name: 'take', required: false, description: 'Count of comments' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getCommentsByActivityId(@Param() { id }: ParamsId, @Query('take') take: string) {
-    return await this.commentService.getCommentsbyActivityId(id, take);
+  async getCommentsByActivityId(@Param() { id }: ParamsId, @Query('take') take?: string) {
+    return await this.commentService.getCommentsbyActivityId(id, validateOptionalIntegerQuery(take, 'take', { min: 1 }));
   }
 
   @Get(`${id}/count`)
@@ -96,11 +97,12 @@ export class CommentController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update comment by comment id' })
   @ApiParam({ name: 'id', description: 'Comment identifier' })
+  @ApiBody({ type: CommentUpdateDto, required: true })
   @HttpCode(HttpStatus.CREATED)
   @ApiResponse({ status: CREATED, type: CommentResponseDto, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async updateCommentById(@Body() { comment }: { comment: string }, @Param() { id }: ParamsId) {
-    return await this.commentService.updateCommentByCommentId(comment, id);
+  async updateCommentById(@Body() commentDto: CommentUpdateDto, @Param() { id }: ParamsId) {
+    return await this.commentService.updateCommentByCommentId(commentDto.comment, id);
   }
 
   @Post(`${id}/${like}`)

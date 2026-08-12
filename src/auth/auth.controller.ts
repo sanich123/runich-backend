@@ -26,6 +26,7 @@ import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiResponse 
 import { AppConfigEntity, AuthEntity, LoginEntity, MessageEntity, UserAuthEntity } from './auth.entity';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { UserIdParamsDto } from './auth.params.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -117,7 +118,7 @@ export class AuthController {
   @Delete(':userId')
   @ApiOkResponse({ schema: { type: 'null' }, description: 'No response body' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
-  async deleteUser(@Param() { userId }: { userId: string }) {
+  async deleteUser(@Param() { userId }: UserIdParamsDto) {
     return this.authService.deleteUser(userId);
   }
 }

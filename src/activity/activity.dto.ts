@@ -1,5 +1,89 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsDefined,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
+
+export class ActivityPhotoVideoDto {
+  @ApiProperty({ type: String })
+  @IsString()
+  @IsNotEmpty()
+  url: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  @ValidateIf((_object, value) => value !== null)
+  @IsDefined()
+  @IsString()
+  thumbnail: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsString()
+  @IsOptional()
+  blurhash?: string | null;
+}
+
+export class ActivityCoordinatesDto {
+  @ApiProperty({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  latitude: number;
+
+  @ApiProperty({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  longitude: number;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @IsOptional()
+  altitude?: number;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @IsOptional()
+  accuracy?: number;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @IsOptional()
+  altitudeAccuracy?: number;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @IsOptional()
+  heading?: number;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @IsOptional()
+  speed?: number;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @IsOptional()
+  timestamp?: number;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsBoolean()
+  @IsOptional()
+  mocked?: boolean;
+}
+
+export class ActivityLocationDto {
+  @ApiProperty({ type: ActivityCoordinatesDto })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => ActivityCoordinatesDto)
+  coords: ActivityCoordinatesDto;
+}
 
 export type LocationObject = {
   coords: {
@@ -15,20 +99,48 @@ export type LocationObject = {
   };
 };
 
+export class ActivityKilometreSplitDto {
+  @ApiProperty({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  lastKilometerDuration: number;
+
+  @ApiProperty({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  lastKilometerAltitude: number;
+
+  @ApiProperty({ type: ActivityLocationDto })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => ActivityLocationDto)
+  kilometerPoint: ActivityLocationDto;
+}
+
+export type ActivityPhotoVideoObject = {
+  url: string;
+  thumbnail: string | null;
+  blurhash?: string | null;
+};
+
+export type ActivityKilometreSplitObject = {
+  lastKilometerDuration: number;
+  lastKilometerAltitude: number;
+  kilometerPoint: LocationObject;
+};
+
 export class ActivityDto {
   @ApiProperty({ type: Number, description: 'Duration' })
   @IsNotEmpty()
-  @IsNumber()
+  @IsInt()
   duration: number;
 
   @ApiProperty({ type: Number, description: 'Distance' })
   @IsNotEmpty()
-  @IsNumber()
+  @IsInt()
   distance: number;
 
   @ApiProperty({ type: Number, description: 'Speed' })
   @IsNotEmpty()
-  @IsNumber()
+  @IsInt()
   speed: number;
 
   @ApiProperty({ type: String, description: 'Sport value' })
@@ -71,7 +183,9 @@ export class ActivityDto {
   })
   @IsOptional()
   @IsArray()
-  photoVideoUrls?: { url: string; thumbnail: string | null; blurhash?: string }[];
+  @ValidateNested({ each: true })
+  @Type(() => ActivityPhotoVideoDto)
+  photoVideoUrls?: ActivityPhotoVideoObject[];
 
   @ApiPropertyOptional({ type: String, description: 'Image of map with points of activity' })
   @IsOptional()
@@ -115,6 +229,8 @@ export class ActivityDto {
   })
   @IsArray()
   @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => ActivityLocationDto)
   locations?: LocationObject[];
 
   @ApiPropertyOptional({
@@ -132,9 +248,7 @@ export class ActivityDto {
   })
   @IsArray()
   @IsOptional()
-  kilometresSplit?: {
-    lastKilometerDuration: number;
-    lastKilometerAltitude: number;
-    kilometerPoint: LocationObject;
-  }[];
+  @ValidateNested({ each: true })
+  @Type(() => ActivityKilometreSplitDto)
+  kilometresSplit?: ActivityKilometreSplitObject[];
 }

@@ -25,7 +25,7 @@ export class ProfileDto {
   @ApiPropertyOptional({ type: String, description: 'surname value (optional)' })
   surname?: string | null;
   @ApiPropertyOptional({ type: String, description: 'updatedAt value (optional)' })
-  updatedAt?: Date | string;
+  updatedAt?: Date | string | null;
   @ApiPropertyOptional({ type: String, description: 'Language value (optional)' })
   language?: string | null;
   @ApiPropertyOptional({ type: String, description: 'birthday value (optional)' })

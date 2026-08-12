@@ -16,7 +16,7 @@ export class CommentService {
     private readonly activityService: ActivityService,
   ) {}
 
-  async getCommentsbyActivityId(id: string, take: string) {
+  async getCommentsbyActivityId(id: string, take = '10') {
     try {
       const allCommentsLength = await this.prisma.comment.count({ where: { activityId: id } });
       const takenComments = await this.prisma.comment.findMany({

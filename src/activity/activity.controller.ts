@@ -13,6 +13,7 @@ import {
   UseInterceptors,
   UploadedFile,
   NotFoundException,
+  BadRequestException,
   UseGuards,
   Logger,
 } from '@nestjs/common';
@@ -50,6 +51,7 @@ import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
 import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-with-coordinates';
 import { AccountService } from 'src/account/account.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 const { activity, id } = PATHS;
 const receivedArchiveDirectory = join(process.cwd(), 'dist', 'receivedArchive');
 const migrationDirectory = join(process.cwd(), 'dist', 'migration');
@@ -75,8 +77,8 @@ export class ActivityController {
   @ApiQuery({ name: 'take', required: false, description: 'Maximum number of photos' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getMediaByUserId(@Param() { id }: ParamsId, @Query(QueryParams.take) take: string) {
-    return this.activityService.getMediaByUserId(id, take);
+  async getMediaByUserId(@Param() { id }: ParamsId, @Query(QueryParams.take) take?: string) {
+    return this.activityService.getMediaByUserId(id, validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 }));
   }
 
   @Get(`${id}/locations`)
@@ -93,10 +95,24 @@ export class ActivityController {
   @ApiOkResponse({ type: [ActivityCardResponseDto] })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by activities ids' })
-  @ApiQuery({ name: 'ids', required: true, description: 'Comma-separated activity ids' })
+  @ApiQuery({
+    name: 'ids',
+    required: true,
+    isArray: true,
+    description: 'Activity ids (repeated or comma-separated)',
+  })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivitiesByActivitiesIds(@Query(QueryParams.ids) ids: string) {
+  async getActivitiesByActivitiesIds(@Query(QueryParams.ids) ids?: string | string[]) {
+    const isValidIds =
+      typeof ids === 'string'
+        ? Boolean(ids.trim())
+        : Array.isArray(ids) &&
+          ids.length > 0 &&
+          ids.every((activityId) => typeof activityId === 'string' && Boolean(activityId.trim()));
+    if (!isValidIds) {
+      throw new BadRequestException('Activity ids are required');
+    }
     return this.activityService.getActivitiesByTheirIds(ids);
   }
 
@@ -204,10 +220,12 @@ export class ActivityController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getActivitiesByUserId(
     @Param() { id }: ParamsId,
-    @Query(QueryParams.page) page: string,
-    @Query(QueryParams.take) take: string,
+    @Query(QueryParams.page) page?: string,
+    @Query(QueryParams.take) take?: string,
   ) {
-    return await this.activityService.getActivitesByUserId(id, page, take);
+    const validatedPage = validateOptionalIntegerQuery(page, QueryParams.page);
+    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    return await this.activityService.getActivitesByUserId(id, validatedPage, validatedTake);
   }
 
   @Get(`${id}/all`)
@@ -221,10 +239,12 @@ export class ActivityController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getAllActivitiesWithFriends(
     @Param() { id }: ParamsId,
-    @Query(QueryParams.page) page: string,
-    @Query(QueryParams.take) take: string,
+    @Query(QueryParams.page) page?: string,
+    @Query(QueryParams.take) take?: string,
   ) {
-    return await this.activityService.getAllActivitiesWithFriends(id, page, take);
+    const validatedPage = validateOptionalIntegerQuery(page, QueryParams.page);
+    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    return await this.activityService.getAllActivitiesWithFriends(id, validatedPage, validatedTake);
   }
 
   @Get(`/activityId/${id}`)

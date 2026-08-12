@@ -30,7 +30,11 @@ export class StatisticService {
     }
   }
 
-  async getMonthStatisticsByYearMonth(userId: string, year: string, month: string) {
+  async getMonthStatisticsByYearMonth(
+    userId: string,
+    year = `${new Date().getFullYear()}`,
+    month = `${new Date().getMonth()}`,
+  ) {
     try {
       const activities = await this.prisma.activity.findMany({
         where: {
@@ -119,7 +123,11 @@ export class StatisticService {
       prismaErrorHandling(error);
     }
   }
-  async getCurrentWeekStatistics(userId: string, firstDay: string, lastDay: string) {
+  async getCurrentWeekStatistics(
+    userId: string,
+    firstDay = new Date().toISOString(),
+    lastDay = new Date().toISOString(),
+  ) {
     const firstDayDate = new Date(firstDay);
     const lastDayDate = new Date(lastDay);
     try {

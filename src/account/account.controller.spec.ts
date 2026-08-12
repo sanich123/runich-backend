@@ -20,9 +20,13 @@ describe('AccountController', () => {
     expect(service.getFilteredAccounts).toHaveBeenCalledWith(pagination, { name: 'Ann' });
   });
 
-  it('returns undefined and does not call the service when no filter is supplied', async () => {
-    await expect(controller.getFilteredAccounts({ page: 0, limit: 10, size: 10, offset: 0 })).resolves.toBeUndefined();
-    expect(service.getFilteredAccounts).not.toHaveBeenCalled();
+  it('searches all profiles when no filter fields are supplied', async () => {
+    service.getFilteredAccounts.mockResolvedValue({ items: [] });
+
+    await expect(controller.getFilteredAccounts({ page: 0, limit: 10, size: 10, offset: 0 }, {})).resolves.toEqual({
+      items: [],
+    });
+    expect(service.getFilteredAccounts).toHaveBeenCalledWith({ page: 0, limit: 10, size: 10, offset: 0 }, {});
   });
 
   it('propagates service errors from every endpoint', async () => {

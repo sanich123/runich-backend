@@ -24,3 +24,10 @@ export class CommentLikeDto {
   @ApiProperty({ title: 'Author identifer', nullable: false, required: true, type: String })
   authorId: string;
 }
+
+export class CommentUpdateDto {
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({ title: 'Updated text of comment', nullable: false, required: true, type: String })
+  comment: string;
+}

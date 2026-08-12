@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import { BadRequestException } from '@nestjs/common';
 import { CommentController } from './comment.controller';
 import { CommentService } from './comment.service';
 import { asyncMock } from 'src/__tests__/helpers';
@@ -59,5 +60,10 @@ describe('CommentController', () => {
     await expect(controller.postCommentLikeWithCommentId({ commentId: 'c1', authorId: 'u1' })).rejects.toBe(error);
     await expect(controller.deleteCommentLikeWithLikeId({ id: 'cl1' })).rejects.toBe(error);
     await expect(controller.getCommentLikesLengthByCommentId({ id: 'c1' })).rejects.toBe(error);
+  });
+
+  it('rejects malformed comment pagination before calling the service', async () => {
+    await expect(controller.getCommentsByActivityId({ id: 'a1' }, 'NaN')).rejects.toBeInstanceOf(BadRequestException);
+    expect(service.getCommentsbyActivityId).not.toHaveBeenCalled();
   });
 });

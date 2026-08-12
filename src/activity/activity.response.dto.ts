@@ -36,17 +36,14 @@ export class ActivityCoordinatesResponseDto {
 
   @ApiPropertyOptional({ type: Number, nullable: true })
   timestamp?: number | null;
+
+  @ApiPropertyOptional({ type: Boolean, nullable: true })
+  mocked?: boolean | null;
 }
 
 export class ActivityLocationResponseDto {
   @ApiProperty({ type: ActivityCoordinatesResponseDto })
   coords: ActivityCoordinatesResponseDto;
-
-  @ApiPropertyOptional({ type: Boolean, nullable: true })
-  mocked?: boolean | null;
-
-  @ApiPropertyOptional({ type: Number, nullable: true })
-  timestamp?: number | null;
 }
 
 export class ActivityKilometreSplitResponseDto {
@@ -70,10 +67,10 @@ export class ActivityMediaResponseDto {
 
 export class ActivityLocationsResponseDto {
   @ApiPropertyOptional({ type: [ActivityLocationResponseDto], nullable: true })
-  locations: ActivityLocationResponseDto[] | null;
+  locations?: ActivityLocationResponseDto[] | null;
 
   @ApiPropertyOptional({ type: [ActivityKilometreSplitResponseDto], nullable: true })
-  kilometresSplit: ActivityKilometreSplitResponseDto[] | null;
+  kilometresSplit?: ActivityKilometreSplitResponseDto[] | null;
 }
 
 export class ActivityUserEmailResponseDto {
