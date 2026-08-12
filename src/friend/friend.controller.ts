@@ -28,7 +28,7 @@ export class FriendController {
   }
 
   @Delete(id)
-  @ApiOkResponse({ type: FriendResponseDto })
+  @ApiOkResponse({ schema: { type: 'null' }, description: 'No response body' })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete friend by friendId' })
   @ApiParam({ name: 'id', description: 'Friend relationship identifier' })

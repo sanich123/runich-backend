@@ -53,7 +53,10 @@ export class CommentController {
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   async getCommentsByActivityId(@Param() { id }: ParamsId, @Query('take') take?: string) {
-    return await this.commentService.getCommentsbyActivityId(id, validateOptionalIntegerQuery(take, 'take', { min: 1 }));
+    return await this.commentService.getCommentsbyActivityId(
+      id,
+      validateOptionalIntegerQuery(take, 'take', { min: 1 }),
+    );
   }
 
   @Get(`${id}/count`)
@@ -81,7 +84,7 @@ export class CommentController {
   }
 
   @Delete(id)
-  @ApiOkResponse({ type: CommentResponseDto })
+  @ApiOkResponse({ schema: { type: 'null' }, description: 'No response body' })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete comment by comment id' })
   @ApiParam({ name: 'id', description: 'Comment identifier' })
@@ -119,7 +122,7 @@ export class CommentController {
   }
 
   @Delete(`${id}/${like}`)
-  @ApiOkResponse({ type: CommentLikeResponseDto })
+  @ApiOkResponse({ schema: { type: 'null' }, description: 'No response body' })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete like to comment by like id' })
   @ApiParam({ name: 'id', description: 'Comment like identifier' })

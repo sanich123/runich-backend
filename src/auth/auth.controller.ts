@@ -22,12 +22,13 @@ import {
   RefreshTokenDto,
   RegisterUserDto,
 } from './auth.dto';
-import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AppConfigEntity, AuthEntity, LoginEntity, MessageEntity, UserAuthEntity } from './auth.entity';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { UserIdParamsDto } from './auth.params.dto';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -45,6 +46,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
+  @ApiBody({ type: RegisterUserDto })
   @ApiOkResponse({ type: MessageEntity })
   @ApiCreatedResponse({ type: MessageEntity })
   async registerUser(@Body() { email, password }: RegisterUserDto) {
@@ -57,6 +59,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
+  @ApiBody({ type: RegisterUserDto })
   @ApiOkResponse({ type: LoginEntity })
   async login(@Body() { email, password }: RegisterUserDto) {
     return this.authService.login(email, password);
@@ -72,26 +75,30 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
+  @ApiBody({ type: RefreshTokenDto })
   @ApiOkResponse({ type: AuthEntity })
   async refresh(@Body() { refreshToken }: RefreshTokenDto) {
     return this.authService.refreshAccessToken(refreshToken);
   }
 
   @Post('verify')
-  @ApiOkResponse({ type: UserAuthEntity })
-  @ApiCreatedResponse({ type: UserAuthEntity })
+  @ApiBody({ type: AccessTokenDto })
+  @ApiOkResponse({ type: LoginEntity })
+  @ApiCreatedResponse({ type: LoginEntity })
   async verifyTokenAndAppVersion(@Body() { accessToken }: AccessTokenDto) {
     return this.authService.verifyToken(accessToken);
   }
 
   @Post('confirm-email')
-  @ApiOkResponse({ type: UserAuthEntity })
-  @ApiCreatedResponse({ type: UserAuthEntity })
+  @ApiBody({ type: ConfirmationCodeDto })
+  @ApiOkResponse({ type: LoginEntity })
+  @ApiCreatedResponse({ type: LoginEntity })
   async confirmEmailByCode(@Body() { confirmationCode, email }: ConfirmationCodeDto) {
     return this.authService.confirmEmailByCode(confirmationCode, email);
   }
 
   @Post('get-email-code-for-password')
+  @ApiBody({ type: GetEmailCodeForPasswordDto })
   @ApiOkResponse({ type: MessageEntity })
   @ApiCreatedResponse({ type: MessageEntity })
   async getEmailCodeForPassword(@Body() { email }: GetEmailCodeForPasswordDto) {
@@ -99,6 +106,7 @@ export class AuthController {
   }
 
   @Post('verify-password-change-code')
+  @ApiBody({ type: PasswordChangeCodeDto })
   @ApiOkResponse({ type: MessageEntity })
   @ApiCreatedResponse({ type: MessageEntity })
   async verifyPasswordChangeCode(@Body() { confirmationCode, email }: PasswordChangeCodeDto) {
@@ -106,6 +114,7 @@ export class AuthController {
   }
 
   @Post('change-password')
+  @ApiBody({ type: ChangePasswordDto })
   @ApiOkResponse({ type: UserAuthEntity })
   @ApiCreatedResponse({ type: UserAuthEntity })
   async changePassword(@Body() { password1, password2, email }: ChangePasswordDto) {

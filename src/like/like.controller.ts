@@ -8,7 +8,7 @@ import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 const { like, id, activityId } = PATHS;
-const { OK, CREATED, BAD_REQUEST, NO_CONTENT } = HttpStatus;
+const { OK, CREATED, BAD_REQUEST } = HttpStatus;
 
 @ApiTags(like)
 @ApiBearerAuth('bearerAuth')
@@ -28,12 +28,12 @@ export class LikeController {
   }
 
   @Delete(`${id}/${activityId}`)
-  @ApiOkResponse({ schema: { type: 'null' }, description: 'No response body' })
+  @ApiOkResponse({ type: LikeResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete like' })
   @ApiParam({ name: 'id', description: 'Like identifier' })
   @ApiParam({ name: 'activityId', description: 'Activity identifier' })
-  @ApiResponse({ status: NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
+  @ApiResponse({ status: OK, type: LikeResponseDto, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   async deleteLike(@Param() { id }: ParamsId) {
     return await this.likeService.deleteLikeById(id);
