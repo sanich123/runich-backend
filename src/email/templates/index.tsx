@@ -191,15 +191,6 @@ const loginButtonStyle = {
   textDecoration: 'none',
 };
 
-const linkFallbackStyle = {
-  color: colors.accentDark,
-  fontFamily,
-  fontSize: '12px',
-  lineHeight: '18px',
-  overflowWrap: 'anywhere' as const,
-  wordBreak: 'break-all' as const,
-};
-
 export function ConfirmEmailAddressWithLinkAndCode({ text, loginUrl }: { text: string; loginUrl: string }) {
   return (
     <EmailLayout preview="Подтвердите адрес электронной почты в Runich">

@@ -41,7 +41,11 @@ describe('AuthController', () => {
     authService.confirmEmailByCode.mockResolvedValue(auth);
     authService.getEmailCodeForPassword.mockResolvedValue({ message: 'sent' });
     authService.verifyPasswordChangeCode.mockResolvedValue({ message: 'verified' });
-    authService.changePassword.mockResolvedValue({ userId: 'user-1', accessToken: 'access-token', refreshToken: 'refresh-token' });
+    authService.changePassword.mockResolvedValue({
+      userId: 'user-1',
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
     authService.deleteUser.mockResolvedValue(undefined);
 
     await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).resolves.toEqual({

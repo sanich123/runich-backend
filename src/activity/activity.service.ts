@@ -7,6 +7,7 @@ import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { chunkArray } from 'src/common/parsers/chunk-array';
 import { generateActivityTitle } from './activity-title';
+import { blurhashFromUrl } from 'src/common/images/blurhash';
 
 @Injectable()
 export class ActivityService {
@@ -27,6 +28,16 @@ export class ActivityService {
         activityDto.mapPhotoUrl = getMapBoxImage(activityDto?.locations);
       }
 
+      const photoVideoUrls = activityDto.photoVideoUrls
+        ? await Promise.all(
+            activityDto.photoVideoUrls.map(async (photo) => ({
+              ...photo,
+              blurhash: photo.blurhash ?? (await blurhashFromUrl(photo.thumbnail || photo.url)),
+            })),
+          )
+        : activityDto.photoVideoUrls;
+      const mapPhotoUrlBlurhash = activityDto.mapPhotoUrl ? await blurhashFromUrl(activityDto.mapPhotoUrl) : null;
+
       const data = {
         user_id: id,
         profileId: `${account?.id}`,
@@ -34,8 +45,8 @@ export class ActivityService {
         title: activityDto.title?.trim()
           ? activityDto.title
           : generateActivityTitle(activityDto.sport, activityDto.date),
-        photoVideoUrls: activityDto.photoVideoUrls,
-        mapPhotoUrlBlurhash: null,
+        photoVideoUrls,
+        mapPhotoUrlBlurhash,
       };
       const serializedData = JSON.stringify(data).replace(/([?&]access_token=)[^&"]+/gi, '$1[скрыт]');
       this.logger.log(`Структура активности перед сохранением: ${serializedData}`);
