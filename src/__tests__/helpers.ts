@@ -18,7 +18,3 @@ export async function expectInternalServerError(operation: Promise<unknown>) {
     loggerError.mockRestore();
   }
 }
-
-export function rejectWithDatabaseError(message = 'database unavailable') {
-  return Promise.reject(new Error(message));
-}

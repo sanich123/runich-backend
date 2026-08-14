@@ -14,10 +14,3 @@ export function unhandledRejectionHandler({ message, stack }: Error): void {
   void writeLogs(`${new Date().toISOString()} Необработанная ошибка Promise: ${message}\n${stack ?? ''}`);
   process.exitCode = 1;
 }
-
-export function processStdinHandler(data: Buffer) {
-  const logs = data.toString();
-  Logger.log(logs);
-  void writeLogs(`Process stdin ${logs}`);
-  process.stdout.write(logs);
-}
