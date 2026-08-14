@@ -2,7 +2,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ActivityDto } from './activity.dto';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { chunkArray } from 'src/common/parsers/chunk-array';
@@ -53,7 +53,7 @@ export class ActivityService {
 
       return await this.prisma.activity.create({ data });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -79,7 +79,7 @@ export class ActivityService {
       );
       return { success: true };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -103,7 +103,7 @@ export class ActivityService {
         },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -155,7 +155,7 @@ export class ActivityService {
       });
       return activity;
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -171,7 +171,7 @@ export class ActivityService {
       const slicedPhotos = flattedPhotos?.slice(0, Number(take));
       return { photos: slicedPhotos, isLastPage: flattedPhotos?.length <= slicedPhotos?.length };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -201,7 +201,7 @@ export class ActivityService {
       });
       return { activities, isLastPage: !activities.length };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -246,7 +246,7 @@ export class ActivityService {
         },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -293,7 +293,7 @@ export class ActivityService {
       });
       return { activities, isLastPage: !activities.length };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -301,7 +301,7 @@ export class ActivityService {
     try {
       return await this.prisma.activity.delete({ where: { id } });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -341,7 +341,7 @@ export class ActivityService {
       });
       return { profile: activity?.profile, email: activity?.users.email, mapPhotoUrl: activity?.mapPhotoUrl };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 }

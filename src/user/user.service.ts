@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { UserDto } from './user.dto';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
 
@@ -12,7 +12,7 @@ export class UserService {
     try {
       return await this.prisma.profile.findUnique({ where: { user_id: userId } });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -23,7 +23,7 @@ export class UserService {
         data: { ...accountDto, profilePhotoBlurhash, user_id: id },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -39,7 +39,7 @@ export class UserService {
         data: { ...accountDto, profilePhotoBlurhash, updatedAt: new Date() },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 }

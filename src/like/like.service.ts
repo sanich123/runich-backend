@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { LikeDto } from './like.dto';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
 
@@ -28,7 +28,7 @@ export class LikeService {
         },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -36,7 +36,7 @@ export class LikeService {
     try {
       return await this.prismaService.like.delete({ where: { id } });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -48,7 +48,7 @@ export class LikeService {
         include: { profile: true },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 }

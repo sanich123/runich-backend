@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { Filtering } from './filter.decorator';
 import { Prisma } from 'src/infrastructure/database/generated/prisma/client';
@@ -49,7 +49,7 @@ export class AccountService {
         size,
       };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -57,7 +57,7 @@ export class AccountService {
     try {
       return await this.prisma.profile.findUnique({ where: { user_id: id } });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -69,7 +69,7 @@ export class AccountService {
         create: { user_id: id },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 }

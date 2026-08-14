@@ -1,4 +1,9 @@
-import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { EmailService } from 'src/email/email.service';
@@ -73,6 +78,20 @@ describe('AuthService', () => {
       expect.any(Number),
       'access-token',
     );
+  });
+
+  it('returns service unavailable when confirmation email sending fails', async () => {
+    const dependencies = createDependencies();
+    dependencies.prisma.users.findUnique.mockResolvedValue(null);
+    dependencies.prisma.users.create.mockResolvedValue({ id: 'user-1' });
+    dependencies.email.sendConfirmationCode.mockRejectedValue(new Error('mail provider failed'));
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+    );
+
+    await expect(service.signUp('user@example.com', 'secret123')).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it('handles all login outcomes', async () => {

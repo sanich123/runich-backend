@@ -4,11 +4,12 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { JwtService } from '@nestjs/jwt';
 import { EmailService } from 'src/email/email.service';
 import { getRandomInt } from 'src/common/utils/utils';
@@ -34,7 +35,7 @@ export class AuthService {
       if (user && !user?.email_confirmed_at) {
         const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: emailAccessTokenExpiresIn });
         const confirmationCode = getRandomInt(1, 100000);
-        await this.emailService.sendConfirmationCode(email, confirmationCode, accessToken);
+        await this.sendConfirmationCode(email, confirmationCode, accessToken);
         return await this.prisma.users.update({
           where: { email },
           data: { confirmation_sent_at: new Date(), confirmation_token: `${confirmationCode}` },
@@ -54,11 +55,20 @@ export class AuthService {
           },
         });
         const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: emailAccessTokenExpiresIn });
-        await this.emailService.sendConfirmationCode(email, confirmationCode, accessToken);
+        await this.sendConfirmationCode(email, confirmationCode, accessToken);
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       }
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
+    }
+  }
+
+  private async sendConfirmationCode(email: string, confirmationCode: number, accessToken: string) {
+    try {
+      await this.emailService.sendConfirmationCode(email, confirmationCode, accessToken);
+    } catch (error) {
+      this.logger.error(`Не удалось отправить письмо с кодом подтверждения на ${email}`, error);
+      throw new ServiceUnavailableException('Сервис отправки электронной почты временно недоступен');
     }
   }
 
@@ -84,7 +94,7 @@ export class AuthService {
         };
       }
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -101,7 +111,7 @@ export class AuthService {
 
       return { message: 'Ссылка для входа в Runich отправлена на указанную почту' };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -128,7 +138,7 @@ export class AuthService {
       if (error instanceof Error && error.name === 'TokenExpiredError') {
         throw new UnauthorizedException('Срок действия токена истёк');
       }
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -168,7 +178,7 @@ export class AuthService {
       );
       return deletedUser;
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -190,7 +200,7 @@ export class AuthService {
         };
       }
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -214,7 +224,7 @@ export class AuthService {
 
       return { message: 'Код для смены email был выслан на указанную почту' };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -236,7 +246,7 @@ export class AuthService {
 
       return { message: 'Код для смены пароля подтверждён' };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -274,7 +284,7 @@ export class AuthService {
         userId: user.id,
       };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 }

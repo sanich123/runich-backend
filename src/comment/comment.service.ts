@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
@@ -47,7 +47,7 @@ export class CommentService {
         allCommentsLength,
       };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -55,7 +55,7 @@ export class CommentService {
     try {
       return await this.prisma.comment.count({ where: { activityId: id } });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -72,7 +72,7 @@ export class CommentService {
         },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -80,7 +80,7 @@ export class CommentService {
     try {
       return await this.prisma.comment.delete({ where: { id } });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -91,7 +91,7 @@ export class CommentService {
         data: { comment },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -113,7 +113,7 @@ export class CommentService {
       });
       return { profile: comment?.profile, email: comment?.profile.users.email, comment: comment?.comment };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -129,7 +129,7 @@ export class CommentService {
         },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -137,7 +137,7 @@ export class CommentService {
     try {
       return await this.prisma.commentLike.delete({ where: { id } });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -145,7 +145,7 @@ export class CommentService {
     try {
       return await this.prisma.commentLike.findMany({ where: { commentId: id }, select: { authorId: true, id: true } });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 }

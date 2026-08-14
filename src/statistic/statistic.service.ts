@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { reduceAllMetricsToYearCategoryMonths } from './utils';
 
 @Injectable()
@@ -26,7 +26,7 @@ export class StatisticService {
         }),
       );
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -77,7 +77,7 @@ export class StatisticService {
         },
       };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -99,7 +99,7 @@ export class StatisticService {
         },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -120,7 +120,7 @@ export class StatisticService {
       }
       return { isUserHasActivities: true, ...activities.reduce(reduceAllMetricsToYearCategoryMonths, {}) };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
   async getCurrentWeekStatistics(
@@ -143,7 +143,7 @@ export class StatisticService {
       const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(currentWeekActivities);
       return { totalDuration, totalDistance, totalItems };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -156,7 +156,7 @@ export class StatisticService {
       const { totalDistance, totalDuration, totalItems } = this.reduceMetricsFromActivities(activities);
       return { totalDistance, totalDuration, totalItems };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 

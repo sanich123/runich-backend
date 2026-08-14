@@ -13,7 +13,7 @@ export async function expectInternalServerError(operation: Promise<unknown>) {
   const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   try {
     await expect(operation).rejects.toBeInstanceOf(InternalServerErrorException);
-    expect(loggerError).toHaveBeenCalledWith('Ошибка операции с базой данных', expect.anything());
+    expect(loggerError).toHaveBeenCalledWith('Неожиданная ошибка при выполнении операции', expect.anything());
   } finally {
     loggerError.mockRestore();
   }
