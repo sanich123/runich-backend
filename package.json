@@ -27,7 +27,7 @@
     "format": "prettier --config .prettierrc --write './src/**/*.{ts,tsx}'",
     "typecheck": "tsc --noEmit",
     "madge": "madge --ts-config ./tsconfig.json --warning --circular --extensions ts --exclude 'generated' ./src",
-    "ts-prune": "ts-prune --ignore 'src/generated|\\.spec\\.ts$'",
+    "ts-prune": "ts-prune --ignore 'src/infrastructure|src/generated|prisma.config.ts|tsup.config.ts|\\.spec\\.ts$'",
     "depcheck": "depcheck"
   },
   "dependencies": {
