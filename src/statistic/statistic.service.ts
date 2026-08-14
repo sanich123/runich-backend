@@ -7,6 +7,14 @@ import { reduceAllMetricsToYearCategoryMonths } from './utils';
 export class StatisticService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
+  private static utcYearRange(year: number) {
+    return { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) };
+  }
+
+  private static utcMonthRange(year: number, month: number) {
+    return { gte: new Date(Date.UTC(year, month, 1)), lt: new Date(Date.UTC(year, month + 1, 1)) };
+  }
+
   async getYearsAndTypesOfActivities(id: string) {
     try {
       const activities = await this.prisma.activity.findMany({ where: { user_id: id }, select: { date: true } });
@@ -16,8 +24,7 @@ export class StatisticService {
           const types = await this.prisma.activity.findMany({
             where: {
               date: {
-                gte: new Date(year as number, 0, 1, 0, 0, 0),
-                lte: new Date(year as number, 11, 31, 23, 59, 59),
+                ...StatisticService.utcYearRange(year as number),
               },
             },
             select: { sport: true },
@@ -40,8 +47,7 @@ export class StatisticService {
         where: {
           user_id: userId,
           date: {
-            gte: new Date(+year, +month, 1, 0, 0, 0),
-            lte: new Date(+year, +month, 31, 23, 59, 59),
+            ...StatisticService.utcMonthRange(+year, +month),
           },
         },
         select: {
@@ -87,8 +93,7 @@ export class StatisticService {
         where: {
           user_id: userId,
           date: {
-            gte: new Date(+year, +month, 1, 0, 0, 0),
-            lte: new Date(+year, +month, 31, 23, 59, 59),
+            ...StatisticService.utcMonthRange(+year, +month),
           },
           sport: category,
         },
@@ -135,8 +140,12 @@ export class StatisticService {
         where: {
           user_id: userId,
           date: {
-            gte: new Date(firstDayDate.getFullYear(), firstDayDate.getMonth(), firstDayDate.getDate(), 0, 0, 0),
-            lte: new Date(lastDayDate.getFullYear(), lastDayDate.getMonth(), lastDayDate.getDate(), 23, 59, 59),
+            gte: new Date(
+              Date.UTC(firstDayDate.getUTCFullYear(), firstDayDate.getUTCMonth(), firstDayDate.getUTCDate()),
+            ),
+            lt: new Date(
+              Date.UTC(lastDayDate.getUTCFullYear(), lastDayDate.getUTCMonth(), lastDayDate.getUTCDate() + 1),
+            ),
           },
         },
       });

@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:latest
+    command: ['postgres', '-c', 'timezone=UTC']
     restart: always
     environment:
       POSTGRES_USER: runich
@@ -21,6 +22,7 @@ services:
     env_file:
       - .env
     environment:
+      TZ: UTC
       DATABASE_URL: postgresql://runich:HfG3%40fj0OfjvHdkf234ja@db:5432/runich_db?schema=public
     ports:
       - '3000:3000'
