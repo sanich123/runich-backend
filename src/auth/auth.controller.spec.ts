@@ -41,7 +41,7 @@ describe('AuthController', () => {
     authService.confirmEmailByCode.mockResolvedValue(auth);
     authService.getEmailCodeForPassword.mockResolvedValue({ message: 'sent' });
     authService.verifyPasswordChangeCode.mockResolvedValue({ message: 'verified' });
-    authService.changePassword.mockResolvedValue({ userId: 'user-1', accessToken: 'access-token' });
+    authService.changePassword.mockResolvedValue({ userId: 'user-1', accessToken: 'access-token', refreshToken: 'refresh-token' });
     authService.deleteUser.mockResolvedValue(undefined);
 
     await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).resolves.toEqual({
@@ -68,7 +68,7 @@ describe('AuthController', () => {
         password1: 'NewPassword1',
         password2: 'NewPassword1',
       }),
-    ).resolves.toEqual({ userId: 'user-1', accessToken: 'access-token' });
+    ).resolves.toEqual({ userId: 'user-1', accessToken: 'access-token', refreshToken: 'refresh-token' });
     await expect(controller.deleteUser({ userId: 'user-1' })).resolves.toBeUndefined();
     expect(authService.signUp).toHaveBeenCalledWith('user@example.com', 'secret123');
     expect(authService.sendLoginLinkByEmail).toHaveBeenCalledWith('user@example.com');

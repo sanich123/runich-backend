@@ -23,7 +23,7 @@ import {
   RegisterUserDto,
 } from './auth.dto';
 import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AppConfigEntity, AuthEntity, LoginEntity, MessageEntity, UserAuthEntity } from './auth.entity';
+import { AppConfigEntity, AuthEntity, LoginEntity, MessageEntity } from './auth.entity';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { UserIdParamsDto } from './auth.params.dto';
@@ -115,8 +115,8 @@ export class AuthController {
 
   @Post('change-password')
   @ApiBody({ type: ChangePasswordDto })
-  @ApiOkResponse({ type: UserAuthEntity })
-  @ApiCreatedResponse({ type: UserAuthEntity })
+  @ApiOkResponse({ type: LoginEntity })
+  @ApiCreatedResponse({ type: LoginEntity })
   async changePassword(@Body() { password1, password2, email }: ChangePasswordDto) {
     return this.authService.changePassword(password1, password2, email);
   }

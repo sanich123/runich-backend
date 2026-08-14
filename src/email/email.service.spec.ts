@@ -60,7 +60,7 @@ describe('EmailService', () => {
     mockEmailApi();
     await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).resolves.toBeUndefined();
     mockEmailApi();
-    await expect(service.sendLoginLink('bob@example.com', 'access-token', 'user-1')).resolves.toBeUndefined();
+    await expect(service.sendLoginLink('bob@example.com', 'access-token')).resolves.toBeUndefined();
   });
 
   it('propagates Gmail failures from every email type', async () => {
@@ -86,7 +86,7 @@ describe('EmailService', () => {
       'Ошибка Gmail API (код 500)',
     );
     mockEmailApi(500);
-    await expect(service.sendLoginLink('bob@example.com', 'access-token', 'user-1')).rejects.toThrow(
+    await expect(service.sendLoginLink('bob@example.com', 'access-token')).rejects.toThrow(
       'Ошибка Gmail API (код 500)',
     );
   });

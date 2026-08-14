@@ -200,7 +200,7 @@ const linkFallbackStyle = {
   wordBreak: 'break-all' as const,
 };
 
-export function ConfirmEmailAddressWithLinkAndCode({ text }: { text: string; accessToken: string }) {
+export function ConfirmEmailAddressWithLinkAndCode({ text, loginUrl }: { text: string; loginUrl: string }) {
   return (
     <EmailLayout preview="Подтвердите адрес электронной почты в Runich">
       <Text style={eyebrowStyle}>RUNICH • РЕГИСТРАЦИЯ</Text>
@@ -212,6 +212,14 @@ export function ConfirmEmailAddressWithLinkAndCode({ text }: { text: string; acc
       </Text>
       <Text style={codeLabelStyle}>Код подтверждения:</Text>
       <Text style={codeStyle}>{text}</Text>
+      <Section style={{ margin: '4px 0 26px', textAlign: 'center' }}>
+        <Link href={loginUrl} style={loginButtonStyle}>
+          Войти в Runich
+        </Link>
+      </Section>
+      <Text style={{ ...securityNoteStyle, marginTop: 0 }}>
+        Кнопка входа действительна 5 минут. После этого войдите обычным способом или запросите новую ссылку.
+      </Text>
       <Text style={securityNoteStyle}>Если вы не регистрировались в Runich, просто проигнорируйте это письмо.</Text>
     </EmailLayout>
   );
@@ -253,14 +261,8 @@ export function LoginByEmailLink({ loginUrl }: { loginUrl: string }) {
         </Link>
       </Section>
       <Text style={{ ...securityNoteStyle, marginTop: 0 }}>
-        Ссылка действительна 24 часа и предназначена только для вас. Не пересылайте это письмо другим людям.
+        Ссылка действительна 5 минут и предназначена только для вас. Не пересылайте это письмо другим людям.
       </Text>
-      <Text style={{ ...codeLabelStyle, marginTop: '24px' }}>
-        Если кнопка не открывается, скопируйте эту ссылку в браузер:
-      </Text>
-      <Link href={loginUrl} style={linkFallbackStyle}>
-        {loginUrl}
-      </Link>
       <Text style={{ ...securityNoteStyle, marginTop: '24px' }}>
         Если вы не запрашивали вход, просто проигнорируйте это письмо. Ваш аккаунт в безопасности.
       </Text>

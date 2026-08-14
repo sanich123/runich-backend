@@ -90,7 +90,11 @@ export class EmailService {
   async sendConfirmationCode(emailAddress: string, confirmationCode: number, accessToken: string) {
     try {
       const subject = 'Подтверждение электронной почты';
-      const html = await render(ConfirmEmailAddressWithLinkAndCode({ text: confirmationCode.toString(), accessToken }));
+      const loginUrl = new URL('https://stage--runich.netlify.app/sign-in');
+      loginUrl.searchParams.set('accessToken', accessToken);
+      const html = await render(
+        ConfirmEmailAddressWithLinkAndCode({ text: confirmationCode.toString(), loginUrl: loginUrl.toString() }),
+      );
       await sendEmail(emailAddress, subject, html);
     } catch (error) {
       this.logger.error(`Не удалось отправить письмо с кодом подтверждения на ${emailAddress}`, error);
@@ -109,11 +113,10 @@ export class EmailService {
     }
   }
 
-  async sendLoginLink(emailAddress: string, accessToken: string, userId: string) {
+  async sendLoginLink(emailAddress: string, accessToken: string) {
     try {
       const loginUrl = new URL('https://stage--runich.netlify.app/sign-in');
       loginUrl.searchParams.set('accessToken', accessToken);
-      loginUrl.searchParams.set('userId', userId);
 
       const subject = 'Вход в Runich по ссылке';
       const html = await render(LoginByEmailLink({ loginUrl: loginUrl.toString() }));

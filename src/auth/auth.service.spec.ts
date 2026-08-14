@@ -33,7 +33,7 @@ describe('AuthService', () => {
     );
 
     await expect(service.signUp('user@example.com', 'secret123')).resolves.toEqual({ id: 'user-1' });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '5m' });
     expect(dependencies.email.sendConfirmationCode).toHaveBeenCalledWith(
       'user@example.com',
       expect.any(Number),
@@ -65,6 +65,7 @@ describe('AuthService', () => {
         confirmation_token: expect.any(String),
         confirmation_sent_at: expect.any(Date),
         created_at: expect.any(Date),
+        profile: { create: {} },
       }),
     });
     expect(dependencies.email.sendConfirmationCode).toHaveBeenCalledWith(
@@ -105,7 +106,7 @@ describe('AuthService', () => {
       accessToken: 'access-token',
       refreshToken: 'access-token',
     });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '1d' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '30d' });
     expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '180d' });
     expect(dependencies.prisma.users.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
@@ -123,6 +124,16 @@ describe('AuthService', () => {
 
     dependencies.jwt.verify.mockReturnValue({});
     await expect(service.verifyToken('token')).rejects.toBeInstanceOf(UnauthorizedException);
+
+    const expiredTokenError = new Error('jwt expired');
+    expiredTokenError.name = 'TokenExpiredError';
+    dependencies.jwt.verify.mockImplementationOnce(() => {
+      throw expiredTokenError;
+    });
+    await expect(service.verifyToken('expired-token')).rejects.toMatchObject({
+      status: 401,
+      message: 'Срок действия токена истёк',
+    });
 
     dependencies.jwt.verify.mockReturnValue({ userId: 'missing' });
     dependencies.prisma.users.findUnique.mockResolvedValueOnce(null);
@@ -161,8 +172,8 @@ describe('AuthService', () => {
     });
 
     expect(dependencies.prisma.users.findUnique).toHaveBeenCalledWith({ where: { email: 'user@example.com' } });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '1d' });
-    expect(dependencies.email.sendLoginLink).toHaveBeenCalledWith('user@example.com', 'access-token', 'user-1');
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '5m' });
+    expect(dependencies.email.sendLoginLink).toHaveBeenCalledWith('user@example.com', 'access-token');
   });
 
   it('does not send a passwordless login link for an unknown user', async () => {
@@ -189,7 +200,7 @@ describe('AuthService', () => {
     dependencies.jwt.verify.mockReturnValue({ userId: 'user-1' });
 
     await expect(service.refreshAccessToken('refresh-token')).resolves.toEqual({ accessToken: 'access-token' });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '1d' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '30d' });
 
     dependencies.jwt.verify.mockReturnValue({});
     await expect(service.refreshAccessToken('refresh-token')).rejects.toBeInstanceOf(UnauthorizedException);
@@ -242,14 +253,14 @@ describe('AuthService', () => {
     const accessPayload = jwtService.decode<{ iat: number; exp: number }>(loginResult.accessToken);
     const refreshPayload = jwtService.decode<{ iat: number; exp: number }>(loginResult.refreshToken);
 
-    expect(accessPayload.exp - accessPayload.iat).toBe(86400);
+    expect(accessPayload.exp - accessPayload.iat).toBe(30 * 24 * 60 * 60);
     expect(refreshPayload.exp - refreshPayload.iat).toBe(180 * 24 * 60 * 60);
 
     const refreshedResult = await service.refreshAccessToken(loginResult.refreshToken);
     const refreshedAccessPayload = jwtService.decode<{ iat: number; exp: number }>(refreshedResult.accessToken);
 
     expect(refreshedResult).toEqual({ accessToken: expect.any(String) });
-    expect(refreshedAccessPayload.exp - refreshedAccessPayload.iat).toBe(86400);
+    expect(refreshedAccessPayload.exp - refreshedAccessPayload.iat).toBe(30 * 24 * 60 * 60);
   });
 
   it('sends a six-digit password change code and stores it for the user', async () => {
@@ -342,6 +353,7 @@ describe('AuthService', () => {
     await expect(service.changePassword('NewPassword1', 'NewPassword1', ' USER@EXAMPLE.COM ')).resolves.toEqual({
       userId: 'user-1',
       accessToken: 'access-token',
+      refreshToken: 'access-token',
     });
     expect(dependencies.prisma.users.findUnique).toHaveBeenCalledWith({ where: { email: 'user@example.com' } });
     expect(dependencies.prisma.users.update).toHaveBeenCalledWith({

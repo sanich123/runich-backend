@@ -12,7 +12,7 @@ import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
 import { JwtService } from '@nestjs/jwt';
 import { EmailService } from 'src/email/email.service';
 import { getRandomInt } from 'src/common/utils/utils';
-import { accessTokenExpiresIn, refreshTokenExpiresIn } from './jwt.constants';
+import { accessTokenExpiresIn, emailAccessTokenExpiresIn, refreshTokenExpiresIn } from './jwt.constants';
 
 @Injectable()
 export class AuthService {
@@ -32,7 +32,7 @@ export class AuthService {
       const user = await this.prisma.users.findUnique({ where: { email } });
 
       if (user && !user?.email_confirmed_at) {
-        const accessToken = this.jwtService.sign({ userId: user.id });
+        const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: emailAccessTokenExpiresIn });
         const confirmationCode = getRandomInt(1, 100000);
         await this.emailService.sendConfirmationCode(email, confirmationCode, accessToken);
         return await this.prisma.users.update({
@@ -50,9 +50,10 @@ export class AuthService {
             confirmation_token: `${confirmationCode}`,
             confirmation_sent_at: new Date(),
             created_at: new Date(),
+            profile: { create: {} },
           },
         });
-        const accessToken = this.jwtService.sign({ userId: user.id });
+        const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: emailAccessTokenExpiresIn });
         await this.emailService.sendConfirmationCode(email, confirmationCode, accessToken);
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       }
@@ -95,8 +96,8 @@ export class AuthService {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       }
 
-      const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn });
-      await this.emailService.sendLoginLink(normalizedEmail, accessToken, user.id);
+      const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: emailAccessTokenExpiresIn });
+      await this.emailService.sendLoginLink(normalizedEmail, accessToken);
 
       return { message: 'Ссылка для входа в Runich отправлена на указанную почту' };
     } catch (error) {
@@ -124,6 +125,9 @@ export class AuthService {
         refreshToken: this.jwtService.sign({ userId: user.id }, { expiresIn: refreshTokenExpiresIn }),
       };
     } catch (error) {
+      if (error instanceof Error && error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Срок действия токена истёк');
+      }
       prismaErrorHandling(error);
     }
   }
@@ -266,6 +270,7 @@ export class AuthService {
 
       return {
         accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
+        refreshToken: this.jwtService.sign({ userId: user.id }, { expiresIn: refreshTokenExpiresIn }),
         userId: user.id,
       };
     } catch (error) {
