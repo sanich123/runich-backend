@@ -12,6 +12,7 @@
   "scripts": {
     "start": "nest start",
     "dev": "tsx watch src/main.ts",
+    "db:up": "docker compose up -d db --wait && yarn prisma migrate deploy",
     "start:debug": "node --inspect --import tsx src/main.ts",
     "start:prod": "node dist/main.js",
     "start:migrate:prod": "prisma migrate deploy && node dist/main.js",
