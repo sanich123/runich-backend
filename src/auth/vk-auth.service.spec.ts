@@ -6,8 +6,13 @@ type RedirectResponse = { redirect: jest.Mock };
 
 describe('VkAuthService', () => {
   const prismaMock = { users: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() } };
-  const jwt = { sign: jest.fn(() => 'signed-state'), verify: jest.fn(() => ({ codeVerifier: 'verifier' })) } as unknown as JwtService;
-  const tokenService = { createAccessToken: jest.fn(() => 'app-token') } as unknown as ConstructorParameters<typeof VkAuthService>[2];
+  const jwt = {
+    sign: jest.fn(() => 'signed-state'),
+    verify: jest.fn(() => ({ codeVerifier: 'verifier' })),
+  } as unknown as JwtService;
+  const tokenService = { createAccessToken: jest.fn(() => 'app-token') } as unknown as ConstructorParameters<
+    typeof VkAuthService
+  >[2];
   let service: VkAuthService;
 
   beforeEach(() => {
@@ -15,7 +20,11 @@ describe('VkAuthService', () => {
     process.env.VK_CLIENT_ID = '123';
     process.env.VK_REDIRECT_URI = 'https://runich.example/auth/vk/callback';
     process.env.JWT_SECRET = 'secret';
-    service = new VkAuthService(prismaMock as unknown as ConstructorParameters<typeof VkAuthService>[0], jwt, tokenService);
+    service = new VkAuthService(
+      prismaMock as unknown as ConstructorParameters<typeof VkAuthService>[0],
+      jwt,
+      tokenService,
+    );
   });
 
   it('builds a VK ID authorization URL with S256 PKCE', () => {
@@ -36,17 +45,29 @@ describe('VkAuthService', () => {
     const response = { redirect: jest.fn() } as RedirectResponse;
     await service.callback('code', 'state', '', response as unknown as Parameters<typeof service.callback>[3]);
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('oauthError=VK+%D0%BD%D0%B5+%D0%B2%D0%B5%D1%80%D0%BD%D1%83%D0%BB+device_id'));
+    expect(response.redirect).toHaveBeenCalledWith(
+      expect.stringContaining('oauthError=VK+%D0%BD%D0%B5+%D0%B2%D0%B5%D1%80%D0%BD%D1%83%D0%BB+device_id'),
+    );
     fetchMock.mockRestore();
   });
 
   it('redirects VK token errors with the provider description', async () => {
-    jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'invalid code_verifier' }), { status: 400 }),
-    );
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'invalid code_verifier' }), {
+          status: 400,
+        }),
+      );
     const response = { redirect: jest.fn() } as RedirectResponse;
 
-    await service.callback('code', 'state', '', response as unknown as Parameters<typeof service.callback>[3], 'device-1');
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
 
     expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('oauthError=invalid+code_verifier'));
     expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('oauthErrorCode=invalid_grant'));
@@ -57,7 +78,9 @@ describe('VkAuthService', () => {
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: '42' })))
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ user: { user_id: '42', first_name: 'Ivan', last_name: 'Ivanov', city: 'Moscow' } })),
+        new Response(
+          JSON.stringify({ user: { user_id: '42', first_name: 'Ivan', last_name: 'Ivanov', city: 'Moscow' } }),
+        ),
       );
     (prismaMock.users.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
     (prismaMock.users.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
@@ -66,7 +89,13 @@ describe('VkAuthService', () => {
     });
     const response = { redirect: jest.fn() } as RedirectResponse;
 
-    await service.callback('code', 'state', '', response as unknown as Parameters<typeof service.callback>[3], 'device-1');
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
@@ -78,9 +107,11 @@ describe('VkAuthService', () => {
     expect(String(tokenRequest.body)).toContain('device_id=device-1');
     expect(String(tokenRequest.body)).toContain('code_verifier=verifier');
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.com/oauth2/user_info', expect.any(Object));
-    expect(prismaMock.users.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ email: 'vk_42@vk.local', auth_provider: 'VK' }),
-    }));
+    expect(prismaMock.users.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ email: 'vk_42@vk.local', auth_provider: 'VK' }),
+      }),
+    );
     expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('accessToken=app-token'));
   });
 });
