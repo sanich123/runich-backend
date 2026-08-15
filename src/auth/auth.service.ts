@@ -16,6 +16,7 @@ import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
 import { YandexAuthService } from './yandex-auth.service';
 import { AuthEmailService } from './auth-email.service';
+import { VkAuthService } from './vk-auth.service';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +24,7 @@ export class AuthService {
   private readonly tokenService: AuthTokenService;
   private readonly yandexAuthService: YandexAuthService;
   private readonly authEmailService: AuthEmailService;
+  private readonly vkAuthService: VkAuthService;
 
   constructor(
     @Inject(PrismaService)
@@ -37,10 +39,21 @@ export class AuthService {
     yandexAuthService?: YandexAuthService,
     @Inject(AuthEmailService)
     authEmailService?: AuthEmailService,
+    @Inject(VkAuthService)
+    vkAuthService?: VkAuthService,
   ) {
     this.tokenService = tokenService ?? new AuthTokenService(this.jwtService);
     this.yandexAuthService = yandexAuthService ?? new YandexAuthService(this.prisma, this.tokenService);
     this.authEmailService = authEmailService ?? new AuthEmailService(this.emailService);
+    this.vkAuthService = vkAuthService ?? new VkAuthService(this.prisma, this.jwtService, this.tokenService);
+  }
+
+  startVkAuth(response: Response) {
+    return this.vkAuthService.start(response);
+  }
+
+  handleVkCallback(code: string, state: string, error: string, response: Response) {
+    return this.vkAuthService.callback(code, state, error, response);
   }
 
   startYandexAuth(response: Response) {
@@ -175,9 +188,10 @@ export class AuthService {
       if (!user) {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       } else {
-        if (user.auth_provider === 'YANDEX') {
+        if (user.auth_provider === 'YANDEX' || user.auth_provider === 'VK') {
+          const providerName = user.auth_provider === 'VK' ? 'VK' : 'Яндекс';
           throw new UnauthorizedException(
-            'Вы зарегистрированы без пароля с помощью Яндекса. Авторизуйтесь через Яндекс',
+            `Вы зарегистрированы без пароля с помощью ${providerName}. Авторизуйтесь через ${providerName}`,
           );
         }
         const isPasswordValid = await bcrypt.compare(password, `${user.encrypted_password}`);

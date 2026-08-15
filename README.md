@@ -30,6 +30,10 @@ Create a local, ignored .env file:
     EMAIL_API_TIMEOUT=15000
     IS_DEV=true
     SEED_MOCK_DATA=false
+    VK_CLIENT_ID=your-vk-client-id
+    VK_CLIENT_SECRET=your-vk-client-secret
+    VK_REDIRECT_URI=http://localhost:3000/auth/vk/callback
+    VK_FRONTEND_REDIRECT_URI=http://localhost:5173/sign-in
 
 Initialize the database and start development mode:
 
@@ -58,6 +62,11 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | EMAIL_API_TIMEOUT               | Google OAuth and Gmail API timeout in milliseconds, default 15000 |
 | MAPBOX_ACCESS_TOKEN             | Mapbox Static Images API access token                             |
 | JWT_SECRET                      | Secret used to sign and verify JWT tokens                         |
+| VK_CLIENT_ID                    | VK ID application client ID                                       |
+| VK_CLIENT_SECRET                | VK ID application secret, server-side only                       |
+| VK_REDIRECT_URI                 | Registered VK OAuth callback URL                                  |
+| VK_FRONTEND_REDIRECT_URI        | Frontend URL receiving the application JWT                       |
+| VK_API_VERSION                  | Optional VK API version, defaults to 5.199                        |
 | IS_DEV                          | Development URL selection in email templates                      |
 | SEED_MOCK_DATA                  | Create mock users and activities at startup                       |
 | SEED_USER_EMAIL                 | Optional email used by Prisma seed                                |

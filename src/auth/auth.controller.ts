@@ -57,6 +57,21 @@ export class AuthController {
     return this.authService.handleYandexCallback(code, error, response);
   }
 
+  @Get('vk')
+  startVkAuth(@Res() response: Response) {
+    return this.authService.startVkAuth(response);
+  }
+
+  @Get('vk/callback')
+  vkCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') error: string,
+    @Res() response: Response,
+  ) {
+    return this.authService.handleVkCallback(code, state, error, response);
+  }
+
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
   @ApiBody({ type: RegisterUserDto })
@@ -65,8 +80,9 @@ export class AuthController {
   async registerUser(@Body() { email, password }: RegisterUserDto) {
     const user = await this.prismaService.users.findUnique({ where: { email } });
     if (user?.email_confirmed_at) {
-      if (user.auth_provider === 'YANDEX') {
-        throw new ConflictException('Пользователь зарегистрирован с помощью провайдера Яндекс');
+      if (user.auth_provider === 'YANDEX' || user.auth_provider === 'VK') {
+        const providerName = user.auth_provider === 'VK' ? 'VK' : 'Яндекс';
+        throw new ConflictException(`Пользователь зарегистрирован с помощью провайдера ${providerName}`);
       }
       throw new ConflictException('Под этим адресом почты уже зарегистрирован пользователь');
     }

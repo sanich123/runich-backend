@@ -9,6 +9,7 @@ import { EmailService } from 'src/email/email.service';
 import { AuthTokenService } from './auth-token.service';
 import { YandexAuthService } from './yandex-auth.service';
 import { AuthEmailService } from './auth-email.service';
+import { VkAuthService } from './vk-auth.service';
 
 @Module({
   imports: [
@@ -20,6 +21,14 @@ import { AuthEmailService } from './auth-email.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthTokenService, AuthEmailService, YandexAuthService, JwtStrategy, EmailService],
+  providers: [
+    AuthService,
+    AuthTokenService,
+    AuthEmailService,
+    YandexAuthService,
+    VkAuthService,
+    JwtStrategy,
+    EmailService,
+  ],
 })
 export class AuthModule {}
