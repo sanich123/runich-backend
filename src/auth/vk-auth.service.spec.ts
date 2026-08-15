@@ -31,11 +31,25 @@ describe('VkAuthService', () => {
     expect(url.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
 
-  it('requires device_id from the VK ID callback', async () => {
+  it('redirects to the frontend with a readable error when device_id is missing', async () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch');
-    await expect(service.callback('code', 'state', '', {} as unknown as Parameters<typeof service.callback>[3])).rejects.toThrow('device_id');
+    const response = { redirect: jest.fn() } as RedirectResponse;
+    await service.callback('code', 'state', '', response as unknown as Parameters<typeof service.callback>[3]);
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('oauthError=VK+%D0%BD%D0%B5+%D0%B2%D0%B5%D1%80%D0%BD%D1%83%D0%BB+device_id'));
     fetchMock.mockRestore();
+  });
+
+  it('redirects VK token errors with the provider description', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'invalid code_verifier' }), { status: 400 }),
+    );
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback('code', 'state', '', response as unknown as Parameters<typeof service.callback>[3], 'device-1');
+
+    expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('oauthError=invalid+code_verifier'));
+    expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('oauthErrorCode=invalid_grant'));
   });
 
   it('exchanges the code and creates a user from VK ID profile', async () => {

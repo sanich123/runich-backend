@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, createHash } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -43,20 +43,21 @@ export class VkAuthService {
   async callback(code: string, state: string, error: string, response: Response, deviceId?: string) {
     const frontendUrl = process.env.VK_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/sign-in';
     if (error || !code || !state) {
-      return response.redirect(`${frontendUrl}?oauthError=${encodeURIComponent(error || 'missing_code')}`);
+      return this.redirectError(response, frontendUrl, error || 'missing_code');
     }
 
     let statePayload: VkState;
     try {
       statePayload = this.jwtService.verify<VkState>(state);
     } catch {
-      throw new UnauthorizedException('Недействительный state VK');
+      return this.redirectError(response, frontendUrl, 'Недействительный state VK', 'invalid_state');
     }
-    if (!statePayload.codeVerifier) throw new UnauthorizedException('VK не вернул code verifier');
+    if (!statePayload.codeVerifier) return this.redirectError(response, frontendUrl, 'VK не вернул code verifier', 'missing_verifier');
 
-    if (!deviceId) throw new UnauthorizedException('VK не вернул device_id');
+    if (!deviceId) return this.redirectError(response, frontendUrl, 'VK не вернул device_id', 'missing_device_id');
 
-    const tokenResponse = await fetch(VK_TOKEN_URL, {
+    try {
+      const tokenResponse = await fetch(VK_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -67,22 +68,42 @@ export class VkAuthService {
         code,
         code_verifier: statePayload.codeVerifier,
       }),
-    });
-    if (!tokenResponse.ok) throw new UnauthorizedException('Не удалось получить токен VK');
-    const tokens = (await tokenResponse.json()) as { access_token?: string; user_id?: string | number; email?: string };
-    if (!tokens.access_token || !tokens.user_id) throw new UnauthorizedException('VK не вернул данные токена');
+      });
+      const tokenPayload = (await tokenResponse.json()) as {
+        access_token?: string;
+        user_id?: string | number;
+        email?: string;
+        error?: string;
+        error_description?: string;
+      };
+      if (!tokenResponse.ok) {
+        return this.redirectError(
+          response,
+          frontendUrl,
+          tokenPayload.error_description ?? 'VK не выдал токен',
+          tokenPayload.error ?? 'token_exchange_failed',
+        );
+      }
+      if (!tokenPayload.access_token || !tokenPayload.user_id) {
+        return this.redirectError(response, frontendUrl, 'VK не вернул данные токена', 'invalid_token_response');
+      }
+      const tokens = tokenPayload;
+      const accessToken = tokenPayload.access_token;
 
     const profileResponse = await fetch(VK_USER_INFO_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ access_token: tokens.access_token, client_id: process.env.VK_CLIENT_ID ?? '' }),
+      body: new URLSearchParams({ access_token: accessToken, client_id: process.env.VK_CLIENT_ID ?? '' }),
     });
-    if (!profileResponse.ok) throw new UnauthorizedException('Не удалось получить профиль VK');
-    const profilePayload = (await profileResponse.json()) as {
+      const profilePayload = (await profileResponse.json()) as {
       user?: { user_id?: string; first_name?: string; last_name?: string; avatar?: string; city?: string };
+        error?: string;
+        error_description?: string;
     };
+      if (!profileResponse.ok || !profilePayload.user) {
+        return this.redirectError(response, frontendUrl, profilePayload.error_description ?? 'VK не вернул профиль пользователя', profilePayload.error ?? 'profile_failed');
+      }
     const profile = profilePayload.user;
-    if (!profile) throw new UnauthorizedException('VK не вернул профиль пользователя');
 
     const profileId = profile.user_id ?? String(tokens.user_id);
     const email = tokens.email ?? `vk_${profileId}@vk.local`;
@@ -111,6 +132,18 @@ export class VkAuthService {
     await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
     const redirect = new URL(frontendUrl);
     redirect.searchParams.set('accessToken', this.tokenService.createAccessToken(user.id));
+    return response.redirect(redirect.toString());
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Неизвестная ошибка VK';
+      return this.redirectError(response, frontendUrl, message, 'vk_auth_failed');
+    }
+  }
+
+  private redirectError(response: Response, frontendUrl: string, message: string, code = 'oauth_error') {
+    const redirect = new URL(frontendUrl);
+    redirect.searchParams.set('oauthError', message);
+    redirect.searchParams.set('oauthProvider', 'vk');
+    redirect.searchParams.set('oauthErrorCode', code);
     return response.redirect(redirect.toString());
   }
 }
