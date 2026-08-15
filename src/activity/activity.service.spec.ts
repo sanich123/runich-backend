@@ -1,5 +1,6 @@
 import { ActivityService } from './activity.service';
 import { asyncMock, expectInternalServerError } from 'src/__tests__/helpers';
+import { jest } from '@jest/globals';
 
 const activityDto = {
   duration: 100,
@@ -26,6 +27,7 @@ describe('ActivityService', () => {
   const originalMapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
 
   afterEach(() => {
+    jest.restoreAllMocks();
     if (originalMapboxToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN;
     else process.env.MAPBOX_ACCESS_TOKEN = originalMapboxToken;
   });
@@ -35,6 +37,7 @@ describe('ActivityService', () => {
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
     prisma.activity.create.mockResolvedValue({ id: 'activity-1' });
+    jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
     await expect(service.createActivity({ ...activityDto }, 'user-1')).resolves.toEqual({ id: 'activity-1' });
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
