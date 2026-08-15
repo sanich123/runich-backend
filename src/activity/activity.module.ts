@@ -4,11 +4,12 @@ import { ActivityController } from './activity.controller';
 import { ActivityService } from './activity.service';
 import { FriendModule } from '../friend/friend.module';
 import { AccountModule } from '../account/account.module';
+import { ActivityPersistenceService } from './activity-persistence.service';
 
 @Module({
   imports: [PrismaModule, FriendModule, AccountModule],
   controllers: [ActivityController],
-  providers: [ActivityService],
+  providers: [ActivityService, ActivityPersistenceService],
   exports: [ActivityService],
 })
 export class ActivityModule {}

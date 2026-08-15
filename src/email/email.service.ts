@@ -1,18 +1,19 @@
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
 import { sendEmail } from 'src/common/email/nodemailer';
 import { render } from '@react-email/components';
-import {
-  NotificationEmail,
-  ConfirmEmailAddressWithLinkAndCode,
-  LoginByEmailLink,
-  PasswordChangeCode,
-} from './templates';
-import { EmailType } from './templates/types';
+import { ConfirmEmailAddressWithLinkAndCode, LoginByEmailLink, PasswordChangeCode } from './templates';
 import { Injectable, Logger } from '@nestjs/common';
+import { EmailNotificationService } from './email-notification.service';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
+
+  private readonly notificationService: EmailNotificationService;
+
+  constructor(notificationService?: EmailNotificationService) {
+    this.notificationService = notificationService ?? new EmailNotificationService();
+  }
 
   async sendLikeEmailNotification({
     profilePhoto,
@@ -23,6 +24,16 @@ export class EmailService {
     recepientSurname,
     mapPhotoUrl,
   }: LikeEmailDTO) {
+    return this.notificationService.sendLike({
+      profilePhoto,
+      name,
+      surname,
+      recepientEmail,
+      recepientName,
+      recepientSurname,
+      mapPhotoUrl,
+    });
+    /*
     const subject = 'Лайк к активности';
     const html = await render(
       NotificationEmail({
@@ -36,6 +47,7 @@ export class EmailService {
       }),
     );
     await sendEmail(recepientEmail, subject, html);
+    */
   }
 
   async sendCommentEmailNotification({
@@ -48,6 +60,17 @@ export class EmailService {
     recepientSurname,
     mapPhotoUrl,
   }: CommentEmailDTO) {
+    return this.notificationService.sendComment({
+      profilePhoto,
+      name,
+      surname,
+      comment,
+      recepientEmail,
+      recepientName,
+      recepientSurname,
+      mapPhotoUrl,
+    });
+    /*
     const subject = 'Новый комментарий к вашей активности';
     const html = await render(
       NotificationEmail({
@@ -62,6 +85,7 @@ export class EmailService {
       }),
     );
     await sendEmail(recepientEmail, subject, html);
+    */
   }
 
   async sendCommentLikeEmailNotification({
@@ -73,6 +97,16 @@ export class EmailService {
     recepientName,
     recepientSurname,
   }: CommentLikeEmailDTO) {
+    return this.notificationService.sendCommentLike({
+      profilePhoto,
+      name,
+      surname,
+      comment,
+      recepientEmail,
+      recepientName,
+      recepientSurname,
+    });
+    /*
     const subject = 'Лайк к вашему комментарию';
     const html = await render(
       NotificationEmail({
@@ -86,6 +120,7 @@ export class EmailService {
       }),
     );
     await sendEmail(recepientEmail, subject, html);
+    */
   }
   async sendConfirmationCode(emailAddress: string, confirmationCode: number, accessToken: string) {
     try {

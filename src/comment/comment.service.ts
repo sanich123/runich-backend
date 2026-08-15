@@ -4,6 +4,7 @@ import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
+import { CommentLikeService } from './comment-like.service';
 
 @Injectable()
 export class CommentService {
@@ -14,7 +15,13 @@ export class CommentService {
     private readonly accountService: AccountService,
     @Inject(ActivityService)
     private readonly activityService: ActivityService,
-  ) {}
+    @Inject(CommentLikeService)
+    commentLikeService?: CommentLikeService,
+  ) {
+    this.commentLikeService = commentLikeService ?? new CommentLikeService(this.prisma);
+  }
+
+  private readonly commentLikeService: CommentLikeService;
 
   async getCommentsbyActivityId(id: string, take = '10') {
     try {
@@ -121,13 +128,7 @@ export class CommentService {
     try {
       const account = await this.accountService.getAccountByUserId(authorId);
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
-      return await this.prisma.commentLike.create({
-        data: {
-          profileId: account.id,
-          authorId,
-          commentId,
-        },
-      });
+      return await this.commentLikeService.create({ profileId: account.id, authorId, commentId });
     } catch (error) {
       handleServiceError(error);
     }
@@ -135,7 +136,7 @@ export class CommentService {
 
   async deleteCommentLikeByLikeId(id: string) {
     try {
-      return await this.prisma.commentLike.delete({ where: { id } });
+      return await this.commentLikeService.delete(id);
     } catch (error) {
       handleServiceError(error);
     }
@@ -143,7 +144,7 @@ export class CommentService {
 
   async getCommentLikesLengthByCommentId(id: string) {
     try {
-      return await this.prisma.commentLike.findMany({ where: { commentId: id }, select: { authorId: true, id: true } });
+      return await this.commentLikeService.findByCommentId(id);
     } catch (error) {
       handleServiceError(error);
     }

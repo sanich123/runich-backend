@@ -4,7 +4,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -13,12 +12,17 @@ import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { JwtService } from '@nestjs/jwt';
 import { EmailService } from 'src/email/email.service';
 import { getRandomInt } from 'src/common/utils/utils';
-import { accessTokenExpiresIn, emailAccessTokenExpiresIn, refreshTokenExpiresIn } from './jwt.constants';
 import type { Response } from 'express';
+import { AuthTokenService } from './auth-token.service';
+import { YandexAuthService } from './yandex-auth.service';
+import { AuthEmailService } from './auth-email.service';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly tokenService: AuthTokenService;
+  private readonly yandexAuthService: YandexAuthService;
+  private readonly authEmailService: AuthEmailService;
 
   constructor(
     @Inject(PrismaService)
@@ -27,9 +31,21 @@ export class AuthService {
     private jwtService: JwtService,
     @Inject(EmailService)
     private emailService: EmailService,
-  ) {}
+    @Inject(AuthTokenService)
+    tokenService?: AuthTokenService,
+    @Inject(YandexAuthService)
+    yandexAuthService?: YandexAuthService,
+    @Inject(AuthEmailService)
+    authEmailService?: AuthEmailService,
+  ) {
+    this.tokenService = tokenService ?? new AuthTokenService(this.jwtService);
+    this.yandexAuthService = yandexAuthService ?? new YandexAuthService(this.prisma, this.tokenService);
+    this.authEmailService = authEmailService ?? new AuthEmailService(this.emailService);
+  }
 
   startYandexAuth(response: Response) {
+    return this.yandexAuthService.start(response);
+    /*
     const clientId = process.env.YANDEX_CLIENT_ID;
     const redirectUri = process.env.YANDEX_REDIRECT_URI;
     if (!clientId || !redirectUri) {
@@ -41,9 +57,12 @@ export class AuthService {
     url.searchParams.set('redirect_uri', redirectUri);
     url.searchParams.set('force_confirm', 'yes');
     return response.redirect(url.toString());
+    */
   }
 
   async handleYandexCallback(code: string, error: string, response: Response) {
+    return this.yandexAuthService.callback(code, error, response);
+    /*
     const frontendUrl = process.env.YANDEX_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/sign-in';
     if (error || !code)
       return response.redirect(`${frontendUrl}?oauthError=${encodeURIComponent(error || 'missing_code')}`);
@@ -103,10 +122,11 @@ export class AuthService {
       user = await this.prisma.users.update({ where: { id: user.id }, data: { email_confirmed_at: new Date() } });
     }
     await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
-    const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn });
+    const accessToken = this.tokenService.createAccessToken(user.id);
     const redirect = new URL(frontendUrl);
     redirect.searchParams.set('accessToken', accessToken);
     return response.redirect(redirect.toString());
+    */
   }
 
   async signUp(email: string, password: string) {
@@ -114,7 +134,7 @@ export class AuthService {
       const user = await this.prisma.users.findUnique({ where: { email } });
 
       if (user && !user?.email_confirmed_at) {
-        const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: emailAccessTokenExpiresIn });
+        const accessToken = this.tokenService.createEmailAccessToken(user.id);
         const confirmationCode = getRandomInt(1, 100000);
         await this.sendConfirmationCode(email, confirmationCode, accessToken);
         await this.prisma.users.update({
@@ -136,7 +156,7 @@ export class AuthService {
             profile: { create: {} },
           },
         });
-        const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: emailAccessTokenExpiresIn });
+        const accessToken = this.tokenService.createEmailAccessToken(user.id);
         await this.sendConfirmationCode(email, confirmationCode, accessToken);
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       }
@@ -146,12 +166,7 @@ export class AuthService {
   }
 
   private async sendConfirmationCode(email: string, confirmationCode: number, accessToken: string) {
-    try {
-      await this.emailService.sendConfirmationCode(email, confirmationCode, accessToken);
-    } catch (error) {
-      this.logger.error(`Не удалось отправить письмо с кодом подтверждения на ${email}`, error);
-      throw new ServiceUnavailableException('Сервис отправки электронной почты временно недоступен');
-    }
+    return this.authEmailService.sendConfirmationCode(email, confirmationCode, accessToken);
   }
 
   async login(email: string, password: string) {
@@ -176,8 +191,8 @@ export class AuthService {
         await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
         return {
           userId: user.id,
-          accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
-          refreshToken: this.jwtService.sign({ userId: user.id }, { expiresIn: refreshTokenExpiresIn }),
+          accessToken: this.tokenService.createAccessToken(user.id),
+          refreshToken: this.tokenService.createRefreshToken(user.id),
         };
       }
     } catch (error) {
@@ -193,8 +208,8 @@ export class AuthService {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       }
 
-      const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: emailAccessTokenExpiresIn });
-      await this.emailService.sendLoginLink(normalizedEmail, accessToken);
+      const accessToken = this.tokenService.createEmailAccessToken(user.id);
+      await this.authEmailService.sendLoginLink(normalizedEmail, accessToken);
 
       return { message: 'Ссылка для входа в Runich отправлена на указанную почту' };
     } catch (error) {
@@ -204,7 +219,7 @@ export class AuthService {
 
   async verifyToken(accessToken: string) {
     try {
-      const tokenInfo = await this.jwtService.verify(accessToken);
+      const tokenInfo = this.tokenService.verifyAccessToken(accessToken);
       if (!tokenInfo?.userId) {
         throw new UnauthorizedException('Информация о пользователе не была найдена');
       }
@@ -218,8 +233,8 @@ export class AuthService {
 
       return {
         userId: user.id,
-        accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
-        refreshToken: this.jwtService.sign({ userId: user.id }, { expiresIn: refreshTokenExpiresIn }),
+        accessToken: this.tokenService.createAccessToken(user.id),
+        refreshToken: this.tokenService.createRefreshToken(user.id),
       };
     } catch (error) {
       if (error instanceof Error && error.name === 'TokenExpiredError') {
@@ -230,21 +245,7 @@ export class AuthService {
   }
 
   async refreshAccessToken(refreshToken: string) {
-    try {
-      const tokenInfo = this.jwtService.verify<{ userId?: string }>(refreshToken);
-      if (typeof tokenInfo?.userId !== 'string' || !tokenInfo.userId) {
-        throw new UnauthorizedException('Информация о пользователе не была найдена');
-      }
-
-      return {
-        accessToken: this.jwtService.sign({ userId: tokenInfo.userId }, { expiresIn: accessTokenExpiresIn }),
-      };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      throw new UnauthorizedException('Недействительный refresh token');
-    }
+    return this.tokenService.refreshAccessToken(refreshToken);
   }
 
   async deleteUser(userId: string) {
@@ -282,8 +283,8 @@ export class AuthService {
         await this.prisma.users.update({ where: { email: normalizedEmail }, data: { email_confirmed_at: new Date() } });
         return {
           userId: user.id,
-          accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
-          refreshToken: this.jwtService.sign({ userId: user.id }, { expiresIn: refreshTokenExpiresIn }),
+          accessToken: this.tokenService.createAccessToken(user.id),
+          refreshToken: this.tokenService.createRefreshToken(user.id),
         };
       }
     } catch (error) {
@@ -300,7 +301,7 @@ export class AuthService {
       }
 
       const recoveryCode = getRandomInt(100000, 999999);
-      await this.emailService.sendPasswordChangeCode(normalizedEmail, recoveryCode);
+      await this.authEmailService.sendPasswordChangeCode(normalizedEmail, recoveryCode);
       await this.prisma.users.update({
         where: { id: user.id },
         data: {
@@ -366,8 +367,8 @@ export class AuthService {
       });
 
       return {
-        accessToken: this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn }),
-        refreshToken: this.jwtService.sign({ userId: user.id }, { expiresIn: refreshTokenExpiresIn }),
+        accessToken: this.tokenService.createAccessToken(user.id),
+        refreshToken: this.tokenService.createRefreshToken(user.id),
         userId: user.id,
       };
     } catch (error) {

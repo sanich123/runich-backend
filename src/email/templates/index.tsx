@@ -181,14 +181,16 @@ const codeStyle = {
 const loginButtonStyle = {
   backgroundColor: colors.accent,
   borderRadius: '14px',
+  boxSizing: 'border-box' as const,
   color: colors.surface,
-  display: 'inline-block',
+  display: 'block',
   fontFamily,
   fontSize: '16px',
   fontWeight: 700,
   lineHeight: '22px',
   padding: '14px 22px',
   textDecoration: 'none',
+  width: '100%',
 };
 
 export function ConfirmEmailAddressWithLinkAndCode({ text, loginUrl }: { text: string; loginUrl: string }) {

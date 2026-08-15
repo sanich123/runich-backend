@@ -2,18 +2,18 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { reduceAllMetricsToYearCategoryMonths } from './utils';
+import { ActivityMetricsService } from './activity-metrics.service';
 
 @Injectable()
 export class StatisticService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
-
-  private static utcYearRange(year: number) {
-    return { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) };
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ActivityMetricsService) metricsService?: ActivityMetricsService,
+  ) {
+    this.metricsService = metricsService ?? new ActivityMetricsService();
   }
 
-  private static utcMonthRange(year: number, month: number) {
-    return { gte: new Date(Date.UTC(year, month, 1)), lt: new Date(Date.UTC(year, month + 1, 1)) };
-  }
+  private readonly metricsService: ActivityMetricsService;
 
   async getYearsAndTypesOfActivities(id: string) {
     try {
@@ -24,7 +24,7 @@ export class StatisticService {
           const types = await this.prisma.activity.findMany({
             where: {
               date: {
-                ...StatisticService.utcYearRange(year as number),
+                ...this.metricsService.utcYearRange(year as number),
               },
             },
             select: { sport: true },
@@ -47,7 +47,7 @@ export class StatisticService {
         where: {
           user_id: userId,
           date: {
-            ...StatisticService.utcMonthRange(+year, +month),
+            ...this.metricsService.utcMonthRange(+year, +month),
           },
         },
         select: {
@@ -93,7 +93,7 @@ export class StatisticService {
         where: {
           user_id: userId,
           date: {
-            ...StatisticService.utcMonthRange(+year, +month),
+            ...this.metricsService.utcMonthRange(+year, +month),
           },
           sport: category,
         },
@@ -170,15 +170,6 @@ export class StatisticService {
   }
 
   reduceMetricsFromActivities(activities: { duration: number; distance: number }[]) {
-    const safeActivities = Array.isArray(activities) ? activities : [];
-    const { totalDistance, totalDuration } = safeActivities.reduce(
-      (acc, { distance, duration }) => {
-        acc.totalDistance += distance;
-        acc.totalDuration += duration;
-        return acc;
-      },
-      { totalDistance: 0, totalDuration: 0 },
-    );
-    return { totalDistance, totalDuration, totalItems: safeActivities.length };
+    return this.metricsService.reduceMetricsFromActivities(activities);
   }
 }

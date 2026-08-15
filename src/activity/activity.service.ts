@@ -8,6 +8,7 @@ import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { chunkArray } from 'src/common/parsers/chunk-array';
 import { generateActivityTitle } from './activity-title';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
+import { ActivityPersistenceService } from './activity-persistence.service';
 
 @Injectable()
 export class ActivityService {
@@ -18,7 +19,13 @@ export class ActivityService {
     private readonly prisma: PrismaService,
     @Inject(AccountService)
     private readonly accountService: AccountService,
-  ) {}
+    @Inject(ActivityPersistenceService)
+    persistenceService?: ActivityPersistenceService,
+  ) {
+    this.persistenceService = persistenceService ?? new ActivityPersistenceService(this.prisma);
+  }
+
+  private readonly persistenceService: ActivityPersistenceService;
 
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
@@ -51,7 +58,7 @@ export class ActivityService {
       const serializedData = JSON.stringify(data).replace(/([?&]access_token=)[^&"]+/gi, '$1[скрыт]');
       this.logger.log(`Структура активности перед сохранением: ${serializedData}`);
 
-      return await this.prisma.activity.create({ data });
+      return await this.persistenceService.create(data);
     } catch (error) {
       handleServiceError(error);
     }
@@ -74,7 +81,7 @@ export class ActivityService {
       await Promise.all(
         chunkedActivities.map(async (activities) => {
           this.logger.debug(`Writing activity batch (${activities.length} records)`);
-          return await this.prisma.activity.createMany({ data: activities, skipDuplicates: true });
+          return await this.persistenceService.createMany(activities);
         }),
       );
       return { success: true };
@@ -87,20 +94,17 @@ export class ActivityService {
     try {
       const { date, description, emotion, isPublic, photoVideoUrls, sport, title, distance, duration, speed } =
         activityDto;
-      return await this.prisma.activity.update({
-        where: { id },
-        data: {
-          title,
-          sport,
-          photoVideoUrls,
-          isPublic,
-          emotion,
-          date,
-          description,
-          distance,
-          duration,
-          speed,
-        },
+      return await this.persistenceService.update(id, {
+        title,
+        sport,
+        photoVideoUrls,
+        isPublic,
+        emotion,
+        date,
+        description,
+        distance,
+        duration,
+        speed,
       });
     } catch (error) {
       handleServiceError(error);
@@ -299,7 +303,7 @@ export class ActivityService {
 
   async deleteActivityById(id: string) {
     try {
-      return await this.prisma.activity.delete({ where: { id } });
+      return await this.persistenceService.delete(id);
     } catch (error) {
       handleServiceError(error);
     }
