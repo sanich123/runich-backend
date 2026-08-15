@@ -10,6 +10,7 @@ import { AuthTokenService } from './auth-token.service';
 import { YandexAuthService } from './yandex-auth.service';
 import { AuthEmailService } from './auth-email.service';
 import { VkAuthService } from './vk-auth.service';
+import { EmailNotificationService } from 'src/email/email-notification.service';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { VkAuthService } from './vk-auth.service';
     VkAuthService,
     JwtStrategy,
     EmailService,
+    EmailNotificationService,
   ],
 })
 export class AuthModule {}
