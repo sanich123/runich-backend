@@ -28,7 +28,11 @@ export class VkAuthService {
 
     const codeVerifier = randomBytes(32).toString('base64url');
     const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
-    const state = this.jwtService.sign({ codeVerifier } satisfies VkState, { expiresIn: '10m' });
+    // VK ID removes dots from the state value returned to the callback. Keep
+    // the signed state opaque and URL-safe so its JWT separators survive the
+    // provider round trip.
+    const signedState = this.jwtService.sign({ codeVerifier } satisfies VkState, { expiresIn: '10m' });
+    const state = Buffer.from(signedState).toString('base64url');
     const url = new URL(VK_AUTHORIZE_URL);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('client_id', clientId);
@@ -48,7 +52,8 @@ export class VkAuthService {
 
     let statePayload: VkState;
     try {
-      statePayload = this.jwtService.verify<VkState>(state);
+      const signedState = Buffer.from(state, 'base64url').toString('utf8');
+      statePayload = this.jwtService.verify<VkState>(signedState);
     } catch {
       return this.redirectError(response, frontendUrl, 'Недействительный state VK', 'invalid_state');
     }
