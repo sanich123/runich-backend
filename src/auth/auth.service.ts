@@ -117,10 +117,11 @@ export class AuthService {
         const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: emailAccessTokenExpiresIn });
         const confirmationCode = getRandomInt(1, 100000);
         await this.sendConfirmationCode(email, confirmationCode, accessToken);
-        return await this.prisma.users.update({
+        await this.prisma.users.update({
           where: { email },
           data: { confirmation_sent_at: new Date(), confirmation_token: `${confirmationCode}` },
         });
+        return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       } else {
         const hashedPassword = await bcrypt.hash(password, 10);
         const confirmationCode = getRandomInt(1, 100000);

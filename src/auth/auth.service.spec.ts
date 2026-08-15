@@ -37,7 +37,9 @@ describe('AuthService', () => {
       dependencies.email as unknown as EmailService,
     );
 
-    await expect(service.signUp('user@example.com', 'secret123')).resolves.toEqual({ id: 'user-1' });
+    await expect(service.signUp('user@example.com', 'secret123')).resolves.toEqual({
+      message: 'Код подтверждения был выслан на Вашу электронную почту',
+    });
     expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '5m' });
     expect(dependencies.email.sendConfirmationCode).toHaveBeenCalledWith(
       'user@example.com',
