@@ -10,6 +10,6 @@ import { ActivityPersistenceService } from './activity-persistence.service';
   imports: [PrismaModule, FriendModule, AccountModule],
   controllers: [ActivityController],
   providers: [ActivityService, ActivityPersistenceService],
-  exports: [ActivityService],
+  exports: [ActivityService, ActivityPersistenceService],
 })
 export class ActivityModule {}
