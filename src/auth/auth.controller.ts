@@ -67,9 +67,10 @@ export class AuthController {
     @Query('code') code: string,
     @Query('state') state: string,
     @Query('error') error: string,
+    @Query('device_id') deviceId: string,
     @Res() response: Response,
   ) {
-    return this.authService.handleVkCallback(code, state, error, response);
+    return this.authService.handleVkCallback(code, state, error, response, deviceId);
   }
 
   @HttpCode(HttpStatus.CREATED)
