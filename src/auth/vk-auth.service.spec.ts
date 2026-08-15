@@ -40,6 +40,18 @@ describe('VkAuthService', () => {
     expect(url.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
 
+  it('encodes the signed state without JWT separators for the VK round trip', () => {
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    service.start(response as unknown as Parameters<typeof service.start>[0]);
+
+    const url = new URL(String(response.redirect.mock.calls[0][0]));
+    const state = url.searchParams.get('state') ?? '';
+    expect(state).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(state).not.toContain('.');
+    expect(Buffer.from(state, 'base64url').toString('utf8')).toBe('signed-state');
+  });
+
   it('redirects to the frontend with a readable error when device_id is missing', async () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch');
     const response = { redirect: jest.fn() } as RedirectResponse;
@@ -52,13 +64,11 @@ describe('VkAuthService', () => {
   });
 
   it('redirects VK token errors with the provider description', async () => {
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'invalid code_verifier' }), {
-          status: 400,
-        }),
-      );
+    jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'invalid code_verifier' }), {
+        status: 400,
+      }),
+    );
     const response = { redirect: jest.fn() } as RedirectResponse;
 
     await service.callback(
