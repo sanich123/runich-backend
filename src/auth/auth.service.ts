@@ -14,6 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { EmailService } from 'src/email/email.service';
 import { getRandomInt } from 'src/common/utils/utils';
 import { accessTokenExpiresIn, emailAccessTokenExpiresIn, refreshTokenExpiresIn } from './jwt.constants';
+import type { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,86 @@ export class AuthService {
     @Inject(EmailService)
     private emailService: EmailService,
   ) {}
+
+  startYandexAuth(response: Response) {
+    const clientId = process.env.YANDEX_CLIENT_ID;
+    const redirectUri = process.env.YANDEX_REDIRECT_URI;
+    if (!clientId || !redirectUri) {
+      throw new ServiceUnavailableException('Авторизация через Яндекс не настроена');
+    }
+    const url = new URL('https://oauth.yandex.ru/authorize');
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('client_id', clientId);
+    url.searchParams.set('redirect_uri', redirectUri);
+    url.searchParams.set('force_confirm', 'yes');
+    return response.redirect(url.toString());
+  }
+
+  async handleYandexCallback(code: string, error: string, response: Response) {
+    const frontendUrl = process.env.YANDEX_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/sign-in';
+    if (error || !code)
+      return response.redirect(`${frontendUrl}?oauthError=${encodeURIComponent(error || 'missing_code')}`);
+
+    const tokenResponse = await fetch('https://oauth.yandex.ru/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        client_id: process.env.YANDEX_CLIENT_ID ?? '',
+        client_secret: process.env.YANDEX_CLIENT_SECRET ?? '',
+      }),
+    });
+    if (!tokenResponse.ok) throw new UnauthorizedException('Не удалось получить токен Яндекс');
+    const { access_token: yandexAccessToken } = (await tokenResponse.json()) as { access_token?: string };
+    if (!yandexAccessToken) throw new UnauthorizedException('Яндекс не вернул access token');
+
+    const userResponse = await fetch('https://login.yandex.ru/info?format=json', {
+      headers: { Authorization: `OAuth ${yandexAccessToken}` },
+    });
+    if (!userResponse.ok) throw new UnauthorizedException('Не удалось получить данные пользователя Яндекс');
+    const yandexUser = (await userResponse.json()) as {
+      id?: string;
+      default_email?: string;
+      login?: string;
+      first_name?: string;
+      last_name?: string;
+      real_name?: string;
+      city?: string;
+      default_avatar_id?: string;
+    };
+    const email = yandexUser.default_email ?? (yandexUser.login ? `${yandexUser.login}@yandex.ru` : undefined);
+    if (!email) throw new UnauthorizedException('Яндекс не вернул email пользователя');
+
+    let user = await this.prisma.users.findUnique({ where: { email } });
+    if (!user) {
+      const profileData = {
+        name: yandexUser.first_name ?? yandexUser.real_name?.split(' ')[0],
+        surname: yandexUser.last_name,
+        city: yandexUser.city,
+        profilePhoto: yandexUser.default_avatar_id
+          ? `https://avatars.yandex.net/get-yapic/${yandexUser.default_avatar_id}/islands-200`
+          : undefined,
+        email,
+      };
+      user = await this.prisma.users.create({
+        data: {
+          email,
+          auth_provider: 'YANDEX',
+          email_confirmed_at: new Date(),
+          created_at: new Date(),
+          profile: { create: profileData },
+        },
+      });
+    } else if (!user.email_confirmed_at) {
+      user = await this.prisma.users.update({ where: { id: user.id }, data: { email_confirmed_at: new Date() } });
+    }
+    await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
+    const accessToken = this.jwtService.sign({ userId: user.id }, { expiresIn: accessTokenExpiresIn });
+    const redirect = new URL(frontendUrl);
+    redirect.searchParams.set('accessToken', accessToken);
+    return response.redirect(redirect.toString());
+  }
 
   async signUp(email: string, password: string) {
     try {
@@ -78,6 +159,11 @@ export class AuthService {
       if (!user) {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       } else {
+        if (user.auth_provider === 'YANDEX') {
+          throw new UnauthorizedException(
+            'Вы зарегистрированы без пароля с помощью Яндекса. Авторизуйтесь через Яндекс',
+          );
+        }
         const isPasswordValid = await bcrypt.compare(password, `${user.encrypted_password}`);
         if (!isPasswordValid) {
           throw new UnauthorizedException('Неправильный пароль');

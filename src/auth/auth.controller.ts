@@ -10,7 +10,10 @@ import {
   Param,
   Post,
   UseGuards,
+  Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import {
   AccessTokenDto,
@@ -44,6 +47,16 @@ export class AuthController {
     return { appVersion: '4.0.0' };
   }
 
+  @Get('yandex')
+  startYandexAuth(@Res() response: Response) {
+    return this.authService.startYandexAuth(response);
+  }
+
+  @Get('yandex/callback')
+  async yandexCallback(@Query('code') code: string, @Query('error') error: string, @Res() response: Response) {
+    return this.authService.handleYandexCallback(code, error, response);
+  }
+
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
   @ApiBody({ type: RegisterUserDto })
@@ -52,6 +65,9 @@ export class AuthController {
   async registerUser(@Body() { email, password }: RegisterUserDto) {
     const user = await this.prismaService.users.findUnique({ where: { email } });
     if (user?.email_confirmed_at) {
+      if (user.auth_provider === 'YANDEX') {
+        throw new ConflictException('Пользователь зарегистрирован с помощью провайдера Яндекс');
+      }
       throw new ConflictException('Под этим адресом почты уже зарегистрирован пользователь');
     }
     return this.authService.signUp(email, password);

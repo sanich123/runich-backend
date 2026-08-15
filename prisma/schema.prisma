@@ -21,6 +21,7 @@ model Users {
   aud                         String?    @db.VarChar(255)
   role                        String?    @db.VarChar(255)
   email                       String     @unique @db.VarChar(255)
+  auth_provider               String?    @db.VarChar(32)
   encrypted_password          String?    @db.VarChar(255)
   email_confirmed_at          DateTime?  @db.Timestamptz(6)
   invited_at                  DateTime?  @db.Timestamptz(6)
