@@ -9,11 +9,13 @@ import {
   Inject,
   Param,
   Post,
+  Patch,
   UseGuards,
   Query,
   Res,
+  Req,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import {
   AccessTokenDto,
@@ -24,6 +26,7 @@ import {
   PasswordChangeCodeDto,
   RefreshTokenDto,
   RegisterUserDto,
+  SessionLocationDto,
 } from './auth.dto';
 import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AppConfigEntity, AuthEntity, LoginEntity, MessageEntity } from './auth.entity';
@@ -94,8 +97,8 @@ export class AuthController {
   @Post('login')
   @ApiBody({ type: RegisterUserDto })
   @ApiOkResponse({ type: LoginEntity })
-  async login(@Body() { email, password }: RegisterUserDto) {
-    return this.authService.login(email, password);
+  async login(@Body() { email, password }: RegisterUserDto, @Req() request?: Request) {
+    return request ? this.authService.login(email, password, this.getSessionMetadata(request)) : this.authService.login(email, password);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -110,8 +113,40 @@ export class AuthController {
   @Post('refresh')
   @ApiBody({ type: RefreshTokenDto })
   @ApiOkResponse({ type: AuthEntity })
-  async refresh(@Body() { refreshToken }: RefreshTokenDto) {
-    return this.authService.refreshAccessToken(refreshToken);
+  async refresh(@Body() { refreshToken }: RefreshTokenDto, @Req() request?: Request) {
+    return request
+      ? this.authService.refreshAccessToken(refreshToken, this.getSessionMetadata(request))
+      : this.authService.refreshAccessToken(refreshToken);
+  }
+
+  @Patch('session/location')
+  @UseGuards(JwtAuthGuard)
+  async updateSessionLocation(@Req() request: Request & { user?: { sessionId?: string } }, @Body() body: SessionLocationDto) {
+    const sessionId = request.user?.sessionId;
+    if (sessionId && body.latitude !== undefined && body.longitude !== undefined) {
+      await this.prismaService.userSession.update({
+        where: { id: sessionId },
+        data: { last_latitude: body.latitude, last_longitude: body.longitude, last_location_at: new Date() },
+      });
+    }
+    return { updated: Boolean(sessionId) };
+  }
+
+  private getSessionMetadata(request?: Request) {
+    return {
+      deviceId: request?.header('x-device-id'),
+      deviceName: request?.header('x-device-name'),
+      platform: request?.header('x-platform'),
+      model: request?.header('x-device-model'),
+      manufacturer: request?.header('x-device-manufacturer'),
+      osName: request?.header('x-device-os-name'),
+      osVersion: request?.header('x-device-os-version'),
+      deviceType: request?.header('x-device-type'),
+      appVersion: request?.header('x-app-version'),
+      appBuild: request?.header('x-app-build'),
+      userAgent: request?.header('user-agent'),
+      ipAddress: request?.ip,
+    };
   }
 
   @Post('verify')

@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -14,6 +15,7 @@ import { EmailService } from 'src/email/email.service';
 import { getRandomInt } from 'src/common/utils/utils';
 import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
+import type { SessionMetadata } from './auth-token.service';
 import { YandexAuthService } from './yandex-auth.service';
 import { AuthEmailService } from './auth-email.service';
 import { VkAuthService } from './vk-auth.service';
@@ -58,88 +60,10 @@ export class AuthService {
 
   startYandexAuth(response: Response) {
     return this.yandexAuthService.start(response);
-    /*
-    const clientId = process.env.YANDEX_CLIENT_ID;
-    const redirectUri = process.env.YANDEX_REDIRECT_URI;
-    if (!clientId || !redirectUri) {
-      throw new ServiceUnavailableException('Авторизация через Яндекс не настроена');
-    }
-    const url = new URL('https://oauth.yandex.ru/authorize');
-    url.searchParams.set('response_type', 'code');
-    url.searchParams.set('client_id', clientId);
-    url.searchParams.set('redirect_uri', redirectUri);
-    url.searchParams.set('force_confirm', 'yes');
-    return response.redirect(url.toString());
-    */
   }
 
   async handleYandexCallback(code: string, error: string, response: Response) {
     return this.yandexAuthService.callback(code, error, response);
-    /*
-    const frontendUrl = process.env.YANDEX_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/sign-in';
-    if (error || !code)
-      return response.redirect(`${frontendUrl}?oauthError=${encodeURIComponent(error || 'missing_code')}`);
-
-    const tokenResponse = await fetch('https://oauth.yandex.ru/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        client_id: process.env.YANDEX_CLIENT_ID ?? '',
-        client_secret: process.env.YANDEX_CLIENT_SECRET ?? '',
-      }),
-    });
-    if (!tokenResponse.ok) throw new UnauthorizedException('Не удалось получить токен Яндекс');
-    const { access_token: yandexAccessToken } = (await tokenResponse.json()) as { access_token?: string };
-    if (!yandexAccessToken) throw new UnauthorizedException('Яндекс не вернул access token');
-
-    const userResponse = await fetch('https://login.yandex.ru/info?format=json', {
-      headers: { Authorization: `OAuth ${yandexAccessToken}` },
-    });
-    if (!userResponse.ok) throw new UnauthorizedException('Не удалось получить данные пользователя Яндекс');
-    const yandexUser = (await userResponse.json()) as {
-      id?: string;
-      default_email?: string;
-      login?: string;
-      first_name?: string;
-      last_name?: string;
-      real_name?: string;
-      city?: string;
-      default_avatar_id?: string;
-    };
-    const email = yandexUser.default_email ?? (yandexUser.login ? `${yandexUser.login}@yandex.ru` : undefined);
-    if (!email) throw new UnauthorizedException('Яндекс не вернул email пользователя');
-
-    let user = await this.prisma.users.findUnique({ where: { email } });
-    if (!user) {
-      const profileData = {
-        name: yandexUser.first_name ?? yandexUser.real_name?.split(' ')[0],
-        surname: yandexUser.last_name,
-        city: yandexUser.city,
-        profilePhoto: yandexUser.default_avatar_id
-          ? `https://avatars.yandex.net/get-yapic/${yandexUser.default_avatar_id}/islands-200`
-          : undefined,
-        email,
-      };
-      user = await this.prisma.users.create({
-        data: {
-          email,
-          auth_provider: 'YANDEX',
-          email_confirmed_at: new Date(),
-          created_at: new Date(),
-          profile: { create: profileData },
-        },
-      });
-    } else if (!user.email_confirmed_at) {
-      user = await this.prisma.users.update({ where: { id: user.id }, data: { email_confirmed_at: new Date() } });
-    }
-    await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
-    const accessToken = this.tokenService.createAccessToken(user.id);
-    const redirect = new URL(frontendUrl);
-    redirect.searchParams.set('accessToken', accessToken);
-    return response.redirect(redirect.toString());
-    */
   }
 
   async signUp(email: string, password: string) {
@@ -149,7 +73,7 @@ export class AuthService {
       if (user && !user?.email_confirmed_at) {
         const accessToken = this.tokenService.createEmailAccessToken(user.id);
         const confirmationCode = getRandomInt(1, 100000);
-        await this.sendConfirmationCode(email, confirmationCode, accessToken);
+        await this.sendConfirmationEmail(email, confirmationCode, accessToken);
         await this.prisma.users.update({
           where: { email },
           data: { confirmation_sent_at: new Date(), confirmation_token: `${confirmationCode}` },
@@ -170,7 +94,7 @@ export class AuthService {
           },
         });
         const accessToken = this.tokenService.createEmailAccessToken(user.id);
-        await this.sendConfirmationCode(email, confirmationCode, accessToken);
+        await this.sendConfirmationEmail(email, confirmationCode, accessToken);
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       }
     } catch (error) {
@@ -182,7 +106,17 @@ export class AuthService {
     return this.authEmailService.sendConfirmationCode(email, confirmationCode, accessToken);
   }
 
-  async login(email: string, password: string) {
+  private async sendConfirmationEmail(email: string, confirmationCode: number, accessToken: string) {
+    try {
+      return await this.sendConfirmationCode(email, confirmationCode, accessToken);
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      this.logger.error(`Не удалось отправить письмо подтверждения на ${email}`, error);
+      throw new ServiceUnavailableException('Сервис отправки электронной почты временно недоступен');
+    }
+  }
+
+  async login(email: string, password: string, metadata: SessionMetadata = {}) {
     try {
       const user = await this.prisma.users.findUnique({ where: { email } });
       if (!user) {
@@ -203,11 +137,7 @@ export class AuthService {
           throw new UnauthorizedException('Данная учетная запись не подтверждена');
         }
         await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
-        return {
-          userId: user.id,
-          accessToken: this.tokenService.createAccessToken(user.id),
-          refreshToken: this.tokenService.createRefreshToken(user.id),
-        };
+        return this.tokenService.createSessionTokens(user.id, metadata);
       }
     } catch (error) {
       handleServiceError(error);
@@ -245,11 +175,7 @@ export class AuthService {
         await this.prisma.users.update({ where: { id: user.id }, data: { email_confirmed_at: new Date() } });
       }
 
-      return {
-        userId: user.id,
-        accessToken: this.tokenService.createAccessToken(user.id),
-        refreshToken: this.tokenService.createRefreshToken(user.id),
-      };
+      return this.tokenService.createSessionTokens(user.id);
     } catch (error) {
       if (error instanceof Error && error.name === 'TokenExpiredError') {
         throw new UnauthorizedException('Срок действия токена истёк');
@@ -258,8 +184,8 @@ export class AuthService {
     }
   }
 
-  async refreshAccessToken(refreshToken: string) {
-    return this.tokenService.refreshAccessToken(refreshToken);
+  async refreshAccessToken(refreshToken: string, metadata: SessionMetadata = {}) {
+    return this.tokenService.refreshAccessToken(refreshToken, metadata);
   }
 
   async deleteUser(userId: string) {
@@ -295,11 +221,7 @@ export class AuthService {
         throw new BadRequestException('Код подтверждения не соответствует высланному');
       } else {
         await this.prisma.users.update({ where: { email: normalizedEmail }, data: { email_confirmed_at: new Date() } });
-        return {
-          userId: user.id,
-          accessToken: this.tokenService.createAccessToken(user.id),
-          refreshToken: this.tokenService.createRefreshToken(user.id),
-        };
+        return this.tokenService.createSessionTokens(user.id);
       }
     } catch (error) {
       handleServiceError(error);
@@ -380,11 +302,7 @@ export class AuthService {
         },
       });
 
-      return {
-        accessToken: this.tokenService.createAccessToken(user.id),
-        refreshToken: this.tokenService.createRefreshToken(user.id),
-        userId: user.id,
-      };
+      return this.tokenService.createSessionTokens(user.id);
     } catch (error) {
       handleServiceError(error);
     }

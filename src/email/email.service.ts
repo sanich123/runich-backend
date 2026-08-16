@@ -33,21 +33,6 @@ export class EmailService {
       recepientSurname,
       mapPhotoUrl,
     });
-    /*
-    const subject = 'Лайк к активности';
-    const html = await render(
-      NotificationEmail({
-        type: EmailType.like,
-        mapPhotoUrl,
-        name,
-        surname,
-        profilePhoto,
-        recepientName,
-        recepientSurname,
-      }),
-    );
-    await sendEmail(recepientEmail, subject, html);
-    */
   }
 
   async sendCommentEmailNotification({
@@ -70,22 +55,6 @@ export class EmailService {
       recepientSurname,
       mapPhotoUrl,
     });
-    /*
-    const subject = 'Новый комментарий к вашей активности';
-    const html = await render(
-      NotificationEmail({
-        type: EmailType.comment,
-        mapPhotoUrl,
-        comment,
-        name,
-        surname,
-        profilePhoto,
-        recepientName,
-        recepientSurname,
-      }),
-    );
-    await sendEmail(recepientEmail, subject, html);
-    */
   }
 
   async sendCommentLikeEmailNotification({
@@ -106,21 +75,6 @@ export class EmailService {
       recepientName,
       recepientSurname,
     });
-    /*
-    const subject = 'Лайк к вашему комментарию';
-    const html = await render(
-      NotificationEmail({
-        type: EmailType.commentLike,
-        comment,
-        name,
-        surname,
-        profilePhoto,
-        recepientName,
-        recepientSurname,
-      }),
-    );
-    await sendEmail(recepientEmail, subject, html);
-    */
   }
   async sendConfirmationCode(emailAddress: string, confirmationCode: number, accessToken: string) {
     try {

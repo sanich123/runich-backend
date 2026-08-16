@@ -309,18 +309,6 @@ export class ActivityService {
     }
   }
 
-  // async getPhotoVideoUrlsWithBlurhash(photoVideoUrls) {
-  //   return await Promise.all(
-  //     photoVideoUrls.map(async (photoVideoUrl) => {
-  //       const blurhash = await blurhashFromURL(photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url, {
-  //         size: 300,
-  //       });
-  //       photoVideoUrl.blurhash = blurhash.encoded;
-  //       return photoVideoUrl;
-  //     }),
-  //   );
-  // }
-
   async getActivityWithEmailData(activityId: string) {
     try {
       const activity = await this.prisma.activity.findUnique({
