@@ -40,7 +40,23 @@ export class AuthTokenService {
     const sessionId = randomUUID();
     const refreshToken = this.createRefreshToken(userId, sessionId);
     await this.prisma.userSession.create({
-      data: { id: sessionId, user_id: userId, refresh_hash: hashToken(refreshToken), device_id: metadata.deviceId ?? 'unknown', device_name: metadata.deviceName, platform: metadata.platform, device_model: metadata.model, manufacturer: metadata.manufacturer, os_name: metadata.osName, os_version: metadata.osVersion, device_type: metadata.deviceType, app_version: metadata.appVersion, app_build: metadata.appBuild, user_agent: metadata.userAgent, ip_address: metadata.ipAddress },
+      data: {
+        id: sessionId,
+        user_id: userId,
+        refresh_hash: hashToken(refreshToken),
+        device_id: metadata.deviceId ?? 'unknown',
+        device_name: metadata.deviceName,
+        platform: metadata.platform,
+        device_model: metadata.model,
+        manufacturer: metadata.manufacturer,
+        os_name: metadata.osName,
+        os_version: metadata.osVersion,
+        device_type: metadata.deviceType,
+        app_version: metadata.appVersion,
+        app_build: metadata.appBuild,
+        user_agent: metadata.userAgent,
+        ip_address: metadata.ipAddress,
+      },
     });
     return { userId, accessToken: this.createAccessToken(userId, sessionId), refreshToken };
   }
@@ -51,9 +67,25 @@ export class AuthTokenService {
       if (!tokenInfo.userId) throw new UnauthorizedException('Информация о пользователе не была найдена');
       if (!tokenInfo.sessionId || !this.prisma) return { accessToken: this.createAccessToken(tokenInfo.userId) };
       const session = await this.prisma.userSession.findUnique({ where: { id: tokenInfo.sessionId } });
-      if (!session || session.revoked_at || session.refresh_hash !== hashToken(refreshToken)) throw new UnauthorizedException('Сессия завершена');
+      if (!session || session.revoked_at || session.refresh_hash !== hashToken(refreshToken))
+        throw new UnauthorizedException('Сессия завершена');
       const nextRefreshToken = this.createRefreshToken(tokenInfo.userId, session.id);
-      await this.prisma.userSession.update({ where: { id: session.id }, data: { refresh_hash: hashToken(nextRefreshToken), last_seen_at: new Date(), ip_address: metadata.ipAddress ?? session.ip_address, user_agent: metadata.userAgent ?? session.user_agent, device_model: metadata.model ?? session.device_model, manufacturer: metadata.manufacturer ?? session.manufacturer, os_name: metadata.osName ?? session.os_name, os_version: metadata.osVersion ?? session.os_version, device_type: metadata.deviceType ?? session.device_type, app_version: metadata.appVersion ?? session.app_version, app_build: metadata.appBuild ?? session.app_build } });
+      await this.prisma.userSession.update({
+        where: { id: session.id },
+        data: {
+          refresh_hash: hashToken(nextRefreshToken),
+          last_seen_at: new Date(),
+          ip_address: metadata.ipAddress ?? session.ip_address,
+          user_agent: metadata.userAgent ?? session.user_agent,
+          device_model: metadata.model ?? session.device_model,
+          manufacturer: metadata.manufacturer ?? session.manufacturer,
+          os_name: metadata.osName ?? session.os_name,
+          os_version: metadata.osVersion ?? session.os_version,
+          device_type: metadata.deviceType ?? session.device_type,
+          app_version: metadata.appVersion ?? session.app_version,
+          app_build: metadata.appBuild ?? session.app_build,
+        },
+      });
       return { accessToken: this.createAccessToken(tokenInfo.userId, session.id), refreshToken: nextRefreshToken };
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;

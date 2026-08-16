@@ -98,7 +98,9 @@ export class AuthController {
   @ApiBody({ type: RegisterUserDto })
   @ApiOkResponse({ type: LoginEntity })
   async login(@Body() { email, password }: RegisterUserDto, @Req() request?: Request) {
-    return request ? this.authService.login(email, password, this.getSessionMetadata(request)) : this.authService.login(email, password);
+    return request
+      ? this.authService.login(email, password, this.getSessionMetadata(request))
+      : this.authService.login(email, password);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -121,7 +123,10 @@ export class AuthController {
 
   @Patch('session/location')
   @UseGuards(JwtAuthGuard)
-  async updateSessionLocation(@Req() request: Request & { user?: { sessionId?: string } }, @Body() body: SessionLocationDto) {
+  async updateSessionLocation(
+    @Req() request: Request & { user?: { sessionId?: string } },
+    @Body() body: SessionLocationDto,
+  ) {
     const sessionId = request.user?.sessionId;
     if (sessionId && body.latitude !== undefined && body.longitude !== undefined) {
       await this.prismaService.userSession.update({
