@@ -50,7 +50,9 @@ async function googleAccessToken(): Promise<string> {
   return accessToken;
 }
 
-async function rawEmail(email: string, subject: string, html: string): Promise<string> {
+type EmailAttachment = { filename: string; content: Buffer; contentType?: string };
+
+async function rawEmail(email: string, subject: string, html: string, extraAttachments: EmailAttachment[] = []): Promise<string> {
   const userEmail = requiredEnvironmentVariable('USER_EMAIL');
   const logoPath = join(process.cwd(), 'assets/images/runich-logo.png');
   if (!existsSync(logoPath)) {
@@ -70,6 +72,7 @@ async function rawEmail(email: string, subject: string, html: string): Promise<s
         cid: RUNICH_LOGO_CID,
         contentType: 'image/png',
       },
+      ...extraAttachments,
     ],
   });
 
@@ -79,9 +82,9 @@ async function rawEmail(email: string, subject: string, html: string): Promise<s
   return result.message.toString('base64url');
 }
 
-export const sendEmail = async (email: string, subject: string, html: string) => {
+export const sendEmail = async (email: string, subject: string, html: string, attachments: EmailAttachment[] = []) => {
   try {
-    const [accessToken, raw] = await Promise.all([googleAccessToken(), rawEmail(email, subject, html)]);
+    const [accessToken, raw] = await Promise.all([googleAccessToken(), rawEmail(email, subject, html, attachments)]);
     const response = await fetch(GMAIL_SEND_URL, {
       method: 'POST',
       headers: {

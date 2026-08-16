@@ -1,4 +1,5 @@
-import { Body, Controller, Inject, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Inject, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { EmailService } from './email.service';
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
@@ -39,5 +40,15 @@ export class EmailController {
   @ApiResponse({ status: 201, schema: { type: 'null' }, description: 'No response body' })
   async sendCommentLikeEmailNotification(@Body() commentLikeDto: CommentLikeEmailDTO) {
     return await this.emailService.sendCommentLikeEmailNotification(commentLikeDto);
+  }
+
+  @Post('feedback')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('photo'))
+  async sendFeedback(
+    @Body() body: { kind: string; userId: string; text: string; deviceInfo: string },
+    @UploadedFile() photo?: Express.Multer.File,
+  ) {
+    return await this.emailService.sendFeedback(body.kind, body.userId, body.text, body.deviceInfo, photo);
   }
 }

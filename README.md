@@ -33,7 +33,7 @@ Create a local, ignored .env file:
     VK_CLIENT_ID=your-vk-client-id
     VK_CLIENT_SECRET=your-vk-client-secret
     VK_REDIRECT_URI=http://localhost:3000/auth/vk/callback
-    VK_FRONTEND_REDIRECT_URI=http://localhost:5173/sign-in
+    VK_FRONTEND_REDIRECT_URI=http://localhost:5173/login-from-url
 
 Initialize the database and start development mode:
 

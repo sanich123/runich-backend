@@ -25,7 +25,7 @@ export class YandexAuthService {
   }
 
   async callback(code: string, error: string, response: Response) {
-    const frontendUrl = process.env.YANDEX_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/sign-in';
+    const frontendUrl = process.env.YANDEX_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/login-from-url';
     if (error || !code) {
       return response.redirect(`${frontendUrl}?oauthError=${encodeURIComponent(error || 'missing_code')}`);
     }

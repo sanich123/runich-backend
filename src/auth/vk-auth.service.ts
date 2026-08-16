@@ -45,7 +45,7 @@ export class VkAuthService {
   }
 
   async callback(code: string, state: string, error: string, response: Response, deviceId?: string) {
-    const frontendUrl = process.env.VK_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/sign-in';
+    const frontendUrl = process.env.VK_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/login-from-url';
     if (error || !code || !state) {
       return this.redirectError(response, frontendUrl, error || 'missing_code');
     }

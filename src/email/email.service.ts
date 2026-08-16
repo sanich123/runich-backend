@@ -79,7 +79,7 @@ export class EmailService {
   async sendConfirmationCode(emailAddress: string, confirmationCode: number, accessToken: string) {
     try {
       const subject = 'Подтверждение электронной почты';
-      const loginUrl = new URL('https://stage--runich.netlify.app/sign-in');
+      const loginUrl = new URL('https://stage--runich.netlify.app/login-from-url');
       loginUrl.searchParams.set('accessToken', accessToken);
       const html = await render(
         ConfirmEmailAddressWithLinkAndCode({ text: confirmationCode.toString(), loginUrl: loginUrl.toString() }),
@@ -104,7 +104,7 @@ export class EmailService {
 
   async sendLoginLink(emailAddress: string, accessToken: string) {
     try {
-      const loginUrl = new URL('https://stage--runich.netlify.app/sign-in');
+      const loginUrl = new URL('https://stage--runich.netlify.app/login-from-url');
       loginUrl.searchParams.set('accessToken', accessToken);
 
       const subject = 'Вход в Runich по ссылке';
@@ -114,5 +114,12 @@ export class EmailService {
       this.logger.error(`Не удалось отправить ссылку для входа на ${emailAddress}`, error);
       throw error;
     }
+  }
+
+  async sendFeedback(kind: string, userId: string, text: string, deviceInfo: string, photo?: Express.Multer.File) {
+    const labels: Record<string, string> = { bug: 'Поведать о баге', thanks: 'Поблагодарить разработчика', feature: 'Хочу фичу' };
+    const subject = `[Runich] ${labels[kind] ?? 'Обратная связь'} от ${userId}`;
+    const html = `<h2>${labels[kind] ?? 'Обратная связь'}</h2><p><b>userId:</b> ${userId}</p><p><b>Устройство:</b><br>${deviceInfo}</p><p>${text.replaceAll('\n', '<br>')}</p>`;
+    await sendEmail('aovoronin.piano@gmail.com', subject, html, photo ? [{ filename: photo.originalname, content: photo.buffer, contentType: photo.mimetype }] : []);
   }
 }
