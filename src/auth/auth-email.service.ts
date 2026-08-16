@@ -1,11 +1,11 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class AuthEmailService {
   private readonly logger = new Logger(AuthEmailService.name);
 
-  constructor(private readonly emailService: EmailService) {}
+  constructor(@Inject(EmailService) private readonly emailService: EmailService) {}
 
   async sendConfirmationCode(email: string, code: number, accessToken: string) {
     try {

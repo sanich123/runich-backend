@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
@@ -6,8 +6,8 @@ import { AuthTokenService } from './auth-token.service';
 @Injectable()
 export class YandexAuthService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly tokenService: AuthTokenService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuthTokenService) private readonly tokenService: AuthTokenService,
   ) {}
 
   start(response: Response) {

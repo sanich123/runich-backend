@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, createHash } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -14,9 +14,9 @@ const VK_USER_INFO_URL = 'https://id.vk.com/oauth2/user_info';
 @Injectable()
 export class VkAuthService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
-    private readonly tokenService: AuthTokenService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(JwtService) private readonly jwtService: JwtService,
+    @Inject(AuthTokenService) private readonly tokenService: AuthTokenService,
   ) {}
 
   start(response: Response) {

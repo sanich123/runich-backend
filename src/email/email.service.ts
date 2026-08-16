@@ -2,7 +2,7 @@ import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto'
 import { sendEmail } from 'src/common/email/nodemailer';
 import { render } from '@react-email/components';
 import { ConfirmEmailAddressWithLinkAndCode, LoginByEmailLink, PasswordChangeCode } from './templates';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EmailNotificationService } from './email-notification.service';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class EmailService {
 
   private readonly notificationService: EmailNotificationService;
 
-  constructor(notificationService?: EmailNotificationService) {
+  constructor(@Inject(EmailNotificationService) notificationService?: EmailNotificationService) {
     this.notificationService = notificationService ?? new EmailNotificationService();
   }
 
