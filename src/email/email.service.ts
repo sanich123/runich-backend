@@ -117,9 +117,18 @@ export class EmailService {
   }
 
   async sendFeedback(kind: string, userId: string, text: string, deviceInfo: string, photo?: Express.Multer.File) {
-    const labels: Record<string, string> = { bug: 'Поведать о баге', thanks: 'Поблагодарить разработчика', feature: 'Хочу фичу' };
+    const labels: Record<string, string> = {
+      bug: 'Поведать о баге',
+      thanks: 'Поблагодарить разработчика',
+      feature: 'Хочу фичу',
+    };
     const subject = `[Runich] ${labels[kind] ?? 'Обратная связь'} от ${userId}`;
     const html = `<h2>${labels[kind] ?? 'Обратная связь'}</h2><p><b>userId:</b> ${userId}</p><p><b>Устройство:</b><br>${deviceInfo}</p><p>${text.replaceAll('\n', '<br>')}</p>`;
-    await sendEmail('aovoronin.piano@gmail.com', subject, html, photo ? [{ filename: photo.originalname, content: photo.buffer, contentType: photo.mimetype }] : []);
+    await sendEmail(
+      'aovoronin.piano@gmail.com',
+      subject,
+      html,
+      photo ? [{ filename: photo.originalname, content: photo.buffer, contentType: photo.mimetype }] : [],
+    );
   }
 }

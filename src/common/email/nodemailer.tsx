@@ -52,7 +52,12 @@ async function googleAccessToken(): Promise<string> {
 
 type EmailAttachment = { filename: string; content: Buffer; contentType?: string };
 
-async function rawEmail(email: string, subject: string, html: string, extraAttachments: EmailAttachment[] = []): Promise<string> {
+async function rawEmail(
+  email: string,
+  subject: string,
+  html: string,
+  extraAttachments: EmailAttachment[] = [],
+): Promise<string> {
   const userEmail = requiredEnvironmentVariable('USER_EMAIL');
   const logoPath = join(process.cwd(), 'assets/images/runich-logo.png');
   if (!existsSync(logoPath)) {
