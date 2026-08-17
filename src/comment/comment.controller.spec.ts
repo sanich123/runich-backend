@@ -37,12 +37,20 @@ describe('CommentController', () => {
     });
     await expect(controller.getCommentsLengthByActivityId({ id: 'a1' })).resolves.toBe(1);
     await expect(
-      controller.postCommentWithActivityId({ comment: 'Hi', authorId: 'u1' }, { id: 'a1' }),
+      controller.postCommentWithActivityId({ comment: 'Hi' }, { id: 'a1' }, { user: { id: 'u1' } } as never),
     ).resolves.toBeUndefined();
-    await expect(controller.deleteCommentWithCommentId({ id: 'c1' })).resolves.toEqual(comment);
-    await expect(controller.updateCommentById({ comment: 'Updated' }, { id: 'c1' })).resolves.toEqual(comment);
-    await expect(controller.postCommentLikeWithCommentId({ commentId: 'c1', authorId: 'u1' })).resolves.toEqual(like);
-    await expect(controller.deleteCommentLikeWithLikeId({ id: 'cl1' })).resolves.toEqual(like);
+    await expect(controller.deleteCommentWithCommentId({ id: 'c1' }, { user: { id: 'u1' } } as never)).resolves.toEqual(
+      comment,
+    );
+    await expect(
+      controller.updateCommentById({ comment: 'Updated' }, { id: 'c1' }, { user: { id: 'u1' } } as never),
+    ).resolves.toEqual(comment);
+    await expect(
+      controller.postCommentLikeWithCommentId({ commentId: 'c1' }, { user: { id: 'u1' } } as never),
+    ).resolves.toEqual(like);
+    await expect(
+      controller.deleteCommentLikeWithLikeId({ id: 'cl1' }, { user: { id: 'u1' } } as never),
+    ).resolves.toEqual(like);
     await expect(controller.getCommentLikesLengthByCommentId({ id: 'c1' })).resolves.toEqual([like]);
   });
 
@@ -52,13 +60,21 @@ describe('CommentController', () => {
 
     await expect(controller.getCommentsByActivityId({ id: 'a1' }, '10')).rejects.toBe(error);
     await expect(controller.getCommentsLengthByActivityId({ id: 'a1' })).rejects.toBe(error);
-    await expect(controller.postCommentWithActivityId({ comment: 'Hi', authorId: 'u1' }, { id: 'a1' })).rejects.toBe(
+    await expect(
+      controller.postCommentWithActivityId({ comment: 'Hi' }, { id: 'a1' }, { user: { id: 'u1' } } as never),
+    ).rejects.toBe(error);
+    await expect(controller.deleteCommentWithCommentId({ id: 'c1' }, { user: { id: 'u1' } } as never)).rejects.toBe(
       error,
     );
-    await expect(controller.deleteCommentWithCommentId({ id: 'c1' })).rejects.toBe(error);
-    await expect(controller.updateCommentById({ comment: 'Updated' }, { id: 'c1' })).rejects.toBe(error);
-    await expect(controller.postCommentLikeWithCommentId({ commentId: 'c1', authorId: 'u1' })).rejects.toBe(error);
-    await expect(controller.deleteCommentLikeWithLikeId({ id: 'cl1' })).rejects.toBe(error);
+    await expect(
+      controller.updateCommentById({ comment: 'Updated' }, { id: 'c1' }, { user: { id: 'u1' } } as never),
+    ).rejects.toBe(error);
+    await expect(
+      controller.postCommentLikeWithCommentId({ commentId: 'c1' }, { user: { id: 'u1' } } as never),
+    ).rejects.toBe(error);
+    await expect(controller.deleteCommentLikeWithLikeId({ id: 'cl1' }, { user: { id: 'u1' } } as never)).rejects.toBe(
+      error,
+    );
     await expect(controller.getCommentLikesLengthByCommentId({ id: 'c1' })).rejects.toBe(error);
   });
 

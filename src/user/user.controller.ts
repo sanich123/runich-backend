@@ -8,13 +8,26 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { UserService } from './user.service';
 import { UserDto } from './user.dto';
 import { ProfileDto } from 'src/account/account.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { PATHS } from 'src/common/constants';
+import type { AuthenticatedRequest } from 'src/auth/auth-request';
 
 @ApiTags(PATHS.user)
 @ApiBearerAuth('bearerAuth')
@@ -40,8 +53,12 @@ export class UserController {
   @ApiBody({ type: UserDto })
   @ApiParam({ name: 'id', description: 'User identifier' })
   @HttpCode(HttpStatus.CREATED)
-  async createProfileByUserId(@Param() { id }: ParamsId, @Body() accountDto: UserDto) {
-    return await this.userService.createProfileByUserId(id, accountDto);
+  async createProfileByUserId(
+    @Param() { id }: ParamsId,
+    @Body() accountDto: UserDto,
+    @Req() request?: AuthenticatedRequest,
+  ) {
+    return await this.userService.createProfileByUserId(id, request?.user.id ?? id, accountDto);
   }
 
   @Patch(':id/profile')
@@ -51,7 +68,11 @@ export class UserController {
   @ApiBody({ type: UserDto })
   @ApiParam({ name: 'id', description: 'User identifier' })
   @HttpCode(HttpStatus.OK)
-  async updateProfileByProfileId(@Param() { id }: ParamsId, @Body() accountDto: UserDto) {
-    return await this.userService.updateProfileByProfileId(id, accountDto);
+  async updateProfileByProfileId(
+    @Param() { id }: ParamsId,
+    @Body() accountDto: UserDto,
+    @Req() request?: AuthenticatedRequest,
+  ) {
+    return await this.userService.updateProfileByProfileId(id, request?.user.id ?? id, accountDto);
   }
 }

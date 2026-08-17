@@ -1,7 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/prisma-errors';
-import { FriendDto } from './friend.dto';
 import { AccountService } from 'src/account/account.service';
 
 @Injectable()
@@ -33,9 +32,9 @@ export class FriendService {
     }
   }
 
-  async deleteFriendById(id: string) {
+  async deleteFriendById(id: string, userId?: string) {
     try {
-      return await this.prismaService.friend.delete({ where: { id } });
+      return await this.prismaService.friend.delete({ where: userId ? { id, user_id: userId } : { id } });
     } catch (error) {
       handleServiceError(error);
     }
@@ -65,13 +64,14 @@ export class FriendService {
     }
   }
 
-  async addFriendByFriendId(id: string, { userId }: FriendDto) {
+  async addFriendByFriendId(id: string, currentUserId: string | { userId: string }) {
     try {
+      const ownerId = typeof currentUserId === 'string' ? currentUserId : currentUserId.userId;
       const profile = await this.accountService.getAccountByUserId(id);
       if (!profile) throw new NotFoundException('Профиль пользователя не найден: userId');
       return await this.prismaService.friend.create({
         data: {
-          user_id: userId,
+          user_id: ownerId,
           friendId: id,
           profileId: profile.id,
         },

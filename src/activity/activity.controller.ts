@@ -16,7 +16,10 @@ import {
   BadRequestException,
   UseGuards,
   Logger,
+  ForbiddenException,
+  Req,
 } from '@nestjs/common';
+import type { AuthenticatedRequest as RequestWithUser } from 'src/auth/auth-request';
 import { mkdir, rm } from 'fs/promises';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
@@ -145,6 +148,7 @@ export class ActivityController {
   async getArchiveWithActivitiesFromStrava(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Param() { id }: ParamsId,
+    @Req() request?: RequestWithUser,
   ) {
     const startedAt = Date.now();
 
@@ -153,7 +157,9 @@ export class ActivityController {
         throw new NotFoundException('Не указан файл архива: archive');
       }
 
-      const account = await this.accountService.getOrCreateAccountByUserId(id);
+      const currentUserId = request?.user.userId ?? request?.user.id;
+      if (currentUserId && id !== currentUserId) throw new ForbiddenException('Недостаточно прав');
+      const account = await this.accountService.getOrCreateAccountByUserId(currentUserId ?? id);
       if (!account) {
         throw new NotFoundException(`Профиль пользователя не найден: ${id}`);
       }
@@ -162,7 +168,7 @@ export class ActivityController {
       const parsedActivities = await parseCsvFileIntoArray();
       const activitiesWithCoordinates = await mapActivitiesWithCoordinates({
         parsedActivities,
-        userId: id,
+        userId: currentUserId ?? id,
         profileId: account.id,
       });
       if (!activitiesWithCoordinates) return;
@@ -193,8 +199,10 @@ export class ActivityController {
   @ApiResponse({ status: HttpStatus.CREATED, type: ActivityResponseDto, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(HttpStatus.CREATED)
-  async createActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
-    return await this.activityService.createActivity(activity, id);
+  async createActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    const currentUserId = request?.user.userId ?? request?.user.id ?? id;
+    if (currentUserId !== id) throw new ForbiddenException('Недостаточно прав');
+    return await this.activityService.createActivity(activity, currentUserId);
   }
 
   @Patch(id)
@@ -205,8 +213,8 @@ export class ActivityController {
   @ApiBody({ type: ActivityDto })
   @ApiResponse({ status: HttpStatus.CREATED, type: ActivityResponseDto, description: 'Success' })
   @HttpCode(HttpStatus.CREATED)
-  async patchActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
-    return await this.activityService.updateActivity(activity, id);
+  async patchActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    return await this.activityService.updateActivity(activity, id, request?.user.userId ?? request?.user.id ?? id);
   }
 
   @Get(id)
@@ -266,7 +274,7 @@ export class ActivityController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteActivityById(@Param() { id }: ParamsId) {
-    return await this.activityService.deleteActivityById(id);
+  async deleteActivityById(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    return await this.activityService.deleteActivityById(id, request?.user.userId ?? request?.user.id ?? id);
   }
 }

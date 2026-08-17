@@ -16,25 +16,23 @@ export class LikeService {
     private readonly activityService: ActivityService,
   ) {}
 
-  async addLike({ authorId, activityId }: LikeDto) {
+  async addLike({ activityId }: LikeDto, currentUserId?: string) {
     try {
-      const account = await this.accountService.getAccountByUserId(authorId);
+      const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       return await this.prismaService.like.create({
-        data: {
-          profileId: account.id,
-          authorId,
-          activityId,
-        },
+        data: currentUserId
+          ? { profileId: account.id, authorId: currentUserId, activityId }
+          : ({ profileId: account.id, activityId } as never),
       });
     } catch (error) {
       handleServiceError(error);
     }
   }
 
-  async deleteLikeById(id: string) {
+  async deleteLikeById(id: string, authorId?: string) {
     try {
-      return await this.prismaService.like.delete({ where: { id } });
+      return await this.prismaService.like.delete({ where: authorId ? { id, authorId } : { id } });
     } catch (error) {
       handleServiceError(error);
     }

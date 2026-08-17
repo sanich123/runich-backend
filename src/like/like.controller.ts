@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, HttpStatus, Delete, Inject, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpStatus, Delete, Inject, UseGuards, Req } from '@nestjs/common';
 import { LikeService } from './like.service';
 import { LikeResponseDto } from './like.response.dto';
 import { LikeDto } from './like.dto';
@@ -6,6 +6,7 @@ import { ParamsId } from 'src/common/dto/params-validation';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from 'src/auth/auth-request';
 
 const { like, id, activityId } = PATHS;
 const { OK, CREATED, BAD_REQUEST } = HttpStatus;
@@ -23,8 +24,8 @@ export class LikeController {
   @ApiBody({ type: LikeDto })
   @ApiResponse({ status: CREATED, type: LikeResponseDto, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async sendOrDeleteLike(@Body() likeDto: LikeDto) {
-    return await this.likeService.addLike(likeDto);
+  async sendOrDeleteLike(@Body() likeDto: LikeDto, @Req() request?: AuthenticatedRequest) {
+    return await this.likeService.addLike(likeDto, request?.user.id);
   }
 
   @Delete(`${id}/${activityId}`)
@@ -35,8 +36,8 @@ export class LikeController {
   @ApiParam({ name: 'activityId', description: 'Activity identifier' })
   @ApiResponse({ status: OK, type: LikeResponseDto, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async deleteLike(@Param() { id }: ParamsId) {
-    return await this.likeService.deleteLikeById(id);
+  async deleteLike(@Param() { id }: ParamsId, @Req() request?: AuthenticatedRequest) {
+    return await this.likeService.deleteLikeById(id, request?.user.id);
   }
 
   @Get(id)

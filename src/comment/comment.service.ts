@@ -66,15 +66,15 @@ export class CommentService {
     }
   }
 
-  async createCommentByActivityId({ comment, authorId }: CommentDTO, id: string) {
+  async createCommentByActivityId({ comment }: CommentDTO, id: string, currentUserId?: string) {
     try {
-      const account = await this.accountService.getAccountByUserId(authorId);
+      const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       await this.prisma.comment.create({
         data: {
           profileId: account.id,
           activityId: id,
-          authorId,
+          authorId: currentUserId ?? '',
           comment,
         },
       });
@@ -83,18 +83,18 @@ export class CommentService {
     }
   }
 
-  async deleteCommentByCommentId(id: string) {
+  async deleteCommentByCommentId(id: string, authorId?: string) {
     try {
-      return await this.prisma.comment.delete({ where: { id } });
+      return await this.prisma.comment.delete({ where: authorId ? { id, authorId } : { id } });
     } catch (error) {
       handleServiceError(error);
     }
   }
 
-  async updateCommentByCommentId(comment: string, id: string) {
+  async updateCommentByCommentId(comment: string, id: string, authorId?: string) {
     try {
       return await this.prisma.comment.update({
-        where: { id },
+        where: authorId ? { id, authorId } : { id },
         data: { comment },
       });
     } catch (error) {
@@ -124,19 +124,19 @@ export class CommentService {
     }
   }
 
-  async createCommentLikeByCommentId({ commentId, authorId }: CommentLikeDto) {
+  async createCommentLikeByCommentId({ commentId }: CommentLikeDto, currentUserId?: string) {
     try {
-      const account = await this.accountService.getAccountByUserId(authorId);
+      const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
-      return await this.commentLikeService.create({ profileId: account.id, authorId, commentId });
+      return await this.commentLikeService.create({ profileId: account.id, authorId: currentUserId ?? '', commentId });
     } catch (error) {
       handleServiceError(error);
     }
   }
 
-  async deleteCommentLikeByLikeId(id: string) {
+  async deleteCommentLikeByLikeId(id: string, authorId?: string) {
     try {
-      return await this.commentLikeService.delete(id);
+      return await this.commentLikeService.delete(id, authorId);
     } catch (error) {
       handleServiceError(error);
     }

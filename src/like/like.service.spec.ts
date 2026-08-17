@@ -17,11 +17,11 @@ describe('LikeService', () => {
     prisma.like.delete.mockResolvedValue({ id: 'like-1' });
     prisma.like.findMany.mockResolvedValue([{ id: 'like-1' }]);
 
-    await expect(service.addLike({ authorId: 'user-1', activityId: 'activity-1' })).resolves.toEqual({ id: 'like-1' });
+    await expect(service.addLike({ activityId: 'activity-1' })).resolves.toEqual({ id: 'like-1' });
     await expect(service.deleteLikeById('like-1')).resolves.toEqual({ id: 'like-1' });
     await expect(service.getLikesByActivityId('activity-1')).resolves.toEqual([{ id: 'like-1' }]);
     expect(prisma.like.create).toHaveBeenCalledWith({
-      data: { profileId: 'profile-1', authorId: 'user-1', activityId: 'activity-1' },
+      data: { profileId: 'profile-1', activityId: 'activity-1' },
     });
   });
 
@@ -33,9 +33,7 @@ describe('LikeService', () => {
       {} as never,
     );
 
-    await expect(service.addLike({ authorId: 'user-1', activityId: 'activity-1' })).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(service.addLike({ activityId: 'activity-1' })).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.like.create).not.toHaveBeenCalled();
   });
 
@@ -49,7 +47,7 @@ describe('LikeService', () => {
       {} as never,
     );
 
-    await expectInternalServerError(service.addLike({ authorId: 'u1', activityId: 'a1' }));
+    await expectInternalServerError(service.addLike({ activityId: 'a1' }));
     await expectInternalServerError(service.deleteLikeById('l1'));
     await expectInternalServerError(service.getLikesByActivityId('a1'));
   });

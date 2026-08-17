@@ -9,8 +9,8 @@ export class CommentLikeService {
     return this.prisma.commentLike.create({ data });
   }
 
-  delete(id: string) {
-    return this.prisma.commentLike.delete({ where: { id } });
+  delete(id: string, authorId?: string) {
+    return this.prisma.commentLike.delete({ where: authorId ? { id, authorId } : { id } });
   }
 
   findByCommentId(commentId: string) {

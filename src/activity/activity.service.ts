@@ -90,11 +90,11 @@ export class ActivityService {
     }
   }
 
-  async updateActivity(activityDto: ActivityDto, id: string) {
+  async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
       const { date, description, emotion, isPublic, photoVideoUrls, sport, title, distance, duration, speed } =
         activityDto;
-      return await this.persistenceService.update(id, {
+      return await this.persistenceService.update(id, userId, {
         title,
         sport,
         photoVideoUrls,
@@ -301,9 +301,9 @@ export class ActivityService {
     }
   }
 
-  async deleteActivityById(id: string) {
+  async deleteActivityById(id: string, userId = id) {
     try {
-      return await this.persistenceService.delete(id);
+      return await this.persistenceService.delete(id, userId);
     } catch (error) {
       handleServiceError(error);
     }

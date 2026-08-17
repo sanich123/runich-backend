@@ -13,11 +13,11 @@ export class ActivityPersistenceService {
     return this.prisma.activity.createMany({ data: data as never, skipDuplicates: true });
   }
 
-  update(id: string, data: Record<string, unknown>) {
-    return this.prisma.activity.update({ where: { id }, data: data as never });
+  update(id: string, userId: string, data: Record<string, unknown>) {
+    return this.prisma.activity.update({ where: { id, user_id: userId }, data: data as never });
   }
 
-  delete(id: string) {
-    return this.prisma.activity.delete({ where: { id } });
+  delete(id: string, userId: string) {
+    return this.prisma.activity.delete({ where: { id, user_id: userId } });
   }
 }

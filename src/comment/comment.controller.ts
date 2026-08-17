@@ -11,6 +11,7 @@ import {
   Post,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import {
@@ -34,6 +35,7 @@ import {
 import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import type { AuthenticatedRequest } from 'src/auth/auth-request';
 
 const { comment, id, like } = PATHS;
 const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
@@ -79,8 +81,12 @@ export class CommentController {
   @ApiResponse({ status: CREATED, schema: { type: 'null' }, description: 'No response body' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(CREATED)
-  async postCommentWithActivityId(@Body() commentDto: CommentDTO, @Param() { id }: ParamsId) {
-    return await this.commentService.createCommentByActivityId(commentDto, id);
+  async postCommentWithActivityId(
+    @Body() commentDto: CommentDTO,
+    @Param() { id }: ParamsId,
+    @Req() request?: AuthenticatedRequest,
+  ) {
+    return await this.commentService.createCommentByActivityId(commentDto, id, request?.user.id);
   }
 
   @Delete(id)
@@ -91,8 +97,8 @@ export class CommentController {
   @ApiResponse({ status: NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(NO_CONTENT)
-  async deleteCommentWithCommentId(@Param() { id }: ParamsId) {
-    return await this.commentService.deleteCommentByCommentId(id);
+  async deleteCommentWithCommentId(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
+    return await this.commentService.deleteCommentByCommentId(id, request.user.id);
   }
 
   @Patch(id)
@@ -104,8 +110,12 @@ export class CommentController {
   @HttpCode(HttpStatus.CREATED)
   @ApiResponse({ status: CREATED, type: CommentResponseDto, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async updateCommentById(@Body() commentDto: CommentUpdateDto, @Param() { id }: ParamsId) {
-    return await this.commentService.updateCommentByCommentId(commentDto.comment, id);
+  async updateCommentById(
+    @Body() commentDto: CommentUpdateDto,
+    @Param() { id }: ParamsId,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return await this.commentService.updateCommentByCommentId(commentDto.comment, id, request.user.id);
   }
 
   @Post(`${id}/${like}`)
@@ -117,8 +127,8 @@ export class CommentController {
   @ApiResponse({ status: CREATED, type: CommentLikeResponseDto, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(CREATED)
-  async postCommentLikeWithCommentId(@Body() commentLikeDto: CommentLikeDto) {
-    return await this.commentService.createCommentLikeByCommentId(commentLikeDto);
+  async postCommentLikeWithCommentId(@Body() commentLikeDto: CommentLikeDto, @Req() request?: AuthenticatedRequest) {
+    return await this.commentService.createCommentLikeByCommentId(commentLikeDto, request?.user.id);
   }
 
   @Delete(`${id}/${like}`)
@@ -129,8 +139,8 @@ export class CommentController {
   @ApiResponse({ status: NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(NO_CONTENT)
-  async deleteCommentLikeWithLikeId(@Param() { id }: ParamsId) {
-    return await this.commentService.deleteCommentLikeByLikeId(id);
+  async deleteCommentLikeWithLikeId(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
+    return await this.commentService.deleteCommentLikeByLikeId(id, request.user.id);
   }
 
   @Get(`${id}/${like}`)

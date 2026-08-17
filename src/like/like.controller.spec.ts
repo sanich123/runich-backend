@@ -19,8 +19,8 @@ describe('LikeController', () => {
     service.deleteLikeById.mockResolvedValue(like);
     service.getLikesByActivityId.mockResolvedValue([like]);
 
-    await expect(controller.sendOrDeleteLike({ authorId: 'u1', activityId: 'a1' })).resolves.toEqual(like);
-    await expect(controller.deleteLike({ id: 'like-1' })).resolves.toEqual(like);
+    await expect(controller.sendOrDeleteLike({ activityId: 'a1' })).resolves.toEqual(like);
+    await expect(controller.deleteLike({ id: 'like-1' }, undefined)).resolves.toEqual(like);
     await expect(controller.getLikesByActivityId({ id: 'a1' })).resolves.toEqual([like]);
   });
 
@@ -28,8 +28,8 @@ describe('LikeController', () => {
     const error = new Error('service failed');
     Object.values(service).forEach((method) => method.mockRejectedValue(error));
 
-    await expect(controller.sendOrDeleteLike({ authorId: 'u1', activityId: 'a1' })).rejects.toBe(error);
-    await expect(controller.deleteLike({ id: 'like-1' })).rejects.toBe(error);
+    await expect(controller.sendOrDeleteLike({ activityId: 'a1' })).rejects.toBe(error);
+    await expect(controller.deleteLike({ id: 'like-1' }, undefined)).rejects.toBe(error);
     await expect(controller.getLikesByActivityId({ id: 'a1' })).rejects.toBe(error);
   });
 });

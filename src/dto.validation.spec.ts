@@ -155,20 +155,19 @@ describe('request DTO validation', () => {
   });
 
   it('validates social, comment and email DTOs', async () => {
-    await expectValid(CommentDTO, { comment: 'Nice activity', authorId: uuid });
+    await expectValid(CommentDTO, { comment: 'Nice activity' });
     await expectValid(CommentUpdateDto, { comment: 'Updated comment' });
-    await expectValid(CommentLikeDto, { commentId: uuid, authorId: uuid });
-    await expectValid(FriendDto, { userId: uuid });
-    await expectValid(LikeDto, { activityId: uuid, authorId: uuid });
+    await expectValid(CommentLikeDto, { commentId: uuid });
+    await expectValid(FriendDto, {});
+    await expectValid(LikeDto, { activityId: uuid });
 
     for (const dto of [CommentDTO, CommentUpdateDto]) {
       await expectInvalid(dto, { comment: '' });
       await expectInvalid(dto, { comment: 42 });
     }
-    await expectInvalid(CommentDTO, { comment: 'text', authorId: 'user-1' });
-    await expectInvalid(CommentLikeDto, { commentId: uuid, authorId: 'user-1' });
-    await expectInvalid(FriendDto, { userId: 'user-1' });
-    await expectInvalid(LikeDto, { activityId: uuid, authorId: 'user-1' });
+    await expectInvalid(CommentLikeDto, {});
+    await expectValid(FriendDto, { unexpected: 'ignored' });
+    await expectValid(LikeDto, { activityId: uuid });
 
     const baseEmail = {
       name: 'Ann',

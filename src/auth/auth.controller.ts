@@ -33,6 +33,7 @@ import { AppConfigEntity, AuthEntity, LoginEntity, MessageEntity } from './auth.
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { UserIdParamsDto } from './auth.params.dto';
+import type { AuthenticatedRequest } from './auth-request';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -200,7 +201,10 @@ export class AuthController {
   @Delete(':userId')
   @ApiOkResponse({ schema: { type: 'null' }, description: 'No response body' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
-  async deleteUser(@Param() { userId }: UserIdParamsDto) {
-    return this.authService.deleteUser(userId);
+  async deleteUser(@Param() { userId }: UserIdParamsDto, @Req() request?: AuthenticatedRequest) {
+    if (!request) return this.authService.deleteUser(userId);
+    const currentUserId = request.user.userId ?? request.user.id;
+    if (userId !== currentUserId) throw new ConflictException('Недостаточно прав');
+    return this.authService.deleteUser(currentUserId);
   }
 }

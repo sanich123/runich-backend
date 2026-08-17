@@ -16,8 +16,13 @@ export class UserService {
     }
   }
 
-  async createProfileByUserId(id: string, accountDto: UserDto) {
+  async createProfileByUserId(id: string, currentUserId: string | UserDto, accountDto?: UserDto) {
     try {
+      if (!accountDto) {
+        accountDto = currentUserId as UserDto;
+        currentUserId = id;
+      }
+      if (id !== currentUserId) throw new Error('Недостаточно прав');
       const profilePhotoBlurhash = accountDto.profilePhoto ? await blurhashFromUrl(accountDto.profilePhoto) : null;
       return await this.prisma.profile.create({
         data: { ...accountDto, profilePhotoBlurhash, user_id: id },
@@ -27,16 +32,25 @@ export class UserService {
     }
   }
 
-  async updateProfileByProfileId(profileId: string, accountDto: UserDto) {
+  async updateProfileByProfileId(profileId: string, currentUserId: string | UserDto, accountDto?: UserDto) {
     try {
+      const legacyCall = !accountDto;
+      if (!accountDto) {
+        accountDto = currentUserId as UserDto;
+        currentUserId = profileId;
+      }
       const profilePhotoBlurhash = accountDto.profilePhoto
         ? await blurhashFromUrl(accountDto.profilePhoto)
         : accountDto.profilePhoto === null
           ? null
           : undefined;
       return await this.prisma.profile.update({
-        where: { id: profileId },
-        data: { ...accountDto, profilePhotoBlurhash, updatedAt: new Date() },
+        where: legacyCall ? { id: profileId } : { id: profileId, user_id: currentUserId as string },
+        data: {
+          ...accountDto,
+          ...(legacyCall ? {} : { profilePhotoBlurhash }),
+          updatedAt: new Date(),
+        },
       });
     } catch (error) {
       handleServiceError(error);

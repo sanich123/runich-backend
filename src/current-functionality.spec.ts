@@ -175,7 +175,7 @@ describe('account, user and social services', () => {
     await expect(friend.getUsersYouFollowByUserId('u1')).resolves.toEqual([]);
     await expect(friend.addFriendByFriendId('u2', { userId: 'u1' })).resolves.toEqual({ id: 'f1' });
     await expect(friend.deleteFriendById('f1')).resolves.toEqual({ id: 'f1' });
-    await expect(like.addLike({ authorId: 'u1', activityId: 'a1' })).resolves.toEqual({ id: 'l1' });
+    await expect(like.addLike({ activityId: 'a1' })).resolves.toEqual({ id: 'l1' });
     await expect(like.deleteLikeById('l1')).resolves.toEqual({ id: 'l1' });
     await expect(like.getLikesByActivityId('a1')).resolves.toEqual([]);
   });
@@ -186,7 +186,7 @@ describe('account, user and social services', () => {
     const friend = new FriendService(prisma as never, account as never);
     const like = new LikeService(prisma as never, account as never, {} as never);
     await expect(friend.addFriendByFriendId('u2', { userId: 'u1' })).rejects.toBeInstanceOf(NotFoundException);
-    await expect(like.addLike({ authorId: 'u1', activityId: 'a1' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(like.addLike({ activityId: 'a1' })).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 
@@ -250,12 +250,10 @@ describe('activity, comments and statistics', () => {
       comments: [{ id: 'c1' }],
       allCommentsLength: 1,
     });
-    await expect(
-      service.createCommentByActivityId({ comment: 'hello', authorId: 'u1' }, 'a1'),
-    ).resolves.toBeUndefined();
+    await expect(service.createCommentByActivityId({ comment: 'hello' }, 'a1')).resolves.toBeUndefined();
     await expect(service.updateCommentByCommentId('updated', 'c1')).resolves.toEqual({ id: 'c1' });
     await expect(service.deleteCommentByCommentId('c1')).resolves.toEqual({ id: 'c1' });
-    await expect(service.createCommentLikeByCommentId({ commentId: 'c1', authorId: 'u1' })).resolves.toEqual({
+    await expect(service.createCommentLikeByCommentId({ commentId: 'c1' })).resolves.toEqual({
       id: 'cl1',
     });
     await expect(service.getCommentLikesLengthByCommentId('c1')).resolves.toEqual([{ id: 'cl1' }]);
