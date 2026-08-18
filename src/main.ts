@@ -4,7 +4,7 @@ import { AppModule } from './app/app.module';
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { PrismaClientExceptionFilter } from './common/filters/prisma-client-exception.filter';
-import { PRISMA_ERR_TO_HTTP_CODES } from './common/constants';
+import { MAX_JSON_BODY_BYTES, PRISMA_ERR_TO_HTTP_CODES } from './common/constants';
 import { getLogLevels } from './common/utils/log-levels';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { urlencoded, json } from 'express';
@@ -32,8 +32,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: getLogLevels(process.env.NODE_ENV === 'production'),
   });
-  app.use(json({ limit: '50mb' }));
-  app.use(urlencoded({ extended: true, limit: '50mb' }));
+  app.use(json({ limit: MAX_JSON_BODY_BYTES }));
+  app.use(urlencoded({ extended: true, limit: MAX_JSON_BODY_BYTES }));
   const config = new DocumentBuilder()
     .setTitle('Runich')
     .setDescription('Runich API')

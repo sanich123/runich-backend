@@ -7,8 +7,12 @@ import { Extensions, RawStravaCsvColumns } from './types';
 import { v4 } from 'uuid';
 import { ActivityDto, LocationObject } from 'src/activity/activity.dto';
 import { Logger } from '@nestjs/common';
+import { calculateKilometreSplits } from './calculate-kilometre-splits';
+import { reduceLocations } from './reduce-locations';
 
 const logger = new Logger('ActivityMapper');
+const MIGRATION_BATCH_SIZE = 8;
+const MAX_MAP_IMAGE_LOCATIONS = 500;
 
 type MigratedActivity = ActivityDto & {
   id: string;
@@ -29,57 +33,68 @@ export async function mapActivitiesWithCoordinates({
   try {
     if (!parsedActivities) return [];
 
-    const results = await Promise.allSettled(
-      parsedActivities.map(async (activity, i): Promise<MigratedActivity> => {
-        const sourceActivityId = String(activity['Activity ID'] ?? '').trim();
-        if (!sourceActivityId) {
-          throw new Error('Не указан идентификатор активности Strava: Activity ID');
-        }
+    const results: PromiseSettledResult<MigratedActivity>[] = [];
+    for (let offset = 0; offset < parsedActivities.length; offset += MIGRATION_BATCH_SIZE) {
+      const batch = parsedActivities.slice(offset, offset + MIGRATION_BATCH_SIZE);
+      results.push(
+        ...(await Promise.allSettled(
+          batch.map(async (activity, batchIndex): Promise<MigratedActivity> => {
+            const i = offset + batchIndex;
+            const sourceActivityId = String(activity['Activity ID'] ?? '').trim();
+            if (!sourceActivityId) {
+              throw new Error('Не указан идентификатор активности Strava: Activity ID');
+            }
 
-        let locations: LocationObject[] = [];
-        let fileName = activity['Filename'];
+            let rawLocations: LocationObject[] = [];
+            let fileName = activity['Filename'];
 
-        if (extname(fileName) === Extensions.gz) {
-          await ungzipFile(fileName);
-          fileName = fileName.slice(0, -3);
-        }
+            if (extname(fileName) === Extensions.gz) {
+              await ungzipFile(fileName);
+              fileName = fileName.slice(0, -3);
+            }
 
-        if (
-          extname(fileName) === Extensions.gpx ||
-          extname(fileName) === Extensions.tcx ||
-          extname(fileName) === Extensions.fit
-        ) {
-          locations = await parseCoordinatesFromFile(fileName);
-        }
-        logger.debug(`Processing activity ${i + 1}`);
+            if (
+              extname(fileName) === Extensions.gpx ||
+              extname(fileName) === Extensions.tcx ||
+              extname(fileName) === Extensions.fit
+            ) {
+              rawLocations = await parseCoordinatesFromFile(fileName);
+            }
+            logger.debug(`Processing activity ${i + 1}`);
 
-        const duration = Number(activity['Elapsed Time']) * 1000;
-        const distance = Number(activity.Distance);
-        const title = activity['Activity Name'];
-        const sport = activity['Activity Type'].toLowerCase();
-        const description = activity['Activity Description'];
-        const date = new Date(activity['Activity Date']).toISOString();
-        const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
-        const mapPhotoUrl = locations.length > 1 ? getMapBoxImage(locations) : '';
+            const duration = Number(activity['Elapsed Time']) * 1000;
+            const distance = Number(activity.Distance);
+            const title = activity['Activity Name'];
+            const sport = activity['Activity Type'].toLowerCase();
+            const description = activity['Activity Description'];
+            const date = new Date(activity['Activity Date']).toISOString();
+            const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
+            const kilometresSplit = calculateKilometreSplits(rawLocations, duration);
+            const locations = reduceLocations(rawLocations);
+            const mapPhotoUrl =
+              rawLocations.length > 1 ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS)) : '';
 
-        return {
-          id: v4(),
-          source: 'strava',
-          sourceActivityId,
-          date,
-          title,
-          sport,
-          description,
-          duration,
-          distance,
-          speed,
-          locations,
-          user_id: userId,
-          mapPhotoUrl,
-          profileId,
-        };
-      }),
-    );
+            return {
+              id: v4(),
+              source: 'strava',
+              sourceActivityId,
+              date,
+              title,
+              sport,
+              description,
+              duration,
+              distance,
+              speed,
+              locations,
+              kilometresSplit,
+              user_id: userId,
+              mapPhotoUrl,
+              profileId,
+            };
+          }),
+        )),
+      );
+    }
 
     const failedResults = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
     failedResults.forEach((result) => {

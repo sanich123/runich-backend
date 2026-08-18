@@ -9,25 +9,21 @@ import { Logger } from '@nestjs/common';
 const logger = new Logger('CoordinatesParser');
 
 export async function parseCoordinatesFromFile(filePath: string): Promise<LocationObject[]> {
-  let parsedCoordinates: LocationObject[] = [];
   const inputFilePath = join(process.cwd(), 'dist', 'migration', filePath);
   try {
     if (!existsSync(inputFilePath)) {
       throw new Error(`Файл с координатами не найден: ${filePath}`);
     }
     if (filePath.includes('.gpx')) {
-      parsedCoordinates = await getCoordinatesFromGpxFile(inputFilePath);
-    } else if (filePath.includes('.tcx')) {
-      parsedCoordinates = await getCoordinatesFromTcxFile(inputFilePath);
-    } else if (filePath.includes('.fit')) {
-      parsedCoordinates = await getCoordinatesFromFitFile(inputFilePath);
-    } else {
-      parsedCoordinates = [];
+      return await getCoordinatesFromGpxFile(inputFilePath);
     }
-    if (parsedCoordinates?.length > 1000) {
-      parsedCoordinates = parsedCoordinates.filter((_, i) => i % Math.ceil(parsedCoordinates.length / 1000) === 0);
+    if (filePath.includes('.tcx')) {
+      return await getCoordinatesFromTcxFile(inputFilePath);
     }
-    return parsedCoordinates || [];
+    if (filePath.includes('.fit')) {
+      return await getCoordinatesFromFitFile(inputFilePath);
+    }
+    return [];
   } catch (error) {
     logger.error(
       `Не удалось обработать файл с координатами ${filePath}`,

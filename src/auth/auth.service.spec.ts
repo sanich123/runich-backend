@@ -40,7 +40,7 @@ describe('AuthService', () => {
     await expect(service.signUp('user@example.com', 'secret123')).resolves.toEqual({
       message: 'Код подтверждения был выслан на Вашу электронную почту',
     });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '5m' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'email' }, { expiresIn: '5m' });
     expect(dependencies.email.sendConfirmationCode).toHaveBeenCalledWith(
       'user@example.com',
       expect.any(Number),
@@ -127,8 +127,8 @@ describe('AuthService', () => {
       accessToken: 'access-token',
       refreshToken: 'access-token',
     });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '30d' });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '180d' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'access' }, { expiresIn: '30d' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'refresh' }, { expiresIn: '180d' });
     expect(dependencies.prisma.users.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
       data: { last_sign_in_at: expect.any(Date) },
@@ -193,7 +193,7 @@ describe('AuthService', () => {
     });
 
     expect(dependencies.prisma.users.findUnique).toHaveBeenCalledWith({ where: { email: 'user@example.com' } });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '5m' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'email' }, { expiresIn: '5m' });
     expect(dependencies.email.sendLoginLink).toHaveBeenCalledWith('user@example.com', 'access-token');
   });
 
@@ -221,7 +221,7 @@ describe('AuthService', () => {
     dependencies.jwt.verify.mockReturnValue({ userId: 'user-1' });
 
     await expect(service.refreshAccessToken('refresh-token')).resolves.toEqual({ accessToken: 'access-token' });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1' }, { expiresIn: '30d' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'access' }, { expiresIn: '30d' });
 
     dependencies.jwt.verify.mockReturnValue({});
     await expect(service.refreshAccessToken('refresh-token')).rejects.toBeInstanceOf(UnauthorizedException);

@@ -54,10 +54,15 @@ export class CommentController {
   @ApiQuery({ name: 'take', required: false, description: 'Count of comments' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getCommentsByActivityId(@Param() { id }: ParamsId, @Query('take') take?: string) {
+  async getCommentsByActivityId(
+    @Param() { id }: ParamsId,
+    @Query('take') take?: string,
+    @Req() request?: AuthenticatedRequest,
+  ) {
     return await this.commentService.getCommentsbyActivityId(
       id,
       validateOptionalIntegerQuery(take, 'take', { min: 1 }),
+      request?.user.userId ?? request?.user.id,
     );
   }
 
@@ -68,8 +73,8 @@ export class CommentController {
   @ApiParam({ name: 'id', description: 'Activity identifier' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getCommentsLengthByActivityId(@Param() { id }: ParamsId) {
-    return await this.commentService.getCommentsLengthbyActivityId(id);
+  async getCommentsLengthByActivityId(@Param() { id }: ParamsId, @Req() request?: AuthenticatedRequest) {
+    return await this.commentService.getCommentsLengthbyActivityId(id, request?.user.userId ?? request?.user.id);
   }
 
   @Post(id)
@@ -86,7 +91,11 @@ export class CommentController {
     @Param() { id }: ParamsId,
     @Req() request?: AuthenticatedRequest,
   ) {
-    return await this.commentService.createCommentByActivityId(commentDto, id, request?.user.id);
+    return await this.commentService.createCommentByActivityId(
+      commentDto,
+      id,
+      request?.user.userId ?? request?.user.id,
+    );
   }
 
   @Delete(id)
@@ -128,7 +137,10 @@ export class CommentController {
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(CREATED)
   async postCommentLikeWithCommentId(@Body() commentLikeDto: CommentLikeDto, @Req() request?: AuthenticatedRequest) {
-    return await this.commentService.createCommentLikeByCommentId(commentLikeDto, request?.user.id);
+    return await this.commentService.createCommentLikeByCommentId(
+      commentLikeDto,
+      request?.user.userId ?? request?.user.id,
+    );
   }
 
   @Delete(`${id}/${like}`)
@@ -150,7 +162,7 @@ export class CommentController {
   @ApiOperation({ summary: 'Get likes to comment by comment id' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getCommentLikesLengthByCommentId(@Param() { id }: ParamsId) {
-    return await this.commentService.getCommentLikesLengthByCommentId(id);
+  async getCommentLikesLengthByCommentId(@Param() { id }: ParamsId, @Req() request?: AuthenticatedRequest) {
+    return await this.commentService.getCommentLikesLengthByCommentId(id, request?.user.userId ?? request?.user.id);
   }
 }

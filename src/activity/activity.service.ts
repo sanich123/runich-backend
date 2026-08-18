@@ -27,6 +27,17 @@ export class ActivityService {
 
   private readonly persistenceService: ActivityPersistenceService;
 
+  async canAccessActivity(id: string, currentUserId?: string) {
+    if (!currentUserId) return true;
+
+    const activity = await this.prisma.activity.findUnique({
+      where: { id },
+      select: { user_id: true, isPublic: true },
+    });
+
+    return Boolean(activity && (activity.user_id === currentUserId || activity.isPublic === true));
+  }
+
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
       const account = await this.accountService.getAccountByUserId(id);
@@ -111,17 +122,22 @@ export class ActivityService {
     }
   }
 
-  async getLocationsByActivityId(id: string) {
-    return await this.prisma.activity.findUnique({
+  async getLocationsByActivityId(id: string, currentUserId?: string) {
+    const activity = await this.prisma.activity.findUnique({
       where: { id },
       select: {
         locations: true,
         kilometresSplit: true,
+        user_id: true,
+        isPublic: true,
       },
     });
+    if (!activity || !currentUserId) return activity;
+    if (activity.user_id !== currentUserId && activity.isPublic !== true) return null;
+    return { locations: activity.locations, kilometresSplit: activity.kilometresSplit };
   }
 
-  async getActivityByActivityId(id: string) {
+  async getActivityByActivityId(id: string, currentUserId?: string) {
     try {
       const activity = await this.prisma.activity.findUnique({
         where: { id },
@@ -157,17 +173,25 @@ export class ActivityService {
           },
         },
       });
+      if (activity && currentUserId && activity.user_id !== currentUserId && activity.isPublic !== true) {
+        return null;
+      }
       return activity;
     } catch (error) {
       handleServiceError(error);
     }
   }
 
-  async getMediaByUserId(id: string, take = '10') {
+  async getMediaByUserId(id: string, take = '10', currentUserId?: string) {
     try {
       const photos = await this.prisma.activity.findMany({
         //@ts-ignore
-        where: { user_id: id, photoVideoUrls: { not: null } },
+        where: {
+          user_id: id,
+          // @ts-ignore Prisma's generated JSON filter type does not accept SQL NULL here.
+          photoVideoUrls: { not: null },
+          ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
+        },
         orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
       });
@@ -179,10 +203,13 @@ export class ActivityService {
     }
   }
 
-  async getActivitesByUserId(id: string, page = '0', take = '10') {
+  async getActivitesByUserId(id: string, page = '0', take = '10', currentUserId?: string) {
     try {
       const activities = await this.prisma.activity.findMany({
-        where: { user_id: id },
+        where: {
+          user_id: id,
+          ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
+        },
         orderBy: { date: 'desc' },
         skip: Number(page) * Number(take),
         take: Number(take),

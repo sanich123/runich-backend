@@ -43,6 +43,11 @@ Initialize the database and start development mode:
 
 The API is available at http://localhost:3000; Swagger is at http://localhost:3000/api.
 
+Tracked activities are reduced by the mobile client to at most 5,000 location
+points before sending. The API accepts the same maximum and limits JSON request
+bodies to 5 MiB. Larger routes should be sampled on the client or uploaded in
+chunks instead of increasing the global body limit.
+
 ### Docker Compose
 
     docker compose up --build
@@ -63,9 +68,9 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | MAPBOX_ACCESS_TOKEN             | Mapbox Static Images API access token                             |
 | JWT_SECRET                      | Secret used to sign and verify JWT tokens                         |
 | VK_CLIENT_ID                    | VK ID application client ID                                       |
-| VK_CLIENT_SECRET                | VK ID application secret, server-side only                       |
+| VK_CLIENT_SECRET                | VK ID application secret, server-side only                        |
 | VK_REDIRECT_URI                 | Registered VK OAuth callback URL                                  |
-| VK_FRONTEND_REDIRECT_URI        | Frontend URL receiving the application JWT                       |
+| VK_FRONTEND_REDIRECT_URI        | Frontend URL receiving the application JWT                        |
 | VK_API_VERSION                  | Optional VK API version, defaults to 5.199                        |
 | IS_DEV                          | Development URL selection in email templates                      |
 | SEED_MOCK_DATA                  | Create mock users and activities at startup                       |
@@ -84,6 +89,7 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | yarn eslint src            | ESLint check without auto-fix           |
 | yarn test:ci               | Serial CI test run                      |
 | yarn test:cov              | Jest coverage run                       |
+| yarn test:integration      | PostgreSQL integration/e2e tests        |
 | yarn format                | Format TypeScript files                 |
 | yarn prisma generate       | Generate Prisma Client                  |
 | yarn prisma migrate dev    | Create a development migration          |
@@ -128,10 +134,17 @@ The endpoint inventory is in `doc/api.yaml`; Swagger at `/api` is the authoritat
 
 Before opening a pull request:
 
+    yarn prisma generate
     yarn typecheck
     yarn eslint src
     yarn build
     yarn test:ci
+    yarn test:cov
+    yarn test:integration
     yarn madge
+
+Integration tests require a disposable PostgreSQL database configured through
+`DATABASE_URL`. The CI workflow starts PostgreSQL, applies migrations, runs all
+quality gates and builds the Docker image.
 
 See CONTRIBUTING.md for development and review rules. The package is private and marked UNLICENSED.

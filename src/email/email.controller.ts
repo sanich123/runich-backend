@@ -6,6 +6,7 @@ import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto'
 import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/auth/auth-request';
+import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 
 @ApiTags(PATHS.email)
 @ApiBearerAuth('bearerAuth')
@@ -45,7 +46,7 @@ export class EmailController {
 
   @Post('feedback')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('photo'))
+  @UseInterceptors(FileInterceptor('photo', { limits: { fileSize: UPLOAD_LIMITS.feedbackPhotoBytes, files: 1 } }))
   async sendFeedback(
     @Body() body: { kind: string; text: string; deviceInfo: string },
     @Req() request: AuthenticatedRequest,

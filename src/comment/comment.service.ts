@@ -23,8 +23,27 @@ export class CommentService {
 
   private readonly commentLikeService: CommentLikeService;
 
-  async getCommentsbyActivityId(id: string, take = '10') {
+  private async ensureActivityAccess(activityId: string, currentUserId?: string) {
+    if (currentUserId && !(await this.activityService.canAccessActivity(activityId, currentUserId))) {
+      throw new NotFoundException('Активность не найдена');
+    }
+  }
+
+  private async ensureCommentAccess(commentId: string, currentUserId?: string) {
+    if (!currentUserId) return;
+
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      select: { activityId: true },
+    });
+    if (!comment || !(await this.activityService.canAccessActivity(comment.activityId, currentUserId))) {
+      throw new NotFoundException('Комментарий не найден');
+    }
+  }
+
+  async getCommentsbyActivityId(id: string, take = '10', currentUserId?: string) {
     try {
+      await this.ensureActivityAccess(id, currentUserId);
       const allCommentsLength = await this.prisma.comment.count({ where: { activityId: id } });
       const takenComments = await this.prisma.comment.findMany({
         where: { activityId: id },
@@ -58,8 +77,9 @@ export class CommentService {
     }
   }
 
-  async getCommentsLengthbyActivityId(id: string) {
+  async getCommentsLengthbyActivityId(id: string, currentUserId?: string) {
     try {
+      await this.ensureActivityAccess(id, currentUserId);
       return await this.prisma.comment.count({ where: { activityId: id } });
     } catch (error) {
       handleServiceError(error);
@@ -68,6 +88,7 @@ export class CommentService {
 
   async createCommentByActivityId({ comment }: CommentDTO, id: string, currentUserId?: string) {
     try {
+      await this.ensureActivityAccess(id, currentUserId);
       const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       await this.prisma.comment.create({
@@ -102,8 +123,9 @@ export class CommentService {
     }
   }
 
-  async getCommentByCommentId(id: string) {
+  async getCommentByCommentId(id: string, currentUserId?: string) {
     try {
+      await this.ensureCommentAccess(id, currentUserId);
       const comment = await this.prisma.comment.findUnique({
         where: { id },
         include: {
@@ -126,6 +148,7 @@ export class CommentService {
 
   async createCommentLikeByCommentId({ commentId }: CommentLikeDto, currentUserId?: string) {
     try {
+      await this.ensureCommentAccess(commentId, currentUserId);
       const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       return await this.commentLikeService.create({ profileId: account.id, authorId: currentUserId ?? '', commentId });
@@ -142,8 +165,9 @@ export class CommentService {
     }
   }
 
-  async getCommentLikesLengthByCommentId(id: string) {
+  async getCommentLikesLengthByCommentId(id: string, currentUserId?: string) {
     try {
+      await this.ensureCommentAccess(id, currentUserId);
       return await this.commentLikeService.findByCommentId(id);
     } catch (error) {
       handleServiceError(error);

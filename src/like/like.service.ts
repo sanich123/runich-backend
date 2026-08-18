@@ -18,6 +18,9 @@ export class LikeService {
 
   async addLike({ activityId }: LikeDto, currentUserId?: string) {
     try {
+      if (currentUserId && !(await this.activityService.canAccessActivity(activityId, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
+      }
       const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       return await this.prismaService.like.create({
@@ -38,8 +41,11 @@ export class LikeService {
     }
   }
 
-  async getLikesByActivityId(id: string) {
+  async getLikesByActivityId(id: string, currentUserId?: string) {
     try {
+      if (currentUserId && !(await this.activityService.canAccessActivity(id, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
+      }
       return await this.prismaService.like.findMany({
         where: { activityId: id },
         orderBy: { date: 'desc' },

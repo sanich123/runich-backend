@@ -47,6 +47,7 @@ model Users {
   friends                     Friend[]
   profile                     Profile?
   sessions                    UserSession[]
+  auth_exchanges              AuthExchange[]
 }
 
 model UserSession {
@@ -75,6 +76,20 @@ model UserSession {
 
   @@index([user_id])
   @@index([user_id, device_id])
+}
+
+model AuthExchange {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  code_hash  String    @unique @db.VarChar(128)
+  purpose    String    @db.VarChar(32)
+  expires_at DateTime  @db.Timestamptz(6)
+  consumed_at DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  users      Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, purpose])
+  @@index([expires_at])
 }
 
 model Profile {

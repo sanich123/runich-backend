@@ -1,0 +1,12 @@
+import { extname } from 'node:path';
+
+export const UPLOAD_LIMITS = {
+  migrationArchiveBytes: 150 * 1024 * 1024,
+  migrationArchiveEntries: 5_000,
+  migrationArchiveUncompressedBytes: 500 * 1024 * 1024,
+  feedbackPhotoBytes: 10 * 1024 * 1024,
+} as const;
+
+export function isZipUpload(fileName: string) {
+  return extname(fileName).toLowerCase() === '.zip';
+}

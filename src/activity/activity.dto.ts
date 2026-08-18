@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { MAX_ACTIVITY_LOCATIONS } from 'src/common/constants';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -205,6 +207,7 @@ export class ActivityDto {
   @ApiPropertyOptional({
     type: 'array',
     description: 'Location data',
+    maxItems: MAX_ACTIVITY_LOCATIONS,
     items: {
       type: 'object',
       properties: {
@@ -228,6 +231,7 @@ export class ActivityDto {
     },
   })
   @IsArray()
+  @ArrayMaxSize(MAX_ACTIVITY_LOCATIONS)
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => ActivityLocationDto)
@@ -236,6 +240,7 @@ export class ActivityDto {
   @ApiPropertyOptional({
     type: 'array',
     description: 'Kilometre splits',
+    maxItems: MAX_ACTIVITY_LOCATIONS,
     items: {
       type: 'object',
       properties: {
@@ -247,6 +252,7 @@ export class ActivityDto {
     },
   })
   @IsArray()
+  @ArrayMaxSize(MAX_ACTIVITY_LOCATIONS)
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => ActivityKilometreSplitDto)

@@ -1,6 +1,6 @@
 import { Inject, Injectable, Optional, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { accessTokenExpiresIn, emailAccessTokenExpiresIn, refreshTokenExpiresIn } from './jwt.constants';
 
@@ -12,15 +12,64 @@ export class AuthTokenService {
   ) {}
 
   createAccessToken(userId: string, sessionId?: string) {
-    return this.jwtService.sign({ userId, ...(sessionId ? { sessionId } : {}) }, { expiresIn: accessTokenExpiresIn });
+    return this.jwtService.sign(
+      { userId, type: 'access', ...(sessionId ? { sessionId } : {}) },
+      { expiresIn: accessTokenExpiresIn },
+    );
   }
 
   createEmailAccessToken(userId: string) {
-    return this.jwtService.sign({ userId }, { expiresIn: emailAccessTokenExpiresIn });
+    return this.jwtService.sign({ userId, type: 'email' }, { expiresIn: emailAccessTokenExpiresIn });
   }
 
   createRefreshToken(userId: string, sessionId?: string) {
-    return this.jwtService.sign({ userId, ...(sessionId ? { sessionId } : {}) }, { expiresIn: refreshTokenExpiresIn });
+    return this.jwtService.sign(
+      { userId, type: 'refresh', ...(sessionId ? { sessionId } : {}) },
+      { expiresIn: refreshTokenExpiresIn },
+    );
+  }
+
+  hasPersistentStore() {
+    return Boolean(this.prisma);
+  }
+
+  async createEmailLoginCredential(userId: string) {
+    if (!this.prisma) return this.createEmailAccessToken(userId);
+
+    const code = randomBytes(32).toString('base64url');
+    await this.prisma.authExchange.create({
+      data: {
+        user_id: userId,
+        code_hash: hashToken(code),
+        purpose: 'email_login',
+        expires_at: new Date(Date.now() + 5 * 60 * 1000),
+      },
+    });
+    return code;
+  }
+
+  async consumeEmailLoginCode(code: string) {
+    if (!this.prisma) throw new UnauthorizedException('Недействительный код входа');
+
+    const now = new Date();
+    const codeHash = hashToken(code);
+    const exchange = await this.prisma.$transaction(async (transaction) => {
+      const consumed = await transaction.authExchange.updateMany({
+        where: {
+          code_hash: codeHash,
+          purpose: 'email_login',
+          consumed_at: null,
+          expires_at: { gt: now },
+        },
+        data: { consumed_at: now },
+      });
+      if (consumed.count !== 1) throw new UnauthorizedException('Код входа недействителен или уже использован');
+
+      return transaction.authExchange.findUnique({ where: { code_hash: codeHash } });
+    });
+
+    if (!exchange) throw new UnauthorizedException('Недействительный код входа');
+    return exchange.user_id;
   }
 
   createAuthTokens(userId: string) {
@@ -63,15 +112,23 @@ export class AuthTokenService {
 
   async refreshAccessToken(refreshToken: string, metadata: SessionMetadata = {}) {
     try {
-      const tokenInfo = this.jwtService.verify<{ userId?: string; sessionId?: string }>(refreshToken);
+      const tokenInfo = this.jwtService.verify<{ userId?: string; type?: string; sessionId?: string }>(refreshToken);
       if (!tokenInfo.userId) throw new UnauthorizedException('Информация о пользователе не была найдена');
+      if (tokenInfo.type && tokenInfo.type !== 'refresh') {
+        throw new UnauthorizedException('Недействительный refresh token');
+      }
       if (!tokenInfo.sessionId || !this.prisma) return { accessToken: this.createAccessToken(tokenInfo.userId) };
       const session = await this.prisma.userSession.findUnique({ where: { id: tokenInfo.sessionId } });
       if (!session || session.revoked_at || session.refresh_hash !== hashToken(refreshToken))
         throw new UnauthorizedException('Сессия завершена');
       const nextRefreshToken = this.createRefreshToken(tokenInfo.userId, session.id);
-      await this.prisma.userSession.update({
-        where: { id: session.id },
+      const updated = await this.prisma.userSession.updateMany({
+        where: {
+          id: session.id,
+          user_id: tokenInfo.userId,
+          refresh_hash: hashToken(refreshToken),
+          revoked_at: null,
+        },
         data: {
           refresh_hash: hashToken(nextRefreshToken),
           last_seen_at: new Date(),
@@ -86,6 +143,7 @@ export class AuthTokenService {
           app_build: metadata.appBuild ?? session.app_build,
         },
       });
+      if (updated.count !== 1) throw new UnauthorizedException('Сессия завершена');
       return { accessToken: this.createAccessToken(tokenInfo.userId, session.id), refreshToken: nextRefreshToken };
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;

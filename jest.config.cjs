@@ -9,7 +9,20 @@ module.exports = {
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/src/$1',
   },
-  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/generated/**', '!src/**/*.d.ts'],
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/infrastructure/database/generated/**',
+    '!src/**/*.d.ts',
+    '!src/**/*.spec.ts',
+  ],
   coverageDirectory: '../coverage',
+  coverageThreshold: {
+    global: {
+      branches: 45,
+      functions: 65,
+      lines: 65,
+      statements: 65,
+    },
+  },
   testEnvironment: 'node',
 };

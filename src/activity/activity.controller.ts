@@ -55,6 +55,7 @@ import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-
 import { AccountService } from 'src/account/account.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 const { activity, id } = PATHS;
 const receivedArchiveDirectory = join(process.cwd(), 'dist', 'receivedArchive');
 const migrationDirectory = join(process.cwd(), 'dist', 'migration');
@@ -80,8 +81,16 @@ export class ActivityController {
   @ApiQuery({ name: 'take', required: false, description: 'Maximum number of photos' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getMediaByUserId(@Param() { id }: ParamsId, @Query(QueryParams.take) take?: string) {
-    return this.activityService.getMediaByUserId(id, validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 }));
+  async getMediaByUserId(
+    @Param() { id }: ParamsId,
+    @Query(QueryParams.take) take?: string,
+    @Req() request?: RequestWithUser,
+  ) {
+    return this.activityService.getMediaByUserId(
+      id,
+      validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 }),
+      request?.user.userId ?? request?.user.id,
+    );
   }
 
   @Get(`${id}/locations`)
@@ -90,8 +99,8 @@ export class ActivityController {
   @ApiOperation({ summary: 'Get locations by activity id' })
   @ApiParam({ name: 'id', description: 'Activity identifier' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
-  async getLocationsByActivityId(@Param() { id }: ParamsId) {
-    return this.activityService.getLocationsByActivityId(id);
+  async getLocationsByActivityId(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    return this.activityService.getLocationsByActivityId(id, request?.user.userId ?? request?.user.id);
   }
 
   @Get('activityIds')
@@ -129,6 +138,14 @@ export class ActivityController {
   @ApiBody({ schema: { type: 'object', properties: { archive: { type: 'string', format: 'binary' } } } })
   @UseInterceptors(
     FileInterceptor('archive', {
+      limits: { fileSize: UPLOAD_LIMITS.migrationArchiveBytes, files: 1 },
+      fileFilter: (_request, file, callback) => {
+        if (!isZipUpload(file.originalname)) {
+          callback(new BadRequestException('Разрешены только ZIP-архивы'), false);
+          return;
+        }
+        callback(null, true);
+      },
       storage: diskStorage({
         destination: async (req, file: Express.Multer.File, cb) => {
           try {
@@ -164,7 +181,11 @@ export class ActivityController {
         throw new NotFoundException(`Профиль пользователя не найден: ${id}`);
       }
 
-      await unzipTransferArchive(file.path);
+      const archiveStats = await unzipTransferArchive(file.path);
+      this.logger.log(
+        `Migration archive size: ${archiveStats.compressedBytes} compressed bytes, ` +
+          `${archiveStats.uncompressedBytes} uncompressed bytes, ${archiveStats.entries} entries`,
+      );
       const parsedActivities = await parseCsvFileIntoArray();
       const activitiesWithCoordinates = await mapActivitiesWithCoordinates({
         parsedActivities,
@@ -230,10 +251,16 @@ export class ActivityController {
     @Param() { id }: ParamsId,
     @Query(QueryParams.page) page?: string,
     @Query(QueryParams.take) take?: string,
+    @Req() request?: RequestWithUser,
   ) {
     const validatedPage = validateOptionalIntegerQuery(page, QueryParams.page);
     const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
-    return await this.activityService.getActivitesByUserId(id, validatedPage, validatedTake);
+    return await this.activityService.getActivitesByUserId(
+      id,
+      validatedPage,
+      validatedTake,
+      request?.user.userId ?? request?.user.id,
+    );
   }
 
   @Get(`${id}/all`)
@@ -262,8 +289,8 @@ export class ActivityController {
   @ApiParam({ name: 'id', description: 'Activity identifier' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivityByActivityId(@Param() { id }: ParamsId) {
-    return await this.activityService.getActivityByActivityId(id);
+  async getActivityByActivityId(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    return await this.activityService.getActivityByActivityId(id, request?.user.userId ?? request?.user.id);
   }
 
   @Delete(id)

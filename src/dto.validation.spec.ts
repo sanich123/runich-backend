@@ -18,6 +18,7 @@ import { FriendDto } from './friend/friend.dto';
 import { LikeDto } from './like/like.dto';
 import { ParamsId } from './common/dto/params-validation';
 import { UserDto } from './user/user.dto';
+import { MAX_ACTIVITY_LOCATIONS } from './common/constants';
 
 const uuid = '11111111-1111-4111-8111-111111111111';
 const email = 'runner@example.com';
@@ -151,6 +152,15 @@ describe('request DTO validation', () => {
       speed: 1,
       sport: 'run',
       kilometresSplit: [{ lastKilometerDuration: 300, lastKilometerAltitude: 10 }],
+    });
+    await expectInvalid(ActivityDto, {
+      duration: 1,
+      distance: 1,
+      speed: 1,
+      sport: 'run',
+      locations: Array.from({ length: MAX_ACTIVITY_LOCATIONS + 1 }, () => ({
+        coords: { latitude: 55.75, longitude: 37.61 },
+      })),
     });
   });
 

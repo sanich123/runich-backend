@@ -21,6 +21,10 @@ describe('StatisticService', () => {
     prisma.activity.findMany.mockResolvedValueOnce([{ sport: 'run' }, { sport: 'run' }, { sport: 'bike' }]);
 
     await expect(service.getYearsAndTypesOfActivities('u1')).resolves.toEqual([{ year: 2025, types: ['run', 'bike'] }]);
+    expect(prisma.activity.findMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ where: expect.objectContaining({ user_id: 'u1' }) }),
+    );
   });
 
   it('calculates monthly statistics grouped by sport', async () => {
@@ -66,6 +70,10 @@ describe('StatisticService', () => {
       totalDistance: 3000,
       totalItems: 2,
     });
+    expect(prisma.activity.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ where: expect.objectContaining({ user_id: 'u1' }) }),
+    );
     await expect(service.getAllActivitiesStatisticsByUserId('u1')).resolves.toEqual({
       totalDuration: 300,
       totalDistance: 3000,

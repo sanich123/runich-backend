@@ -71,9 +71,9 @@ export class AuthService {
       const user = await this.prisma.users.findUnique({ where: { email } });
 
       if (user && !user?.email_confirmed_at) {
-        const accessToken = this.tokenService.createEmailAccessToken(user.id);
+        const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
         const confirmationCode = getRandomInt(1, 100000);
-        await this.sendConfirmationEmail(email, confirmationCode, accessToken);
+        await this.sendConfirmationEmail(email, confirmationCode, loginCredential);
         await this.prisma.users.update({
           where: { email },
           data: { confirmation_sent_at: new Date(), confirmation_token: `${confirmationCode}` },
@@ -93,8 +93,8 @@ export class AuthService {
             profile: { create: {} },
           },
         });
-        const accessToken = this.tokenService.createEmailAccessToken(user.id);
-        await this.sendConfirmationEmail(email, confirmationCode, accessToken);
+        const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
+        await this.sendConfirmationEmail(email, confirmationCode, loginCredential);
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       }
     } catch (error) {
@@ -102,13 +102,13 @@ export class AuthService {
     }
   }
 
-  private async sendConfirmationCode(email: string, confirmationCode: number, accessToken: string) {
-    return this.authEmailService.sendConfirmationCode(email, confirmationCode, accessToken);
+  private async sendConfirmationCode(email: string, confirmationCode: number, loginCredential: string) {
+    return this.authEmailService.sendConfirmationCode(email, confirmationCode, loginCredential);
   }
 
-  private async sendConfirmationEmail(email: string, confirmationCode: number, accessToken: string) {
+  private async sendConfirmationEmail(email: string, confirmationCode: number, loginCredential: string) {
     try {
-      return await this.sendConfirmationCode(email, confirmationCode, accessToken);
+      return await this.sendConfirmationCode(email, confirmationCode, loginCredential);
     } catch (error) {
       if (error instanceof ServiceUnavailableException) throw error;
       this.logger.error(`Не удалось отправить письмо подтверждения на ${email}`, error);
@@ -152,8 +152,8 @@ export class AuthService {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       }
 
-      const accessToken = this.tokenService.createEmailAccessToken(user.id);
-      await this.authEmailService.sendLoginLink(normalizedEmail, accessToken);
+      const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
+      await this.authEmailService.sendLoginLink(normalizedEmail, loginCredential);
 
       return { message: 'Ссылка для входа в Runich отправлена на указанную почту' };
     } catch (error) {
@@ -161,9 +161,32 @@ export class AuthService {
     }
   }
 
-  async verifyToken(accessToken: string) {
+  async verifyToken(accessToken?: string, code?: string, metadata: SessionMetadata = {}) {
     try {
-      const tokenInfo = this.tokenService.verifyAccessToken(accessToken);
+      if (code) {
+        const userId = await this.tokenService.consumeEmailLoginCode(code);
+        await this.prisma.users.update({
+          where: { id: userId },
+          data: { email_confirmed_at: new Date(), last_sign_in_at: new Date() },
+        });
+        return this.tokenService.createSessionTokens(userId, metadata);
+      }
+
+      if (!accessToken) throw new UnauthorizedException('Не указан код входа');
+      const tokenInfo = this.tokenService.verifyAccessToken(accessToken) as {
+        userId?: string;
+        type?: string;
+        iat?: number;
+        exp?: number;
+      };
+      const isLegacyEmailToken =
+        !tokenInfo.type &&
+        tokenInfo.iat !== undefined &&
+        tokenInfo.exp !== undefined &&
+        tokenInfo.exp - tokenInfo.iat <= 5 * 60;
+      if (this.tokenService.hasPersistentStore() && tokenInfo.type !== 'email' && !isLegacyEmailToken) {
+        throw new UnauthorizedException('Недействительный код входа');
+      }
       if (!tokenInfo?.userId) {
         throw new UnauthorizedException('Информация о пользователе не была найдена');
       }
@@ -175,7 +198,7 @@ export class AuthService {
         await this.prisma.users.update({ where: { id: user.id }, data: { email_confirmed_at: new Date() } });
       }
 
-      return this.tokenService.createSessionTokens(user.id);
+      return this.tokenService.createSessionTokens(user.id, metadata);
     } catch (error) {
       if (error instanceof Error && error.name === 'TokenExpiredError') {
         throw new UnauthorizedException('Срок действия токена истёк');

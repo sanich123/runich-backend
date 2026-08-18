@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, MinLength, ValidateIf } from 'class-validator';
 
 export class RegisterUserDto {
   @ApiProperty({ type: String, description: 'Email' })
@@ -16,10 +16,17 @@ export class RegisterUserDto {
 }
 
 export class AccessTokenDto {
-  @ApiProperty({ type: String, description: 'Access Token' })
-  @IsNotEmpty()
+  @ApiProperty({ type: String, required: false, description: 'Legacy email access token' })
+  @ValidateIf((object) => object.accessToken !== undefined || !object.code)
   @IsString()
-  accessToken: string;
+  @IsNotEmpty()
+  accessToken?: string;
+
+  @ApiProperty({ type: String, required: false, description: 'One-time email/OAuth exchange code' })
+  @ValidateIf((object) => object.code !== undefined || !object.accessToken)
+  @IsString()
+  @IsNotEmpty()
+  code?: string;
 }
 
 export class RefreshTokenDto {

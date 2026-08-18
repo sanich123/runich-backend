@@ -159,8 +159,8 @@ export class AuthController {
   @ApiBody({ type: AccessTokenDto })
   @ApiOkResponse({ type: LoginEntity })
   @ApiCreatedResponse({ type: LoginEntity })
-  async verifyTokenAndAppVersion(@Body() { accessToken }: AccessTokenDto) {
-    return this.authService.verifyToken(accessToken);
+  async verifyTokenAndAppVersion(@Body() { accessToken, code }: AccessTokenDto, @Req() request?: Request) {
+    return this.authService.verifyToken(accessToken, code, request ? this.getSessionMetadata(request) : undefined);
   }
 
   @Post('confirm-email')

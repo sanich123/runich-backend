@@ -87,7 +87,8 @@ export class YandexAuthService {
     await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
 
     const redirect = new URL(frontendUrl);
-    redirect.searchParams.set('accessToken', this.tokenService.createAccessToken(user.id));
+    const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
+    redirect.searchParams.set(this.tokenService.hasPersistentStore() ? 'code' : 'accessToken', loginCredential);
     return response.redirect(redirect.toString());
   }
 }

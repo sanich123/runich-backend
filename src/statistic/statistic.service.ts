@@ -23,6 +23,7 @@ export class StatisticService {
         years.map(async (year) => {
           const types = await this.prisma.activity.findMany({
             where: {
+              user_id: id,
               date: {
                 ...this.metricsService.utcYearRange(year as number),
               },

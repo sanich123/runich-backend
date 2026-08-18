@@ -14,9 +14,28 @@ export async function getCoordinatesFromGpxFile(filePath: string): Promise<Locat
   try {
     const gpxInText = await readFile(filePath, { encoding: 'utf-8' });
     const [parsedFile] = await parseGPXWithCustomParser(gpxInText, customParseMethod);
-    const coordinates = parsedFile?.tracks[0]?.points?.map(({ longitude, latitude }) => ({
-      coords: { longitude, latitude },
-    }));
+    const points = parsedFile?.tracks?.flatMap(({ points: trackPoints }) => trackPoints ?? []) ?? [];
+    const coordinates = points
+      .filter(({ longitude, latitude }) => Number.isFinite(longitude) && Number.isFinite(latitude))
+      .map(({ longitude, latitude, elevation, time }) => {
+        const parsedTimestamp =
+          time instanceof Date
+            ? time.getTime()
+            : time && Number.isFinite(Date.parse(String(time)))
+              ? Date.parse(String(time))
+              : null;
+        const timestamp =
+          typeof parsedTimestamp === 'number' && Number.isFinite(parsedTimestamp) ? parsedTimestamp : null;
+
+        return {
+          coords: {
+            longitude,
+            latitude,
+            ...(typeof elevation === 'number' && Number.isFinite(elevation) ? { altitude: elevation } : {}),
+            ...(timestamp !== null ? { timestamp } : {}),
+          },
+        };
+      });
     return coordinates || [];
   } catch (error) {
     logger.error(`Не удалось обработать GPX-файл ${filePath}`, error instanceof Error ? error.stack : String(error));

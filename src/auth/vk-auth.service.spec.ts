@@ -10,9 +10,11 @@ describe('VkAuthService', () => {
     sign: jest.fn(() => 'signed-state'),
     verify: jest.fn(() => ({ codeVerifier: 'verifier' })),
   } as unknown as JwtService;
-  const tokenService = { createAccessToken: jest.fn(() => 'app-token') } as unknown as ConstructorParameters<
-    typeof VkAuthService
-  >[2];
+  const tokenService = {
+    createAccessToken: jest.fn(() => 'app-token'),
+    createEmailLoginCredential: jest.fn(() => 'app-token'),
+    hasPersistentStore: jest.fn(() => false),
+  } as unknown as ConstructorParameters<typeof VkAuthService>[2];
   let service: VkAuthService;
 
   beforeEach(() => {

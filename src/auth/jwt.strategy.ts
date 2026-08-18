@@ -12,7 +12,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: { userId: string; sessionId?: string }) {
+  async validate(payload: { userId: string; type?: string; sessionId?: string }) {
+    if (payload.type && payload.type !== 'access') {
+      throw new UnauthorizedException('Требуется access token');
+    }
     const user = await this.prisma.users.findUnique({ where: { id: payload.userId } });
 
     if (!user) {

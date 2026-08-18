@@ -47,7 +47,7 @@ export class LikeController {
   @ApiParam({ name: 'id', description: 'Activity identifier' })
   @ApiResponse({ status: OK, type: [LikeResponseDto], description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getLikesByActivityId(@Param() { id }: ParamsId) {
-    return await this.likeService.getLikesByActivityId(id);
+  async getLikesByActivityId(@Param() { id }: ParamsId, @Req() request?: AuthenticatedRequest) {
+    return await this.likeService.getLikesByActivityId(id, request?.user.userId ?? request?.user.id);
   }
 }

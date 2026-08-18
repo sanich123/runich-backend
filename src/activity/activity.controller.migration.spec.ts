@@ -30,7 +30,7 @@ describe('ActivityController Strava migration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     accountService.getOrCreateAccountByUserId.mockResolvedValue({ id: 'profile-1' });
-    unzipTransferArchive.mockResolvedValue(undefined);
+    unzipTransferArchive.mockResolvedValue({ compressedBytes: 1, uncompressedBytes: 1, entries: 1 });
     parseCsvFileIntoArray.mockResolvedValue([{ 'Activity ID': 'strava-1' }]);
     mapActivitiesWithCoordinates.mockResolvedValue([{ id: 'activity-1', sourceActivityId: 'strava-1' }]);
     activityService.createActivitiesFromMigrationArchive.mockResolvedValue({ success: true });
