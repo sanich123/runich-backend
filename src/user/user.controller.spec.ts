@@ -7,7 +7,7 @@ describe('UserController', () => {
   const service = {
     getProfileByUserId: asyncMock(),
     createProfileByUserId: asyncMock(),
-    updateProfileByProfileId: asyncMock(),
+    updateProfileByUserId: asyncMock(),
   };
   const controller = new UserController(service as unknown as UserService);
 
@@ -17,11 +17,11 @@ describe('UserController', () => {
     const result = { id: 'profile-1' };
     service.getProfileByUserId.mockResolvedValue(result);
     service.createProfileByUserId.mockResolvedValue(result);
-    service.updateProfileByProfileId.mockResolvedValue(result);
+    service.updateProfileByUserId.mockResolvedValue(result);
 
     await expect(controller.getProfileByUserId({ id: 'u1' })).resolves.toEqual(result);
     await expect(controller.createProfileByUserId({ id: 'u1' }, { name: 'Ann' })).resolves.toEqual(result);
-    await expect(controller.updateProfileByProfileId({ id: 'p1' }, { name: 'Ann' })).resolves.toEqual(result);
+    await expect(controller.updateProfileByUserId({ id: 'u1' }, { name: 'Ann' })).resolves.toEqual(result);
   });
 
   it('propagates service errors from every endpoint', async () => {
@@ -30,6 +30,6 @@ describe('UserController', () => {
 
     await expect(controller.getProfileByUserId({ id: 'u1' })).rejects.toBe(error);
     await expect(controller.createProfileByUserId({ id: 'u1' }, {})).rejects.toBe(error);
-    await expect(controller.updateProfileByProfileId({ id: 'p1' }, {})).rejects.toBe(error);
+    await expect(controller.updateProfileByUserId({ id: 'u1' }, {})).rejects.toBe(error);
   });
 });

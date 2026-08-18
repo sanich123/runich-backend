@@ -84,4 +84,15 @@ describe('ownership authorization', () => {
       expect.objectContaining({ where: { id: 'profile-1', user_id: 'owner-1' } }),
     );
   });
+
+  it('rejects profile updates for another user', async () => {
+    const prisma = { profile: { findUnique: mock(), upsert: mock() } };
+    const service = new UserService(prisma as never);
+    prisma.profile.findUnique.mockResolvedValue(null);
+
+    await expect(service.updateProfileByUserId('owner-1', 'other-user', { name: 'Blocked' })).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(prisma.profile.upsert).not.toHaveBeenCalled();
+  });
 });

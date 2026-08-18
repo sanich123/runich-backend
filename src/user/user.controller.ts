@@ -68,11 +68,11 @@ export class UserController {
   @ApiBody({ type: UserDto })
   @ApiParam({ name: 'id', description: 'User identifier' })
   @HttpCode(HttpStatus.OK)
-  async updateProfileByProfileId(
+  async updateProfileByUserId(
     @Param() { id }: ParamsId,
     @Body() accountDto: UserDto,
     @Req() request?: AuthenticatedRequest,
   ) {
-    return await this.userService.updateProfileByProfileId(id, request?.user.id ?? id, accountDto);
+    return await this.userService.updateProfileByUserId(id, request?.user.id ?? id, accountDto);
   }
 }
