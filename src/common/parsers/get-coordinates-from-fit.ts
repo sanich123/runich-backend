@@ -13,6 +13,7 @@ export async function getCoordinatesFromFitFile(filePath: string): Promise<Locat
     const [activities] = getSportsLibEventFromBuffer.getActivities();
     const streams = new Map(activities.getAllStreams().map((stream) => [stream.type, stream.getData()]));
     const altitude = streams.get('Altitude');
+    const startTimestamp = activities.startDate.getTime();
     return activities.getPositionData().flatMap((position, index) => {
       if (
         position?.longitudeDegrees == null ||
@@ -30,6 +31,7 @@ export async function getCoordinatesFromFitFile(filePath: string): Promise<Locat
             longitude: position.longitudeDegrees,
             latitude: position.latitudeDegrees,
             ...(typeof altitudeValue === 'number' && Number.isFinite(altitudeValue) ? { altitude: altitudeValue } : {}),
+            ...(Number.isFinite(startTimestamp) ? { timestamp: startTimestamp + index * 1_000 } : {}),
           },
         },
       ];

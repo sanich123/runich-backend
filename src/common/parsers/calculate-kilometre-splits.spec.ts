@@ -35,10 +35,24 @@ describe('calculateKilometreSplits', () => {
     expect(splits[0].lastKilometerAltitude).toBe(0);
   });
 
+  it('scales timestamp durations when moving time is shorter than elapsed time', () => {
+    const splits = calculateKilometreSplits(createRoute([100, 100, 100, 100, 100]), 1_000_000);
+
+    expect(splits).toHaveLength(1);
+    expect(splits[0].lastKilometerDuration).toBeCloseTo(1_000_000, -1);
+  });
+
   it('does not count a short altitude fluctuation as elevation gain', () => {
     const splits = calculateKilometreSplits(createRoute([100, 104, 102, 105, 103]), 1_000_000);
 
     expect(splits).toHaveLength(1);
     expect(splits[0].lastKilometerAltitude).toBe(0);
+  });
+
+  it('keeps a sustained imported climb below the live-tracker threshold', () => {
+    const splits = calculateKilometreSplits(createRoute([100, 101, 102, 103, 104]), 1_000_000);
+
+    expect(splits).toHaveLength(1);
+    expect(splits[0].lastKilometerAltitude).toBeCloseTo(2, 5);
   });
 });

@@ -6,6 +6,7 @@ export type RawStravaCsvColumns = {
   'Activity Type': string;
   'Activity Description': string;
   'Elapsed Time': number;
+  'Moving Time'?: number;
   Distance: number;
 };
 

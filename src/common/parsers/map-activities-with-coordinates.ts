@@ -62,7 +62,10 @@ export async function mapActivitiesWithCoordinates({
             }
             logger.debug(`Processing activity ${i + 1}`);
 
-            const duration = Number(activity['Elapsed Time']) * 1000;
+            const movingTime = Number(activity['Moving Time']);
+            const elapsedTime = Number(activity['Elapsed Time']);
+            const durationSeconds = Number.isFinite(movingTime) && movingTime >= 0 ? movingTime : elapsedTime;
+            const duration = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds * 1000 : 0;
             const distance = Number(activity.Distance);
             const title = activity['Activity Name'];
             const sport = activity['Activity Type'].toLowerCase();

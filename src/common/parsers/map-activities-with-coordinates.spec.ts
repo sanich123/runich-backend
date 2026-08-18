@@ -51,12 +51,14 @@ describe('mapActivitiesWithCoordinates', () => {
           'Activity Type': 'Run',
           'Activity Description': '',
           'Elapsed Time': 300,
+          'Moving Time': 240,
           Distance: 1_250,
         },
       ],
     });
 
     expect(activity.locations).toHaveLength(6);
+    expect(activity.duration).toBe(240_000);
     expect(activity.kilometresSplit).toHaveLength(1);
     expect(activity.kilometresSplit?.[0].kilometerPoint.coords.longitude).toBeCloseTo(
       1_000 / METERS_PER_EQUATOR_DEGREE,

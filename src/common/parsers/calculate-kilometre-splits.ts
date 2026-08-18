@@ -3,7 +3,12 @@ import type { ActivityKilometreSplitObject, LocationObject } from 'src/activity/
 const EARTH_RADIUS_METERS = 6_371_008.8;
 const METERS_IN_KILOMETER = 1_000;
 const ELEVATION_SMOOTHING_WINDOW = 5;
-const MIN_CLIMB_METERS = 10;
+// Imported FIT/GPX/TCX altitude streams are already smoothed, but their
+// useful elevation changes are often smaller than the 10 m threshold used by
+// the live tracker. Keep a smaller threshold here so short climbs are not
+// discarded completely while the smoothing and descent hysteresis still
+// suppress GPS noise.
+const MIN_CLIMB_METERS = 2;
 const MAX_VERTICAL_SPEED_METERS_PER_SECOND = 3;
 
 function isFiniteNumber(value: unknown): value is number {
@@ -28,7 +33,8 @@ function distanceBetween(first: LocationObject, second: LocationObject) {
 
 function median(values: number[]) {
   const sorted = [...values].sort((first, second) => first - second);
-  return sorted[Math.floor(sorted.length / 2)];
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
 }
 
 function getSmoothedAltitudes(locations: LocationObject[]) {
@@ -161,6 +167,12 @@ export function calculateKilometreSplits(
   if (totalDistance <= 0) return [];
 
   const elevationGains = getElevationGains(validLocations);
+  const firstTimestamp = validLocations[0].coords.timestamp;
+  const lastTimestamp = validLocations.at(-1)?.coords.timestamp;
+  const timestampSpan =
+    isFiniteNumber(firstTimestamp) && isFiniteNumber(lastTimestamp) ? Math.max(0, lastTimestamp - firstTimestamp) : 0;
+  const timestampScale =
+    timestampSpan > Math.max(0, totalDuration) && timestampSpan > 0 ? Math.max(0, totalDuration) / timestampSpan : 1;
   const splits: ActivityKilometreSplitObject[] = [];
   let distanceInCurrentKilometer = 0;
   let durationInCurrentKilometer = 0;
@@ -171,7 +183,7 @@ export function calculateKilometreSplits(
     const second = validLocations[index + 1];
     const timestampDuration =
       isFiniteNumber(first.coords.timestamp) && isFiniteNumber(second.coords.timestamp)
-        ? Math.max(0, second.coords.timestamp - first.coords.timestamp)
+        ? Math.max(0, second.coords.timestamp - first.coords.timestamp) * timestampScale
         : 0;
     let segmentDuration = timestampDuration || (Math.max(0, totalDuration) * segmentDistance) / totalDistance;
     let remainingDistance = segmentDistance;
