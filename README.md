@@ -7,7 +7,7 @@ Backend API for Runich, a social fitness application for activities, profiles, f
 - NestJS 11, TypeScript 6 and ESM
 - Node.js >=26 <27
 - Yarn 4.18.0
-- PostgreSQL 17 and Prisma 7
+- PostgreSQL 18.6 and Prisma 7
 - JWT bearer authentication
 - Swagger/OpenAPI at /api
 
@@ -21,6 +21,10 @@ Install Node.js 26 and Corepack:
 Create a local, ignored .env file:
 
     DATABASE_URL=postgresql://user:password@localhost:5432/runich_db?schema=public
+    DATABASE_URL_DOCKER=postgresql://user:password@db:5432/runich_db?schema=public
+    POSTGRES_USER=runich
+    POSTGRES_PASSWORD=local-password
+    POSTGRES_DB=runich_db
     PORT=3000
     NODE_ENV=development
     GOOGLE_CLIENT_ID=your-google-oauth-client-id
@@ -52,6 +56,15 @@ chunks instead of increasing the global body limit.
 
     docker compose up --build
 
+The local Compose database uses PostgreSQL 18.6. `POSTGRES_PASSWORD` and
+`DATABASE_URL_DOCKER` are required in the ignored `.env` file. The database
+port is bound only to `127.0.0.1` for local migrations; Railway uses private
+service networking and does not use this Compose port mapping.
+
+For Railway, add `DATABASE_URL` as a reference to the PostgreSQL service's
+Railway variable, for example `${{Postgres.DATABASE_URL}}`. Do not copy the
+local `.env` file or database password into the repository.
+
 Use secret management and rotated credentials in production. Never commit .env, database credentials, JWT secrets, SMTP passwords or third-party API tokens.
 
 ## Configuration
@@ -59,6 +72,9 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | Variable                        | Purpose                                                           |
 | ------------------------------- | ----------------------------------------------------------------- |
 | DATABASE_URL                    | PostgreSQL connection string                                      |
+| DATABASE_URL_DOCKER             | Local Compose connection string using the `db` hostname           |
+| POSTGRES_USER, POSTGRES_DB      | Local Compose database user and database name                    |
+| POSTGRES_PASSWORD               | Local Compose database password                                  |
 | PORT                            | HTTP port, default 3000                                           |
 | NODE_ENV                        | Runtime environment                                               |
 | GOOGLE_CLIENT_ID, GOOGLE_SECRET | Google OAuth client credentials                                   |
