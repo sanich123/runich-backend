@@ -20,7 +20,7 @@ describe('CommentService privacy', () => {
   it('does not allow liking a comment on a private activity', async () => {
     const prisma = {
       comment: { findUnique: asyncMock() },
-      commentLike: { create: asyncMock() },
+      commentLike: { upsert: asyncMock() },
     };
     prisma.comment.findUnique.mockResolvedValue({ activityId: 'activity-1' });
     const activityService = { canAccessActivity: asyncMock().mockResolvedValue(false) };
@@ -29,7 +29,7 @@ describe('CommentService privacy', () => {
       prisma as never,
       accountService as never,
       activityService as never,
-      { create: prisma.commentLike.create } as never,
+      { create: prisma.commentLike.upsert } as never,
     );
 
     await expect(service.createCommentLikeByCommentId({ commentId: 'comment-1' }, 'viewer-1')).rejects.toBeInstanceOf(

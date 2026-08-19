@@ -4,6 +4,10 @@ import { PrismaException } from 'src/common/filters/prisma-exceptions';
 
 const logger = new Logger('Prisma');
 
+export function isPrismaUniqueConstraintError(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}
+
 export function handleServiceError(error: unknown) {
   // Service methods currently use broad try/catch blocks. Keep application-level
   // HTTP exceptions intact and only translate errors that Prisma identifies.

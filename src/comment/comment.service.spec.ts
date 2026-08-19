@@ -12,7 +12,7 @@ function createPrismaMock() {
       update: asyncMock(),
       findUnique: asyncMock(),
     },
-    commentLike: { create: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
+    commentLike: { upsert: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
   };
 }
 
@@ -32,7 +32,8 @@ describe('CommentService', () => {
       profile: { users: { email: 'user@example.com' } },
       comment: 'Hello',
     });
-    prisma.commentLike.create.mockResolvedValue(like);
+    prisma.commentLike.upsert.mockResolvedValue(like);
+    prisma.commentLike.findUnique.mockResolvedValue(like);
     prisma.commentLike.delete.mockResolvedValue(like);
     prisma.commentLike.findMany.mockResolvedValue([like]);
 
@@ -66,7 +67,7 @@ describe('CommentService', () => {
       NotFoundException,
     );
     expect(prisma.comment.create).not.toHaveBeenCalled();
-    expect(prisma.commentLike.create).not.toHaveBeenCalled();
+    expect(prisma.commentLike.upsert).not.toHaveBeenCalled();
   });
 
   it('converts database failures from every operation to an internal server error', async () => {

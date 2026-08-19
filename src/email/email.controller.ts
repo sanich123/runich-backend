@@ -7,6 +7,7 @@ import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/auth/auth-request';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 
 @ApiTags(PATHS.email)
 @ApiBearerAuth('bearerAuth')
@@ -45,6 +46,7 @@ export class EmailController {
   }
 
   @Post('feedback')
+  @RateLimit(RATE_LIMITS.feedbackUpload.limit, RATE_LIMITS.feedbackUpload.ttl)
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('photo', { limits: { fileSize: UPLOAD_LIMITS.feedbackPhotoBytes, files: 1 } }))
   async sendFeedback(

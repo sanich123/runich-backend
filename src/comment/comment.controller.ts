@@ -133,9 +133,9 @@ export class CommentController {
   @ApiOperation({ summary: 'Post like to comment by comment id' })
   @ApiParam({ name: 'id', description: 'Comment identifier' })
   @ApiBody({ type: CommentLikeDto, required: true })
-  @ApiResponse({ status: CREATED, type: CommentLikeResponseDto, description: 'Success' })
+  @ApiResponse({ status: OK, type: CommentLikeResponseDto, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  @HttpCode(CREATED)
+  @HttpCode(OK)
   async postCommentLikeWithCommentId(@Body() commentLikeDto: CommentLikeDto, @Req() request?: AuthenticatedRequest) {
     return await this.commentService.createCommentLikeByCommentId(
       commentLikeDto,

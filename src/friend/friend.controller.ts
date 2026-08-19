@@ -9,7 +9,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/auth/auth-request';
 
 const { friend, id } = PATHS;
-const { OK, BAD_REQUEST, NO_CONTENT, CREATED } = HttpStatus;
+const { OK, BAD_REQUEST, NO_CONTENT } = HttpStatus;
 
 @ApiTags(friend)
 @ApiBearerAuth('bearerAuth')
@@ -46,8 +46,9 @@ export class FriendController {
   @ApiOperation({ summary: 'Create friend by friendId' })
   @ApiParam({ name: 'id', description: 'User identifier' })
   @ApiBody({ description: 'Create friend body', type: FriendDto })
-  @ApiResponse({ status: CREATED, type: FriendResponseDto, description: 'Success' })
+  @ApiResponse({ status: OK, type: FriendResponseDto, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
+  @HttpCode(OK)
   async createFrienById(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
     return await this.friendService.addFriendByFriendId(id, request.user.id);
   }

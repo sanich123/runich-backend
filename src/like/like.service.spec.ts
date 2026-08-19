@@ -4,7 +4,7 @@ import { asyncMock, expectInternalServerError } from 'src/__tests__/helpers';
 
 function createPrismaMock() {
   return {
-    like: { create: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
+    like: { upsert: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
   };
 }
 
@@ -13,15 +13,18 @@ describe('LikeService', () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new LikeService(prisma as never, account as never, {} as never);
-    prisma.like.create.mockResolvedValue({ id: 'like-1' });
+    prisma.like.upsert.mockResolvedValue({ id: 'like-1' });
+    prisma.like.findUnique.mockResolvedValue({ id: 'like-1' });
     prisma.like.delete.mockResolvedValue({ id: 'like-1' });
     prisma.like.findMany.mockResolvedValue([{ id: 'like-1' }]);
 
     await expect(service.addLike({ activityId: 'activity-1' })).resolves.toEqual({ id: 'like-1' });
     await expect(service.deleteLikeById('like-1')).resolves.toEqual({ id: 'like-1' });
     await expect(service.getLikesByActivityId('activity-1')).resolves.toEqual([{ id: 'like-1' }]);
-    expect(prisma.like.create).toHaveBeenCalledWith({
-      data: { profileId: 'profile-1', activityId: 'activity-1' },
+    expect(prisma.like.upsert).toHaveBeenCalledWith({
+      where: { authorId_activityId: { authorId: '', activityId: 'activity-1' } },
+      update: {},
+      create: { profileId: 'profile-1', authorId: '', activityId: 'activity-1' },
     });
   });
 
@@ -34,7 +37,7 @@ describe('LikeService', () => {
     );
 
     await expect(service.addLike({ activityId: 'activity-1' })).rejects.toBeInstanceOf(NotFoundException);
-    expect(prisma.like.create).not.toHaveBeenCalled();
+    expect(prisma.like.upsert).not.toHaveBeenCalled();
   });
 
   it('converts database failures from every operation to an internal server error', async () => {

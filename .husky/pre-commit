@@ -7,14 +7,26 @@ yarn lint
 # 3. Форматирование исходного кода
 yarn format
 
-# 4. Тесты
+# 4. Unit-тесты
 yarn test:ci
 
-# 5. Проверка circular dependencies
+# 5. Coverage-тесты с порогами покрытия
+yarn test:cov
+
+# 6. PostgreSQL integration/e2e-тесты
+yarn test:integration
+
+# 7. Остановка локальной БД после успешного прохождения всех тестов
+docker compose stop db
+
+# 8. Production-сборка
+yarn build
+
+# 9. Проверка circular dependencies
 yarn madge
 
-# 6. Проверка неиспользуемых экспортов
+# 10. Проверка неиспользуемых экспортов
 yarn ts-prune
 
-# 7. Проверка неиспользуемых зависимостей (диагностическая)
+# 11. Проверка неиспользуемых зависимостей (диагностическая)
 yarn depcheck || true

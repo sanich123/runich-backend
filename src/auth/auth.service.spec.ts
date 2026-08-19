@@ -127,8 +127,11 @@ describe('AuthService', () => {
       accessToken: 'access-token',
       refreshToken: 'access-token',
     });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'access' }, { expiresIn: '30d' });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'refresh' }, { expiresIn: '180d' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'access' }, { expiresIn: '1d' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'user-1', type: 'refresh', jti: expect.any(String) }),
+      { expiresIn: '30d' },
+    );
     expect(dependencies.prisma.users.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
       data: { last_sign_in_at: expect.any(Date) },
@@ -221,7 +224,7 @@ describe('AuthService', () => {
     dependencies.jwt.verify.mockReturnValue({ userId: 'user-1' });
 
     await expect(service.refreshAccessToken('refresh-token')).resolves.toEqual({ accessToken: 'access-token' });
-    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'access' }, { expiresIn: '30d' });
+    expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'access' }, { expiresIn: '1d' });
 
     dependencies.jwt.verify.mockReturnValue({});
     await expect(service.refreshAccessToken('refresh-token')).rejects.toBeInstanceOf(UnauthorizedException);
@@ -274,14 +277,14 @@ describe('AuthService', () => {
     const accessPayload = jwtService.decode<{ iat: number; exp: number }>(loginResult.accessToken);
     const refreshPayload = jwtService.decode<{ iat: number; exp: number }>(loginResult.refreshToken);
 
-    expect(accessPayload.exp - accessPayload.iat).toBe(30 * 24 * 60 * 60);
-    expect(refreshPayload.exp - refreshPayload.iat).toBe(180 * 24 * 60 * 60);
+    expect(accessPayload.exp - accessPayload.iat).toBe(24 * 60 * 60);
+    expect(refreshPayload.exp - refreshPayload.iat).toBe(30 * 24 * 60 * 60);
 
     const refreshedResult = await service.refreshAccessToken(loginResult.refreshToken);
     const refreshedAccessPayload = jwtService.decode<{ iat: number; exp: number }>(refreshedResult.accessToken);
 
     expect(refreshedResult).toEqual({ accessToken: expect.any(String) });
-    expect(refreshedAccessPayload.exp - refreshedAccessPayload.iat).toBe(30 * 24 * 60 * 60);
+    expect(refreshedAccessPayload.exp - refreshedAccessPayload.iat).toBe(24 * 60 * 60);
   });
 
   it('sends a six-digit password change code and stores it for the user', async () => {

@@ -56,6 +56,7 @@ import { AccountService } from 'src/account/account.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 const { activity, id } = PATHS;
 const receivedArchiveDirectory = join(process.cwd(), 'dist', 'receivedArchive');
 const migrationDirectory = join(process.cwd(), 'dist', 'migration');
@@ -129,6 +130,7 @@ export class ActivityController {
   }
 
   @Post('migration-strava/:id')
+  @RateLimit(RATE_LIMITS.stravaImport.limit, RATE_LIMITS.stravaImport.ttl)
   @ApiOkResponse({ type: ActivityImportResponseDto })
   @ApiResponse({ status: HttpStatus.CREATED, type: ActivityImportResponseDto, description: 'Success' })
   @UseGuards(JwtAuthGuard)

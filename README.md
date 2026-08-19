@@ -9,7 +9,7 @@ Backend API for Runich, a social fitness application for activities, profiles, f
 - Yarn 4.18.0
 - PostgreSQL 18.6 and Prisma 7
 - JWT bearer authentication
-- Swagger/OpenAPI at /api
+- Swagger/OpenAPI at /api in development; production access is disabled by default
 
 ## Quick start
 
@@ -27,6 +27,7 @@ Create a local, ignored .env file:
     POSTGRES_DB=runich_db
     PORT=3000
     NODE_ENV=development
+    SWAGGER_ENABLED=true
     GOOGLE_CLIENT_ID=your-google-oauth-client-id
     GOOGLE_SECRET=your-google-oauth-client-secret
     GOOGLE_REFRESH_TOKEN=your-google-oauth-refresh-token
@@ -46,6 +47,26 @@ Initialize the database and start development mode:
     yarn start:dev
 
 The API is available at http://localhost:3000; Swagger is at http://localhost:3000/api.
+Liveness is available at `/health/live`, and Railway readiness checks should use
+`/health/ready`.
+
+Sensitive endpoints have route-specific rate limits. Login and registration
+allow 5 requests per minute. Email-code and password-change endpoints allow
+5 requests per 10 minutes. Strava archive imports allow 2 requests per
+10 minutes, and feedback photo uploads allow 5 requests per 10 minutes.
+Exceeding a limit returns HTTP 429 with a `Retry-After` response header.
+Following a user and liking an activity or comment are idempotent: repeating
+the same request returns the existing relation with HTTP 200.
+
+JWT access tokens expire after 1 day. Refresh tokens expire after 30 days,
+are stored as hashes for persistent sessions, and are rotated on every
+successful refresh.
+
+Swagger is disabled by default in every environment and is enabled only when
+`SWAGGER_ENABLED=true` is set. If enabled in production, both
+`SWAGGER_USER` and `SWAGGER_PASSWORD` are required and protect `/api` and
+`/api-json` with Basic Auth. Store these values only in Railway variables or a
+local ignored `.env` file.
 
 Tracked activities are reduced by the mobile client to at most 5,000 location
 points before sending. The API accepts the same maximum and limits JSON request
@@ -77,6 +98,8 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | POSTGRES_PASSWORD               | Local Compose database password                                  |
 | PORT                            | HTTP port, default 3000                                           |
 | NODE_ENV                        | Runtime environment                                               |
+| SWAGGER_ENABLED                 | Enable Swagger; production default is disabled                    |
+| SWAGGER_USER, SWAGGER_PASSWORD | Basic Auth credentials when Swagger is enabled in production      |
 | GOOGLE_CLIENT_ID, GOOGLE_SECRET | Google OAuth client credentials                                   |
 | GOOGLE_REFRESH_TOKEN            | Offline OAuth token with Gmail Send permission                    |
 | USER_EMAIL                      | Gmail sender address                                              |

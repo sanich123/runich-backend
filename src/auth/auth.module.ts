@@ -11,6 +11,8 @@ import { YandexAuthService } from './yandex-auth.service';
 import { AuthEmailService } from './auth-email.service';
 import { VkAuthService } from './vk-auth.service';
 import { EmailNotificationService } from 'src/email/email-notification.service';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { accessTokenExpiresIn } from './jwt.constants';
 
 @Module({
   imports: [
@@ -18,7 +20,7 @@ import { EmailNotificationService } from 'src/email/email-notification.service';
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET!,
-      signOptions: { expiresIn: '1y' },
+      signOptions: { expiresIn: accessTokenExpiresIn },
     }),
   ],
   controllers: [AuthController],
@@ -31,6 +33,7 @@ import { EmailNotificationService } from 'src/email/email-notification.service';
     JwtStrategy,
     EmailService,
     EmailNotificationService,
+    ThrottlerGuard,
   ],
 })
 export class AuthModule {}

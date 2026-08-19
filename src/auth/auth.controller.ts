@@ -34,6 +34,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { UserIdParamsDto } from './auth.params.dto';
 import type { AuthenticatedRequest } from './auth-request';
+import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -79,6 +80,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
+  @RateLimit(RATE_LIMITS.authAttempt.limit, RATE_LIMITS.authAttempt.ttl)
   @ApiBody({ type: RegisterUserDto })
   @ApiOkResponse({ type: MessageEntity })
   @ApiCreatedResponse({ type: MessageEntity })
@@ -96,6 +98,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
+  @RateLimit(RATE_LIMITS.authAttempt.limit, RATE_LIMITS.authAttempt.ttl)
   @ApiBody({ type: RegisterUserDto })
   @ApiOkResponse({ type: LoginEntity })
   async login(@Body() { email, password }: RegisterUserDto, @Req() request?: Request) {
@@ -106,6 +109,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('by-email-link')
+  @RateLimit(RATE_LIMITS.emailCode.limit, RATE_LIMITS.emailCode.ttl)
   @ApiBody({ type: EmailLoginLinkDto })
   @ApiOkResponse({ type: MessageEntity })
   async sendLoginLinkByEmail(@Body() { email }: EmailLoginLinkDto) {
@@ -164,6 +168,7 @@ export class AuthController {
   }
 
   @Post('confirm-email')
+  @RateLimit(RATE_LIMITS.emailCode.limit, RATE_LIMITS.emailCode.ttl)
   @ApiBody({ type: ConfirmationCodeDto })
   @ApiOkResponse({ type: LoginEntity })
   @ApiCreatedResponse({ type: LoginEntity })
@@ -172,6 +177,7 @@ export class AuthController {
   }
 
   @Post('get-email-code-for-password')
+  @RateLimit(RATE_LIMITS.emailCode.limit, RATE_LIMITS.emailCode.ttl)
   @ApiBody({ type: GetEmailCodeForPasswordDto })
   @ApiOkResponse({ type: MessageEntity })
   @ApiCreatedResponse({ type: MessageEntity })
@@ -180,6 +186,7 @@ export class AuthController {
   }
 
   @Post('verify-password-change-code')
+  @RateLimit(RATE_LIMITS.passwordChange.limit, RATE_LIMITS.passwordChange.ttl)
   @ApiBody({ type: PasswordChangeCodeDto })
   @ApiOkResponse({ type: MessageEntity })
   @ApiCreatedResponse({ type: MessageEntity })
@@ -188,6 +195,7 @@ export class AuthController {
   }
 
   @Post('change-password')
+  @RateLimit(RATE_LIMITS.passwordChange.limit, RATE_LIMITS.passwordChange.ttl)
   @ApiBody({ type: ChangePasswordDto })
   @ApiOkResponse({ type: LoginEntity })
   @ApiCreatedResponse({ type: LoginEntity })

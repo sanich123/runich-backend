@@ -27,7 +27,7 @@ paths:
       summary: Send a passwordless login link
       description: >-
         Sends a passwordless login link to an existing user's email address.
-        The link contains a 24-hour access token and does not require
+        The link contains a short-lived access token and does not require
         authentication on this endpoint.
       security: []
       requestBody:

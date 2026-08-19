@@ -12,6 +12,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AllExceptionsFilter } from './common/filters/all-exceptions';
 import { uncaughtErrorHandler, unhandledRejectionHandler } from './common/utils/handling-process';
 import { formatValidationErrors } from './common/utils/validation-errors';
+import { createSwaggerBasicAuth } from './common/security/swagger-basic-auth';
 
 const CORS_ORIGINS = [
   'https://runich.netlify.app',
@@ -32,17 +33,36 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: getLogLevels(process.env.NODE_ENV === 'production'),
   });
+  // Railway terminates the public connection at a proxy. Trust the first proxy
+  // hop so request IPs, rate limiting and session metadata use the client IP.
+  app.set('trust proxy', 1);
   app.use(json({ limit: MAX_JSON_BODY_BYTES }));
   app.use(urlencoded({ extended: true, limit: MAX_JSON_BODY_BYTES }));
-  const config = new DocumentBuilder()
-    .setTitle('Runich')
-    .setDescription('Runich API')
-    .setVersion('1.0')
-    .addBearerAuth(undefined, 'bearerAuth')
-    .addTag('runich')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  const isProduction = process.env.NODE_ENV === 'production';
+  const swaggerEnabled = process.env.SWAGGER_ENABLED === 'true';
+
+  if (swaggerEnabled) {
+    const swaggerUser = process.env.SWAGGER_USER;
+    const swaggerPassword = process.env.SWAGGER_PASSWORD;
+
+    if (isProduction && (!swaggerUser || !swaggerPassword)) {
+      throw new Error('SWAGGER_USER and SWAGGER_PASSWORD are required when Swagger is enabled in production');
+    }
+
+    if (isProduction) {
+      app.use(['/api', '/api-json'], createSwaggerBasicAuth(swaggerUser!, swaggerPassword!));
+    }
+
+    const config = new DocumentBuilder()
+      .setTitle('Runich')
+      .setDescription('Runich API')
+      .setVersion('1.0')
+      .addBearerAuth(undefined, 'bearerAuth')
+      .addTag('runich')
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
   app.useGlobalFilters(new PrismaClientExceptionFilter(PRISMA_ERR_TO_HTTP_CODES));
   app.useGlobalPipes(
     new ValidationPipe({

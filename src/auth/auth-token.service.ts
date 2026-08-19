@@ -24,7 +24,7 @@ export class AuthTokenService {
 
   createRefreshToken(userId: string, sessionId?: string) {
     return this.jwtService.sign(
-      { userId, type: 'refresh', ...(sessionId ? { sessionId } : {}) },
+      { userId, type: 'refresh', jti: randomUUID(), ...(sessionId ? { sessionId } : {}) },
       { expiresIn: refreshTokenExpiresIn },
     );
   }

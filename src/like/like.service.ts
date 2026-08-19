@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { LikeDto } from './like.dto';
-import { handleServiceError } from 'src/common/utils/prisma-errors';
+import { handleServiceError, isPrismaUniqueConstraintError } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
 
@@ -23,11 +23,18 @@ export class LikeService {
       }
       const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
-      return await this.prismaService.like.create({
-        data: currentUserId
-          ? { profileId: account.id, authorId: currentUserId, activityId }
-          : ({ profileId: account.id, activityId } as never),
-      });
+      const authorId = currentUserId ?? '';
+      const where = { authorId_activityId: { authorId, activityId } };
+      try {
+        await this.prismaService.like.upsert({
+          where,
+          update: {},
+          create: { profileId: account.id, authorId, activityId },
+        });
+      } catch (error) {
+        if (!isPrismaUniqueConstraintError(error)) throw error;
+      }
+      return await this.prismaService.like.findUnique({ where });
     } catch (error) {
       handleServiceError(error);
     }

@@ -4,7 +4,7 @@ import { asyncMock, expectInternalServerError } from 'src/__tests__/helpers';
 
 function createPrismaMock() {
   return {
-    friend: { findMany: asyncMock(), delete: asyncMock(), create: asyncMock() },
+    friend: { findMany: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), upsert: asyncMock() },
   };
 }
 
@@ -15,14 +15,17 @@ describe('FriendService', () => {
     const service = new FriendService(prisma as never, account as never);
     prisma.friend.findMany.mockResolvedValueOnce([{ id: 'friend-1' }]).mockResolvedValueOnce([{ id: 'friend-2' }]);
     prisma.friend.delete.mockResolvedValue({ id: 'friend-1' });
-    prisma.friend.create.mockResolvedValue({ id: 'friend-3' });
+    prisma.friend.upsert.mockResolvedValue({ id: 'friend-3' });
+    prisma.friend.findUnique.mockResolvedValue({ id: 'friend-3' });
 
     await expect(service.getUsersYouFollowByUserId('user-1')).resolves.toEqual([{ id: 'friend-1' }]);
     await expect(service.getFollowers('user-1')).resolves.toEqual([{ id: 'friend-2' }]);
     await expect(service.deleteFriendById('friend-1')).resolves.toEqual({ id: 'friend-1' });
     await expect(service.addFriendByFriendId('friend-user', { userId: 'user-1' })).resolves.toEqual({ id: 'friend-3' });
-    expect(prisma.friend.create).toHaveBeenCalledWith({
-      data: { user_id: 'user-1', friendId: 'friend-user', profileId: 'profile-1' },
+    expect(prisma.friend.upsert).toHaveBeenCalledWith({
+      where: { user_id_friendId: { user_id: 'user-1', friendId: 'friend-user' } },
+      update: {},
+      create: { user_id: 'user-1', friendId: 'friend-user', profileId: 'profile-1' },
     });
   });
 
@@ -34,7 +37,7 @@ describe('FriendService', () => {
     await expect(service.addFriendByFriendId('friend-user', { userId: 'user-1' })).rejects.toBeInstanceOf(
       NotFoundException,
     );
-    expect(prisma.friend.create).not.toHaveBeenCalled();
+    expect(prisma.friend.upsert).not.toHaveBeenCalled();
   });
 
   it('converts database failures from every operation to an internal server error', async () => {

@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { handleServiceError } from 'src/common/utils/prisma-errors';
+import { handleServiceError, isPrismaUniqueConstraintError } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 
 @Injectable()
@@ -69,13 +69,17 @@ export class FriendService {
       const ownerId = typeof currentUserId === 'string' ? currentUserId : currentUserId.userId;
       const profile = await this.accountService.getAccountByUserId(id);
       if (!profile) throw new NotFoundException('Профиль пользователя не найден: userId');
-      return await this.prismaService.friend.create({
-        data: {
-          user_id: ownerId,
-          friendId: id,
-          profileId: profile.id,
-        },
-      });
+      const where = { user_id_friendId: { user_id: ownerId, friendId: id } };
+      try {
+        await this.prismaService.friend.upsert({
+          where,
+          update: {},
+          create: { user_id: ownerId, friendId: id, profileId: profile.id },
+        });
+      } catch (error) {
+        if (!isPrismaUniqueConstraintError(error)) throw error;
+      }
+      return await this.prismaService.friend.findUnique({ where });
     } catch (error) {
       handleServiceError(error);
     }
