@@ -22,7 +22,7 @@ describe('CommentController', () => {
   it('returns service results for every comment endpoint', async () => {
     const comment = { id: 'comment-1' };
     const like = { id: 'like-1' };
-    service.getCommentsbyActivityId.mockResolvedValue({ comments: [comment], allCommentsLength: 1 });
+    service.getCommentsbyActivityId.mockResolvedValue({ comments: [comment], hasMore: false, nextCursor: null });
     service.getCommentsLengthbyActivityId.mockResolvedValue(1);
     service.createCommentByActivityId.mockResolvedValue(undefined);
     service.deleteCommentByCommentId.mockResolvedValue(comment);
@@ -33,7 +33,8 @@ describe('CommentController', () => {
 
     await expect(controller.getCommentsByActivityId({ id: 'a1' }, '10')).resolves.toEqual({
       comments: [comment],
-      allCommentsLength: 1,
+      hasMore: false,
+      nextCursor: null,
     });
     await expect(controller.getCommentsLengthByActivityId({ id: 'a1' })).resolves.toBe(1);
     await expect(
@@ -80,6 +81,10 @@ describe('CommentController', () => {
 
   it('rejects malformed comment pagination before calling the service', async () => {
     await expect(controller.getCommentsByActivityId({ id: 'a1' }, 'NaN')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getCommentsByActivityId({ id: 'a1' }, '51')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getCommentsByActivityId({ id: 'a1' }, '10', 'not-a-cursor')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     expect(service.getCommentsbyActivityId).not.toHaveBeenCalled();
   });
 });

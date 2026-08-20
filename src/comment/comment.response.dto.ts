@@ -63,8 +63,11 @@ export class CommentsResponseDto {
   @ApiProperty({ type: [CommentResponseDto] })
   comments: CommentResponseDto[];
 
-  @ApiProperty({ type: Number })
-  allCommentsLength: number;
+  @ApiProperty({ type: Boolean })
+  hasMore: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  nextCursor: string | null;
 }
 
 export class CommentLikeResponseDto {

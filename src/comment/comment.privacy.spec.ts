@@ -11,7 +11,7 @@ describe('CommentService privacy', () => {
     const activityService = { canAccessActivity: asyncMock().mockResolvedValue(false) };
     const service = new CommentService(prisma as never, {} as never, activityService as never);
 
-    await expect(service.getCommentsbyActivityId('activity-1', '10', 'viewer-1')).rejects.toBeInstanceOf(
+    await expect(service.getCommentsbyActivityId('activity-1', '10', undefined, 'viewer-1')).rejects.toBeInstanceOf(
       NotFoundException,
     );
     expect(prisma.comment.count).not.toHaveBeenCalled();

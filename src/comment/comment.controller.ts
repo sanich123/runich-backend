@@ -36,6 +36,7 @@ import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import type { AuthenticatedRequest } from 'src/auth/auth-request';
+import { parseCommentCursor } from './comment.pagination';
 
 const { comment, id, like } = PATHS;
 const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
@@ -51,17 +52,20 @@ export class CommentController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get comments by activity id' })
   @ApiParam({ name: 'id', description: 'Activity identifier' })
-  @ApiQuery({ name: 'take', required: false, description: 'Count of comments' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Count of comments per page' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor for the next page of older comments' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   async getCommentsByActivityId(
     @Param() { id }: ParamsId,
-    @Query('take') take?: string,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
     @Req() request?: AuthenticatedRequest,
   ) {
     return await this.commentService.getCommentsbyActivityId(
       id,
-      validateOptionalIntegerQuery(take, 'take', { min: 1 }),
+      validateOptionalIntegerQuery(limit, 'limit', { min: 1, max: 50 }),
+      parseCommentCursor(cursor),
       request?.user.userId ?? request?.user.id,
     );
   }

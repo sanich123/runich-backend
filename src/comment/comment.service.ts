@@ -5,6 +5,8 @@ import { CommentDTO, CommentLikeDto } from './comment.dto';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
 import { CommentLikeService } from './comment-like.service';
+import { encodeCommentCursor } from './comment.pagination';
+import type { CommentCursor } from './comment.pagination';
 
 @Injectable()
 export class CommentService {
@@ -41,13 +43,20 @@ export class CommentService {
     }
   }
 
-  async getCommentsbyActivityId(id: string, take = '10', currentUserId?: string) {
+  async getCommentsbyActivityId(id: string, limit = '10', cursor?: CommentCursor, currentUserId?: string) {
     try {
       await this.ensureActivityAccess(id, currentUserId);
-      const allCommentsLength = await this.prisma.comment.count({ where: { activityId: id } });
-      const takenComments = await this.prisma.comment.findMany({
-        where: { activityId: id },
-        orderBy: { date: 'desc' },
+      const pageSize = Number(limit);
+      const commentsWithExtraItem = await this.prisma.comment.findMany({
+        where: {
+          activityId: id,
+          ...(cursor
+            ? {
+                OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
+              }
+            : {}),
+        },
+        orderBy: [{ date: 'desc' }, { id: 'desc' }],
         include: {
           profile: {
             select: {
@@ -66,11 +75,14 @@ export class CommentService {
             },
           },
         },
-        take: Number(take),
+        take: pageSize + 1,
       });
+      const hasMore = commentsWithExtraItem.length > pageSize;
+      const comments = commentsWithExtraItem.slice(0, pageSize);
       return {
-        comments: takenComments,
-        allCommentsLength,
+        comments,
+        hasMore,
+        nextCursor: hasMore && comments.length ? encodeCommentCursor(comments.at(-1)!) : null,
       };
     } catch (error) {
       handleServiceError(error);

@@ -251,7 +251,8 @@ describe('activity, comments and statistics', () => {
     prisma.commentLike.delete.mockResolvedValue({ id: 'cl1' });
     await expect(service.getCommentsbyActivityId('a1', '10')).resolves.toEqual({
       comments: [{ id: 'c1' }],
-      allCommentsLength: 1,
+      hasMore: false,
+      nextCursor: null,
     });
     await expect(service.createCommentByActivityId({ comment: 'hello' }, 'a1')).resolves.toBeUndefined();
     await expect(service.updateCommentByCommentId('updated', 'c1')).resolves.toEqual({ id: 'c1' });
