@@ -49,4 +49,43 @@ describe('formatValidationErrors', () => {
       ]),
     );
   });
+
+  it('formats every supported constraint and nested array path', () => {
+    const errors = [
+      { property: 'defined', constraints: { isDefined: 'required' } },
+      { property: 'empty', constraints: { isNotEmpty: 'required' } },
+      { property: 'string', constraints: { isString: 'string' } },
+      { property: 'email', constraints: { isEmail: 'email' } },
+      { property: 'uuid', constraints: { isUUID: 'uuid' } },
+      { property: 'int', constraints: { isInt: 'int' } },
+      { property: 'number', constraints: { isNumber: 'number' } },
+      { property: 'boolean', constraints: { isBoolean: 'boolean' } },
+      { property: 'array', constraints: { isArray: 'array' } },
+      { property: 'date', constraints: { isDateString: 'date' } },
+      { property: 'short', constraints: { minLength: '6' } },
+      { property: 'matches', constraints: { matches: 'matches' } },
+      { property: 'unknown', constraints: { unknownValue: 'unknown' } },
+      {
+        property: 'items',
+        children: [{ property: '0', constraints: { custom: 'invalid' } }],
+      },
+    ] as never;
+
+    expect(formatValidationErrors(errors)).toEqual([
+      'Не указано обязательное свойство: defined',
+      'Обязательное свойство не заполнено: empty',
+      'Свойство должно быть строкой: string',
+      'Некорректный адрес электронной почты: email',
+      'Некорректный UUID: uuid',
+      'Свойство должно быть целым числом: int',
+      'Свойство должно быть числом: number',
+      'Свойство должно быть логическим значением: boolean',
+      'Свойство должно быть массивом: array',
+      'Некорректная дата: date',
+      'Свойство должно содержать минимум 6 символов: short',
+      'Свойство содержит недопустимые символы: matches',
+      'Некорректное значение: unknown',
+      'Некорректное значение: items[0]',
+    ]);
+  });
 });

@@ -103,9 +103,9 @@ export class ActivityService {
 
   async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
-      const { date, description, emotion, isPublic, photoVideoUrls, sport, title, distance, duration, speed } =
+      const { date, description, emotion, isPublic, photoVideoUrls, sport, title, distance, duration, speed, steps } =
         activityDto;
-      return await this.persistenceService.update(id, userId, {
+      const data = {
         title,
         sport,
         photoVideoUrls,
@@ -116,7 +116,9 @@ export class ActivityService {
         distance,
         duration,
         speed,
-      });
+        ...(steps === undefined ? {} : { steps }),
+      };
+      return await this.persistenceService.update(id, userId, data);
     } catch (error) {
       handleServiceError(error);
     }
@@ -153,6 +155,7 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
+          steps: true,
           isPublic: true,
           emotion: true,
           kilometresSplit: true,
@@ -260,6 +263,7 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
+          steps: true,
           profile: {
             select: {
               surname: true,
@@ -305,6 +309,7 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
+          steps: true,
           profile: {
             select: {
               surname: true,

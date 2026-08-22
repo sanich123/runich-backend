@@ -129,6 +129,7 @@ model Activity {
   locations           Json?
   user_id             String    @db.Uuid
   speed               Float
+  steps               Int?
   sport               String
   title               String?
   kilometresSplit     Json?

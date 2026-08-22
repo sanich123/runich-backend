@@ -52,7 +52,7 @@ jobs:
         run: yarn prisma generate
 
       - name: Apply database migrations
-        run: yarn prisma migrate deploy
+        run: yarn migrate
 
       - name: Typecheck
         run: yarn typecheck

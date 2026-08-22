@@ -82,6 +82,39 @@ describe('ActivityService', () => {
     });
   });
 
+  it('persists optional pedometer data for the activity and its kilometre splits', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new ActivityService(prisma as never, account as never);
+    const pedometerActivity = {
+      ...activityDto,
+      sport: 'walk',
+      steps: 1240,
+      kilometresSplit: [
+        {
+          lastKilometerDuration: 600_000,
+          lastKilometerAltitude: 0,
+          lastKilometerSteps: 1240,
+          kilometerPoint: { coords: { latitude: 55.75, longitude: 37.61 } },
+        },
+      ],
+    };
+
+    await service.createActivity(pedometerActivity, 'user-1');
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        steps: 1240,
+        kilometresSplit: pedometerActivity.kilometresSplit,
+      }),
+    });
+
+    await service.updateActivity(pedometerActivity, 'activity-1');
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1', user_id: 'activity-1' },
+      data: expect.objectContaining({ steps: 1240 }),
+    });
+  });
+
   it('writes migration activities in chunks and skips duplicate records', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);

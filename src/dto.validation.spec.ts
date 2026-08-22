@@ -103,6 +103,7 @@ describe('request DTO validation', () => {
       duration: 100,
       distance: 1000,
       speed: 10,
+      steps: 1240,
       sport: 'run',
       date: '2026-08-12T10:00:00.000Z',
       description: 'Morning run',
@@ -117,12 +118,14 @@ describe('request DTO validation', () => {
         {
           lastKilometerDuration: 300,
           lastKilometerAltitude: 10,
+          lastKilometerSteps: 240,
           kilometerPoint: { coords: { latitude: 55.75, longitude: 37.61 } },
         },
       ],
     });
     await expectInvalid(ActivityDto, {});
     await expectInvalid(ActivityDto, { duration: 1.5, distance: 1, speed: 1, sport: 'run' });
+    await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'walk', steps: -1 });
     await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'run', date: 'yesterday' });
     await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'run', isPublic: 'true' });
     await expectInvalid(ActivityDto, {

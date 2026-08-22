@@ -42,9 +42,11 @@ Create a local, ignored .env file:
 
 Initialize the database and start development mode:
 
-    yarn prisma generate
-    yarn prisma migrate deploy
     yarn start:dev
+
+`yarn start:dev` generates the Prisma Client and applies all committed database
+migrations before starting the development server. To update only the database,
+run `yarn migrate`.
 
 The API is available at http://localhost:3000; Swagger is at http://localhost:3000/api.
 Liveness is available at `/health/live`, and Railway readiness checks should use
@@ -119,6 +121,7 @@ Use secret management and rotated credentials in production. Never commit .env, 
 
 | Command                    | Description                             |
 | -------------------------- | --------------------------------------- |
+| yarn migrate               | Apply committed migrations              |
 | yarn start:dev             | Development server with watch mode      |
 | yarn start:debug           | Development server with Node inspector  |
 | yarn build                 | Build with tsup                         |
@@ -183,7 +186,8 @@ Before opening a pull request:
     yarn madge
 
 Integration tests require a disposable PostgreSQL database configured through
-`DATABASE_URL`. The CI workflow starts PostgreSQL, applies migrations, runs all
-quality gates and builds the Docker image.
+`DATABASE_URL`. `yarn test:integration` applies committed migrations before
+running the e2e suite. The CI workflow starts PostgreSQL, applies migrations,
+runs all quality gates and builds the Docker image.
 
 See CONTRIBUTING.md for development and review rules. The package is private and marked UNLICENSED.

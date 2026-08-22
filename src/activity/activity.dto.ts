@@ -12,6 +12,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Min,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -106,6 +107,12 @@ export class ActivityKilometreSplitDto {
   @IsNumber({ allowInfinity: false, allowNaN: false })
   lastKilometerDuration: number;
 
+  @ApiPropertyOptional({ type: Number, minimum: 0 })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  lastKilometerSteps?: number;
+
   @ApiProperty({ type: Number })
   @IsNumber({ allowInfinity: false, allowNaN: false })
   lastKilometerAltitude: number;
@@ -127,6 +134,7 @@ export type ActivityKilometreSplitObject = {
   lastKilometerDuration: number;
   lastKilometerAltitude: number;
   kilometerPoint: LocationObject;
+  lastKilometerSteps?: number;
 };
 
 export class ActivityDto {
@@ -144,6 +152,12 @@ export class ActivityDto {
   @IsNotEmpty()
   @IsNumber({ allowInfinity: false, allowNaN: false })
   speed: number;
+
+  @ApiPropertyOptional({ type: Number, minimum: 0, description: 'Number of steps recorded during the activity' })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  steps?: number;
 
   @ApiProperty({ type: String, description: 'Sport value' })
   @IsString()

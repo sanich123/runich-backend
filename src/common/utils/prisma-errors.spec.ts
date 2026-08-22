@@ -2,7 +2,7 @@ import { BadRequestException, HttpStatus, InternalServerErrorException, Logger }
 import { jest } from '@jest/globals';
 import { Prisma } from 'src/infrastructure/database/generated/prisma/client';
 import { PrismaException } from 'src/common/filters/prisma-exceptions';
-import { handleServiceError } from './prisma-errors';
+import { handleServiceError, isPrismaUniqueConstraintError } from './prisma-errors';
 
 describe('handleServiceError', () => {
   let loggerError: jest.SpiedFunction<Logger['error']>;
@@ -57,5 +57,29 @@ describe('handleServiceError', () => {
 
     expect(() => handleServiceError(error)).toThrow(error);
     expect(loggerError).not.toHaveBeenCalled();
+  });
+
+  it('recognizes only Prisma unique constraint errors', () => {
+    const uniqueError = new Prisma.PrismaClientKnownRequestError('unique constraint', {
+      code: 'P2002',
+      clientVersion: 'test',
+    });
+    const otherError = new Prisma.PrismaClientKnownRequestError('not found', {
+      code: 'P2025',
+      clientVersion: 'test',
+    });
+
+    expect(isPrismaUniqueConstraintError(uniqueError)).toBe(true);
+    expect(isPrismaUniqueConstraintError(otherError)).toBe(false);
+    expect(isPrismaUniqueConstraintError(new Error('unique constraint'))).toBe(false);
+  });
+
+  it('maps unknown and validation Prisma errors to internal server errors', () => {
+    const unknownError = new Prisma.PrismaClientUnknownRequestError('unknown', { clientVersion: 'test' });
+    const validationError = new Prisma.PrismaClientValidationError('validation', { clientVersion: 'test' });
+
+    expect(() => handleServiceError(unknownError)).toThrow(PrismaException);
+    expect(() => handleServiceError(validationError)).toThrow(PrismaException);
+    expect(loggerError).toHaveBeenCalledWith('Ошибка клиента базы данных', expect.anything());
   });
 });

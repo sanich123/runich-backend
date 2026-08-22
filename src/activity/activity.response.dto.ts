@@ -50,6 +50,9 @@ export class ActivityKilometreSplitResponseDto {
   @ApiProperty({ type: Number })
   lastKilometerDuration: number;
 
+  @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true })
+  lastKilometerSteps?: number | null;
+
   @ApiProperty({ type: Number })
   lastKilometerAltitude: number;
 
@@ -159,6 +162,9 @@ export class ActivityCardResponseDto {
 
   @ApiProperty({ type: Number })
   distance: number;
+
+  @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true })
+  steps?: number | null;
 
   @ApiPropertyOptional({ type: Number, nullable: true })
   speed?: number | null;
