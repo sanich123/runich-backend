@@ -25,6 +25,7 @@
     "test:watch": "yarn prisma generate && node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:cov": "yarn prisma generate && node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --runInBand --no-watchman",
     "test:integration": "yarn prisma generate && yarn migrate && RUNICH_INTEGRATION=true node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.cjs --runInBand --no-watchman",
+    "test:all": "yarn db:up && yarn test:ci && yarn test:cov && yarn test:integration",
     "prepare": "husky",
     "lint": "eslint src integration --fix",
     "format": "prettier --config .prettierrc --write './src/**/*.{ts,tsx}' './integration/**/*.ts'",
