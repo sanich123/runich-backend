@@ -126,6 +126,47 @@ describe('AuthTokenService persistence branches', () => {
     });
   });
 
+  it('normalizes session metadata to the database column limits before creating a session', async () => {
+    const jwt = jwtMock();
+    const prisma = {
+      userSession: { create: asyncMock() },
+    };
+    const service = new AuthTokenService(jwt as never, prisma as never);
+
+    await service.createSessionTokens('user-1', {
+      deviceId: 'd'.repeat(129),
+      deviceName: 'n'.repeat(256),
+      platform: 'p'.repeat(65),
+      model: 'm'.repeat(129),
+      manufacturer: 'f'.repeat(129),
+      osName: 'o'.repeat(65),
+      osVersion: 'v'.repeat(65),
+      deviceType: 't'.repeat(65),
+      appVersion: 'a'.repeat(33),
+      appBuild: 'b'.repeat(33),
+      userAgent: 'u'.repeat(513),
+      ipAddress: 'i'.repeat(129),
+    });
+
+    const createData = prisma.userSession.create.mock.calls[0]?.[0] as {
+      data: Record<string, string>;
+    };
+    expect(createData.data).toMatchObject({
+      device_id: 'd'.repeat(128),
+      device_name: 'n'.repeat(255),
+      platform: 'p'.repeat(64),
+      device_model: 'm'.repeat(128),
+      manufacturer: 'f'.repeat(128),
+      os_name: 'o'.repeat(64),
+      os_version: 'v'.repeat(64),
+      device_type: 't'.repeat(64),
+      app_version: 'a'.repeat(32),
+      app_build: 'b'.repeat(32),
+      user_agent: 'u'.repeat(512),
+      ip_address: 'i'.repeat(128),
+    });
+  });
+
   it('refreshes valid persistent sessions and updates supplied metadata', async () => {
     const jwt = jwtMock();
     jwt.verify.mockReturnValue({ userId: 'user-1', type: 'refresh', sessionId: 'session-1' });
