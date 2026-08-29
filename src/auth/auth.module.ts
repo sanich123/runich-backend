@@ -17,7 +17,7 @@ import { accessTokenExpiresIn } from './jwt.constants';
 @Module({
   imports: [
     PrismaModule,
-    PassportModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET!,
       signOptions: { expiresIn: accessTokenExpiresIn },

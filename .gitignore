@@ -3,7 +3,10 @@
 
 /node_modules
 .env
-.yarn
+.yarn/*
+!.yarn/patches/
+.yarn/patches/*
+!.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch
 # Logs
 logs
 *.log

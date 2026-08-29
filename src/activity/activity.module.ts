@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { ActivityController } from './activity.controller';
 import { ActivityService } from './activity.service';
@@ -8,7 +9,7 @@ import { ActivityPersistenceService } from './activity-persistence.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
-  imports: [PrismaModule, FriendModule, AccountModule],
+  imports: [PrismaModule, FriendModule, AccountModule, PassportModule.register({ defaultStrategy: 'jwt' })],
   controllers: [ActivityController],
   providers: [ActivityService, ActivityPersistenceService, ThrottlerGuard],
   exports: [ActivityService, ActivityPersistenceService],

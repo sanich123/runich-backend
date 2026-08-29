@@ -1,0 +1,615 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..f2a3ca99e48f6bef730717e985eee48c6cbc24d7
+--- /dev/null
++++ b/dist/index.mjs
+@@ -0,0 +1,585 @@
++import * as common_1 from '@nestjs/common';
++import * as core_1 from '@nestjs/core';
++import * as crypto from 'node:crypto';
++
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
++  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
++}) : x)(function(x) {
++  if (typeof require !== "undefined") return require.apply(this, arguments);
++  throw Error('Dynamic require of "' + x + '" is not supported');
++});
++var __commonJS = (cb, mod) => function __require2() {
++  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
++};
++
++// ../../../../..dist/throttler-module-options.interface.js
++var require_throttler_module_options_interface = __commonJS({
++  "../../../../..dist/throttler-module-options.interface.js"(exports) {
++    "use strict";
++    Object.defineProperty(exports, "__esModule", { value: true });
++  }
++});
++
++// ../../../../..dist/throttler-storage.interface.js
++var require_throttler_storage_interface = __commonJS({
++  "../../../../..dist/throttler-storage.interface.js"(exports) {
++    "use strict";
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.ThrottlerStorage = void 0;
++    exports.ThrottlerStorage = /* @__PURE__ */ Symbol("ThrottlerStorage");
++  }
++});
++
++// ../../../../..dist/throttler.constants.js
++var require_throttler_constants = __commonJS({
++  "../../../../..dist/throttler.constants.js"(exports) {
++    "use strict";
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.THROTTLER_SKIP = exports.THROTTLER_OPTIONS = exports.THROTTLER_KEY_GENERATOR = exports.THROTTLER_BLOCK_DURATION = exports.THROTTLER_TRACKER = exports.THROTTLER_TTL = exports.THROTTLER_LIMIT = void 0;
++    exports.THROTTLER_LIMIT = "THROTTLER:LIMIT";
++    exports.THROTTLER_TTL = "THROTTLER:TTL";
++    exports.THROTTLER_TRACKER = "THROTTLER:TRACKER";
++    exports.THROTTLER_BLOCK_DURATION = "THROTTLER:BLOCK_DURATION";
++    exports.THROTTLER_KEY_GENERATOR = "THROTTLER:KEY_GENERATOR";
++    exports.THROTTLER_OPTIONS = "THROTTLER:MODULE_OPTIONS";
++    exports.THROTTLER_SKIP = "THROTTLER:SKIP";
++  }
++});
++
++// ../../../../..dist/throttler.service.js
++var require_throttler_service = __commonJS({
++  "../../../../..dist/throttler.service.js"(exports) {
++    "use strict";
++    var __decorate = exports && exports.__decorate || function(decorators, target, key, desc) {
++      var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
++      if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
++      else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
++      return c > 3 && r && Object.defineProperty(target, key, r), r;
++    };
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.ThrottlerStorageService = void 0;
++    var ThrottlerStorageService = class ThrottlerStorageService {
++      constructor() {
++        this._storage = /* @__PURE__ */ new Map();
++        this.timeoutIds = /* @__PURE__ */ new Map();
++      }
++      get storage() {
++        return this._storage;
++      }
++      getExpirationTime(key) {
++        return Math.ceil((this.storage.get(key).expiresAt - Date.now()) / 1e3);
++      }
++      getBlockExpirationTime(key) {
++        return Math.ceil((this.storage.get(key).blockExpiresAt - Date.now()) / 1e3);
++      }
++      setExpirationTime(key, ttlMilliseconds, throttlerName) {
++        const timeoutId = setTimeout(() => {
++          const { totalHits } = this.storage.get(key);
++          totalHits.set(throttlerName, totalHits.get(throttlerName) - 1);
++          clearTimeout(timeoutId);
++          this.timeoutIds.set(throttlerName, this.timeoutIds.get(throttlerName).filter((id) => id !== timeoutId));
++        }, ttlMilliseconds);
++        this.timeoutIds.get(throttlerName).push(timeoutId);
++      }
++      clearExpirationTimes(throttlerName) {
++        this.timeoutIds.get(throttlerName).forEach(clearTimeout);
++        this.timeoutIds.set(throttlerName, []);
++      }
++      resetBlockdRequest(key, throttlerName) {
++        this.storage.get(key).isBlocked = false;
++        this.storage.get(key).totalHits.set(throttlerName, 0);
++        this.clearExpirationTimes(throttlerName);
++      }
++      fireHitCount(key, throttlerName, ttl) {
++        const { totalHits } = this.storage.get(key);
++        totalHits.set(throttlerName, totalHits.get(throttlerName) + 1);
++        this.setExpirationTime(key, ttl, throttlerName);
++      }
++      async increment(key, ttl, limit, blockDuration, throttlerName) {
++        const ttlMilliseconds = ttl;
++        const blockDurationMilliseconds = blockDuration;
++        if (!this.timeoutIds.has(throttlerName)) {
++          this.timeoutIds.set(throttlerName, []);
++        }
++        if (!this.storage.has(key)) {
++          this.storage.set(key, {
++            totalHits: /* @__PURE__ */ new Map([[throttlerName, 0]]),
++            expiresAt: Date.now() + ttlMilliseconds,
++            blockExpiresAt: 0,
++            isBlocked: false
++          });
++        }
++        let timeToExpire = this.getExpirationTime(key);
++        if (timeToExpire <= 0) {
++          this.storage.get(key).expiresAt = Date.now() + ttlMilliseconds;
++          timeToExpire = this.getExpirationTime(key);
++        }
++        if (!this.storage.get(key).isBlocked) {
++          this.fireHitCount(key, throttlerName, ttlMilliseconds);
++        }
++        if (this.storage.get(key).totalHits.get(throttlerName) > limit && !this.storage.get(key).isBlocked) {
++          this.storage.get(key).isBlocked = true;
++          this.storage.get(key).blockExpiresAt = Date.now() + blockDurationMilliseconds;
++        }
++        const timeToBlockExpire = this.getBlockExpirationTime(key);
++        if (timeToBlockExpire <= 0 && this.storage.get(key).isBlocked) {
++          this.resetBlockdRequest(key, throttlerName);
++          this.fireHitCount(key, throttlerName, ttlMilliseconds);
++        }
++        return {
++          totalHits: this.storage.get(key).totalHits.get(throttlerName),
++          timeToExpire,
++          isBlocked: this.storage.get(key).isBlocked,
++          timeToBlockExpire
++        };
++      }
++      onApplicationShutdown() {
++        this.timeoutIds.forEach((timeouts) => timeouts.forEach(clearTimeout));
++      }
++    };
++    exports.ThrottlerStorageService = ThrottlerStorageService;
++    exports.ThrottlerStorageService = ThrottlerStorageService = __decorate([
++      (0, common_1.Injectable)()
++    ], ThrottlerStorageService);
++  }
++});
++
++// ../../../../..dist/throttler.providers.js
++var require_throttler_providers = __commonJS({
++  "../../../../..dist/throttler.providers.js"(exports) {
++    "use strict";
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.getStorageToken = exports.getOptionsToken = exports.ThrottlerStorageProvider = void 0;
++    exports.createThrottlerProviders = createThrottlerProviders;
++    var throttler_storage_interface_1 = require_throttler_storage_interface();
++    var throttler_constants_1 = require_throttler_constants();
++    var throttler_service_1 = require_throttler_service();
++    function createThrottlerProviders(options) {
++      return [
++        {
++          provide: throttler_constants_1.THROTTLER_OPTIONS,
++          useValue: options
++        }
++      ];
++    }
++    exports.ThrottlerStorageProvider = {
++      provide: throttler_storage_interface_1.ThrottlerStorage,
++      useFactory: (options) => {
++        return !Array.isArray(options) && options.storage ? options.storage : new throttler_service_1.ThrottlerStorageService();
++      },
++      inject: [throttler_constants_1.THROTTLER_OPTIONS]
++    };
++    var getOptionsToken = () => throttler_constants_1.THROTTLER_OPTIONS;
++    exports.getOptionsToken = getOptionsToken;
++    var getStorageToken = () => throttler_storage_interface_1.ThrottlerStorage;
++    exports.getStorageToken = getStorageToken;
++  }
++});
++
++// ../../../../..dist/throttler.decorator.js
++var require_throttler_decorator = __commonJS({
++  "../../../../..dist/throttler.decorator.js"(exports) {
++    "use strict";
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.InjectThrottlerStorage = exports.InjectThrottlerOptions = exports.SkipThrottle = exports.Throttle = void 0;
++    var throttler_constants_1 = require_throttler_constants();
++    var throttler_providers_1 = require_throttler_providers();
++    function setThrottlerMetadata(target, options) {
++      for (const name in options) {
++        Reflect.defineMetadata(throttler_constants_1.THROTTLER_TTL + name, options[name].ttl, target);
++        Reflect.defineMetadata(throttler_constants_1.THROTTLER_LIMIT + name, options[name].limit, target);
++        Reflect.defineMetadata(throttler_constants_1.THROTTLER_BLOCK_DURATION + name, options[name].blockDuration, target);
++        Reflect.defineMetadata(throttler_constants_1.THROTTLER_TRACKER + name, options[name].getTracker, target);
++        Reflect.defineMetadata(throttler_constants_1.THROTTLER_KEY_GENERATOR + name, options[name].generateKey, target);
++      }
++    }
++    var Throttle = (options) => {
++      return (target, propertyKey, descriptor) => {
++        if (descriptor) {
++          setThrottlerMetadata(descriptor.value, options);
++          return descriptor;
++        }
++        setThrottlerMetadata(target, options);
++        return target;
++      };
++    };
++    exports.Throttle = Throttle;
++    var SkipThrottle = (skip = { default: true }) => {
++      return (target, propertyKey, descriptor) => {
++        var _a;
++        const reflectionTarget = (_a = descriptor === null || descriptor === void 0 ? void 0 : descriptor.value) !== null && _a !== void 0 ? _a : target;
++        for (const key in skip) {
++          Reflect.defineMetadata(throttler_constants_1.THROTTLER_SKIP + key, skip[key], reflectionTarget);
++        }
++        return descriptor !== null && descriptor !== void 0 ? descriptor : target;
++      };
++    };
++    exports.SkipThrottle = SkipThrottle;
++    var InjectThrottlerOptions = () => (0, common_1.Inject)((0, throttler_providers_1.getOptionsToken)());
++    exports.InjectThrottlerOptions = InjectThrottlerOptions;
++    var InjectThrottlerStorage = () => (0, common_1.Inject)((0, throttler_providers_1.getStorageToken)());
++    exports.InjectThrottlerStorage = InjectThrottlerStorage;
++  }
++});
++
++// ../../../../..dist/throttler.exception.js
++var require_throttler_exception = __commonJS({
++  "../../../../..dist/throttler.exception.js"(exports) {
++    "use strict";
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.ThrottlerException = exports.throttlerMessage = void 0;
++    exports.throttlerMessage = "ThrottlerException: Too Many Requests";
++    var ThrottlerException = class extends common_1.HttpException {
++      constructor(message) {
++        super(`${message || exports.throttlerMessage}`, common_1.HttpStatus.TOO_MANY_REQUESTS);
++      }
++    };
++    exports.ThrottlerException = ThrottlerException;
++  }
++});
++
++// ../../../../..dist/hash.js
++var require_hash = __commonJS({
++  "../../../../..dist/hash.js"(exports) {
++    "use strict";
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.sha256 = sha256;
++    function sha256(text) {
++      return crypto.createHash("sha256").update(text).digest("hex");
++    }
++  }
++});
++
++// ../../../../..dist/throttler.guard.js
++var require_throttler_guard = __commonJS({
++  "../../../../..dist/throttler.guard.js"(exports) {
++    "use strict";
++    var __decorate = exports && exports.__decorate || function(decorators, target, key, desc) {
++      var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
++      if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
++      else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
++      return c > 3 && r && Object.defineProperty(target, key, r), r;
++    };
++    var __metadata = exports && exports.__metadata || function(k, v) {
++      if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
++    };
++    var __param = exports && exports.__param || function(paramIndex, decorator) {
++      return function(target, key) {
++        decorator(target, key, paramIndex);
++      };
++    };
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.ThrottlerGuard = void 0;
++    var hash_1 = require_hash();
++    var throttler_storage_interface_1 = require_throttler_storage_interface();
++    var throttler_constants_1 = require_throttler_constants();
++    var throttler_decorator_1 = require_throttler_decorator();
++    var throttler_exception_1 = require_throttler_exception();
++    var ThrottlerGuard = class ThrottlerGuard {
++      constructor(options, storageService, reflector) {
++        this.options = options;
++        this.storageService = storageService;
++        this.reflector = reflector;
++        this.headerPrefix = "X-RateLimit";
++        this.errorMessage = throttler_exception_1.throttlerMessage;
++      }
++      async onModuleInit() {
++        var _a, _b;
++        var _c, _d;
++        this.throttlers = (Array.isArray(this.options) ? this.options : this.options.throttlers).sort((first, second) => {
++          if (typeof first.ttl === "function") {
++            return 1;
++          }
++          if (typeof second.ttl === "function") {
++            return 0;
++          }
++          return first.ttl - second.ttl;
++        }).map((opt) => {
++          var _a2;
++          return Object.assign(Object.assign({}, opt), { name: (_a2 = opt.name) !== null && _a2 !== void 0 ? _a2 : "default" });
++        });
++        if (Array.isArray(this.options)) {
++          this.commonOptions = {};
++        } else {
++          this.commonOptions = {
++            skipIf: this.options.skipIf,
++            ignoreUserAgents: this.options.ignoreUserAgents,
++            getTracker: this.options.getTracker,
++            generateKey: this.options.generateKey,
++            setHeaders: this.options.setHeaders
++          };
++        }
++        (_a = (_c = this.commonOptions).getTracker) !== null && _a !== void 0 ? _a : _c.getTracker = this.getTracker.bind(this);
++        (_b = (_d = this.commonOptions).generateKey) !== null && _b !== void 0 ? _b : _d.generateKey = this.generateKey.bind(this);
++      }
++      async canActivate(context) {
++        const handler = context.getHandler();
++        const classRef = context.getClass();
++        if (await this.shouldSkip(context)) {
++          return true;
++        }
++        const continues = [];
++        for (const namedThrottler of this.throttlers) {
++          const skip = this.reflector.getAllAndOverride(throttler_constants_1.THROTTLER_SKIP + namedThrottler.name, [
++            handler,
++            classRef
++          ]);
++          const skipIf = namedThrottler.skipIf || this.commonOptions.skipIf;
++          if (skip || (skipIf === null || skipIf === void 0 ? void 0 : skipIf(context))) {
++            continues.push(true);
++            continue;
++          }
++          const routeOrClassLimit = this.reflector.getAllAndOverride(throttler_constants_1.THROTTLER_LIMIT + namedThrottler.name, [handler, classRef]);
++          const routeOrClassTtl = this.reflector.getAllAndOverride(throttler_constants_1.THROTTLER_TTL + namedThrottler.name, [handler, classRef]);
++          const routeOrClassBlockDuration = this.reflector.getAllAndOverride(throttler_constants_1.THROTTLER_BLOCK_DURATION + namedThrottler.name, [handler, classRef]);
++          const routeOrClassGetTracker = this.reflector.getAllAndOverride(throttler_constants_1.THROTTLER_TRACKER + namedThrottler.name, [handler, classRef]);
++          const routeOrClassGetKeyGenerator = this.reflector.getAllAndOverride(throttler_constants_1.THROTTLER_KEY_GENERATOR + namedThrottler.name, [handler, classRef]);
++          const limit = await this.resolveValue(context, routeOrClassLimit || namedThrottler.limit);
++          const ttl = await this.resolveValue(context, routeOrClassTtl || namedThrottler.ttl);
++          const blockDuration = await this.resolveValue(context, routeOrClassBlockDuration || namedThrottler.blockDuration || ttl);
++          const getTracker = routeOrClassGetTracker || namedThrottler.getTracker || this.commonOptions.getTracker;
++          const generateKey = routeOrClassGetKeyGenerator || namedThrottler.generateKey || this.commonOptions.generateKey;
++          continues.push(await this.handleRequest({
++            context,
++            limit,
++            ttl,
++            throttler: namedThrottler,
++            blockDuration,
++            getTracker,
++            generateKey
++          }));
++        }
++        return continues.every((cont) => cont);
++      }
++      async shouldSkip(_context) {
++        return false;
++      }
++      async handleRequest(requestProps) {
++        var _a, _b, _c;
++        const { context, limit, ttl, throttler, blockDuration, getTracker, generateKey } = requestProps;
++        const { req, res } = this.getRequestResponse(context);
++        const ignoreUserAgents = (_a = throttler.ignoreUserAgents) !== null && _a !== void 0 ? _a : this.commonOptions.ignoreUserAgents;
++        if (Array.isArray(ignoreUserAgents)) {
++          for (const pattern of ignoreUserAgents) {
++            if (pattern.test(req.headers["user-agent"])) {
++              return true;
++            }
++          }
++        }
++        const tracker = await getTracker(req, context);
++        const key = generateKey(context, tracker, throttler.name);
++        const { totalHits, timeToExpire, isBlocked, timeToBlockExpire } = await this.storageService.increment(key, ttl, limit, blockDuration, throttler.name);
++        const getThrottlerSuffix = (name) => name === "default" ? "" : `-${name}`;
++        const setHeaders = (_c = (_b = throttler.setHeaders) !== null && _b !== void 0 ? _b : this.commonOptions.setHeaders) !== null && _c !== void 0 ? _c : true;
++        if (isBlocked) {
++          if (setHeaders) {
++            res.header(`Retry-After${getThrottlerSuffix(throttler.name)}`, timeToBlockExpire);
++          }
++          await this.throwThrottlingException(context, {
++            limit,
++            ttl,
++            key,
++            tracker,
++            totalHits,
++            timeToExpire,
++            isBlocked,
++            timeToBlockExpire
++          });
++        }
++        if (setHeaders) {
++          res.header(`${this.headerPrefix}-Limit${getThrottlerSuffix(throttler.name)}`, limit);
++          res.header(`${this.headerPrefix}-Remaining${getThrottlerSuffix(throttler.name)}`, Math.max(0, limit - totalHits));
++          res.header(`${this.headerPrefix}-Reset${getThrottlerSuffix(throttler.name)}`, timeToExpire);
++        }
++        return true;
++      }
++      async getTracker(req) {
++        return req.ip;
++      }
++      getRequestResponse(context) {
++        const http = context.switchToHttp();
++        return { req: http.getRequest(), res: http.getResponse() };
++      }
++      generateKey(context, suffix, name) {
++        const prefix = `${context.getClass().name}-${context.getHandler().name}-${name}`;
++        return (0, hash_1.sha256)(`${prefix}-${suffix}`);
++      }
++      async throwThrottlingException(context, throttlerLimitDetail) {
++        throw new throttler_exception_1.ThrottlerException(await this.getErrorMessage(context, throttlerLimitDetail));
++      }
++      async getErrorMessage(context, throttlerLimitDetail) {
++        if (!Array.isArray(this.options)) {
++          if (!this.options.errorMessage)
++            return this.errorMessage;
++          return typeof this.options.errorMessage === "function" ? this.options.errorMessage(context, throttlerLimitDetail) : this.options.errorMessage;
++        }
++        return this.errorMessage;
++      }
++      async resolveValue(context, resolvableValue) {
++        return typeof resolvableValue === "function" ? resolvableValue(context) : resolvableValue;
++      }
++    };
++    exports.ThrottlerGuard = ThrottlerGuard;
++    exports.ThrottlerGuard = ThrottlerGuard = __decorate([
++      (0, common_1.Injectable)(),
++      __param(0, (0, throttler_decorator_1.InjectThrottlerOptions)()),
++      __param(1, (0, throttler_decorator_1.InjectThrottlerStorage)()),
++      __metadata("design:paramtypes", [Object, Object, core_1.Reflector])
++    ], ThrottlerGuard);
++  }
++});
++
++// ../../../../..dist/throttler.guard.interface.js
++var require_throttler_guard_interface = __commonJS({
++  "../../../../..dist/throttler.guard.interface.js"(exports) {
++    "use strict";
++    Object.defineProperty(exports, "__esModule", { value: true });
++  }
++});
++
++// ../../../../..dist/throttler.module.js
++var require_throttler_module = __commonJS({
++  "../../../../..dist/throttler.module.js"(exports) {
++    "use strict";
++    var __decorate = exports && exports.__decorate || function(decorators, target, key, desc) {
++      var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
++      if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
++      else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
++      return c > 3 && r && Object.defineProperty(target, key, r), r;
++    };
++    var ThrottlerModule_1;
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.ThrottlerModule = void 0;
++    var throttler_constants_1 = require_throttler_constants();
++    var throttler_providers_1 = require_throttler_providers();
++    var ThrottlerModule = ThrottlerModule_1 = class ThrottlerModule {
++      static forRoot(options = []) {
++        const providers = [...(0, throttler_providers_1.createThrottlerProviders)(options), throttler_providers_1.ThrottlerStorageProvider];
++        return {
++          module: ThrottlerModule_1,
++          providers,
++          exports: providers
++        };
++      }
++      static forRootAsync(options) {
++        const providers = [...this.createAsyncProviders(options), throttler_providers_1.ThrottlerStorageProvider];
++        return {
++          module: ThrottlerModule_1,
++          imports: options.imports || [],
++          providers,
++          exports: providers
++        };
++      }
++      static createAsyncProviders(options) {
++        if (options.useExisting || options.useFactory) {
++          return [this.createAsyncOptionsProvider(options)];
++        }
++        return [
++          this.createAsyncOptionsProvider(options),
++          {
++            provide: options.useClass,
++            useClass: options.useClass
++          }
++        ];
++      }
++      static createAsyncOptionsProvider(options) {
++        if (options.useFactory) {
++          return {
++            provide: throttler_constants_1.THROTTLER_OPTIONS,
++            useFactory: options.useFactory,
++            inject: options.inject || []
++          };
++        }
++        return {
++          provide: throttler_constants_1.THROTTLER_OPTIONS,
++          useFactory: async (optionsFactory) => await optionsFactory.createThrottlerOptions(),
++          inject: [options.useExisting || options.useClass]
++        };
++      }
++    };
++    exports.ThrottlerModule = ThrottlerModule;
++    exports.ThrottlerModule = ThrottlerModule = ThrottlerModule_1 = __decorate([
++      (0, common_1.Global)(),
++      (0, common_1.Module)({})
++    ], ThrottlerModule);
++  }
++});
++
++// ../../../../..dist/utilities.js
++var require_utilities = __commonJS({
++  "../../../../..dist/utilities.js"(exports) {
++    "use strict";
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.weeks = exports.days = exports.hours = exports.minutes = exports.seconds = void 0;
++    var seconds = (howMany) => howMany * 1e3;
++    exports.seconds = seconds;
++    var minutes = (howMany) => 60 * howMany * (0, exports.seconds)(1);
++    exports.minutes = minutes;
++    var hours = (howMany) => 60 * howMany * (0, exports.minutes)(1);
++    exports.hours = hours;
++    var days = (howMany) => 24 * howMany * (0, exports.hours)(1);
++    exports.days = days;
++    var weeks = (howMany) => 7 * howMany * (0, exports.days)(1);
++    exports.weeks = weeks;
++  }
++});
++
++// ../../../../..dist/index.js
++var require_index = __commonJS({
++  "../../../../..dist/index.js"(exports) {
++    var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
++      if (k2 === void 0) k2 = k;
++      var desc = Object.getOwnPropertyDescriptor(m, k);
++      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
++        desc = { enumerable: true, get: function() {
++          return m[k];
++        } };
++      }
++      Object.defineProperty(o, k2, desc);
++    }) : (function(o, m, k, k2) {
++      if (k2 === void 0) k2 = k;
++      o[k2] = m[k];
++    }));
++    var __exportStar = exports && exports.__exportStar || function(m, exports2) {
++      for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports2, p)) __createBinding(exports2, m, p);
++    };
++    Object.defineProperty(exports, "__esModule", { value: true });
++    exports.getStorageToken = exports.getOptionsToken = void 0;
++    __exportStar(require_throttler_module_options_interface(), exports);
++    __exportStar(require_throttler_storage_interface(), exports);
++    __exportStar(require_throttler_decorator(), exports);
++    __exportStar(require_throttler_exception(), exports);
++    __exportStar(require_throttler_guard(), exports);
++    __exportStar(require_throttler_guard_interface(), exports);
++    __exportStar(require_throttler_module(), exports);
++    var throttler_providers_1 = require_throttler_providers();
++    Object.defineProperty(exports, "getOptionsToken", { enumerable: true, get: function() {
++      return throttler_providers_1.getOptionsToken;
++    } });
++    Object.defineProperty(exports, "getStorageToken", { enumerable: true, get: function() {
++      return throttler_providers_1.getStorageToken;
++    } });
++    __exportStar(require_throttler_service(), exports);
++    __exportStar(require_utilities(), exports);
++  }
++});
++var throttlerExports = require_index();
++export const ThrottlerStorage = throttlerExports.ThrottlerStorage;
++export const Throttle = throttlerExports.Throttle;
++export const SkipThrottle = throttlerExports.SkipThrottle;
++export const InjectThrottlerOptions = throttlerExports.InjectThrottlerOptions;
++export const InjectThrottlerStorage = throttlerExports.InjectThrottlerStorage;
++export const ThrottlerException = throttlerExports.ThrottlerException;
++export const throttlerMessage = throttlerExports.throttlerMessage;
++export const ThrottlerGuard = throttlerExports.ThrottlerGuard;
++export const ThrottlerModule = throttlerExports.ThrottlerModule;
++export const getOptionsToken = throttlerExports.getOptionsToken;
++export const getStorageToken = throttlerExports.getStorageToken;
++export const ThrottlerStorageService = throttlerExports.ThrottlerStorageService;
++export const seconds = throttlerExports.seconds;
++export const minutes = throttlerExports.minutes;
++export const hours = throttlerExports.hours;
++export const days = throttlerExports.days;
++export const weeks = throttlerExports.weeks;
++export default throttlerExports;
+diff --git a/package.json b/package.json
+index 881079bc8369e10598ddcbca339963d1d2a75bd4..1ca0117534032154f13ff4050425ddcab0e0dd68 100644
+--- a/package.json
++++ b/package.json
+@@ -19,7 +19,7 @@
+   },
+   "private": false,
+   "license": "MIT",
+-  "main": "dist/index.js",
++  "main": "dist/index.mjs",
+   "types": "dist/index.d.ts",
+   "files": [
+     "dist"
+@@ -76,8 +76,8 @@
+     "ws": "8.18.3"
+   },
+   "peerDependencies": {
+-    "@nestjs/common": "^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0",
+-    "@nestjs/core": "^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0",
++    "@nestjs/common": "^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0",
++    "@nestjs/core": "^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0",
+     "reflect-metadata": "^0.1.13 || ^0.2.0"
+   },
+   "jest": {
