@@ -13,7 +13,7 @@ export async function parseCsvFileIntoArray(): Promise<RawStravaCsvColumns[]> {
 
   try {
     if (!existsSync(csvFileToParse)) {
-      throw new Error('Сsv file doesnt exists! Nothing to parse');
+      throw new Error('Файл CSV не найден: activities.csv');
     }
     const parser = createReadStream(csvFileToParse).pipe(parse({ columns: true }));
     for await (const record of parser) {
@@ -21,7 +21,7 @@ export async function parseCsvFileIntoArray(): Promise<RawStravaCsvColumns[]> {
     }
     return records;
   } catch (error) {
-    logger.error('Failed to parse migration CSV file', error instanceof Error ? error.stack : String(error));
+    logger.error('Не удалось обработать CSV-файл миграции', error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

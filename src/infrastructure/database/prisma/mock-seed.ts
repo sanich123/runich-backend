@@ -296,7 +296,7 @@ export async function seedMockData(prisma: PrismaClient) {
       },
       include: { profile: true },
     });
-    if (!user.profile) throw new Error(`Could not create profile for mock user ${email}`);
+    if (!user.profile) throw new Error(`Не удалось создать профиль тестового пользователя: ${email}`);
     mockUsers.push(user);
   }
 
@@ -433,7 +433,7 @@ export async function seedMockData(prisma: PrismaClient) {
 
     for (const friendId of followedIds) {
       const friend = usersById.get(friendId);
-      if (!friend) throw new Error(`Could not find mock profile for followed user ${friendId}`);
+      if (!friend) throw new Error(`Не найден профиль тестового пользователя: ${friendId}`);
       friendRows.push({ id: randomUUID(), user_id: user.id, friendId, profileId: friend.profile.id });
     }
   }

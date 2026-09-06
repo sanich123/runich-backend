@@ -4,21 +4,31 @@ import { PrismaException } from 'src/common/filters/prisma-exceptions';
 
 const logger = new Logger('Prisma');
 
-export function prismaErrorHandling(error: unknown) {
+export function isPrismaUniqueConstraintError(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}
+
+export function handleServiceError(error: unknown) {
+  // Service methods currently use broad try/catch blocks. Keep application-level
+  // HTTP exceptions intact and only translate errors that Prisma identifies.
   if (error instanceof HttpException) {
     throw error;
   }
 
   const errorDetails =
     error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error;
-  logger.error('Database operation failed', errorDetails);
 
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    throw new PrismaException('Database operation failed', error.code);
+    logger.error(`Ошибка запроса к базе данных (${error.code})`, errorDetails);
+    throw new PrismaException('Ошибка операции с базой данных', error.code);
   }
   if (error instanceof Prisma.PrismaClientUnknownRequestError || error instanceof Prisma.PrismaClientValidationError) {
-    throw new PrismaException('Database operation failed');
+    logger.error('Ошибка клиента базы данных', errorDetails);
+    throw new PrismaException('Ошибка операции с базой данных');
   }
 
-  throw new InternalServerErrorException('Internal server error');
+  // This helper is called from legacy broad catches, so non-Prisma failures can
+  // still arrive here. Do not describe them as database failures in logs.
+  logger.error('Неожиданная ошибка при выполнении операции', errorDetails);
+  throw new InternalServerErrorException('Внутренняя ошибка сервера');
 }

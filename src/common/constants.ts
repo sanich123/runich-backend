@@ -29,3 +29,7 @@ export const PRISMA_ERR_TO_HTTP_CODES = {
   P2002: HttpStatus.CONFLICT,
   P2025: HttpStatus.NOT_FOUND,
 };
+
+// The mobile client reduces tracked routes to this size before sending them.
+export const MAX_ACTIVITY_LOCATIONS = 5_000;
+export const MAX_JSON_BODY_BYTES = 5 * 1024 * 1024;

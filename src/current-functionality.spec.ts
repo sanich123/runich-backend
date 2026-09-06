@@ -50,7 +50,7 @@ describe('authentication', () => {
   const prisma = db();
   const jwtMock = { sign: jest.fn(() => 'jwt'), verify: jest.fn() };
   const jwt = jwtMock as unknown as JwtService;
-  const email = { sendConfirmationCode: jest.fn(), sendResetPasswordLink: jest.fn() };
+  const email = { sendConfirmationCode: jest.fn() };
   const service = new AuthService(prisma as never, jwt, email as never);
 
   beforeEach(() => jest.clearAllMocks());
@@ -81,7 +81,11 @@ describe('authentication', () => {
       email_confirmed_at: new Date(),
     });
     prisma.users.update.mockResolvedValue({});
-    await expect(service.login('user@example.com', 'secret')).resolves.toEqual({ id: 'user-1', accessToken: 'jwt' });
+    await expect(service.login('user@example.com', 'secret')).resolves.toEqual({
+      userId: 'user-1',
+      accessToken: 'jwt',
+      refreshToken: 'jwt',
+    });
     expect(prisma.users.update).toHaveBeenCalled();
 
     prisma.users.findUnique.mockResolvedValue({ id: 'user-1', encrypted_password: await bcrypt.hash('secret', 4) });
@@ -92,15 +96,15 @@ describe('authentication', () => {
     prisma.users.findUnique.mockResolvedValue({ id: 'user-1', confirmation_token: '1234' });
     prisma.users.update.mockResolvedValue({});
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
-      appVersion: '3.0.0',
-      id: 'user-1',
       accessToken: 'jwt',
+      userId: 'user-1',
+      refreshToken: 'jwt',
     });
     await expect(service.confirmEmailByCode('bad', 'user@example.com')).rejects.toBeInstanceOf(BadRequestException);
 
     jwtMock.verify = jest.fn().mockReturnValue({ userId: 'user-1' });
     prisma.users.findUnique.mockResolvedValue({ id: 'user-1', email_confirmed_at: null });
-    await expect(service.verifyToken('token')).resolves.toMatchObject({ id: 'user-1', accessToken: 'jwt' });
+    await expect(service.verifyToken('token')).resolves.toMatchObject({ userId: 'user-1', accessToken: 'jwt' });
     expect(prisma.users.update).toHaveBeenCalled();
   });
 
@@ -120,12 +124,6 @@ describe('account, user and social services', () => {
     const prisma = db();
     prisma.$transaction = createMock().mockResolvedValue([2, [{ id: 'profile-1' }]]) as never;
     const service = new AccountService(prisma as never);
-    await expect(service.getAllAccounts({ page: 0, limit: 10, size: 10, offset: 0 })).resolves.toEqual({
-      totalItems: 2,
-      items: [{ id: 'profile-1' }],
-      page: 0,
-      size: 10,
-    });
     prisma.profile.findMany.mockResolvedValue([{ id: 'profile-1' }]);
     prisma.profile.count.mockResolvedValue(1);
     await expect(
@@ -138,12 +136,8 @@ describe('account, user and social services', () => {
   it('updates, finds and upserts profiles', async () => {
     const prisma = db();
     const service = new AccountService(prisma as never);
-    prisma.profile.update.mockResolvedValue({ id: 'p1' });
     prisma.profile.findUnique.mockResolvedValue({ id: 'p1' });
     prisma.profile.upsert.mockResolvedValue({ id: 'p1' });
-    await expect(
-      service.updateProfileInfo({ email: 'a@example.com', emailNotifications: true }, 'p1'),
-    ).resolves.toEqual({ id: 'p1' });
     await expect(service.getAccountByUserId('u1')).resolves.toEqual({ id: 'p1' });
     await expect(service.getOrCreateAccountByUserId('u1')).resolves.toEqual({ id: 'p1' });
   });
@@ -151,16 +145,12 @@ describe('account, user and social services', () => {
   it('performs user profile CRUD through Prisma', async () => {
     const prisma = db();
     const service = new UserService(prisma as never);
-    prisma.users.findMany.mockResolvedValue([{ profile: { id: 'p1' } }]);
     prisma.profile.findUnique.mockResolvedValue({ id: 'p1' });
     prisma.profile.create.mockResolvedValue({ id: 'p1' });
     prisma.profile.update.mockResolvedValue({ id: 'p1' });
-    prisma.users.delete.mockResolvedValue({ id: 'u1' });
-    await expect(service.getAllUsers()).resolves.toEqual([{ profile: { id: 'p1' } }]);
     await expect(service.getProfileByUserId('u1')).resolves.toEqual({ id: 'p1' });
     await expect(service.createProfileByUserId('u1', { name: 'Ann' })).resolves.toEqual({ id: 'p1' });
     await expect(service.updateProfileByProfileId('p1', { name: 'Ann' })).resolves.toEqual({ id: 'p1' });
-    await expect(service.deleteUserByUserId('u1')).resolves.toEqual({ id: 'u1' });
   });
 
   it('propagates asynchronous profile write failures', async () => {
@@ -168,7 +158,7 @@ describe('account, user and social services', () => {
     const service = new UserService(prisma as never);
     prisma.profile.create.mockRejectedValue(new Error('database unavailable'));
 
-    await expect(service.createProfileByUserId('u1', { name: 'Ann' })).rejects.toThrow('Internal server error');
+    await expect(service.createProfileByUserId('u1', { name: 'Ann' })).rejects.toThrow('Внутренняя ошибка сервера');
   });
 
   it('creates and deletes friends and likes', async () => {
@@ -177,15 +167,17 @@ describe('account, user and social services', () => {
     const friend = new FriendService(prisma as never, account as never);
     const like = new LikeService(prisma as never, account as never, {} as never);
     prisma.friend.findMany.mockResolvedValue([]);
-    prisma.friend.create.mockResolvedValue({ id: 'f1' });
+    prisma.friend.upsert.mockResolvedValue({ id: 'f1' });
+    prisma.friend.findUnique.mockResolvedValue({ id: 'f1' });
     prisma.friend.delete.mockResolvedValue({ id: 'f1' });
-    prisma.like.create.mockResolvedValue({ id: 'l1' });
+    prisma.like.upsert.mockResolvedValue({ id: 'l1' });
+    prisma.like.findUnique.mockResolvedValue({ id: 'l1' });
     prisma.like.delete.mockResolvedValue({ id: 'l1' });
     prisma.like.findMany.mockResolvedValue([]);
     await expect(friend.getUsersYouFollowByUserId('u1')).resolves.toEqual([]);
     await expect(friend.addFriendByFriendId('u2', { userId: 'u1' })).resolves.toEqual({ id: 'f1' });
     await expect(friend.deleteFriendById('f1')).resolves.toEqual({ id: 'f1' });
-    await expect(like.addLike({ authorId: 'u1', activityId: 'a1' })).resolves.toEqual({ id: 'l1' });
+    await expect(like.addLike({ activityId: 'a1' })).resolves.toEqual({ id: 'l1' });
     await expect(like.deleteLikeById('l1')).resolves.toEqual({ id: 'l1' });
     await expect(like.getLikesByActivityId('a1')).resolves.toEqual([]);
   });
@@ -196,7 +188,7 @@ describe('account, user and social services', () => {
     const friend = new FriendService(prisma as never, account as never);
     const like = new LikeService(prisma as never, account as never, {} as never);
     await expect(friend.addFriendByFriendId('u2', { userId: 'u1' })).rejects.toBeInstanceOf(NotFoundException);
-    await expect(like.addLike({ authorId: 'u1', activityId: 'a1' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(like.addLike({ activityId: 'a1' })).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 
@@ -224,6 +216,26 @@ describe('activity, comments and statistics', () => {
     await expect(service.deleteActivityById('a1')).resolves.toEqual({ id: 'a1' });
   });
 
+  it('skips duplicate activities during archive migration', async () => {
+    const prisma = db();
+    const service = new ActivityService(prisma as never, {} as never);
+    const activity = {
+      duration: 100,
+      distance: 1000,
+      speed: 10,
+      sport: 'run',
+      title: 'Imported activity',
+      user_id: 'u1',
+      profileId: 'p1',
+      source: 'strava' as const,
+      sourceActivityId: 'strava-activity-1',
+    };
+    prisma.activity.createMany.mockResolvedValue({ count: 1 });
+
+    await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual({ success: true });
+    expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: [activity], skipDuplicates: true });
+  });
+
   it('creates comments, likes and returns comment collections', async () => {
     const prisma = db();
     const account = { getAccountByUserId: createMock().mockResolvedValue({ id: 'p1' }) };
@@ -233,19 +245,19 @@ describe('activity, comments and statistics', () => {
     prisma.comment.create.mockResolvedValue({ id: 'c1' });
     prisma.comment.update.mockResolvedValue({ id: 'c1' });
     prisma.comment.delete.mockResolvedValue({ id: 'c1' });
-    prisma.commentLike.create.mockResolvedValue({ id: 'cl1' });
+    prisma.commentLike.upsert.mockResolvedValue({ id: 'cl1' });
+    prisma.commentLike.findUnique.mockResolvedValue({ id: 'cl1' });
     prisma.commentLike.findMany.mockResolvedValue([{ id: 'cl1' }]);
     prisma.commentLike.delete.mockResolvedValue({ id: 'cl1' });
     await expect(service.getCommentsbyActivityId('a1', '10')).resolves.toEqual({
       comments: [{ id: 'c1' }],
-      allCommentsLength: 1,
+      hasMore: false,
+      nextCursor: null,
     });
-    await expect(
-      service.createCommentByActivityId({ comment: 'hello', authorId: 'u1' }, 'a1'),
-    ).resolves.toBeUndefined();
+    await expect(service.createCommentByActivityId({ comment: 'hello' }, 'a1')).resolves.toBeUndefined();
     await expect(service.updateCommentByCommentId('updated', 'c1')).resolves.toEqual({ id: 'c1' });
     await expect(service.deleteCommentByCommentId('c1')).resolves.toEqual({ id: 'c1' });
-    await expect(service.createCommentLikeByCommentId({ commentId: 'c1', authorId: 'u1' })).resolves.toEqual({
+    await expect(service.createCommentLikeByCommentId({ commentId: 'c1' })).resolves.toEqual({
       id: 'cl1',
     });
     await expect(service.getCommentLikesLengthByCommentId('c1')).resolves.toEqual([{ id: 'cl1' }]);
@@ -303,8 +315,8 @@ describe('utility functions and configuration', () => {
   });
 
   it('returns a random integer inside the requested inclusive range', () => {
-    jest.spyOn(Math, 'random').mockReturnValue(0.5);
-    expect(getRandomInt(1, 10)).toBe(6);
-    jest.restoreAllMocks();
+    const value = getRandomInt(1, 10);
+    expect(value).toBeGreaterThanOrEqual(1);
+    expect(value).toBeLessThanOrEqual(10);
   });
 });

@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { ActivityController } from './activity.controller';
 import { ActivityService } from './activity.service';
 import { FriendModule } from '../friend/friend.module';
 import { AccountModule } from '../account/account.module';
+import { ActivityPersistenceService } from './activity-persistence.service';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
-  imports: [PrismaModule, FriendModule, AccountModule],
+  imports: [PrismaModule, FriendModule, AccountModule, PassportModule.register({ defaultStrategy: 'jwt' })],
   controllers: [ActivityController],
-  providers: [ActivityService],
-  exports: [ActivityService],
+  providers: [ActivityService, ActivityPersistenceService, ThrottlerGuard],
+  exports: [ActivityService, ActivityPersistenceService],
 })
 export class ActivityModule {}

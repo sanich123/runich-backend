@@ -7,10 +7,20 @@ import { Extensions, RawStravaCsvColumns } from './types';
 import { v4 } from 'uuid';
 import { ActivityDto, LocationObject } from 'src/activity/activity.dto';
 import { Logger } from '@nestjs/common';
+import { calculateKilometreSplits } from './calculate-kilometre-splits';
+import { reduceLocations } from './reduce-locations';
 
 const logger = new Logger('ActivityMapper');
+const MIGRATION_BATCH_SIZE = 8;
+const MAX_MAP_IMAGE_LOCATIONS = 500;
 
-type MigratedActivity = ActivityDto & { id: string; user_id: string; profileId: string };
+type MigratedActivity = ActivityDto & {
+  id: string;
+  user_id: string;
+  profileId: string;
+  source: 'strava';
+  sourceActivityId: string;
+};
 export async function mapActivitiesWithCoordinates({
   parsedActivities,
   userId,
@@ -23,54 +33,75 @@ export async function mapActivitiesWithCoordinates({
   try {
     if (!parsedActivities) return [];
 
-    const results = await Promise.allSettled(
-      parsedActivities.map(async (activity, i): Promise<MigratedActivity> => {
-        let locations: LocationObject[] = [];
-        let fileName = activity['Filename'];
+    const results: PromiseSettledResult<MigratedActivity>[] = [];
+    for (let offset = 0; offset < parsedActivities.length; offset += MIGRATION_BATCH_SIZE) {
+      const batch = parsedActivities.slice(offset, offset + MIGRATION_BATCH_SIZE);
+      results.push(
+        ...(await Promise.allSettled(
+          batch.map(async (activity, batchIndex): Promise<MigratedActivity> => {
+            const i = offset + batchIndex;
+            const sourceActivityId = String(activity['Activity ID'] ?? '').trim();
+            if (!sourceActivityId) {
+              throw new Error('Не указан идентификатор активности Strava: Activity ID');
+            }
 
-        if (extname(fileName) === Extensions.gz) {
-          await ungzipFile(fileName);
-          fileName = fileName.slice(0, -3);
-        }
+            let rawLocations: LocationObject[] = [];
+            let fileName = activity['Filename'];
 
-        if (
-          extname(fileName) === Extensions.gpx ||
-          extname(fileName) === Extensions.tcx ||
-          extname(fileName) === Extensions.fit
-        ) {
-          locations = await parseCoordinatesFromFile(fileName);
-        }
-        logger.debug(`Processing activity ${i + 1}`);
+            if (extname(fileName) === Extensions.gz) {
+              await ungzipFile(fileName);
+              fileName = fileName.slice(0, -3);
+            }
 
-        const duration = Number(activity['Elapsed Time']) * 1000;
-        const distance = Number(activity.Distance);
-        const title = activity['Activity Name'];
-        const sport = activity['Activity Type'].toLowerCase();
-        const description = activity['Activity Description'];
-        const date = new Date(activity['Activity Date']).toISOString();
-        const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
-        const mapPhotoUrl = locations.length > 1 ? getMapBoxImage(locations) : '';
+            if (
+              extname(fileName) === Extensions.gpx ||
+              extname(fileName) === Extensions.tcx ||
+              extname(fileName) === Extensions.fit
+            ) {
+              rawLocations = await parseCoordinatesFromFile(fileName);
+            }
+            logger.debug(`Processing activity ${i + 1}`);
 
-        return {
-          id: v4(),
-          date,
-          title,
-          sport,
-          description,
-          duration,
-          distance,
-          speed,
-          locations,
-          user_id: userId,
-          mapPhotoUrl,
-          profileId,
-        };
-      }),
-    );
+            const movingTime = Number(activity['Moving Time']);
+            const elapsedTime = Number(activity['Elapsed Time']);
+            const durationSeconds = Number.isFinite(movingTime) && movingTime >= 0 ? movingTime : elapsedTime;
+            const duration = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds * 1000 : 0;
+            const distance = Number(activity.Distance);
+            const title = activity['Activity Name'];
+            const sport = activity['Activity Type'].toLowerCase();
+            const description = activity['Activity Description'];
+            const date = new Date(activity['Activity Date']).toISOString();
+            const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
+            const kilometresSplit = calculateKilometreSplits(rawLocations, duration);
+            const locations = reduceLocations(rawLocations);
+            const mapPhotoUrl =
+              rawLocations.length > 1 ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS)) : '';
+
+            return {
+              id: v4(),
+              source: 'strava',
+              sourceActivityId,
+              date,
+              title,
+              sport,
+              description,
+              duration,
+              distance,
+              speed,
+              locations,
+              kilometresSplit,
+              user_id: userId,
+              mapPhotoUrl,
+              profileId,
+            };
+          }),
+        )),
+      );
+    }
 
     const failedResults = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
     failedResults.forEach((result) => {
-      logger.warn(`Skipping activity that could not be mapped: ${String(result.reason)}`);
+      logger.warn(`Активность пропущена: не удалось обработать координаты. Причина: ${String(result.reason)}`);
     });
 
     const successfulResults = results
@@ -78,12 +109,12 @@ export async function mapActivitiesWithCoordinates({
       .map((result) => result.value);
 
     if (parsedActivities.length > 0 && successfulResults.length === 0 && failedResults.length > 0) {
-      throw new Error('Could not map any activities from migration archive');
+      throw new Error('Не удалось обработать ни одной активности из архива миграции');
     }
 
     return successfulResults;
   } catch (error) {
-    logger.error('Failed to map activities with coordinates', error instanceof Error ? error.stack : String(error));
+    logger.error('Не удалось обработать активности и координаты', error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

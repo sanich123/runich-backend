@@ -5,9 +5,9 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider        = "prisma-client"
-  output = "../src/infrastructure/database/generated/prisma"
-  moduleFormat    = "esm"
+  provider            = "prisma-client"
+  output              = "../src/infrastructure/database/generated/prisma"
+  moduleFormat        = "esm"
   importFileExtension = "ts"
 }
 
@@ -16,35 +16,80 @@ datasource db {
 }
 
 model Users {
-  instance_id                 String?           @db.Uuid
-  id                          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  aud                         String?           @db.VarChar(255)
-  role                        String?           @db.VarChar(255)
-  email                       String            @unique @db.VarChar(255)
-  encrypted_password          String?           @db.VarChar(255)
-  email_confirmed_at          DateTime?         @db.Timestamptz(6)
-  invited_at                  DateTime?         @db.Timestamptz(6)
-  confirmation_token          String?           @db.VarChar(255)
-  confirmation_sent_at        DateTime?         @db.Timestamptz(6)
-  recovery_token              String?           @db.VarChar(255)
-  recovery_sent_at            DateTime?         @db.Timestamptz(6)
-  email_change_token_new      String?           @db.VarChar(255)
-  email_change                String?           @db.VarChar(255)
-  email_change_sent_at        DateTime?         @db.Timestamptz(6)
-  last_sign_in_at             DateTime?         @db.Timestamptz(6)
-  created_at                  DateTime?         @default(now()) @db.Timestamptz(6)
-  updated_at                  DateTime?         @db.Timestamptz(6)
-  phone                       String?           @unique
-  phone_confirmed_at          DateTime?         @db.Timestamptz(6)
-  phone_change                String?           @default("")
-  phone_change_token          String?           @default("") @db.VarChar(255)
-  phone_change_sent_at        DateTime?         @db.Timestamptz(6)
-  email_change_token_current  String?           @default("") @db.VarChar(255)
-  email_change_confirm_status Int?              @default(0) @db.SmallInt
-  banned_until                DateTime?         @db.Timestamptz(6)
+  instance_id                 String?    @db.Uuid
+  id                          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  aud                         String?    @db.VarChar(255)
+  role                        String?    @db.VarChar(255)
+  email                       String     @unique @db.VarChar(255)
+  auth_provider               String?    @db.VarChar(32)
+  encrypted_password          String?    @db.VarChar(255)
+  email_confirmed_at          DateTime?  @db.Timestamptz(6)
+  invited_at                  DateTime?  @db.Timestamptz(6)
+  confirmation_token          String?    @db.VarChar(255)
+  confirmation_sent_at        DateTime?  @db.Timestamptz(6)
+  recovery_token              String?    @db.VarChar(255)
+  recovery_sent_at            DateTime?  @db.Timestamptz(6)
+  email_change_token_new      String?    @db.VarChar(255)
+  email_change                String?    @db.VarChar(255)
+  email_change_sent_at        DateTime?  @db.Timestamptz(6)
+  last_sign_in_at             DateTime?  @db.Timestamptz(6)
+  created_at                  DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime?  @db.Timestamptz(6)
+  phone                       String?    @unique
+  phone_confirmed_at          DateTime?  @db.Timestamptz(6)
+  phone_change                String?    @default("")
+  phone_change_token          String?    @default("") @db.VarChar(255)
+  phone_change_sent_at        DateTime?  @db.Timestamptz(6)
+  email_change_token_current  String?    @default("") @db.VarChar(255)
+  email_change_confirm_status Int?       @default(0) @db.SmallInt
+  banned_until                DateTime?  @db.Timestamptz(6)
   activities                  Activity[]
   friends                     Friend[]
   profile                     Profile?
+  sessions                    UserSession[]
+  auth_exchanges              AuthExchange[]
+}
+
+model UserSession {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String    @db.Uuid
+  refresh_hash String   @unique @db.VarChar(128)
+  device_id   String    @db.VarChar(128)
+  device_name String?   @db.VarChar(255)
+  platform    String?   @db.VarChar(64)
+  device_model String?  @db.VarChar(128)
+  manufacturer String?  @db.VarChar(128)
+  os_name     String?    @db.VarChar(64)
+  os_version  String?    @db.VarChar(64)
+  device_type String?    @db.VarChar(64)
+  app_version String?    @db.VarChar(32)
+  app_build   String?    @db.VarChar(32)
+  user_agent  String?   @db.VarChar(512)
+  ip_address  String?   @db.VarChar(128)
+  last_seen_at DateTime  @default(now()) @db.Timestamptz(6)
+  last_latitude Float?
+  last_longitude Float?
+  last_location_at DateTime? @db.Timestamptz(6)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  revoked_at  DateTime? @db.Timestamptz(6)
+  users       Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id])
+  @@index([user_id, device_id])
+}
+
+model AuthExchange {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  code_hash  String    @unique @db.VarChar(128)
+  purpose    String    @db.VarChar(32)
+  expires_at DateTime  @db.Timestamptz(6)
+  consumed_at DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  users      Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, purpose])
+  @@index([expires_at])
 }
 
 model Profile {
@@ -74,16 +119,17 @@ model Profile {
 }
 
 model Activity {
-  date                DateTime  @default(now())
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  date                DateTime  @default(now()) @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(6)
   description         String?
-  distance            Int
+  distance            Float
   duration            Int
   emotion             String?
   locations           Json?
   user_id             String    @db.Uuid
-  speed               Int
+  speed               Float
+  steps               Int?
   sport               String
   title               String?
   kilometresSplit     Json?
@@ -91,27 +137,34 @@ model Activity {
   photoVideoUrls      Json?
   isPublic            Boolean?  @default(true)
   mapPhotoUrlBlurhash String?
+  source              String?   @db.VarChar(32)
+  sourceActivityId    String?   @db.VarChar(128)
   profileId           String    @db.Uuid
   id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   profile             Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users               Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   comments            Comment[]
   likes               Like[]
+
+  @@unique([user_id, source, sourceActivityId])
 }
 
 model Friend {
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
   user_id   String   @db.Uuid
   friendId  String   @db.Uuid
   profileId String   @db.Uuid
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users     Users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, friendId])
+  @@index([friendId])
 }
 
 model Comment {
-  date        DateTime      @default(now())
+  date        DateTime      @default(now()) @db.Timestamptz(6)
   comment     String
   authorId    String
   activityId  String        @db.Uuid
@@ -120,24 +173,32 @@ model Comment {
   activity    Activity      @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   profile     Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   commentLike CommentLike[]
+
+  @@index([activityId])
 }
 
 model CommentLike {
-  date      DateTime @default(now())
+  date      DateTime @default(now()) @db.Timestamptz(6)
   authorId  String
   commentId String   @db.Uuid
   profileId String   @db.Uuid
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([authorId, commentId])
+  @@index([commentId])
 }
 
 model Like {
-  date       DateTime @default(now())
+  date       DateTime @default(now()) @db.Timestamptz(6)
   authorId   String
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   activityId String   @db.Uuid
   profileId  String   @db.Uuid
   activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([authorId, activityId])
+  @@index([activityId])
 }

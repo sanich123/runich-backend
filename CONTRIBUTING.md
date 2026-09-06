@@ -74,9 +74,21 @@ Run the full quality gate before pushing:
     yarn eslint src
     yarn build
     yarn test:ci
+    yarn test:cov
+    yarn test:integration
     yarn madge
 
 Tests should be deterministic and isolated from production services.
+The integration suite uses PostgreSQL and must run only against a disposable
+database. It covers HTTP access control, private activities and database-backed
+session behavior.
+
+Activity requests are bounded at 5,000 location points and 5 MiB of JSON body
+data. Keep the client-side reduction in place; do not bypass these limits by
+raising the global parser limit for a single large route.
+
+The test, coverage and typecheck scripts run `yarn prisma generate` before
+executing, so generated Prisma Client code cannot become stale in CI.
 
 ## Pull requests
 
@@ -97,5 +109,8 @@ Keep the PR focused. Avoid mixing unrelated formatting, dependency upgrades or g
 - [ ] Errors map to safe HTTP responses.
 - [ ] Logs contain context without sensitive data.
 - [ ] Tests cover changed behavior and failure paths.
+- [ ] Coverage thresholds pass (`yarn test:cov`).
+- [ ] PostgreSQL integration/e2e tests pass (`yarn test:integration`).
+- [ ] Docker image builds successfully.
 - [ ] Database migrations are included when needed.
 - [ ] Typecheck, ESLint, build, tests and Madge pass.

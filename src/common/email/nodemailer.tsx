@@ -11,7 +11,7 @@ const GOOGLE_REDIRECT_URI = 'https://developers.google.com/oauthplayground';
 function requiredEnvironmentVariable(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
-    throw new Error(`${name} must be configured`);
+    throw new Error(`Не настроена обязательная переменная окружения: ${name}`);
   }
   return value;
 }
@@ -19,7 +19,7 @@ function requiredEnvironmentVariable(name: string): string {
 function requestTimeout(): number {
   const timeout = Number(process.env.EMAIL_API_TIMEOUT ?? 15000);
   if (!Number.isFinite(timeout) || timeout <= 0) {
-    throw new Error(`EMAIL_API_TIMEOUT must be a positive number, got: ${process.env.EMAIL_API_TIMEOUT}`);
+    throw new Error(`Таймаут EMAIL_API_TIMEOUT должен быть положительным числом: ${process.env.EMAIL_API_TIMEOUT}`);
   }
   return timeout;
 }
@@ -40,21 +40,28 @@ async function googleAccessToken(): Promise<string> {
 
   const responseBody = await response.text();
   if (!response.ok) {
-    throw new Error(`Google OAuth returned ${response.status}: ${responseBody.slice(0, 1000)}`);
+    throw new Error(`Ошибка авторизации Google (код ${response.status}): ${responseBody.slice(0, 1000)}`);
   }
 
   const { access_token: accessToken } = JSON.parse(responseBody) as { access_token?: string };
   if (!accessToken) {
-    throw new Error('Google OAuth response does not contain an access token');
+    throw new Error('Ответ Google не содержит токен доступа');
   }
   return accessToken;
 }
 
-async function rawEmail(email: string, subject: string, html: string): Promise<string> {
+type EmailAttachment = { filename: string; content: Buffer; contentType?: string };
+
+async function rawEmail(
+  email: string,
+  subject: string,
+  html: string,
+  extraAttachments: EmailAttachment[] = [],
+): Promise<string> {
   const userEmail = requiredEnvironmentVariable('USER_EMAIL');
   const logoPath = join(process.cwd(), 'assets/images/runich-logo.png');
   if (!existsSync(logoPath)) {
-    throw new Error(`Email logo file not found: ${logoPath}`);
+    throw new Error(`Файл логотипа письма не найден: ${logoPath}`);
   }
 
   const composer = nodemailer.createTransport({ streamTransport: true, buffer: true });
@@ -70,18 +77,19 @@ async function rawEmail(email: string, subject: string, html: string): Promise<s
         cid: RUNICH_LOGO_CID,
         contentType: 'image/png',
       },
+      ...extraAttachments,
     ],
   });
 
   if (!result.message) {
-    throw new Error('Nodemailer did not generate a MIME message');
+    throw new Error('Не удалось сформировать MIME-сообщение письма');
   }
   return result.message.toString('base64url');
 }
 
-export const sendEmail = async (email: string, subject: string, html: string) => {
+export const sendEmail = async (email: string, subject: string, html: string, attachments: EmailAttachment[] = []) => {
   try {
-    const [accessToken, raw] = await Promise.all([googleAccessToken(), rawEmail(email, subject, html)]);
+    const [accessToken, raw] = await Promise.all([googleAccessToken(), rawEmail(email, subject, html, attachments)]);
     const response = await fetch(GMAIL_SEND_URL, {
       method: 'POST',
       headers: {
@@ -94,7 +102,7 @@ export const sendEmail = async (email: string, subject: string, html: string) =>
 
     const responseBody = await response.text();
     if (!response.ok) {
-      throw new Error(`Gmail API returned ${response.status}: ${responseBody.slice(0, 1000)}`);
+      throw new Error(`Ошибка Gmail API (код ${response.status}): ${responseBody.slice(0, 1000)}`);
     }
 
     const result = JSON.parse(responseBody) as { id?: string; threadId?: string };
@@ -104,7 +112,7 @@ export const sendEmail = async (email: string, subject: string, html: string) =>
       to: email,
     });
   } catch (err) {
-    console.error('[Email] Gmail API sending failed', {
+    console.error('[Email] Ошибка отправки через Gmail API', {
       to: email,
       subject,
       error: err instanceof Error ? { name: err.name, message: err.message } : err,

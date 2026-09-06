@@ -2,7 +2,10 @@ FROM node:26-alpine AS base
 
 WORKDIR /usr/src/app
 
+ENV NODE_ENV=production
+
 COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn/patches .yarn/patches
 
 RUN npm install --global @yarnpkg/cli-dist@4.18.0 \
   && yarn install --immutable

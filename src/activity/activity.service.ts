@@ -2,10 +2,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ActivityDto } from './activity.dto';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { chunkArray } from 'src/common/parsers/chunk-array';
+import { generateActivityTitle } from './activity-title';
+import { blurhashFromUrl } from 'src/common/images/blurhash';
+import { ActivityPersistenceService } from './activity-persistence.service';
 
 @Injectable()
 export class ActivityService {
@@ -16,7 +19,24 @@ export class ActivityService {
     private readonly prisma: PrismaService,
     @Inject(AccountService)
     private readonly accountService: AccountService,
-  ) {}
+    @Inject(ActivityPersistenceService)
+    persistenceService?: ActivityPersistenceService,
+  ) {
+    this.persistenceService = persistenceService ?? new ActivityPersistenceService(this.prisma);
+  }
+
+  private readonly persistenceService: ActivityPersistenceService;
+
+  async canAccessActivity(id: string, currentUserId?: string) {
+    if (!currentUserId) return true;
+
+    const activity = await this.prisma.activity.findUnique({
+      where: { id },
+      select: { user_id: true, isPublic: true },
+    });
+
+    return Boolean(activity && (activity.user_id === currentUserId || activity.isPublic === true));
+  }
 
   async createActivity(activityDto: ActivityDto, id: string) {
     try {
@@ -26,70 +46,100 @@ export class ActivityService {
         activityDto.mapPhotoUrl = getMapBoxImage(activityDto?.locations);
       }
 
-      return await this.prisma.activity.create({
-        data: {
-          user_id: id,
-          profileId: `${account?.id}`,
-          ...activityDto,
-          photoVideoUrls: activityDto.photoVideoUrls,
-          mapPhotoUrlBlurhash: null,
-        },
-      });
+      const photoVideoUrls = activityDto.photoVideoUrls
+        ? await Promise.all(
+            activityDto.photoVideoUrls.map(async (photo) => ({
+              ...photo,
+              blurhash: photo.blurhash ?? (await blurhashFromUrl(photo.thumbnail || photo.url)),
+            })),
+          )
+        : activityDto.photoVideoUrls;
+      const mapPhotoUrlBlurhash = activityDto.mapPhotoUrl ? await blurhashFromUrl(activityDto.mapPhotoUrl) : null;
+
+      const data = {
+        user_id: id,
+        profileId: `${account?.id}`,
+        ...activityDto,
+        title: activityDto.title?.trim()
+          ? activityDto.title
+          : generateActivityTitle(activityDto.sport, activityDto.date),
+        photoVideoUrls,
+        mapPhotoUrlBlurhash,
+      };
+      const serializedData = JSON.stringify(data).replace(/([?&]access_token=)[^&"]+/gi, '$1[скрыт]');
+      this.logger.log(`Структура активности перед сохранением: ${serializedData}`);
+
+      return await this.persistenceService.create(data);
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async createActivitiesFromMigrationArchive(activities: (ActivityDto & { user_id: string; profileId: string })[]) {
+  async createActivitiesFromMigrationArchive(
+    activities: (ActivityDto & {
+      user_id: string;
+      profileId: string;
+      source: 'strava';
+      sourceActivityId: string;
+    })[],
+  ) {
     try {
-      const chunkedActivities = chunkArray(activities, 100);
+      const activitiesWithTitles = activities.map((activity) => ({
+        ...activity,
+        title: activity.title?.trim() ? activity.title : generateActivityTitle(activity.sport, activity.date),
+      }));
+      const chunkedActivities = chunkArray(activitiesWithTitles, 100);
       await Promise.all(
         chunkedActivities.map(async (activities) => {
           this.logger.debug(`Writing activity batch (${activities.length} records)`);
-          return await this.prisma.activity.createMany({ data: activities });
+          return await this.persistenceService.createMany(activities);
         }),
       );
       return { success: true };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async updateActivity(activityDto: ActivityDto, id: string) {
+  async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
-      const { date, description, emotion, isPublic, photoVideoUrls, sport, title, distance, duration, speed } =
+      const { date, description, emotion, isPublic, photoVideoUrls, sport, title, distance, duration, speed, steps } =
         activityDto;
-      return await this.prisma.activity.update({
-        where: { id },
-        data: {
-          title,
-          sport,
-          photoVideoUrls,
-          isPublic,
-          emotion,
-          date,
-          description,
-          distance,
-          duration,
-          speed,
-        },
-      });
+      const data = {
+        title,
+        sport,
+        photoVideoUrls,
+        isPublic,
+        emotion,
+        date,
+        description,
+        distance,
+        duration,
+        speed,
+        ...(steps === undefined ? {} : { steps }),
+      };
+      return await this.persistenceService.update(id, userId, data);
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async getLocationsByActivityId(id: string) {
-    return await this.prisma.activity.findUnique({
+  async getLocationsByActivityId(id: string, currentUserId?: string) {
+    const activity = await this.prisma.activity.findUnique({
       where: { id },
       select: {
         locations: true,
         kilometresSplit: true,
+        user_id: true,
+        isPublic: true,
       },
     });
+    if (!activity || !currentUserId) return activity;
+    if (activity.user_id !== currentUserId && activity.isPublic !== true) return null;
+    return { locations: activity.locations, kilometresSplit: activity.kilometresSplit };
   }
 
-  async getActivityByActivityId(id: string) {
+  async getActivityByActivityId(id: string, currentUserId?: string) {
     try {
       const activity = await this.prisma.activity.findUnique({
         where: { id },
@@ -105,6 +155,7 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
+          steps: true,
           isPublic: true,
           emotion: true,
           kilometresSplit: true,
@@ -125,17 +176,25 @@ export class ActivityService {
           },
         },
       });
+      if (activity && currentUserId && activity.user_id !== currentUserId && activity.isPublic !== true) {
+        return null;
+      }
       return activity;
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async getMediaByUserId(id: string, take: string) {
+  async getMediaByUserId(id: string, take = '10', currentUserId?: string) {
     try {
       const photos = await this.prisma.activity.findMany({
         //@ts-ignore
-        where: { user_id: id, photoVideoUrls: { not: null } },
+        where: {
+          user_id: id,
+          // @ts-ignore Prisma's generated JSON filter type does not accept SQL NULL here.
+          photoVideoUrls: { not: null },
+          ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
+        },
         orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
       });
@@ -143,14 +202,17 @@ export class ActivityService {
       const slicedPhotos = flattedPhotos?.slice(0, Number(take));
       return { photos: slicedPhotos, isLastPage: flattedPhotos?.length <= slicedPhotos?.length };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async getActivitesByUserId(id: string, page = '0', take = '10') {
+  async getActivitesByUserId(id: string, page = '0', take = '10', currentUserId?: string) {
     try {
       const activities = await this.prisma.activity.findMany({
-        where: { user_id: id },
+        where: {
+          user_id: id,
+          ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
+        },
         orderBy: { date: 'desc' },
         skip: Number(page) * Number(take),
         take: Number(take),
@@ -173,12 +235,18 @@ export class ActivityService {
       });
       return { activities, isLastPage: !activities.length };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async getActivitiesByTheirIds(ids: string | string[]) {
-    const searchByStringOrArray = typeof ids === 'string' ? ids : { in: ids };
+  async getActivitiesByTheirIds(ids?: string | string[]) {
+    const normalizedIds = (Array.isArray(ids) ? ids : [ids ?? ''])
+      .flatMap((activityId) => activityId.split(','))
+      .map((activityId) => activityId.trim())
+      .filter(Boolean);
+    if (!normalizedIds.length) return [];
+
+    const searchByStringOrArray = normalizedIds.length === 1 ? normalizedIds[0] : { in: normalizedIds };
     try {
       return await this.prisma.activity.findMany({
         where: { id: searchByStringOrArray, isPublic: true },
@@ -195,6 +263,7 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
+          steps: true,
           profile: {
             select: {
               surname: true,
@@ -212,7 +281,7 @@ export class ActivityService {
         },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -240,6 +309,7 @@ export class ActivityService {
           mapPhotoUrlBlurhash: true,
           duration: true,
           distance: true,
+          steps: true,
           profile: {
             select: {
               surname: true,
@@ -259,29 +329,17 @@ export class ActivityService {
       });
       return { activities, isLastPage: !activities.length };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async deleteActivityById(id: string) {
+  async deleteActivityById(id: string, userId = id) {
     try {
-      return await this.prisma.activity.delete({ where: { id } });
+      return await this.persistenceService.delete(id, userId);
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
-
-  // async getPhotoVideoUrlsWithBlurhash(photoVideoUrls) {
-  //   return await Promise.all(
-  //     photoVideoUrls.map(async (photoVideoUrl) => {
-  //       const blurhash = await blurhashFromURL(photoVideoUrl.thumbnail ? photoVideoUrl.thumbnail : photoVideoUrl.url, {
-  //         size: 300,
-  //       });
-  //       photoVideoUrl.blurhash = blurhash.encoded;
-  //       return photoVideoUrl;
-  //     }),
-  //   );
-  // }
 
   async getActivityWithEmailData(activityId: string) {
     try {
@@ -307,7 +365,7 @@ export class ActivityService {
       });
       return { profile: activity?.profile, email: activity?.users.email, mapPhotoUrl: activity?.mapPhotoUrl };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 }

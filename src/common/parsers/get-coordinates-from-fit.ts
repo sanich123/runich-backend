@@ -7,17 +7,37 @@ const logger = new Logger('FitParser');
 
 export async function getCoordinatesFromFitFile(filePath: string): Promise<LocationObject[]> {
   try {
-    const fileBuffer = (await readFile(filePath)).buffer;
+    const buffer = await readFile(filePath);
+    const fileBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
     const getSportsLibEventFromBuffer = await SportsLib.importFromFit(fileBuffer as ArrayBuffer);
     const [activities] = getSportsLibEventFromBuffer.getActivities();
-    return activities
-      .getPositionData()
-      .filter((position): position is { longitudeDegrees: number; latitudeDegrees: number } =>
-        Boolean(position?.longitudeDegrees != null && position?.latitudeDegrees != null),
-      )
-      .map((position) => ({ coords: { longitude: position.longitudeDegrees, latitude: position.latitudeDegrees } }));
+    const streams = new Map(activities.getAllStreams().map((stream) => [stream.type, stream.getData()]));
+    const altitude = streams.get('Altitude');
+    const startTimestamp = activities.startDate.getTime();
+    return activities.getPositionData().flatMap((position, index) => {
+      if (
+        position?.longitudeDegrees == null ||
+        position?.latitudeDegrees == null ||
+        !Number.isFinite(position.longitudeDegrees) ||
+        !Number.isFinite(position.latitudeDegrees)
+      ) {
+        return [];
+      }
+
+      const altitudeValue = altitude?.[index];
+      return [
+        {
+          coords: {
+            longitude: position.longitudeDegrees,
+            latitude: position.latitudeDegrees,
+            ...(typeof altitudeValue === 'number' && Number.isFinite(altitudeValue) ? { altitude: altitudeValue } : {}),
+            ...(Number.isFinite(startTimestamp) ? { timestamp: startTimestamp + index * 1_000 } : {}),
+          },
+        },
+      ];
+    });
   } catch (error) {
-    logger.error(`Failed to parse FIT file ${filePath}`, error instanceof Error ? error.stack : String(error));
+    logger.error(`Не удалось обработать FIT-файл ${filePath}`, error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

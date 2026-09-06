@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { LikeDto } from './like.dto';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError, isPrismaUniqueConstraintError } from 'src/common/utils/prisma-errors';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
 
@@ -16,39 +16,50 @@ export class LikeService {
     private readonly activityService: ActivityService,
   ) {}
 
-  async addLike({ authorId, activityId }: LikeDto) {
+  async addLike({ activityId }: LikeDto, currentUserId?: string) {
     try {
-      const account = await this.accountService.getAccountByUserId(authorId);
-      if (!account?.id) throw new NotFoundException();
-      return await this.prismaService.like.create({
-        data: {
-          profileId: account.id,
-          authorId,
-          activityId,
-        },
-      });
+      if (currentUserId && !(await this.activityService.canAccessActivity(activityId, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
+      }
+      const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
+      if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
+      const authorId = currentUserId ?? '';
+      const where = { authorId_activityId: { authorId, activityId } };
+      try {
+        await this.prismaService.like.upsert({
+          where,
+          update: {},
+          create: { profileId: account.id, authorId, activityId },
+        });
+      } catch (error) {
+        if (!isPrismaUniqueConstraintError(error)) throw error;
+      }
+      return await this.prismaService.like.findUnique({ where });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async deleteLikeById(id: string) {
+  async deleteLikeById(id: string, authorId?: string) {
     try {
-      return await this.prismaService.like.delete({ where: { id } });
+      return await this.prismaService.like.delete({ where: authorId ? { id, authorId } : { id } });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async getLikesByActivityId(id: string) {
+  async getLikesByActivityId(id: string, currentUserId?: string) {
     try {
+      if (currentUserId && !(await this.activityService.canAccessActivity(id, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
+      }
       return await this.prismaService.like.findMany({
         where: { activityId: id },
         orderBy: { date: 'desc' },
         include: { profile: true },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 }

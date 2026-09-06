@@ -1,11 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { prismaErrorHandling } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/prisma-errors';
 import { reduceAllMetricsToYearCategoryMonths } from './utils';
+import { ActivityMetricsService } from './activity-metrics.service';
 
 @Injectable()
 export class StatisticService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ActivityMetricsService) metricsService?: ActivityMetricsService,
+  ) {
+    this.metricsService = metricsService ?? new ActivityMetricsService();
+  }
+
+  private readonly metricsService: ActivityMetricsService;
 
   async getYearsAndTypesOfActivities(id: string) {
     try {
@@ -15,9 +23,9 @@ export class StatisticService {
         years.map(async (year) => {
           const types = await this.prisma.activity.findMany({
             where: {
+              user_id: id,
               date: {
-                gte: new Date(year as number, 0, 1, 0, 0, 0),
-                lte: new Date(year as number, 11, 31, 23, 59, 59),
+                ...this.metricsService.utcYearRange(year as number),
               },
             },
             select: { sport: true },
@@ -26,18 +34,21 @@ export class StatisticService {
         }),
       );
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
-  async getMonthStatisticsByYearMonth(userId: string, year: string, month: string) {
+  async getMonthStatisticsByYearMonth(
+    userId: string,
+    year = `${new Date().getFullYear()}`,
+    month = `${new Date().getMonth()}`,
+  ) {
     try {
       const activities = await this.prisma.activity.findMany({
         where: {
           user_id: userId,
           date: {
-            gte: new Date(+year, +month, 1, 0, 0, 0),
-            lte: new Date(+year, +month, 31, 23, 59, 59),
+            ...this.metricsService.utcMonthRange(+year, +month),
           },
         },
         select: {
@@ -73,7 +84,7 @@ export class StatisticService {
         },
       };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -83,8 +94,7 @@ export class StatisticService {
         where: {
           user_id: userId,
           date: {
-            gte: new Date(+year, +month, 1, 0, 0, 0),
-            lte: new Date(+year, +month, 31, 23, 59, 59),
+            ...this.metricsService.utcMonthRange(+year, +month),
           },
           sport: category,
         },
@@ -95,7 +105,7 @@ export class StatisticService {
         },
       });
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -116,10 +126,14 @@ export class StatisticService {
       }
       return { isUserHasActivities: true, ...activities.reduce(reduceAllMetricsToYearCategoryMonths, {}) };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
-  async getCurrentWeekStatistics(userId: string, firstDay: string, lastDay: string) {
+  async getCurrentWeekStatistics(
+    userId: string,
+    firstDay = new Date().toISOString(),
+    lastDay = new Date().toISOString(),
+  ) {
     const firstDayDate = new Date(firstDay);
     const lastDayDate = new Date(lastDay);
     try {
@@ -127,15 +141,19 @@ export class StatisticService {
         where: {
           user_id: userId,
           date: {
-            gte: new Date(firstDayDate.getFullYear(), firstDayDate.getMonth(), firstDayDate.getDate(), 0, 0, 0),
-            lte: new Date(lastDayDate.getFullYear(), lastDayDate.getMonth(), lastDayDate.getDate(), 23, 59, 59),
+            gte: new Date(
+              Date.UTC(firstDayDate.getUTCFullYear(), firstDayDate.getUTCMonth(), firstDayDate.getUTCDate()),
+            ),
+            lt: new Date(
+              Date.UTC(lastDayDate.getUTCFullYear(), lastDayDate.getUTCMonth(), lastDayDate.getUTCDate() + 1),
+            ),
           },
         },
       });
       const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(currentWeekActivities);
       return { totalDuration, totalDistance, totalItems };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
@@ -148,20 +166,11 @@ export class StatisticService {
       const { totalDistance, totalDuration, totalItems } = this.reduceMetricsFromActivities(activities);
       return { totalDistance, totalDuration, totalItems };
     } catch (error) {
-      prismaErrorHandling(error);
+      handleServiceError(error);
     }
   }
 
   reduceMetricsFromActivities(activities: { duration: number; distance: number }[]) {
-    const safeActivities = Array.isArray(activities) ? activities : [];
-    const { totalDistance, totalDuration } = safeActivities.reduce(
-      (acc, { distance, duration }) => {
-        acc.totalDistance += distance;
-        acc.totalDuration += duration;
-        return acc;
-      },
-      { totalDistance: 0, totalDuration: 0 },
-    );
-    return { totalDistance, totalDuration, totalItems: safeActivities.length };
+    return this.metricsService.reduceMetricsFromActivities(activities);
   }
 }

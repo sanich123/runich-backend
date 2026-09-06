@@ -1,8 +1,13 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationResponseDto } from 'src/common/dto/pagination.dto';
 
 export class ProfileDto {
   @ApiPropertyOptional({ type: String, description: 'Id value (optional)' })
   id?: string;
+  @ApiPropertyOptional({ type: String, description: 'User identifier (optional)' })
+  user_id?: string;
+  @ApiPropertyOptional({ type: String, format: 'date-time', description: 'Creation date (optional)' })
+  created_at?: Date | string;
   @ApiPropertyOptional({ type: String, description: 'Name value (optional)' })
   name?: string | null;
   @ApiPropertyOptional({ type: String, description: 'bio value (optional)' })
@@ -11,23 +16,29 @@ export class ProfileDto {
   birthday?: Date | string | null;
   @ApiPropertyOptional({ type: String, description: 'city value (optional)' })
   city?: string | null;
-  @ApiPropertyOptional({ type: String, description: 'createdAt value (optional)' })
-  createdAt?: Date | string;
   @ApiPropertyOptional({ type: String, description: 'gender value (optional)' })
   gender?: string | null;
   @ApiPropertyOptional({ type: String, description: 'profilePhoto value (optional)' })
   profilePhoto?: string | null;
-  profilePhotoBlurhash?: string;
   @ApiPropertyOptional({ type: String, description: 'sport value (optional)' })
   sport?: string | null;
   @ApiPropertyOptional({ type: String, description: 'surname value (optional)' })
   surname?: string | null;
   @ApiPropertyOptional({ type: String, description: 'updatedAt value (optional)' })
-  updatedAt?: Date | string;
+  updatedAt?: Date | string | null;
+  @ApiPropertyOptional({ type: String, description: 'Language value (optional)' })
+  language?: string | null;
   @ApiPropertyOptional({ type: String, description: 'birthday value (optional)' })
   weight?: string | null;
+  @ApiPropertyOptional({ type: String, description: 'Profile photo blurhash (optional)' })
+  profilePhotoBlurhash?: string | null;
   @ApiPropertyOptional({ type: Boolean, description: 'Email notifications enabled' })
-  emailNotifications: boolean;
+  emailNotifications?: boolean | null;
   @ApiPropertyOptional({ type: String, description: 'Email value (optional)' })
-  email: string;
+  email?: string | null;
+}
+
+export class ProfilePaginationResponseDto extends PaginationResponseDto<ProfileDto> {
+  @ApiProperty({ type: [ProfileDto] })
+  declare items: ProfileDto[];
 }

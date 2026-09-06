@@ -11,7 +11,7 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse();
     const status = this.errorMap[exception.code] ?? HttpStatus.INTERNAL_SERVER_ERROR;
 
-    this.logger.error(`Prisma request failed (${exception.code})`, exception.stack);
+    this.logger.error(`Ошибка запроса к базе данных (${exception.code})`, exception.stack);
 
     response.status(status).json({
       statusCode: status,
@@ -22,13 +22,13 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
   private getSafeMessage(code: string) {
     switch (code) {
       case 'P2000':
-        return 'Submitted value is too long';
+        return 'Переданное значение слишком длинное';
       case 'P2002':
-        return 'Resource already exists';
+        return 'Такая запись уже существует';
       case 'P2025':
-        return 'Resource was not found';
+        return 'Запись не найдена';
       default:
-        return 'Database request failed';
+        return 'Ошибка запроса к базе данных';
     }
   }
 }

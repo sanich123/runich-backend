@@ -1,7 +1,16 @@
 import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiOkResponse,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -10,55 +19,60 @@ import {
   Patch,
   Post,
   UseGuards,
+  Req,
 } from '@nestjs/common';
-import { ApiBody, ApiCreatedResponse, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { UserService } from './user.service';
 import { UserDto } from './user.dto';
+import { ProfileDto } from 'src/account/account.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { PATHS } from 'src/common/constants';
+import type { AuthenticatedRequest } from 'src/auth/auth-request';
 
+@ApiTags(PATHS.user)
+@ApiBearerAuth('bearerAuth')
 @Controller('/user')
 export class UserController {
   constructor(@Inject(UserService) private readonly userService: UserService) {}
 
-  @Get()
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
-  async getAllUsers() {
-    return await this.userService.getAllUsers();
-  }
-
   @Get(':id/profile')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: ProfileDto })
+  @ApiOperation({ summary: 'Get a user profile' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   async getProfileByUserId(@Param() { id }: ParamsId) {
     return await this.userService.getProfileByUserId(id);
   }
 
   @Post(':id/profile')
   @UseGuards(JwtAuthGuard)
-  @ApiCreatedResponse({ description: 'Create user profile' })
+  @ApiOkResponse({ type: ProfileDto })
+  @ApiCreatedResponse({ type: ProfileDto, description: 'Create user profile' })
   @ApiBody({ type: UserDto })
+  @ApiParam({ name: 'id', description: 'User identifier' })
   @HttpCode(HttpStatus.CREATED)
-  async createProfileByUserId(@Param() { id }: ParamsId, @Body() accountDto: UserDto) {
-    return await this.userService.createProfileByUserId(id, accountDto);
+  async createProfileByUserId(
+    @Param() { id }: ParamsId,
+    @Body() accountDto: UserDto,
+    @Req() request?: AuthenticatedRequest,
+  ) {
+    return await this.userService.createProfileByUserId(id, request?.user.id ?? id, accountDto);
   }
 
   @Patch(':id/profile')
   @UseGuards(JwtAuthGuard)
-  @ApiCreatedResponse({ description: 'Update user profile' })
+  @ApiOkResponse({ type: ProfileDto })
+  @ApiResponse({ status: HttpStatus.OK, type: ProfileDto, description: 'Update user profile' })
   @ApiBody({ type: UserDto })
+  @ApiParam({ name: 'id', description: 'User identifier' })
   @HttpCode(HttpStatus.OK)
-  async updateProfileByProfileId(@Param() { id }: ParamsId, @Body() accountDto: UserDto) {
-    return await this.userService.updateProfileByProfileId(id, accountDto);
-  }
-
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiCreatedResponse({ description: 'Delete user account' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteUserByUserId(@Param() { id }: ParamsId) {
-    return await this.userService.deleteUserByUserId(id);
+  async updateProfileByUserId(
+    @Param() { id }: ParamsId,
+    @Body() accountDto: UserDto,
+    @Req() request?: AuthenticatedRequest,
+  ) {
+    return await this.userService.updateProfileByUserId(id, request?.user.id ?? id, accountDto);
   }
 }

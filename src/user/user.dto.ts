@@ -1,64 +1,69 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDateString, IsEmail, IsOptional, IsString } from 'class-validator';
 
 export class UserDto {
   @ApiPropertyOptional({ type: String, description: "User's name" })
   @IsString()
   @IsOptional()
-  name?: string;
+  name?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "Users's surname" })
   @IsString()
   @IsOptional()
-  surname?: string;
+  surname?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's biography" })
   @IsString()
   @IsOptional()
-  bio?: string;
+  bio?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's birthday" })
-  @IsString()
+  @IsDateString()
   @IsOptional()
-  birthday?: string;
+  birthday?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's city" })
   @IsString()
   @IsOptional()
-  city?: string;
+  city?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's gender" })
   @IsString()
   @IsOptional()
-  gender?: string;
+  gender?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's photo" })
   @IsString()
   @IsOptional()
-  profilePhoto?: string;
+  profilePhoto?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's photo (blurhash value)" })
   @IsString()
   @IsOptional()
-  profilePhotoBlurhash?: string;
+  profilePhotoBlurhash?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's choosed sport" })
   @IsString()
   @IsOptional()
-  sport?: string;
+  sport?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's weight" })
   @IsString()
   @IsOptional()
-  weight?: string;
+  weight?: string | null;
 
   @ApiPropertyOptional({ type: Boolean, description: 'Is user allow to notificate him by email' })
   @IsBoolean()
   @IsOptional()
-  emailNotifications?: boolean;
+  emailNotifications?: boolean | null;
 
   @ApiPropertyOptional({ type: String, description: "User's email" })
   @IsEmail()
   @IsOptional()
-  email?: string;
+  email?: string | null;
+
+  @ApiPropertyOptional({ type: String, description: "User's language" })
+  @IsString()
+  @IsOptional()
+  language?: string | null;
 }

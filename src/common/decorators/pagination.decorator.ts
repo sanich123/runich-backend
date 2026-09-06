@@ -1,6 +1,10 @@
 import { BadRequestException, createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Request } from 'express';
 
+const DEFAULT_PAGE = 0;
+const DEFAULT_SIZE = 10;
+const MAX_SIZE = 100;
+
 export interface Pagination {
   page: number;
   limit: number;
@@ -8,27 +12,34 @@ export interface Pagination {
   offset: number;
 }
 
-export const PaginationParams = createParamDecorator((data, ctx: ExecutionContext): Pagination => {
-  const req: Request = ctx.switchToHttp().getRequest();
-  let page = parseInt(req.query.page as string);
-  let size = parseInt(req.query.size as string);
-
-  if (!page) {
-    page = 0;
-  }
-  if (!size) {
-    size = 10;
+function parseQueryInteger(value: unknown, fallback: number, field: string) {
+  if (value === undefined) return fallback;
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+    throw new BadRequestException(`Некорректное значение параметра пагинации: ${field}`);
   }
 
-  if (isNaN(page) || page < 0 || isNaN(size) || size < 0) {
-    throw new BadRequestException('Invalid pagination params');
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new BadRequestException(`Некорректное значение параметра пагинации: ${field}`);
   }
 
-  if (size > 1000) {
-    throw new BadRequestException('Invalid pagination params: Max size is 100');
-  }
+  return parsed;
+}
+
+export function parsePagination(query: Request['query']): Pagination {
+  const page = parseQueryInteger(query.page, DEFAULT_PAGE, 'page');
+  const size = parseQueryInteger(query.size, DEFAULT_SIZE, 'size');
+
+  if (size === 0) throw new BadRequestException('Размер страницы должен быть больше нуля: size');
+  if (size > MAX_SIZE) throw new BadRequestException(`Размер страницы не может быть больше ${MAX_SIZE}: size`);
 
   const limit = size;
   const offset = page * limit;
+  if (!Number.isSafeInteger(offset)) throw new BadRequestException('Некорректное смещение пагинации: offset');
   return { page, limit, size, offset };
+}
+
+export const PaginationParams = createParamDecorator((_data, ctx: ExecutionContext): Pagination => {
+  const req: Request = ctx.switchToHttp().getRequest();
+  return parsePagination(req.query);
 });

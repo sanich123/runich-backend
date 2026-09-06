@@ -15,7 +15,10 @@ export async function ungzipFile(sourcePath: string) {
     const destination = createWriteStream(join(process.cwd(), 'dist', 'migration', sourcePath.slice(0, -3)));
     await pipe(source, gzip, destination);
   } catch (error) {
-    logger.error(`Failed to unpack gzip file ${sourcePath}`, error instanceof Error ? error.stack : String(error));
+    logger.error(
+      `Не удалось распаковать GZIP-файл ${sourcePath}`,
+      error instanceof Error ? error.stack : String(error),
+    );
     throw error;
   }
 }

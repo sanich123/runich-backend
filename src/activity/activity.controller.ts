@@ -13,16 +13,39 @@ import {
   UseInterceptors,
   UploadedFile,
   NotFoundException,
+  BadRequestException,
   UseGuards,
   Logger,
+  ForbiddenException,
+  Req,
 } from '@nestjs/common';
+import type { AuthenticatedRequest as RequestWithUser } from 'src/auth/auth-request';
 import { mkdir, rm } from 'fs/promises';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
+import {
+  ActivityCardResponseDto,
+  ActivityDetailsResponseDto,
+  ActivityImportResponseDto,
+  ActivityListResponseDto,
+  ActivityLocationsResponseDto,
+  ActivityMediaResponseDto,
+  ActivityResponseDto,
+} from './activity.response.dto';
 import { ParamsId } from 'src/common/dto/params-validation';
-import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiOkResponse,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PATHS, QueryParams } from 'src/common/constants';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -31,11 +54,15 @@ import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
 import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-with-coordinates';
 import { AccountService } from 'src/account/account.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 const { activity, id } = PATHS;
 const receivedArchiveDirectory = join(process.cwd(), 'dist', 'receivedArchive');
 const migrationDirectory = join(process.cwd(), 'dist', 'migration');
 
 @ApiTags(activity)
+@ApiBearerAuth('bearerAuth')
 @Controller(activity)
 export class ActivityController {
   private readonly logger = new Logger(ActivityController.name);
@@ -47,35 +74,80 @@ export class ActivityController {
     private readonly accountService: AccountService,
   ) {}
 
-  @Get(`${id}/photos{.:take}`)
+  @Get(`${id}/photos`)
+  @ApiOkResponse({ type: ActivityMediaResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiQuery({ name: 'take', required: false, description: 'Maximum number of photos' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getMediaByUserId(@Param() { id }: ParamsId, @Query(QueryParams.take) take: string) {
-    return this.activityService.getMediaByUserId(id, take);
+  async getMediaByUserId(
+    @Param() { id }: ParamsId,
+    @Query(QueryParams.take) take?: string,
+    @Req() request?: RequestWithUser,
+  ) {
+    return this.activityService.getMediaByUserId(
+      id,
+      validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 }),
+      request?.user.userId ?? request?.user.id,
+    );
   }
 
   @Get(`${id}/locations`)
+  @ApiOkResponse({ type: ActivityLocationsResponseDto })
   @UseGuards(JwtAuthGuard)
-  async getLocationsByActivityId(@Param() { id }: ParamsId) {
-    return this.activityService.getLocationsByActivityId(id);
+  @ApiOperation({ summary: 'Get locations by activity id' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
+  async getLocationsByActivityId(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    return this.activityService.getLocationsByActivityId(id, request?.user.userId ?? request?.user.id);
   }
 
-  @Get(`activityIds{.:ids}`)
+  @Get('activityIds')
+  @ApiOkResponse({ type: [ActivityCardResponseDto] })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by activities ids' })
-  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
+  @ApiQuery({
+    name: 'ids',
+    required: true,
+    isArray: true,
+    description: 'Activity ids (repeated or comma-separated)',
+  })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivitiesByActivitiesIds(@Query(QueryParams.ids) ids: string) {
+  async getActivitiesByActivitiesIds(@Query(QueryParams.ids) ids?: string | string[]) {
+    const isValidIds =
+      typeof ids === 'string'
+        ? Boolean(ids.trim())
+        : Array.isArray(ids) &&
+          ids.length > 0 &&
+          ids.every((activityId) => typeof activityId === 'string' && Boolean(activityId.trim()));
+    if (!isValidIds) {
+      throw new BadRequestException('Не указаны идентификаторы активностей: ids');
+    }
     return this.activityService.getActivitiesByTheirIds(ids);
   }
 
   @Post('migration-strava/:id')
+  @RateLimit(RATE_LIMITS.stravaImport.limit, RATE_LIMITS.stravaImport.ttl)
+  @ApiOkResponse({ type: ActivityImportResponseDto })
+  @ApiResponse({ status: HttpStatus.CREATED, type: ActivityImportResponseDto, description: 'Success' })
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Import activities from a Strava archive' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', properties: { archive: { type: 'string', format: 'binary' } } } })
   @UseInterceptors(
     FileInterceptor('archive', {
+      limits: { fileSize: UPLOAD_LIMITS.migrationArchiveBytes, files: 1 },
+      fileFilter: (_request, file, callback) => {
+        if (!isZipUpload(file.originalname)) {
+          callback(new BadRequestException('Разрешены только ZIP-архивы'), false);
+          return;
+        }
+        callback(null, true);
+      },
       storage: diskStorage({
         destination: async (req, file: Express.Multer.File, cb) => {
           try {
@@ -95,24 +167,31 @@ export class ActivityController {
   async getArchiveWithActivitiesFromStrava(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Param() { id }: ParamsId,
+    @Req() request?: RequestWithUser,
   ) {
     const startedAt = Date.now();
 
     try {
       if (!file) {
-        throw new NotFoundException('Archive file is required');
+        throw new NotFoundException('Не указан файл архива: archive');
       }
 
-      const account = await this.accountService.getOrCreateAccountByUserId(id);
+      const currentUserId = request?.user.userId ?? request?.user.id;
+      if (currentUserId && id !== currentUserId) throw new ForbiddenException('Недостаточно прав');
+      const account = await this.accountService.getOrCreateAccountByUserId(currentUserId ?? id);
       if (!account) {
-        throw new NotFoundException(`Profile for user ${id} was not found`);
+        throw new NotFoundException(`Профиль пользователя не найден: ${id}`);
       }
 
-      await unzipTransferArchive(file.path);
+      const archiveStats = await unzipTransferArchive(file.path);
+      this.logger.log(
+        `Migration archive size: ${archiveStats.compressedBytes} compressed bytes, ` +
+          `${archiveStats.uncompressedBytes} uncompressed bytes, ${archiveStats.entries} entries`,
+      );
       const parsedActivities = await parseCsvFileIntoArray();
       const activitiesWithCoordinates = await mapActivitiesWithCoordinates({
         parsedActivities,
-        userId: id,
+        userId: currentUserId ?? id,
         profileId: account.id,
       });
       if (!activitiesWithCoordinates) return;
@@ -125,7 +204,7 @@ export class ActivityController {
       cleanupResults.forEach((result) => {
         if (result.status === 'rejected') {
           this.logger.error(
-            'Failed to clean up migration files',
+            'Не удалось удалить временные файлы миграции',
             result.reason instanceof Error ? result.reason.stack : String(result.reason),
           );
         }
@@ -135,69 +214,96 @@ export class ActivityController {
   }
 
   @Post(id)
+  @ApiOkResponse({ type: ActivityResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Post activity by userId' })
-  @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Success' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiBody({ type: ActivityDto })
+  @ApiResponse({ status: HttpStatus.CREATED, type: ActivityResponseDto, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(HttpStatus.CREATED)
-  async createActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
-    return await this.activityService.createActivity(activity, id);
+  async createActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    const currentUserId = request?.user.userId ?? request?.user.id ?? id;
+    if (currentUserId !== id) throw new ForbiddenException('Недостаточно прав');
+    return await this.activityService.createActivity(activity, currentUserId);
   }
 
   @Patch(id)
+  @ApiOkResponse({ type: ActivityResponseDto })
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update activity' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiBody({ type: ActivityDto })
+  @ApiResponse({ status: HttpStatus.CREATED, type: ActivityResponseDto, description: 'Success' })
   @HttpCode(HttpStatus.CREATED)
-  async patchActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId) {
-    return await this.activityService.updateActivity(activity, id);
+  async patchActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    return await this.activityService.updateActivity(activity, id, request?.user.userId ?? request?.user.id ?? id);
   }
 
-  @Get(`${id}{.:page}{.:take}`)
+  @Get(id)
+  @ApiOkResponse({ type: ActivityListResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by userId' })
-  @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getActivitiesByUserId(
     @Param() { id }: ParamsId,
-    @Query(QueryParams.page) page: string,
-    @Query(QueryParams.take) take: string,
+    @Query(QueryParams.page) page?: string,
+    @Query(QueryParams.take) take?: string,
+    @Req() request?: RequestWithUser,
   ) {
-    return await this.activityService.getActivitesByUserId(id, page, take);
+    const validatedPage = validateOptionalIntegerQuery(page, QueryParams.page);
+    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    return await this.activityService.getActivitesByUserId(
+      id,
+      validatedPage,
+      validatedTake,
+      request?.user.userId ?? request?.user.id,
+    );
   }
 
-  @Get(`${id}/all{.:page}{.:take}`)
+  @Get(`${id}/all`)
+  @ApiOkResponse({ type: ActivityListResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by userId and friends ids' })
-  @ApiParam({ name: 'userId', required: true, description: 'User identifer' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getAllActivitiesWithFriends(
     @Param() { id }: ParamsId,
-    @Query(QueryParams.page) page: string,
-    @Query(QueryParams.take) take: string,
+    @Query(QueryParams.page) page?: string,
+    @Query(QueryParams.take) take?: string,
   ) {
-    return await this.activityService.getAllActivitiesWithFriends(id, page, take);
+    const validatedPage = validateOptionalIntegerQuery(page, QueryParams.page);
+    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    return await this.activityService.getAllActivitiesWithFriends(id, validatedPage, validatedTake);
   }
 
   @Get(`/activityId/${id}`)
+  @ApiOkResponse({ type: ActivityDetailsResponseDto })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activity by activity id' })
-  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivityByActivityId(@Param() { id }: ParamsId) {
-    return await this.activityService.getActivityByActivityId(id);
+  async getActivityByActivityId(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    return await this.activityService.getActivityByActivityId(id, request?.user.userId ?? request?.user.id);
   }
 
   @Delete(id)
+  @ApiOkResponse({ schema: { type: 'null' }, description: 'No response body' })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete activity by activity id' })
-  @ApiParam({ name: 'activityId', required: true, description: 'Activity identifer' })
-  @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Success' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiResponse({ status: HttpStatus.NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteActivityById(@Param() { id }: ParamsId) {
-    return await this.activityService.deleteActivityById(id);
+  async deleteActivityById(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    return await this.activityService.deleteActivityById(id, request?.user.userId ?? request?.user.id ?? id);
   }
 }
