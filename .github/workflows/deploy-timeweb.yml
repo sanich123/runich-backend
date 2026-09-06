@@ -29,13 +29,19 @@ jobs:
         run: |
           set -euo pipefail
 
+          : "${DEPLOY_HOST:?GitHub Secret DEPLOY_HOST is required}"
+          : "${DEPLOY_USER:?GitHub Secret DEPLOY_USER is required}"
+          : "${DEPLOY_SSH_KEY:?GitHub Secret DEPLOY_SSH_KEY is required}"
+          : "${DEPLOY_KNOWN_HOSTS:?GitHub Secret DEPLOY_KNOWN_HOSTS is required}"
+
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
           chmod 600 "$HOME/.ssh/id_ed25519"
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 644 "$HOME/.ssh/known_hosts"
 
-          ssh -o BatchMode=yes -o IdentitiesOnly=yes \
+          ssh -i "$HOME/.ssh/id_ed25519" \
+            -o BatchMode=yes -o IdentitiesOnly=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "DEPLOY_SHA='${{ github.sha }}' bash -s" <<'REMOTE'
             set -euo pipefail
