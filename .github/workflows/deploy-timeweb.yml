@@ -1,0 +1,69 @@
+name: Deploy to Timeweb
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Deploy exact commit over SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DEPLOY_SHA='${{ github.sha }}' bash -s" <<'REMOTE'
+            set -euo pipefail
+
+            cd /opt/runich-backend/project
+
+            if ! git diff --quiet || ! git diff --cached --quiet; then
+              echo 'Deployment checkout has tracked changes; refusing to overwrite them.' >&2
+              exit 1
+            fi
+
+            git fetch --prune origin main
+            git checkout --detach "$DEPLOY_SHA"
+            test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+
+            docker compose up -d --build nestjs_app
+
+            for attempt in $(seq 1 30); do
+              if curl --fail --silent --show-error --max-time 5 \
+                http://127.0.0.1:3000/health/live >/dev/null; then
+                echo "Deployment is healthy at commit $DEPLOY_SHA"
+                exit 0
+              fi
+              sleep 2
+            done
+
+            echo 'Health check failed.' >&2
+            docker compose ps
+            docker compose logs --tail=100 nestjs_app
+            exit 1
+          REMOTE
