@@ -89,13 +89,13 @@ export class ActivityService {
         title: activity.title?.trim() ? activity.title : generateActivityTitle(activity.sport, activity.date),
       }));
       const chunkedActivities = chunkArray(activitiesWithTitles, 100);
-      await Promise.all(
+      const batchResults = await Promise.all(
         chunkedActivities.map(async (activities) => {
           this.logger.debug(`Writing activity batch (${activities.length} records)`);
           return await this.persistenceService.createMany(activities);
         }),
       );
-      return { success: true };
+      return { success: true, importedCount: batchResults.reduce((total, result) => total + result.count, 0) };
     } catch (error) {
       handleServiceError(error);
     }

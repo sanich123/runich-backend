@@ -107,6 +107,7 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | USER_EMAIL                      | Gmail sender address                                              |
 | EMAIL_API_TIMEOUT               | Google OAuth and Gmail API timeout in milliseconds, default 15000 |
 | MAPBOX_ACCESS_TOKEN             | Mapbox Static Images API access token                             |
+| MIGRATION_ARCHIVE_DIRECTORY     | Directory for queued Strava archives; use persistent storage      |
 | JWT_SECRET                      | Secret used to sign and verify JWT tokens                         |
 | VK_CLIENT_ID                    | VK ID application client ID                                       |
 | VK_CLIENT_SECRET                | VK ID application secret, server-side only                        |
@@ -171,6 +172,10 @@ Setting SEED_MOCK_DATA=true creates 100 deterministic mock runners. Each user ge
 The API currently exposes 47 operations in the `/auth`, `/user`, `/profile`, `/activity`, `/comment`, `/friend`, `/like`, `/statistics` and `/email` groups. Most routes require `Authorization: Bearer <token>`.
 
 The endpoint inventory is in `doc/api.yaml`; Swagger at `/api` is the authoritative source for request and response schemas.
+
+Strava archive migration is asynchronous. `POST /activity/migration-strava/:id` returns
+`202` with a `jobId`; poll `GET /activity/migration-strava/jobs/:jobId` to read the
+status, progress, imported count and any processing error.
 
 ## Quality gates
 

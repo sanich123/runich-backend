@@ -8,8 +8,11 @@ import { Logger } from '@nestjs/common';
 
 const logger = new Logger('CoordinatesParser');
 
-export async function parseCoordinatesFromFile(filePath: string): Promise<LocationObject[]> {
-  const inputFilePath = join(process.cwd(), 'dist', 'migration', filePath);
+export async function parseCoordinatesFromFile(
+  filePath: string,
+  migrationDirectory = join(process.cwd(), 'dist', 'migration'),
+): Promise<LocationObject[]> {
+  const inputFilePath = join(migrationDirectory, filePath);
   try {
     if (!existsSync(inputFilePath)) {
       throw new Error(`Файл с координатами не найден: ${filePath}`);

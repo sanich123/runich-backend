@@ -128,11 +128,17 @@ describe('ActivityService', () => {
       sourceActivityId: `strava-${index}`,
     }));
 
-    await expect(service.createActivitiesFromMigrationArchive(activities)).resolves.toEqual({ success: true });
+    await expect(service.createActivitiesFromMigrationArchive(activities)).resolves.toEqual({
+      success: true,
+      importedCount: 200,
+    });
     expect(prisma.activity.createMany).toHaveBeenCalledTimes(2);
     expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: activities.slice(0, 100), skipDuplicates: true });
     expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: activities.slice(100), skipDuplicates: true });
-    await expect(service.createActivitiesFromMigrationArchive([])).resolves.toEqual({ success: true });
+    await expect(service.createActivitiesFromMigrationArchive([])).resolves.toEqual({
+      success: true,
+      importedCount: 0,
+    });
   });
 
   it('updates, reads, paginates and deletes activities', async () => {

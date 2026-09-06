@@ -7,9 +7,11 @@ import { Logger } from '@nestjs/common';
 
 const logger = new Logger('CsvParser');
 
-export async function parseCsvFileIntoArray(): Promise<RawStravaCsvColumns[]> {
+export async function parseCsvFileIntoArray(
+  migrationDirectory = join(process.cwd(), 'dist', 'migration'),
+): Promise<RawStravaCsvColumns[]> {
   const records: RawStravaCsvColumns[] = [];
-  const csvFileToParse = join(process.cwd(), 'dist', 'migration', 'activities.csv');
+  const csvFileToParse = join(migrationDirectory, 'activities.csv');
 
   try {
     if (!existsSync(csvFileToParse)) {
