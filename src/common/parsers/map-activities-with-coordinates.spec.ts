@@ -30,18 +30,27 @@ function createRoute(): LocationObject[] {
 }
 
 describe('mapActivitiesWithCoordinates', () => {
+  const originalMapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
     parseCoordinatesFromFile.mockResolvedValue(createRoute());
     getMapBoxImage.mockReturnValue('https://map.example/route');
     getSpeedInMinsInKm.mockReturnValue({ paceAsNumber: 6 });
     uuid.mockReturnValue('activity-1');
   });
 
+  afterAll(() => {
+    if (originalMapboxToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN;
+    else process.env.MAPBOX_ACCESS_TOKEN = originalMapboxToken;
+  });
+
   it('returns kilometre splits from the full route and a capped route for storage', async () => {
     const [activity] = await mapActivitiesWithCoordinates({
       userId: 'user-1',
       profileId: 'profile-1',
+      migrationDirectory: '/tmp/migration-job-1',
       parsedActivities: [
         {
           'Activity ID': 'strava-1',
@@ -66,6 +75,28 @@ describe('mapActivitiesWithCoordinates', () => {
     );
     expect(activity.kilometresSplit?.[0].lastKilometerAltitude).toBeGreaterThan(0);
     expect(activity.mapPhotoUrl).toBe('https://map.example/route');
+    expect(parseCoordinatesFromFile).toHaveBeenCalledWith('activities/run.gpx', '/tmp/migration-job-1');
     expect(getMapBoxImage).toHaveBeenCalledWith(createRoute());
+  });
+
+  it('returns an empty batch when every row is invalid so the worker can record skips and continue', async () => {
+    await expect(
+      mapActivitiesWithCoordinates({
+        userId: 'user-1',
+        profileId: 'profile-1',
+        parsedActivities: [
+          {
+            'Activity ID': '',
+            Filename: '',
+            'Activity Date': '2026-09-07T00:00:00.000Z',
+            'Activity Name': '',
+            'Activity Type': 'Run',
+            'Activity Description': '',
+            'Elapsed Time': 0,
+            Distance: 0,
+          },
+        ],
+      }),
+    ).resolves.toEqual([]);
   });
 });

@@ -4,6 +4,7 @@ import { ActivityController } from './activity.controller';
 import { ActivityService } from './activity.service';
 import { AccountService } from 'src/account/account.service';
 import { asyncMock } from 'src/__tests__/helpers';
+import { ActivityMigrationService } from './activity-migration.service';
 
 describe('ActivityController', () => {
   const activityService = {
@@ -19,9 +20,11 @@ describe('ActivityController', () => {
     deleteActivityById: asyncMock(),
   };
   const accountService = { getOrCreateAccountByUserId: asyncMock() };
+  const activityMigrationService = { enqueue: asyncMock(), getJobForUser: asyncMock() };
   const controller = new ActivityController(
     activityService as unknown as ActivityService,
     accountService as unknown as AccountService,
+    activityMigrationService as unknown as ActivityMigrationService,
   );
 
   beforeEach(() => jest.clearAllMocks());

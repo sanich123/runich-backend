@@ -2,8 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
+import AdmZip from 'adm-zip';
 import request from 'supertest';
 import { AppModule } from 'src/app/app.module';
+import { ActivityMigrationService } from 'src/activity/activity-migration.service';
 import { AuthTokenService } from 'src/auth/auth-token.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 
@@ -375,6 +378,49 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .attach('archive', Buffer.from('not a zip'), 'archive.txt')
       .expect(400);
+  });
+
+  it('queues a Strava archive and commits it through the migration worker', async () => {
+    const sourceActivityId = `e2e-strava-${randomUUID()}`;
+    const zip = new AdmZip();
+    zip.addFile(
+      'activities.csv',
+      Buffer.from(
+        'Activity ID,Filename,Activity Date,Activity Name,Activity Type,Activity Description,Elapsed Time,Moving Time,Distance\n' +
+          `${sourceActivityId},,2026-09-07T08:00:00.000Z,E2E run,Run,Imported in e2e,300,240,1.25\n`,
+      ),
+    );
+
+    const uploadResponse = await request(app.getHttpServer())
+      .post(`/activity/migration-strava/${ownerId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .attach('archive', zip.toBuffer(), 'strava-export.zip')
+      .expect(202);
+    expect(uploadResponse.body).toMatchObject({ status: 'queued', processedActivities: 0 });
+
+    const migrationService = app.get(ActivityMigrationService);
+    let job = await prisma.activityMigrationJob.findUnique({ where: { id: uploadResponse.body.jobId } });
+    for (let attempt = 0; attempt < 10 && job?.status !== 'completed' && job?.status !== 'failed'; attempt += 1) {
+      if (job?.status === 'queued') await migrationService.processNextJob();
+      else await delay(50);
+      job = await prisma.activityMigrationJob.findUnique({ where: { id: uploadResponse.body.jobId } });
+    }
+
+    expect(job).toMatchObject({
+      status: 'completed',
+      totalActivities: 1,
+      processedActivities: 1,
+      importedActivities: 1,
+      skippedActivities: 0,
+    });
+    await request(app.getHttpServer())
+      .get(`/activity/migration-strava/jobs/${uploadResponse.body.jobId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200)
+      .expect((response) => expect(response.body).toMatchObject({ status: 'completed', importedActivities: 1 }));
+    await expect(
+      prisma.activity.findFirst({ where: { user_id: ownerId, source: 'strava', sourceActivityId } }),
+    ).resolves.toMatchObject({ title: 'E2E run', profileId: ownerProfileId });
   });
 
   it('rejects protected email endpoints without authentication and redirects OAuth errors safely', async () => {

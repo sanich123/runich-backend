@@ -44,6 +44,10 @@ Initialize the database and start development mode:
 
     yarn start:dev
 
+Start the migration worker in a second terminal:
+
+    yarn start:migration-worker
+
 `yarn start:dev` generates the Prisma Client and applies all committed database
 migrations before starting the development server. To update only the database,
 run `yarn migrate`.
@@ -92,53 +96,60 @@ Use secret management and rotated credentials in production. Never commit .env, 
 
 ## Configuration
 
-| Variable                        | Purpose                                                           |
-| ------------------------------- | ----------------------------------------------------------------- |
-| DATABASE_URL                    | PostgreSQL connection string                                      |
-| DATABASE_URL_DOCKER             | Local Compose connection string using the `db` hostname           |
-| POSTGRES_USER, POSTGRES_DB      | Local Compose database user and database name                    |
-| POSTGRES_PASSWORD               | Local Compose database password                                  |
-| PORT                            | HTTP port, default 3000                                           |
-| NODE_ENV                        | Runtime environment                                               |
-| SWAGGER_ENABLED                 | Enable Swagger; production default is disabled                    |
-| SWAGGER_USER, SWAGGER_PASSWORD | Basic Auth credentials when Swagger is enabled in production      |
-| GOOGLE_CLIENT_ID, GOOGLE_SECRET | Google OAuth client credentials                                   |
-| GOOGLE_REFRESH_TOKEN            | Offline OAuth token with Gmail Send permission                    |
-| USER_EMAIL                      | Gmail sender address                                              |
-| EMAIL_API_TIMEOUT               | Google OAuth and Gmail API timeout in milliseconds, default 15000 |
-| MAPBOX_ACCESS_TOKEN             | Mapbox Static Images API access token                             |
-| JWT_SECRET                      | Secret used to sign and verify JWT tokens                         |
-| VK_CLIENT_ID                    | VK ID application client ID                                       |
-| VK_CLIENT_SECRET                | VK ID application secret, server-side only                        |
-| VK_REDIRECT_URI                 | Registered VK OAuth callback URL                                  |
-| VK_FRONTEND_REDIRECT_URI        | Frontend URL receiving the application JWT                        |
-| VK_API_VERSION                  | Optional VK API version, defaults to 5.199                        |
-| IS_DEV                          | Development URL selection in email templates                      |
-| SEED_MOCK_DATA                  | Create mock users and activities at startup                       |
-| SEED_USER_EMAIL                 | Optional email used by Prisma seed                                |
+| Variable                          | Purpose                                                           |
+| --------------------------------- | ----------------------------------------------------------------- |
+| DATABASE_URL                      | PostgreSQL connection string                                      |
+| DATABASE_URL_DOCKER               | Local Compose connection string using the `db` hostname           |
+| POSTGRES_USER, POSTGRES_DB        | Local Compose database user and database name                     |
+| POSTGRES_PASSWORD                 | Local Compose database password                                   |
+| PORT                              | HTTP port, default 3000                                           |
+| NODE_ENV                          | Runtime environment                                               |
+| SWAGGER_ENABLED                   | Enable Swagger; production default is disabled                    |
+| SWAGGER_USER, SWAGGER_PASSWORD    | Basic Auth credentials when Swagger is enabled in production      |
+| GOOGLE_CLIENT_ID, GOOGLE_SECRET   | Google OAuth client credentials                                   |
+| GOOGLE_REFRESH_TOKEN              | Offline OAuth token with Gmail Send permission                    |
+| USER_EMAIL                        | Gmail sender address                                              |
+| EMAIL_API_TIMEOUT                 | Google OAuth and Gmail API timeout in milliseconds, default 15000 |
+| MAPBOX_ACCESS_TOKEN               | Mapbox Static Images API access token                             |
+| MIGRATION_ARCHIVE_DIRECTORY       | Durable directory shared by the API and migration worker          |
+| MIGRATION_ACTIVITY_BATCH_SIZE     | Activities processed and committed per worker batch, default 8    |
+| MIGRATION_BATCH_PAUSE_MS          | Pause between migration batches in milliseconds, default 25       |
+| MIGRATION_WORKER_POLL_INTERVAL_MS | Queue polling interval in milliseconds, default 10000             |
+| MIGRATION_WORKER_CPUS             | Docker CPU limit for the migration worker, default 0.50           |
+| JWT_SECRET                        | Secret used to sign and verify JWT tokens                         |
+| VK_CLIENT_ID                      | VK ID application client ID                                       |
+| VK_CLIENT_SECRET                  | VK ID application secret, server-side only                        |
+| VK_REDIRECT_URI                   | Registered VK OAuth callback URL                                  |
+| VK_FRONTEND_REDIRECT_URI          | Frontend URL receiving the application JWT                        |
+| VK_API_VERSION                    | Optional VK API version, defaults to 5.199                        |
+| IS_DEV                            | Development URL selection in email templates                      |
+| SEED_MOCK_DATA                    | Create mock users and activities at startup                       |
+| SEED_USER_EMAIL                   | Optional email used by Prisma seed                                |
 
 ## Commands
 
-| Command                    | Description                             |
-| -------------------------- | --------------------------------------- |
-| yarn migrate               | Apply committed migrations              |
-| yarn start:dev             | Development server with watch mode      |
-| yarn start:debug           | Development server with Node inspector  |
-| yarn build                 | Build with tsup                         |
-| yarn start:prod            | Run compiled application                |
-| yarn start:migrate:prod    | Apply migrations and start compiled app |
-| yarn typecheck             | TypeScript check                        |
-| yarn eslint src            | ESLint check without auto-fix           |
-| yarn test:ci               | Serial CI test run                      |
-| yarn test:cov              | Jest coverage run                       |
-| yarn test:integration      | PostgreSQL integration/e2e tests        |
-| yarn format                | Format TypeScript files                 |
-| yarn prisma generate       | Generate Prisma Client                  |
-| yarn prisma migrate dev    | Create a development migration          |
-| yarn prisma migrate deploy | Apply committed migrations              |
-| yarn madge                 | Check circular dependencies             |
-| yarn ts-prune              | Find unused exports                     |
-| yarn depcheck              | Inspect dependencies                    |
+| Command                          | Description                             |
+| -------------------------------- | --------------------------------------- |
+| yarn migrate                     | Apply committed migrations              |
+| yarn start:dev                   | Development server with watch mode      |
+| yarn start:debug                 | Development server with Node inspector  |
+| yarn build                       | Build with tsup                         |
+| yarn start:prod                  | Run compiled application                |
+| yarn start:migrate:prod          | Apply migrations and start compiled app |
+| yarn start:migration-worker      | Run the Strava migration worker         |
+| yarn start:migration-worker:prod | Run the compiled migration worker       |
+| yarn typecheck                   | TypeScript check                        |
+| yarn eslint src                  | ESLint check without auto-fix           |
+| yarn test:ci                     | Serial CI test run                      |
+| yarn test:cov                    | Jest coverage run                       |
+| yarn test:integration            | PostgreSQL integration/e2e tests        |
+| yarn format                      | Format TypeScript files                 |
+| yarn prisma generate             | Generate Prisma Client                  |
+| yarn prisma migrate dev          | Create a development migration          |
+| yarn prisma migrate deploy       | Apply committed migrations              |
+| yarn madge                       | Check circular dependencies             |
+| yarn ts-prune                    | Find unused exports                     |
+| yarn depcheck                    | Inspect dependencies                    |
 
 ## Database and seed data
 
@@ -168,9 +179,18 @@ Setting SEED_MOCK_DATA=true creates 100 deterministic mock runners. Each user ge
 
 ## API
 
-The API currently exposes 47 operations in the `/auth`, `/user`, `/profile`, `/activity`, `/comment`, `/friend`, `/like`, `/statistics` and `/email` groups. Most routes require `Authorization: Bearer <token>`.
+The API currently exposes 48 operations in the `/auth`, `/user`, `/profile`, `/activity`, `/comment`, `/friend`, `/like`, `/statistics` and `/email` groups. Most routes require `Authorization: Bearer <token>`.
 
 The endpoint inventory is in `doc/api.yaml`; Swagger at `/api` is the authoritative source for request and response schemas.
+
+Strava archive migration is asynchronous. `POST /activity/migration-strava/:id`
+returns HTTP 202 with a `jobId`; poll
+`GET /activity/migration-strava/jobs/:jobId` for status and progress. The API
+only stores the upload and queues the job. A separate worker extracts the
+archive and commits each activity batch together with its progress, so a worker
+restart resumes from the last committed batch. Docker Compose stores queued
+archives in a shared named volume and limits the worker to half a CPU by
+default.
 
 ## Quality gates
 

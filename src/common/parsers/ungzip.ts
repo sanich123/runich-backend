@@ -4,15 +4,16 @@ import { promisify } from 'node:util';
 import { createGunzip } from 'node:zlib';
 import { join } from 'path';
 import { Logger } from '@nestjs/common';
+import { resolveMigrationPath } from './migration-path';
 
 const logger = new Logger('GzipParser');
 
-export async function ungzipFile(sourcePath: string) {
+export async function ungzipFile(sourcePath: string, migrationDirectory = join(process.cwd(), 'dist', 'migration')) {
   try {
     const pipe = promisify(pipeline);
     const gzip = createGunzip();
-    const source = createReadStream(join(process.cwd(), 'dist', 'migration', sourcePath));
-    const destination = createWriteStream(join(process.cwd(), 'dist', 'migration', sourcePath.slice(0, -3)));
+    const source = createReadStream(resolveMigrationPath(migrationDirectory, sourcePath));
+    const destination = createWriteStream(resolveMigrationPath(migrationDirectory, sourcePath.slice(0, -3)));
     await pipe(source, gzip, destination);
   } catch (error) {
     logger.error(

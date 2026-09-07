@@ -1,7 +1,10 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/main.ts'],
+  entry: {
+    main: 'src/main.ts',
+    'activity-migration-worker': 'src/app/activity-migration-worker.ts',
+  },
   format: ['esm'],
   target: 'node26',
   outDir: 'dist',

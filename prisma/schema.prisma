@@ -44,6 +44,7 @@ model Users {
   email_change_confirm_status Int?       @default(0) @db.SmallInt
   banned_until                DateTime?  @db.Timestamptz(6)
   activities                  Activity[]
+  activityMigrationJobs       ActivityMigrationJob[]
   friends                     Friend[]
   profile                     Profile?
   sessions                    UserSession[]
@@ -111,6 +112,7 @@ model Profile {
   profilePhotoBlurhash String?
   id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   activities           Activity[]
+  activityMigrationJobs ActivityMigrationJob[]
   comments             Comment[]
   commentLikes         CommentLike[]
   friends              Friend[]
@@ -147,6 +149,27 @@ model Activity {
   likes               Like[]
 
   @@unique([user_id, source, sourceActivityId])
+}
+
+model ActivityMigrationJob {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String    @db.Uuid
+  profileId           String    @db.Uuid
+  archivePath         String    @db.VarChar(2048)
+  status              String    @db.VarChar(32)
+  totalActivities     Int       @default(0)
+  processedActivities Int       @default(0)
+  importedActivities  Int       @default(0)
+  skippedActivities   Int       @default(0)
+  errorMessage        String?   @db.Text
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  startedAt           DateTime? @db.Timestamptz(6)
+  finishedAt          DateTime? @db.Timestamptz(6)
+  users               Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profile             Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, createdAt])
+  @@index([status, createdAt])
 }
 
 model Friend {

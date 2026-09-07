@@ -30,11 +30,33 @@ services:
     environment:
       TZ: UTC
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must be set in .env or the shell}
+      MIGRATION_ARCHIVE_DIRECTORY: /var/lib/runich/migration-archives
     ports:
       - '127.0.0.1:3000:3000'
     volumes:
       - .:/app
       - /app/node_modules
+      - migration_archives:/var/lib/runich/migration-archives
+
+  activity_migration_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ['yarn', 'start:migration-worker:prod']
+    restart: always
+    cpus: ${MIGRATION_WORKER_CPUS:-0.50}
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      TZ: UTC
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must be set in .env or the shell}
+      MIGRATION_ARCHIVE_DIRECTORY: /var/lib/runich/migration-archives
+    volumes:
+      - migration_archives:/var/lib/runich/migration-archives
 
 volumes:
   pgdata:
+  migration_archives:

@@ -84,6 +84,18 @@ describe('unzipTransferArchive', () => {
     await expect(readFile(join(root, 'dist', 'migration', 'activities.csv'), 'utf8')).resolves.toContain('activity-1');
   });
 
+  it('extracts into an isolated worker directory when one is provided', async () => {
+    const archivePath = join(root, 'safe-worker.zip');
+    const destination = join(root, 'worker', 'job-1');
+    const zip = new AdmZip();
+    zip.addFile('activities.csv', Buffer.from('Activity ID\nactivity-1\n'));
+    zip.writeZip(archivePath);
+
+    await unzipTransferArchive(archivePath, destination);
+
+    await expect(readFile(join(destination, 'activities.csv'), 'utf8')).resolves.toContain('activity-1');
+  });
+
   it('rejects archives with too many entries before extraction', async () => {
     const archivePath = join(root, 'oversized-entry-count.zip');
     const zip = new AdmZip();

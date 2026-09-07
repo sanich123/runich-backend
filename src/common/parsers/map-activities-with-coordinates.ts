@@ -25,10 +25,12 @@ export async function mapActivitiesWithCoordinates({
   parsedActivities,
   userId,
   profileId,
+  migrationDirectory,
 }: {
   parsedActivities?: RawStravaCsvColumns[];
   userId: string;
   profileId: string;
+  migrationDirectory?: string;
 }): Promise<MigratedActivity[]> {
   try {
     if (!parsedActivities) return [];
@@ -46,19 +48,19 @@ export async function mapActivitiesWithCoordinates({
             }
 
             let rawLocations: LocationObject[] = [];
-            let fileName = activity['Filename'];
+            let fileName = String(activity['Filename'] ?? '').trim();
 
-            if (extname(fileName) === Extensions.gz) {
-              await ungzipFile(fileName);
+            if (extname(fileName).toLowerCase() === Extensions.gz) {
+              await ungzipFile(fileName, migrationDirectory);
               fileName = fileName.slice(0, -3);
             }
 
             if (
-              extname(fileName) === Extensions.gpx ||
-              extname(fileName) === Extensions.tcx ||
-              extname(fileName) === Extensions.fit
+              extname(fileName).toLowerCase() === Extensions.gpx ||
+              extname(fileName).toLowerCase() === Extensions.tcx ||
+              extname(fileName).toLowerCase() === Extensions.fit
             ) {
-              rawLocations = await parseCoordinatesFromFile(fileName);
+              rawLocations = await parseCoordinatesFromFile(fileName, migrationDirectory);
             }
             logger.debug(`Processing activity ${i + 1}`);
 
@@ -68,14 +70,16 @@ export async function mapActivitiesWithCoordinates({
             const duration = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds * 1000 : 0;
             const distance = Number(activity.Distance);
             const title = activity['Activity Name'];
-            const sport = activity['Activity Type'].toLowerCase();
+            const sport = String(activity['Activity Type'] ?? '').toLowerCase();
             const description = activity['Activity Description'];
             const date = new Date(activity['Activity Date']).toISOString();
             const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
             const kilometresSplit = calculateKilometreSplits(rawLocations, duration);
             const locations = reduceLocations(rawLocations);
             const mapPhotoUrl =
-              rawLocations.length > 1 ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS)) : '';
+              rawLocations.length > 1 && process.env.MAPBOX_ACCESS_TOKEN
+                ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS))
+                : '';
 
             return {
               id: v4(),
@@ -107,10 +111,6 @@ export async function mapActivitiesWithCoordinates({
     const successfulResults = results
       .filter((result): result is PromiseFulfilledResult<MigratedActivity> => result.status === 'fulfilled')
       .map((result) => result.value);
-
-    if (parsedActivities.length > 0 && successfulResults.length === 0 && failedResults.length > 0) {
-      throw new Error('Не удалось обработать ни одной активности из архива миграции');
-    }
 
     return successfulResults;
   } catch (error) {
