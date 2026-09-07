@@ -56,6 +56,9 @@ The API is available at http://localhost:3000; Swagger is at http://localhost:30
 Liveness is available at `/health/live`, and Railway readiness checks should use
 `/health/ready`.
 
+Production SSH access, Docker Compose logs, health checks and Strava worker
+diagnostics are documented in [OPERATIONS.md](OPERATIONS.md).
+
 Sensitive endpoints have route-specific rate limits. Login and registration
 allow 5 requests per minute. Email-code and password-change endpoints allow
 5 requests per 10 minutes. Strava archive imports allow 2 requests per
