@@ -3,12 +3,7 @@ import type { ActivityKilometreSplitObject, LocationObject } from 'src/activity/
 const EARTH_RADIUS_METERS = 6_371_008.8;
 const METERS_IN_KILOMETER = 1_000;
 const ELEVATION_SMOOTHING_WINDOW = 5;
-// Imported FIT/GPX/TCX altitude streams are already smoothed, but their
-// useful elevation changes are often smaller than the 10 m threshold used by
-// the live tracker. Keep a smaller threshold here so short climbs are not
-// discarded completely while the smoothing and descent hysteresis still
-// suppress GPS noise.
-const MIN_CLIMB_METERS = 2;
+const MAX_ALTITUDE_ACCURACY_METERS = 15;
 const MAX_VERTICAL_SPEED_METERS_PER_SECOND = 3;
 
 function isFiniteNumber(value: unknown): value is number {
@@ -37,16 +32,38 @@ function median(values: number[]) {
   return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
 }
 
-function getSmoothedAltitudes(locations: LocationObject[]) {
+function getReliableAltitude(location: LocationObject) {
+  const { altitude, altitudeAccuracy, mocked } = location.coords;
+
+  if (!isFiniteNumber(altitude)) return null;
+
+  if (isFiniteNumber(altitudeAccuracy) && (altitudeAccuracy < 0 || altitudeAccuracy > MAX_ALTITUDE_ACCURACY_METERS)) {
+    return null;
+  }
+
+  if (mocked === true) return null;
+
+  return altitude;
+}
+
+function getSmoothedLocations(locations: LocationObject[]) {
+  const reliableLocations = locations.filter((location) => getReliableAltitude(location) !== null);
+  if (reliableLocations.length < 2) return [];
+
   const halfWindow = Math.floor(ELEVATION_SMOOTHING_WINDOW / 2);
 
-  return locations.map((location, index) => {
-    const values = locations
-      .slice(Math.max(0, index - halfWindow), Math.min(locations.length, index + halfWindow + 1))
-      .map(({ coords }) => coords.altitude)
-      .filter(isFiniteNumber);
+  return reliableLocations.map((location, index) => {
+    const values = reliableLocations
+      .slice(Math.max(0, index - halfWindow), Math.min(reliableLocations.length, index + halfWindow + 1))
+      .map((item) => getReliableAltitude(item) as number);
 
-    return values.length ? median(values) : null;
+    return {
+      ...location,
+      coords: {
+        ...location.coords,
+        altitude: median(values),
+      },
+    };
   });
 }
 
@@ -59,65 +76,71 @@ function isPlausibleElevationChange(first: LocationObject, second: LocationObjec
   return elapsedSeconds <= 0 || Math.abs(elevationDelta) <= elapsedSeconds * MAX_VERTICAL_SPEED_METERS_PER_SECOND;
 }
 
-/**
- * Filters short GPS elevation noise while preserving positive climbs that reach
- * the same 10 m threshold used by the mobile tracker.
- */
-function getElevationGains(locations: LocationObject[]) {
-  const smoothedAltitudes = getSmoothedAltitudes(locations);
-  const segmentGains = Array.from({ length: Math.max(0, locations.length - 1) }, () => 0);
-  let climbStartAltitude: number | null = null;
-  let peakAltitude: number | null = null;
-  let pendingGains: Array<{ segmentIndex: number; value: number }> = [];
-
-  const commitClimb = () => {
-    if (climbStartAltitude === null || peakAltitude === null || peakAltitude - climbStartAltitude < MIN_CLIMB_METERS) {
-      pendingGains = [];
-      return;
-    }
-
-    pendingGains.forEach(({ segmentIndex, value }) => {
-      segmentGains[segmentIndex] += value;
-    });
-    pendingGains = [];
-  };
-
-  const resetClimb = (altitude: number | null) => {
-    climbStartAltitude = altitude;
-    peakAltitude = altitude;
-    pendingGains = [];
-  };
-
-  for (let index = 1; index < locations.length; index += 1) {
-    const previousAltitude = smoothedAltitudes[index - 1];
-    const currentAltitude = smoothedAltitudes[index];
-
-    if (previousAltitude === null || currentAltitude === null) {
-      commitClimb();
-      resetClimb(currentAltitude);
-      continue;
-    }
-
-    const elevationDelta = currentAltitude - previousAltitude;
-    if (!isPlausibleElevationChange(locations[index - 1], locations[index], elevationDelta)) continue;
-
-    if (climbStartAltitude === null || peakAltitude === null) resetClimb(previousAltitude);
-
-    if (currentAltitude >= (peakAltitude as number)) {
-      const gain = currentAltitude - (peakAltitude as number);
-      if (gain > 0) pendingGains.push({ segmentIndex: index - 1, value: gain });
-      peakAltitude = currentAltitude;
-      continue;
-    }
-
-    if ((peakAltitude as number) - currentAltitude > 3) {
-      commitClimb();
-      resetClimb(currentAltitude);
-    }
+function addElevationChangeToKilometres(
+  elevationChangeByKilometre: (number | null)[],
+  startDistance: number,
+  segmentDistance: number,
+  elevationChange: number,
+) {
+  if (!elevationChangeByKilometre.length || segmentDistance <= 0 || !Number.isFinite(elevationChange)) {
+    return;
   }
 
-  commitClimb();
-  return segmentGains;
+  const segmentEnd = startDistance + segmentDistance;
+  let processedDistance = startDistance;
+
+  while (processedDistance < segmentEnd) {
+    const kilometreIndex = Math.floor(processedDistance / METERS_IN_KILOMETER);
+    const kilometreEnd = (kilometreIndex + 1) * METERS_IN_KILOMETER;
+    const distanceInKilometre = Math.min(segmentEnd, kilometreEnd) - processedDistance;
+
+    if (kilometreIndex >= elevationChangeByKilometre.length) {
+      break;
+    }
+
+    elevationChangeByKilometre[kilometreIndex] =
+      (elevationChangeByKilometre[kilometreIndex] ?? 0) + elevationChange * (distanceInKilometre / segmentDistance);
+    processedDistance += distanceInKilometre;
+  }
+}
+
+function getElevationChangesByKilometre(locations: LocationObject[], kilometreCount: number) {
+  const smoothedLocations = getSmoothedLocations(locations);
+  const elevationChangeByKilometre = Array.from(
+    { length: Math.max(0, Math.floor(kilometreCount)) },
+    () => null as number | null,
+  );
+
+  if (smoothedLocations.length < 2 || !elevationChangeByKilometre.length) {
+    return elevationChangeByKilometre;
+  }
+
+  const distances = [0];
+  for (let index = 1; index < smoothedLocations.length; index += 1) {
+    distances.push(distances[index - 1] + distanceBetween(smoothedLocations[index - 1], smoothedLocations[index]));
+  }
+
+  elevationChangeByKilometre.fill(0);
+  for (let index = 1; index < smoothedLocations.length; index += 1) {
+    const previous = smoothedLocations[index - 1];
+    const current = smoothedLocations[index];
+    const previousAltitude = getReliableAltitude(previous) as number;
+    const currentAltitude = getReliableAltitude(current) as number;
+    const elevationChange = currentAltitude - previousAltitude;
+
+    if (!isPlausibleElevationChange(previous, current, elevationChange)) {
+      continue;
+    }
+
+    addElevationChangeToKilometres(
+      elevationChangeByKilometre,
+      distances[index - 1],
+      distances[index] - distances[index - 1],
+      elevationChange,
+    );
+  }
+
+  return elevationChangeByKilometre;
 }
 
 function interpolateLocation(first: LocationObject, second: LocationObject, fraction: number): LocationObject {
@@ -166,7 +189,6 @@ export function calculateKilometreSplits(
   const totalDistance = segmentDistances.reduce((sum, distance) => sum + distance, 0);
   if (totalDistance <= 0) return [];
 
-  const elevationGains = getElevationGains(validLocations);
   const firstTimestamp = validLocations[0].coords.timestamp;
   const lastTimestamp = validLocations.at(-1)?.coords.timestamp;
   const timestampSpan =
@@ -176,7 +198,6 @@ export function calculateKilometreSplits(
   const splits: ActivityKilometreSplitObject[] = [];
   let distanceInCurrentKilometer = 0;
   let durationInCurrentKilometer = 0;
-  let altitudeInCurrentKilometer = 0;
 
   segmentDistances.forEach((segmentDistance, index) => {
     const first = validLocations[index];
@@ -187,34 +208,34 @@ export function calculateKilometreSplits(
         : 0;
     let segmentDuration = timestampDuration || (Math.max(0, totalDuration) * segmentDistance) / totalDistance;
     let remainingDistance = segmentDistance;
-    let remainingAltitude = elevationGains[index];
     let processedDistance = 0;
 
     while (distanceInCurrentKilometer + remainingDistance >= METERS_IN_KILOMETER) {
       const distanceToSplit = METERS_IN_KILOMETER - distanceInCurrentKilometer;
       const fraction = remainingDistance > 0 ? distanceToSplit / remainingDistance : 0;
       const splitDuration = segmentDuration * fraction;
-      const splitAltitude = remainingAltitude * fraction;
 
       splits.push({
         lastKilometerDuration: durationInCurrentKilometer + splitDuration,
-        lastKilometerAltitude: altitudeInCurrentKilometer + splitAltitude,
+        lastKilometerAltitude: 0,
         kilometerPoint: interpolateLocation(first, second, (processedDistance + distanceToSplit) / segmentDistance),
       });
 
       processedDistance += distanceToSplit;
       remainingDistance -= distanceToSplit;
       segmentDuration -= splitDuration;
-      remainingAltitude -= splitAltitude;
       distanceInCurrentKilometer = 0;
       durationInCurrentKilometer = 0;
-      altitudeInCurrentKilometer = 0;
     }
 
     distanceInCurrentKilometer += remainingDistance;
     durationInCurrentKilometer += segmentDuration;
-    altitudeInCurrentKilometer += remainingAltitude;
   });
 
-  return splits;
+  const elevationChangesByKilometre = getElevationChangesByKilometre(validLocations, splits.length);
+
+  return splits.map((split, index) => ({
+    ...split,
+    lastKilometerAltitude: elevationChangesByKilometre[index] ?? 0,
+  }));
 }

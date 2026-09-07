@@ -65,6 +65,8 @@ jobs:
                 && test "$(docker compose ps --status running --services activity_migration_worker)" = \
                   "activity_migration_worker"; then
                 echo "Deployment is healthy at commit $DEPLOY_SHA"
+                # Keep named volumes (PostgreSQL and migration archives) intact.
+                docker system prune --all --force || echo 'Docker cleanup failed; keeping the healthy deployment.' >&2
                 exit 0
               fi
               sleep 2
