@@ -9,8 +9,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 function escapeHtml(value: string) {
   return value.replace(
     /[&<>"']/g,
-    (character) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character,
+    (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character,
   );
 }
 
@@ -146,10 +145,11 @@ export class EmailService {
       feature: 'Хочу фичу',
     };
     const label = labels[kind] ?? 'Обратная связь';
-    const name = [user.profile?.name, user.profile?.surname]
-      .map((value) => value?.trim())
-      .filter((value): value is string => Boolean(value))
-      .join(' ') || 'Имя не указано';
+    const name =
+      [user.profile?.name, user.profile?.surname]
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value))
+        .join(' ') || 'Имя не указано';
     const email = escapeHtml(user.email);
     const subject = `[Runich] ${label} от ${name} <${user.email}>`;
     const html = [
