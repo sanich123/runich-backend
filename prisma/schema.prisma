@@ -16,35 +16,34 @@ datasource db {
 }
 
 model Users {
-  instance_id                 String?                @db.Uuid
-  id                          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  aud                         String?                @db.VarChar(255)
-  role                        String?                @db.VarChar(255)
-  email                       String                 @unique @db.VarChar(255)
-  auth_provider               String?                @db.VarChar(32)
-  encrypted_password          String?                @db.VarChar(255)
-  email_confirmed_at          DateTime?              @db.Timestamptz(6)
-  invited_at                  DateTime?              @db.Timestamptz(6)
-  confirmation_token          String?                @db.VarChar(255)
-  confirmation_sent_at        DateTime?              @db.Timestamptz(6)
-  recovery_token              String?                @db.VarChar(255)
-  recovery_sent_at            DateTime?              @db.Timestamptz(6)
-  email_change_token_new      String?                @db.VarChar(255)
-  email_change                String?                @db.VarChar(255)
-  email_change_sent_at        DateTime?              @db.Timestamptz(6)
-  last_sign_in_at             DateTime?              @db.Timestamptz(6)
-  created_at                  DateTime?              @default(now()) @db.Timestamptz(6)
-  updated_at                  DateTime?              @db.Timestamptz(6)
-  phone                       String?                @unique
-  phone_confirmed_at          DateTime?              @db.Timestamptz(6)
-  phone_change                String?                @default("")
-  phone_change_token          String?                @default("") @db.VarChar(255)
-  phone_change_sent_at        DateTime?              @db.Timestamptz(6)
-  email_change_token_current  String?                @default("") @db.VarChar(255)
-  email_change_confirm_status Int?                   @default(0) @db.SmallInt
-  banned_until                DateTime?              @db.Timestamptz(6)
+  instance_id                 String?    @db.Uuid
+  id                          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  aud                         String?    @db.VarChar(255)
+  role                        String?    @db.VarChar(255)
+  email                       String     @unique @db.VarChar(255)
+  auth_provider               String?    @db.VarChar(32)
+  encrypted_password          String?    @db.VarChar(255)
+  email_confirmed_at          DateTime?  @db.Timestamptz(6)
+  invited_at                  DateTime?  @db.Timestamptz(6)
+  confirmation_token          String?    @db.VarChar(255)
+  confirmation_sent_at        DateTime?  @db.Timestamptz(6)
+  recovery_token              String?    @db.VarChar(255)
+  recovery_sent_at            DateTime?  @db.Timestamptz(6)
+  email_change_token_new      String?    @db.VarChar(255)
+  email_change                String?    @db.VarChar(255)
+  email_change_sent_at        DateTime?  @db.Timestamptz(6)
+  last_sign_in_at             DateTime?  @db.Timestamptz(6)
+  created_at                  DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime?  @db.Timestamptz(6)
+  phone                       String?    @unique
+  phone_confirmed_at          DateTime?  @db.Timestamptz(6)
+  phone_change                String?    @default("")
+  phone_change_token          String?    @default("") @db.VarChar(255)
+  phone_change_sent_at        DateTime?  @db.Timestamptz(6)
+  email_change_token_current  String?    @default("") @db.VarChar(255)
+  email_change_confirm_status Int?       @default(0) @db.SmallInt
+  banned_until                DateTime?  @db.Timestamptz(6)
   activities                  Activity[]
-  activityMigrationJobs       ActivityMigrationJob[]
   friends                     Friend[]
   profile                     Profile?
   sessions                    UserSession[]
@@ -52,72 +51,71 @@ model Users {
 }
 
 model UserSession {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id          String    @db.Uuid
-  refresh_hash     String    @unique @db.VarChar(128)
-  device_id        String    @db.VarChar(128)
-  device_name      String?   @db.VarChar(255)
-  platform         String?   @db.VarChar(64)
-  device_model     String?   @db.VarChar(128)
-  manufacturer     String?   @db.VarChar(128)
-  os_name          String?   @db.VarChar(64)
-  os_version       String?   @db.VarChar(64)
-  device_type      String?   @db.VarChar(64)
-  app_version      String?   @db.VarChar(32)
-  app_build        String?   @db.VarChar(32)
-  user_agent       String?   @db.VarChar(512)
-  ip_address       String?   @db.VarChar(128)
-  last_seen_at     DateTime  @default(now()) @db.Timestamptz(6)
-  last_latitude    Float?
-  last_longitude   Float?
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String    @db.Uuid
+  refresh_hash String   @unique @db.VarChar(128)
+  device_id   String    @db.VarChar(128)
+  device_name String?   @db.VarChar(255)
+  platform    String?   @db.VarChar(64)
+  device_model String?  @db.VarChar(128)
+  manufacturer String?  @db.VarChar(128)
+  os_name     String?    @db.VarChar(64)
+  os_version  String?    @db.VarChar(64)
+  device_type String?    @db.VarChar(64)
+  app_version String?    @db.VarChar(32)
+  app_build   String?    @db.VarChar(32)
+  user_agent  String?   @db.VarChar(512)
+  ip_address  String?   @db.VarChar(128)
+  last_seen_at DateTime  @default(now()) @db.Timestamptz(6)
+  last_latitude Float?
+  last_longitude Float?
   last_location_at DateTime? @db.Timestamptz(6)
-  created_at       DateTime  @default(now()) @db.Timestamptz(6)
-  revoked_at       DateTime? @db.Timestamptz(6)
-  users            Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  revoked_at  DateTime? @db.Timestamptz(6)
+  users       Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id])
   @@index([user_id, device_id])
 }
 
 model AuthExchange {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id     String    @db.Uuid
-  code_hash   String    @unique @db.VarChar(128)
-  purpose     String    @db.VarChar(32)
-  expires_at  DateTime  @db.Timestamptz(6)
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  code_hash  String    @unique @db.VarChar(128)
+  purpose    String    @db.VarChar(32)
+  expires_at DateTime  @db.Timestamptz(6)
   consumed_at DateTime? @db.Timestamptz(6)
-  created_at  DateTime  @default(now()) @db.Timestamptz(6)
-  users       Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  users      Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id, purpose])
   @@index([expires_at])
 }
 
 model Profile {
-  created_at            DateTime               @default(now()) @db.Timestamptz(6)
-  name                  String?
-  user_id               String                 @unique @db.Uuid
-  bio                   String?
-  birthday              DateTime?              @db.Date
-  city                  String?
-  gender                String?
-  profilePhoto          String?
-  sport                 String?
-  surname               String?
-  updatedAt             DateTime?              @db.Timestamptz(6)
-  weight                String?
-  email                 String?
-  language              String?
-  emailNotifications    Boolean?               @default(false)
-  profilePhotoBlurhash  String?
-  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  activities            Activity[]
-  activityMigrationJobs ActivityMigrationJob[]
-  comments              Comment[]
-  commentLikes          CommentLike[]
-  friends               Friend[]
-  likes                 Like[]
-  users                 Users                  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  created_at           DateTime      @default(now()) @db.Timestamptz(6)
+  name                 String?
+  user_id              String        @unique @db.Uuid
+  bio                  String?
+  birthday             DateTime?     @db.Date
+  city                 String?
+  gender               String?
+  profilePhoto         String?
+  sport                String?
+  surname              String?
+  updatedAt            DateTime?     @db.Timestamptz(6)
+  weight               String?
+  email                String?
+  language             String?
+  emailNotifications   Boolean?      @default(false)
+  profilePhotoBlurhash String?
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activities           Activity[]
+  comments             Comment[]
+  commentLikes         CommentLike[]
+  friends              Friend[]
+  likes                Like[]
+  users                Users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model Activity {
@@ -149,27 +147,6 @@ model Activity {
   likes               Like[]
 
   @@unique([user_id, source, sourceActivityId])
-}
-
-model ActivityMigrationJob {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id             String    @db.Uuid
-  profileId           String    @db.Uuid
-  archivePath         String    @db.VarChar(2048)
-  status              String    @db.VarChar(32)
-  totalActivities     Int       @default(0)
-  processedActivities Int       @default(0)
-  importedActivities  Int       @default(0)
-  skippedActivities   Int       @default(0)
-  errorMessage        String?   @db.Text
-  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
-  startedAt           DateTime? @db.Timestamptz(6)
-  finishedAt          DateTime? @db.Timestamptz(6)
-  users               Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profile             Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([user_id, createdAt])
-  @@index([status, createdAt])
 }
 
 model Friend {

@@ -15,26 +15,25 @@ import {
   NotFoundException,
   BadRequestException,
   UseGuards,
+  Logger,
   ForbiddenException,
   Req,
 } from '@nestjs/common';
 import type { AuthenticatedRequest as RequestWithUser } from 'src/auth/auth-request';
 import { mkdir, rm } from 'fs/promises';
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
 import { ActivityService } from './activity.service';
 import { ActivityDto } from './activity.dto';
 import {
   ActivityCardResponseDto,
   ActivityDetailsResponseDto,
+  ActivityImportResponseDto,
   ActivityListResponseDto,
   ActivityLocationsResponseDto,
   ActivityMediaResponseDto,
   ActivityResponseDto,
 } from './activity.response.dto';
-import { ActivityMigrationJobParams, ActivityMigrationJobResponseDto } from './activity-migration.dto';
-import { ActivityMigrationService } from './activity-migration.service';
-import { getMigrationArchiveDirectory } from './activity-migration-storage';
 import { ParamsId } from 'src/common/dto/params-validation';
 import {
   ApiBearerAuth,
@@ -50,24 +49,29 @@ import {
 import { PATHS, QueryParams } from 'src/common/constants';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import { parseCsvFileIntoArray } from 'src/common/parsers/parse-csv';
+import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
+import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-with-coordinates';
 import { AccountService } from 'src/account/account.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 const { activity, id } = PATHS;
+const receivedArchiveDirectory = join(process.cwd(), 'dist', 'receivedArchive');
+const migrationDirectory = join(process.cwd(), 'dist', 'migration');
 
 @ApiTags(activity)
 @ApiBearerAuth('bearerAuth')
 @Controller(activity)
 export class ActivityController {
+  private readonly logger = new Logger(ActivityController.name);
+
   constructor(
     @Inject(ActivityService)
     private readonly activityService: ActivityService,
     @Inject(AccountService)
     private readonly accountService: AccountService,
-    @Inject(ActivityMigrationService)
-    private readonly activityMigrationService: ActivityMigrationService,
   ) {}
 
   @Get(`${id}/photos`)
@@ -127,7 +131,8 @@ export class ActivityController {
 
   @Post('migration-strava/:id')
   @RateLimit(RATE_LIMITS.stravaImport.limit, RATE_LIMITS.stravaImport.ttl)
-  @ApiResponse({ status: HttpStatus.ACCEPTED, type: ActivityMigrationJobResponseDto, description: 'Migration queued' })
+  @ApiOkResponse({ type: ActivityImportResponseDto })
+  @ApiResponse({ status: HttpStatus.CREATED, type: ActivityImportResponseDto, description: 'Success' })
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Import activities from a Strava archive' })
   @ApiParam({ name: 'id', description: 'User identifier' })
@@ -146,11 +151,10 @@ export class ActivityController {
       storage: diskStorage({
         destination: async (req, file: Express.Multer.File, cb) => {
           try {
-            const archiveDirectory = getMigrationArchiveDirectory();
-            await mkdir(archiveDirectory, { recursive: true });
-            cb(null, archiveDirectory);
+            await mkdir(receivedArchiveDirectory, { recursive: true });
+            cb(null, receivedArchiveDirectory);
           } catch (error) {
-            cb(error instanceof Error ? error : new Error(String(error)), getMigrationArchiveDirectory());
+            cb(error instanceof Error ? error : new Error(String(error)), receivedArchiveDirectory);
           }
         },
         filename: (req, file: Express.Multer.File, cb) => {
@@ -159,12 +163,14 @@ export class ActivityController {
       }),
     }),
   )
-  @HttpCode(HttpStatus.ACCEPTED)
+  @HttpCode(HttpStatus.CREATED)
   async getArchiveWithActivitiesFromStrava(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Param() { id }: ParamsId,
     @Req() request?: RequestWithUser,
   ) {
+    const startedAt = Date.now();
+
     try {
       if (!file) {
         throw new NotFoundException('Не указан файл архива: archive');
@@ -177,25 +183,34 @@ export class ActivityController {
         throw new NotFoundException(`Профиль пользователя не найден: ${id}`);
       }
 
-      return await this.activityMigrationService.enqueue({
-        archivePath: file.path,
+      const archiveStats = await unzipTransferArchive(file.path);
+      this.logger.log(
+        `Migration archive size: ${archiveStats.compressedBytes} compressed bytes, ` +
+          `${archiveStats.uncompressedBytes} uncompressed bytes, ${archiveStats.entries} entries`,
+      );
+      const parsedActivities = await parseCsvFileIntoArray();
+      const activitiesWithCoordinates = await mapActivitiesWithCoordinates({
+        parsedActivities,
         userId: currentUserId ?? id,
         profileId: account.id,
       });
-    } catch (error) {
-      if (file?.path) await rm(file.path, { force: true });
-      throw error;
+      if (!activitiesWithCoordinates) return;
+      return await this.activityService.createActivitiesFromMigrationArchive(activitiesWithCoordinates);
+    } finally {
+      const cleanupResults = await Promise.allSettled([
+        file?.path ? rm(file.path, { force: true }) : Promise.resolve(),
+        rm(migrationDirectory, { recursive: true, force: true }),
+      ]);
+      cleanupResults.forEach((result) => {
+        if (result.status === 'rejected') {
+          this.logger.error(
+            'Не удалось удалить временные файлы миграции',
+            result.reason instanceof Error ? result.reason.stack : String(result.reason),
+          );
+        }
+      });
+      this.logger.log(`Migration archive processed in ${Date.now() - startedAt}ms`);
     }
-  }
-
-  @Get('migration-strava/jobs/:jobId')
-  @ApiOkResponse({ type: ActivityMigrationJobResponseDto })
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get Strava migration status' })
-  @ApiParam({ name: 'jobId', description: 'Migration job identifier' })
-  async getStravaMigrationStatus(@Param() { jobId }: ActivityMigrationJobParams, @Req() request?: RequestWithUser) {
-    const currentUserId = request?.user.userId ?? request?.user.id;
-    return await this.activityMigrationService.getJobForUser(jobId, currentUserId ?? '');
   }
 
   @Post(id)

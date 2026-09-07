@@ -9,18 +9,18 @@ type ArchiveStats = {
   uncompressedBytes: number;
 };
 
-function validateArchiveEntries(zip: AdmZip, destination: string): ArchiveStats {
+function validateArchiveEntries(zip: AdmZip): ArchiveStats {
   const entries = zip.getEntries();
   if (entries.length > UPLOAD_LIMITS.migrationArchiveEntries) {
     throw new Error('Архив содержит слишком много файлов');
   }
 
   let uncompressedSize = 0;
-  const resolvedDestination = resolve(destination);
+  const destination = resolve(process.cwd(), 'dist', 'migration');
   for (const entry of entries) {
     const normalizedName = entry.entryName.replaceAll('\\', '/');
-    const target = resolve(resolvedDestination, normalizedName);
-    const isInsideDestination = target === resolvedDestination || target.startsWith(`${resolvedDestination}${sep}`);
+    const target = resolve(destination, normalizedName);
+    const isInsideDestination = target === destination || target.startsWith(`${destination}${sep}`);
     if (
       !normalizedName ||
       normalizedName.includes('\0') ||
@@ -44,9 +44,10 @@ function validateArchiveEntries(zip: AdmZip, destination: string): ArchiveStats 
   return { entries: entries.length, uncompressedBytes: uncompressedSize };
 }
 
-export async function unzipTransferArchive(source: string, destination = join(process.cwd(), 'dist', 'migration')) {
+export async function unzipTransferArchive(source: string) {
+  const destination = join(process.cwd(), 'dist', 'migration');
   const zip = new AdmZip(source);
-  const archiveStats = validateArchiveEntries(zip, destination);
+  const archiveStats = validateArchiveEntries(zip);
   const { size: compressedBytes } = await stat(source);
   if (existsSync(destination)) {
     await rm(destination, { recursive: true, force: true });

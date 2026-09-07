@@ -14,12 +14,6 @@ const logger = new Logger('ActivityMapper');
 const MIGRATION_BATCH_SIZE = 8;
 const MAX_MAP_IMAGE_LOCATIONS = 500;
 
-type MigrationBatchProgress = {
-  processed: number;
-  imported: number;
-  skipped: number;
-};
-
 type MigratedActivity = ActivityDto & {
   id: string;
   user_id: string;
@@ -31,14 +25,10 @@ export async function mapActivitiesWithCoordinates({
   parsedActivities,
   userId,
   profileId,
-  migrationDirectory,
-  onBatchProcessed,
 }: {
   parsedActivities?: RawStravaCsvColumns[];
   userId: string;
   profileId: string;
-  migrationDirectory?: string;
-  onBatchProcessed?: (progress: MigrationBatchProgress) => Promise<void> | void;
 }): Promise<MigratedActivity[]> {
   try {
     if (!parsedActivities) return [];
@@ -46,73 +36,67 @@ export async function mapActivitiesWithCoordinates({
     const results: PromiseSettledResult<MigratedActivity>[] = [];
     for (let offset = 0; offset < parsedActivities.length; offset += MIGRATION_BATCH_SIZE) {
       const batch = parsedActivities.slice(offset, offset + MIGRATION_BATCH_SIZE);
-      const batchResults = await Promise.allSettled(
-        batch.map(async (activity, batchIndex): Promise<MigratedActivity> => {
-          const i = offset + batchIndex;
-          const sourceActivityId = String(activity['Activity ID'] ?? '').trim();
-          if (!sourceActivityId) {
-            throw new Error('Не указан идентификатор активности Strava: Activity ID');
-          }
+      results.push(
+        ...(await Promise.allSettled(
+          batch.map(async (activity, batchIndex): Promise<MigratedActivity> => {
+            const i = offset + batchIndex;
+            const sourceActivityId = String(activity['Activity ID'] ?? '').trim();
+            if (!sourceActivityId) {
+              throw new Error('Не указан идентификатор активности Strava: Activity ID');
+            }
 
-          let rawLocations: LocationObject[] = [];
-          let fileName = String(activity['Filename'] ?? '').trim();
+            let rawLocations: LocationObject[] = [];
+            let fileName = activity['Filename'];
 
-          if (extname(fileName).toLowerCase() === Extensions.gz) {
-            await ungzipFile(fileName, migrationDirectory);
-            fileName = fileName.slice(0, -3);
-          }
+            if (extname(fileName) === Extensions.gz) {
+              await ungzipFile(fileName);
+              fileName = fileName.slice(0, -3);
+            }
 
-          if (
-            extname(fileName).toLowerCase() === Extensions.gpx ||
-            extname(fileName).toLowerCase() === Extensions.tcx ||
-            extname(fileName).toLowerCase() === Extensions.fit
-          ) {
-            rawLocations = await parseCoordinatesFromFile(fileName, migrationDirectory);
-          }
-          logger.debug(`Processing activity ${i + 1}`);
+            if (
+              extname(fileName) === Extensions.gpx ||
+              extname(fileName) === Extensions.tcx ||
+              extname(fileName) === Extensions.fit
+            ) {
+              rawLocations = await parseCoordinatesFromFile(fileName);
+            }
+            logger.debug(`Processing activity ${i + 1}`);
 
-          const movingTime = Number(activity['Moving Time']);
-          const elapsedTime = Number(activity['Elapsed Time']);
-          const durationSeconds = Number.isFinite(movingTime) && movingTime >= 0 ? movingTime : elapsedTime;
-          const duration = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds * 1000 : 0;
-          const distance = Number(activity.Distance);
-          const title = activity['Activity Name'];
-          const sport = String(activity['Activity Type'] ?? '').toLowerCase();
-          const description = activity['Activity Description'];
-          const date = new Date(activity['Activity Date']).toISOString();
-          const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
-          const kilometresSplit = calculateKilometreSplits(rawLocations, duration);
-          const locations = reduceLocations(rawLocations);
-          const mapPhotoUrl =
-            rawLocations.length > 1 && process.env.MAPBOX_ACCESS_TOKEN
-              ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS))
-              : '';
+            const movingTime = Number(activity['Moving Time']);
+            const elapsedTime = Number(activity['Elapsed Time']);
+            const durationSeconds = Number.isFinite(movingTime) && movingTime >= 0 ? movingTime : elapsedTime;
+            const duration = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds * 1000 : 0;
+            const distance = Number(activity.Distance);
+            const title = activity['Activity Name'];
+            const sport = activity['Activity Type'].toLowerCase();
+            const description = activity['Activity Description'];
+            const date = new Date(activity['Activity Date']).toISOString();
+            const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
+            const kilometresSplit = calculateKilometreSplits(rawLocations, duration);
+            const locations = reduceLocations(rawLocations);
+            const mapPhotoUrl =
+              rawLocations.length > 1 ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS)) : '';
 
-          return {
-            id: v4(),
-            source: 'strava',
-            sourceActivityId,
-            date,
-            title,
-            sport,
-            description,
-            duration,
-            distance,
-            speed,
-            locations,
-            kilometresSplit,
-            user_id: userId,
-            mapPhotoUrl,
-            profileId,
-          };
-        }),
+            return {
+              id: v4(),
+              source: 'strava',
+              sourceActivityId,
+              date,
+              title,
+              sport,
+              description,
+              duration,
+              distance,
+              speed,
+              locations,
+              kilometresSplit,
+              user_id: userId,
+              mapPhotoUrl,
+              profileId,
+            };
+          }),
+        )),
       );
-      results.push(...batchResults);
-      await onBatchProcessed?.({
-        processed: batchResults.length,
-        imported: batchResults.filter((result) => result.status === 'fulfilled').length,
-        skipped: batchResults.filter((result) => result.status === 'rejected').length,
-      });
     }
 
     const failedResults = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');

@@ -122,22 +122,6 @@ paths:
       summary: Import activities from a Strava archive
       parameters:
         - $ref: '#/components/parameters/Id'
-      responses:
-        '202':
-          description: Migration queued; poll the returned jobId for progress
-  /activity/migration-strava/jobs/{jobId}:
-    get:
-      summary: Get Strava migration status
-      parameters:
-        - name: jobId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Migration status and progress
   /activity/{id}:
     get:
       summary: Get activities by user id

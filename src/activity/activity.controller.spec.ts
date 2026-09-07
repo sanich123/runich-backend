@@ -10,6 +10,7 @@ describe('ActivityController', () => {
     getMediaByUserId: asyncMock(),
     getLocationsByActivityId: asyncMock(),
     getActivitiesByTheirIds: asyncMock(),
+    createActivitiesFromMigrationArchive: asyncMock(),
     createActivity: asyncMock(),
     updateActivity: asyncMock(),
     getActivitesByUserId: asyncMock(),
@@ -18,11 +19,9 @@ describe('ActivityController', () => {
     deleteActivityById: asyncMock(),
   };
   const accountService = { getOrCreateAccountByUserId: asyncMock() };
-  const activityMigrationService = { enqueue: asyncMock(), getJobForUser: asyncMock() };
   const controller = new ActivityController(
     activityService as unknown as ActivityService,
     accountService as unknown as AccountService,
-    activityMigrationService as never,
   );
 
   beforeEach(() => jest.clearAllMocks());

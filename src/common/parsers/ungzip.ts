@@ -7,12 +7,12 @@ import { Logger } from '@nestjs/common';
 
 const logger = new Logger('GzipParser');
 
-export async function ungzipFile(sourcePath: string, migrationDirectory = join(process.cwd(), 'dist', 'migration')) {
+export async function ungzipFile(sourcePath: string) {
   try {
     const pipe = promisify(pipeline);
     const gzip = createGunzip();
-    const source = createReadStream(join(migrationDirectory, sourcePath));
-    const destination = createWriteStream(join(migrationDirectory, sourcePath.slice(0, -3)));
+    const source = createReadStream(join(process.cwd(), 'dist', 'migration', sourcePath));
+    const destination = createWriteStream(join(process.cwd(), 'dist', 'migration', sourcePath.slice(0, -3)));
     await pipe(source, gzip, destination);
   } catch (error) {
     logger.error(

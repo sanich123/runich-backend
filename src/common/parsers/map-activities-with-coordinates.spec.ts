@@ -30,20 +30,12 @@ function createRoute(): LocationObject[] {
 }
 
 describe('mapActivitiesWithCoordinates', () => {
-  const originalMapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
     parseCoordinatesFromFile.mockResolvedValue(createRoute());
     getMapBoxImage.mockReturnValue('https://map.example/route');
     getSpeedInMinsInKm.mockReturnValue({ paceAsNumber: 6 });
     uuid.mockReturnValue('activity-1');
-  });
-
-  afterAll(() => {
-    if (originalMapboxToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN;
-    else process.env.MAPBOX_ACCESS_TOKEN = originalMapboxToken;
   });
 
   it('returns kilometre splits from the full route and a capped route for storage', async () => {
