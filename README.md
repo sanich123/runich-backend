@@ -28,13 +28,20 @@ Create a local, ignored .env file:
     PORT=3000
     NODE_ENV=development
     SWAGGER_ENABLED=true
-    GOOGLE_CLIENT_ID=your-google-oauth-client-id
-    GOOGLE_SECRET=your-google-oauth-client-secret
-    GOOGLE_REFRESH_TOKEN=your-google-oauth-refresh-token
-    USER_EMAIL=your-gmail-address
+    YANDEX_SMTP_USER=Runich.app@ya.ru
+    YANDEX_SMTP_PASSWORD=your-yandex-mail-application-password
     EMAIL_API_TIMEOUT=15000
     IS_DEV=true
     SEED_MOCK_DATA=false
+    S3_ENDPOINT=https://s3.twcstorage.ru
+    S3_REGION=ru-1
+    S3_BUCKET=your-timeweb-bucket-name
+    S3_ACCESS_KEY=your-timeweb-access-key
+    S3_SECRET_ACCESS_KEY=your-timeweb-secret-key
+    YANDEX_CLIENT_ID=your-yandex-client-id
+    YANDEX_CLIENT_SECRET=your-yandex-client-secret
+    YANDEX_REDIRECT_URI=http://localhost:3000/auth/yandex/callback
+    YANDEX_FRONTEND_REDIRECT_URI=http://localhost:5173/login-from-url
     VK_CLIENT_ID=your-vk-client-id
     VK_CLIENT_SECRET=your-vk-client-secret
     VK_REDIRECT_URI=http://localhost:3000/auth/vk/callback
@@ -109,17 +116,21 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | NODE_ENV                          | Runtime environment                                               |
 | SWAGGER_ENABLED                   | Enable Swagger; production default is disabled                    |
 | SWAGGER_USER, SWAGGER_PASSWORD    | Basic Auth credentials when Swagger is enabled in production      |
-| GOOGLE_CLIENT_ID, GOOGLE_SECRET   | Google OAuth client credentials                                   |
-| GOOGLE_REFRESH_TOKEN              | Offline OAuth token with Gmail Send permission                    |
-| USER_EMAIL                        | Gmail sender address                                              |
-| EMAIL_API_TIMEOUT                 | Google OAuth and Gmail API timeout in milliseconds, default 15000 |
+| YANDEX_SMTP_USER                  | Full Yandex mailbox address used as the sender                    |
+| YANDEX_SMTP_PASSWORD              | Yandex application password for Mail                             |
+| EMAIL_API_TIMEOUT                 | Yandex SMTP timeout in milliseconds, default 15000               |
 | MAPBOX_ACCESS_TOKEN               | Mapbox Static Images API access token                             |
-| MIGRATION_ARCHIVE_DIRECTORY       | Durable directory shared by the API and migration worker          |
-| MIGRATION_ACTIVITY_BATCH_SIZE     | Activities processed and committed per worker batch, default 8    |
-| MIGRATION_BATCH_PAUSE_MS          | Pause between migration batches in milliseconds, default 25       |
-| MIGRATION_WORKER_POLL_INTERVAL_MS | Queue polling interval in milliseconds, default 10000             |
-| MIGRATION_WORKER_CPUS             | Docker CPU limit for the migration worker, default 0.50           |
+| S3_ENDPOINT                       | S3-compatible endpoint, Timeweb default `https://s3.twcstorage.ru` |
+| S3_REGION                         | S3 region, Timeweb default `ru-1`                                 |
+| S3_BUCKET                         | Public Timeweb S3 bucket name                                    |
+| S3_ACCESS_KEY                     | Server-side S3 access key                                        |
+| S3_SECRET_ACCESS_KEY              | Server-side S3 secret key                                        |
+| S3_PUBLIC_URL                     | Optional public URL prefix; defaults to endpoint plus bucket      |
 | JWT_SECRET                        | Secret used to sign and verify JWT tokens                         |
+| YANDEX_CLIENT_ID                  | Yandex ID application client ID                                   |
+| YANDEX_CLIENT_SECRET              | Yandex ID application secret, server-side only                    |
+| YANDEX_REDIRECT_URI               | Registered Yandex OAuth callback URL                              |
+| YANDEX_FRONTEND_REDIRECT_URI      | Frontend URL receiving the application JWT                        |
 | VK_CLIENT_ID                      | VK ID application client ID                                       |
 | VK_CLIENT_SECRET                  | VK ID application secret, server-side only                        |
 | VK_REDIRECT_URI                   | Registered VK OAuth callback URL                                  |
@@ -128,6 +139,22 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | IS_DEV                            | Development URL selection in email templates                      |
 | SEED_MOCK_DATA                    | Create mock users and activities at startup                       |
 | SEED_USER_EMAIL                   | Optional email used by Prisma seed                                |
+
+Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. The
+`YANDEX_SMTP_USER` value is the full mailbox address (`Runich.app@ya.ru` in
+the current account), and `YANDEX_SMTP_PASSWORD` must be an application
+password created for Mail. The regular Yandex account password and Yandex ID
+OAuth credentials are not used for SMTP.
+
+For the production OAuth configuration, register and use these exact callback
+URLs in both provider dashboards:
+
+    YANDEX_REDIRECT_URI=https://api.runich-app.ru/auth/yandex/callback
+    VK_REDIRECT_URI=https://api.runich-app.ru/auth/vk/callback
+
+The `YANDEX_FRONTEND_REDIRECT_URI` and `VK_FRONTEND_REDIRECT_URI` values are a
+separate post-login redirect and should point to the frontend, for example
+`https://runich.netlify.app/login-from-url`.
 
 ## Commands
 
@@ -194,6 +221,12 @@ archive and commits each activity batch together with its progress, so a worker
 restart resumes from the last committed batch. Docker Compose stores queued
 archives in a shared named volume and limits the worker to half a CPU by
 default.
+
+Photo and video uploads use `POST /photo` with a `file` multipart field. The
+backend keeps S3 credentials private and returns a public object URL. `DELETE
+/photo` accepts that URL and only allows objects under the authenticated user's
+prefix. Account deletion creates a durable cleanup job; the existing background
+worker removes every S3 object under that prefix after the database transaction.
 
 ## Quality gates
 

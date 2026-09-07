@@ -172,6 +172,19 @@ model ActivityMigrationJob {
   @@index([status, createdAt])
 }
 
+model MediaCleanupJob {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String    @db.Uuid
+  status       String    @db.VarChar(32)
+  errorMessage String?   @db.Text
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  startedAt    DateTime? @db.Timestamptz(6)
+  finishedAt   DateTime? @db.Timestamptz(6)
+
+  @@index([status, createdAt])
+  @@index([user_id, createdAt])
+}
+
 model Friend {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)

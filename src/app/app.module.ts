@@ -13,6 +13,7 @@ import { AuthModule } from 'src/auth/auth.module';
 import { HealthModule } from 'src/health/health.module';
 import LoggingService from 'src/common/logger/logger.middleware';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { StorageModule } from 'src/storage/storage.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     EmailModule,
     AuthModule,
     HealthModule,
+    StorageModule,
   ],
 })
 export class AppModule {

@@ -11,6 +11,7 @@
   "splitting": false,
   "external": [
     "@ardentcode/sports-lib",
+    "@aws-sdk/client-s3",
     "@mapbox/polyline",
     "@nestjs/common",
     "@nestjs/core",

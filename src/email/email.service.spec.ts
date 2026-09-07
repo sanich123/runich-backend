@@ -1,8 +1,15 @@
 import { jest } from '@jest/globals';
-import { EmailService } from './email.service';
+
+const sendMail = jest.fn<() => Promise<{ messageId: string }>>().mockResolvedValue({ messageId: 'message-id' });
+const createTransport = jest.fn(() => ({ sendMail }));
+
+jest.unstable_mockModule('nodemailer', () => ({
+  default: { createTransport },
+}));
+
+const { EmailService } = await import('./email.service');
 
 const originalEnvironment = { ...process.env };
-const originalFetch = global.fetch;
 
 const baseEmail = {
   name: 'Ann',
@@ -13,37 +20,37 @@ const baseEmail = {
   recepientEmail: 'bob@example.com',
 };
 
-function mockEmailApi(status = 200) {
-  global.fetch = jest
-    .fn<typeof fetch>()
-    .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'access-token' }), { status: 200 }))
-    .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'message-id' }), { status }));
+function mockEmailDelivery(error?: Error) {
+  if (error) {
+    sendMail.mockRejectedValueOnce(error);
+  } else {
+    sendMail.mockResolvedValueOnce({ messageId: 'message-id' });
+  }
 }
 
 describe('EmailService', () => {
   beforeEach(() => {
-    process.env.GOOGLE_CLIENT_ID = 'client-id';
-    process.env.GOOGLE_SECRET = 'client-secret';
-    process.env.GOOGLE_REFRESH_TOKEN = 'refresh-token';
-    process.env.USER_EMAIL = 'runich.sender@gmail.com';
+    process.env.YANDEX_SMTP_USER = 'Runich.app@ya.ru';
+    process.env.YANDEX_SMTP_PASSWORD = 'application-password';
     process.env.EMAIL_API_TIMEOUT = '5000';
+    sendMail.mockReset().mockResolvedValue({ messageId: 'message-id' });
+    createTransport.mockClear();
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     process.env = { ...originalEnvironment };
-    global.fetch = originalFetch;
     jest.restoreAllMocks();
   });
 
   it('sends all notification and authentication email types', async () => {
     const service = new EmailService();
-    mockEmailApi();
+    mockEmailDelivery();
     await expect(
       service.sendLikeEmailNotification({ ...baseEmail, mapPhotoUrl: 'https://example.com/map.jpg' }),
     ).resolves.toBeUndefined();
-    mockEmailApi();
+    mockEmailDelivery();
     await expect(
       service.sendCommentEmailNotification({
         ...baseEmail,
@@ -51,52 +58,53 @@ describe('EmailService', () => {
         mapPhotoUrl: 'https://example.com/map.jpg',
       }),
     ).resolves.toBeUndefined();
-    mockEmailApi();
+    mockEmailDelivery();
     await expect(
       service.sendCommentLikeEmailNotification({ ...baseEmail, comment: 'Nice run' }),
     ).resolves.toBeUndefined();
-    mockEmailApi();
+    mockEmailDelivery();
     await expect(service.sendConfirmationCode('bob@example.com', 1234, 'access-token')).resolves.toBeUndefined();
-    mockEmailApi();
+    mockEmailDelivery();
     await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).resolves.toBeUndefined();
-    mockEmailApi();
+    mockEmailDelivery();
     await expect(service.sendLoginLink('bob@example.com', 'access-token')).resolves.toBeUndefined();
   });
 
-  it('propagates Gmail failures from every email type', async () => {
+  it('propagates Yandex SMTP failures from every email type', async () => {
     const service = new EmailService();
-    mockEmailApi(500);
+    const smtpError = new Error('Yandex SMTP rejected message');
+    mockEmailDelivery(smtpError);
     await expect(service.sendLikeEmailNotification({ ...baseEmail, mapPhotoUrl: 'map' })).rejects.toThrow(
-      'Ошибка Gmail API (код 500)',
+      'Yandex SMTP rejected message',
     );
-    mockEmailApi(500);
+    mockEmailDelivery(smtpError);
     await expect(
       service.sendCommentEmailNotification({ ...baseEmail, comment: 'Comment', mapPhotoUrl: 'map' }),
-    ).rejects.toThrow('Ошибка Gmail API (код 500)');
-    mockEmailApi(500);
+    ).rejects.toThrow('Yandex SMTP rejected message');
+    mockEmailDelivery(smtpError);
     await expect(service.sendCommentLikeEmailNotification({ ...baseEmail, comment: 'Comment' })).rejects.toThrow(
-      'Ошибка Gmail API (код 500)',
+      'Yandex SMTP rejected message',
     );
-    mockEmailApi(500);
+    mockEmailDelivery(smtpError);
     await expect(service.sendConfirmationCode('bob@example.com', 1234, 'token')).rejects.toThrow(
-      'Ошибка Gmail API (код 500)',
+      'Yandex SMTP rejected message',
     );
-    mockEmailApi(500);
+    mockEmailDelivery(smtpError);
     await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).rejects.toThrow(
-      'Ошибка Gmail API (код 500)',
+      'Yandex SMTP rejected message',
     );
-    mockEmailApi(500);
+    mockEmailDelivery(smtpError);
     await expect(service.sendLoginLink('bob@example.com', 'access-token')).rejects.toThrow(
-      'Ошибка Gmail API (код 500)',
+      'Yandex SMTP rejected message',
     );
   });
 
   it('reports missing email configuration as an error', async () => {
-    delete process.env.GOOGLE_CLIENT_ID;
+    delete process.env.YANDEX_SMTP_USER;
     const service = new EmailService();
 
     await expect(service.sendConfirmationCode('bob@example.com', 1234, 'token')).rejects.toThrow(
-      'Не настроена обязательная переменная окружения: GOOGLE_CLIENT_ID',
+      'Не настроена обязательная переменная окружения: YANDEX_SMTP_USER',
     );
   });
 });

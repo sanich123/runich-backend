@@ -19,6 +19,7 @@ import type { SessionMetadata } from './auth-token.service';
 import { YandexAuthService } from './yandex-auth.service';
 import { AuthEmailService } from './auth-email.service';
 import { VkAuthService } from './vk-auth.service';
+import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
   private readonly yandexAuthService: YandexAuthService;
   private readonly authEmailService: AuthEmailService;
   private readonly vkAuthService: VkAuthService;
+  private readonly mediaCleanupService?: MediaCleanupService;
 
   constructor(
     @Inject(PrismaService)
@@ -43,11 +45,14 @@ export class AuthService {
     authEmailService?: AuthEmailService,
     @Inject(VkAuthService)
     vkAuthService?: VkAuthService,
+    @Inject(MediaCleanupService)
+    mediaCleanupService?: MediaCleanupService,
   ) {
     this.tokenService = tokenService ?? new AuthTokenService(this.jwtService);
     this.yandexAuthService = yandexAuthService ?? new YandexAuthService(this.prisma, this.tokenService);
     this.authEmailService = authEmailService ?? new AuthEmailService(this.emailService);
     this.vkAuthService = vkAuthService ?? new VkAuthService(this.prisma, this.jwtService, this.tokenService);
+    this.mediaCleanupService = mediaCleanupService;
   }
 
   startVkAuth(response: Response) {
@@ -215,6 +220,9 @@ export class AuthService {
     try {
       const deletedUser = await this.prisma.$transaction(
         async (transaction) => {
+          if (this.mediaCleanupService) {
+            await this.mediaCleanupService.enqueueUserCleanup(userId, transaction as never);
+          }
           await transaction.friend.deleteMany({
             where: {
               OR: [{ user_id: userId }, { friendId: userId }],

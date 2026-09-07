@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { EmailService } from 'src/email/email.service';
 import { asyncMock, expectInternalServerError, syncMock } from 'src/__tests__/helpers';
+import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { AuthService } from './auth.service';
 
 function createDependencies() {
@@ -136,6 +137,30 @@ describe('AuthService', () => {
       where: { id: 'user-1' },
       data: { last_sign_in_at: expect.any(Date) },
     });
+  });
+
+  it('enqueues S3 cleanup before deleting an account', async () => {
+    const dependencies = createDependencies();
+    const cleanup = { enqueueUserCleanup: asyncMock() };
+    dependencies.prisma.$transaction.mockImplementation(((
+      callback: (transaction: typeof dependencies.prisma) => Promise<unknown>,
+    ) => callback(dependencies.prisma)) as never);
+    dependencies.prisma.users.delete.mockResolvedValue({ id: 'user-1' });
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      cleanup as unknown as MediaCleanupService,
+    );
+
+    await expect(service.deleteUser('user-1')).resolves.toEqual({ id: 'user-1' });
+    expect(cleanup.enqueueUserCleanup).toHaveBeenCalledWith('user-1', dependencies.prisma);
+    expect(dependencies.prisma.friend.deleteMany).toHaveBeenCalled();
+    expect(dependencies.prisma.users.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
   });
 
   it('verifies tokens for valid, missing and unconfirmed users', async () => {

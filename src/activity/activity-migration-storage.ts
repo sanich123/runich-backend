@@ -1,8 +1,9 @@
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { ACTIVITY_MIGRATION_CONFIG } from './activity-migration-config';
 
 export function getMigrationArchiveDirectory() {
-  return resolve(process.env.MIGRATION_ARCHIVE_DIRECTORY ?? join(process.cwd(), 'dist', 'receivedArchive'));
+  return resolve(process.cwd(), ACTIVITY_MIGRATION_CONFIG.archiveDirectory);
 }
 
 export function getMigrationWorkDirectory(jobId: string) {

@@ -48,7 +48,7 @@ All notable project changes are documented here. The project does not currently 
 - Added public/private activity support and cascade deletion behavior.
 - Added email notifications for activity likes, comments and comment likes.
 - Added blurhash-related activity/profile media fields.
-- Updated the Prisma schema and dependencies for the Supabase-backed database model.
+- Updated the Prisma schema and dependencies for the managed PostgreSQL database model.
 - Added Docker/Railway deployment workflows.
 
 ## 2023–2024 — Initial product functionality

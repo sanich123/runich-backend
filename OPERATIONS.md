@@ -122,11 +122,9 @@ docker compose images
 docker compose ps
 ```
 
-Проверка migration-переменных без вывода остальных секретов `.env`:
-
-```bash
-grep '^MIGRATION_' .env
-```
+Параметры миграции зафиксированы в коде: архивы находятся в
+`./dist/receivedArchive`, размер batch — 8, пауза — 25 мс, polling — 10 секунд,
+лимит worker — 0.50 CPU. Они не передаются через `.env`.
 
 Не выводите весь `.env` и не публикуйте вывод `docker compose config`: он может содержать production-секреты.
 
