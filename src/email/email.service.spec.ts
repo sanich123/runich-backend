@@ -29,12 +29,23 @@ function mockEmailDelivery(error?: Error) {
 }
 
 describe('EmailService', () => {
+  type FeedbackUser = {
+    email: string;
+    profile: { name: string | null; surname: string | null } | null;
+  };
+  const findUnique = jest.fn<() => Promise<FeedbackUser | null>>();
+  const prisma = { users: { findUnique } };
+
   beforeEach(() => {
     process.env.YANDEX_SMTP_USER = 'Runich.app@ya.ru';
     process.env.YANDEX_SMTP_PASSWORD = 'application-password';
     process.env.EMAIL_API_TIMEOUT = '5000';
     sendMail.mockReset().mockResolvedValue({ messageId: 'message-id' });
     createTransport.mockClear();
+    findUnique.mockReset().mockResolvedValue({
+      email: 'ann@example.com',
+      profile: { name: 'Ann', surname: 'Runner' },
+    });
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
@@ -106,5 +117,44 @@ describe('EmailService', () => {
     await expect(service.sendConfirmationCode('bob@example.com', 1234, 'token')).rejects.toThrow(
       'Не настроена обязательная переменная окружения: YANDEX_SMTP_USER',
     );
+  });
+
+  it('looks up the feedback author and sends the optional photo as an attachment', async () => {
+    const service = new EmailService(undefined, prisma as never);
+    const photo = {
+      originalname: 'screen.jpg',
+      buffer: Buffer.from('photo'),
+      mimetype: 'image/jpeg',
+    } as Express.Multer.File;
+
+    await service.sendFeedback('bug', 'user-1', 'Something <wrong>', 'Android\nPixel', photo);
+
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      select: { email: true, profile: { select: { name: true, surname: true } } },
+    });
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'aovoronin.piano@gmail.com',
+        subject: '[Runich] Поведать о баге от Ann Runner <ann@example.com>',
+        html: expect.stringContaining('Пользователь:</b> Ann Runner'),
+        attachments: expect.arrayContaining([
+          expect.objectContaining({ filename: 'screen.jpg', content: photo.buffer, contentType: 'image/jpeg' }),
+        ]),
+      }),
+    );
+    const sentMessage = sendMail.mock.calls.at(-1) as unknown as [{ html: string }];
+    expect(sentMessage[0].html).toContain('Something &lt;wrong&gt;');
+    expect(sentMessage[0].html).not.toContain('userId');
+  });
+
+  it('rejects feedback when the authenticated user no longer exists', async () => {
+    findUnique.mockResolvedValue(null);
+    const service = new EmailService(undefined, prisma as never);
+
+    await expect(service.sendFeedback('thanks', 'missing-user', 'Thanks', 'iOS')).rejects.toThrow(
+      'Пользователь для feedback не найден',
+    );
+    expect(sendMail).not.toHaveBeenCalled();
   });
 });
