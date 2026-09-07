@@ -98,6 +98,33 @@ paths:
       summary: Update a user profile
       parameters:
         - $ref: '#/components/parameters/Id'
+  /photo:
+    post:
+      summary: Upload a photo or video for the authenticated user
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+    delete:
+      summary: Delete an uploaded photo or video
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url:
+                  type: string
+                  format: uri
   /profile/filter:
     get:
       summary: Search profiles

@@ -13,6 +13,7 @@ import { VkAuthService } from './vk-auth.service';
 import { EmailNotificationService } from 'src/email/email-notification.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { accessTokenExpiresIn } from './jwt.constants';
+import { StorageModule } from 'src/storage/storage.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { accessTokenExpiresIn } from './jwt.constants';
       secret: process.env.JWT_SECRET!,
       signOptions: { expiresIn: accessTokenExpiresIn },
     }),
+    StorageModule,
   ],
   controllers: [AuthController],
   providers: [

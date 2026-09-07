@@ -1,65 +1,93 @@
 import { jest } from '@jest/globals';
-import { sendEmail } from './nodemailer';
 
-describe('sendEmail through Gmail API', () => {
+const sendMail = jest.fn<() => Promise<{ messageId: string }>>().mockResolvedValue({ messageId: 'message-id' });
+const createTransport = jest.fn(() => ({ sendMail }));
+
+jest.unstable_mockModule('nodemailer', () => ({
+  default: { createTransport },
+}));
+
+const { sendEmail } = await import('./nodemailer');
+
+describe('sendEmail through Yandex SMTP', () => {
   const originalEnvironment = { ...process.env };
-  const originalFetch = global.fetch;
 
   beforeEach(() => {
-    process.env.GOOGLE_CLIENT_ID = 'client-id';
-    process.env.GOOGLE_SECRET = 'client-secret';
-    process.env.GOOGLE_REFRESH_TOKEN = 'refresh-token';
-    process.env.USER_EMAIL = 'runich.sender@gmail.com';
+    process.env.YANDEX_SMTP_USER = 'Runich.app@ya.ru';
+    process.env.YANDEX_SMTP_PASSWORD = 'application-password';
+    process.env.EMAIL_API_TIMEOUT = '15000';
+    sendMail.mockReset().mockResolvedValue({ messageId: 'message-id' });
+    createTransport.mockClear();
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     process.env = { ...originalEnvironment };
-    global.fetch = originalFetch;
     jest.restoreAllMocks();
   });
 
-  it('refreshes OAuth and sends a MIME message with the inline logo', async () => {
-    const fetchMock = jest
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'access-token' }), { status: 200 }))
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ id: 'message-id', threadId: 'thread-id' }), { status: 200 }),
-      );
-    global.fetch = fetchMock;
+  it('sends a message with the inline logo and configured attachments', async () => {
+    const attachment = {
+      filename: 'feedback.jpg',
+      content: Buffer.from('photo'),
+      contentType: 'image/jpeg',
+    };
 
-    await sendEmail('runner@example.com', 'Тест', '<img src="cid:runich-logo@runich.app" />');
+    await sendEmail('runner@example.com', 'Тест', '<img src="cid:runich-logo@runich.app" />', [attachment]);
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const [tokenUrl, tokenOptions] = fetchMock.mock.calls[0];
-    expect(tokenUrl).toBe('https://oauth2.googleapis.com/token');
-    expect(tokenOptions?.method).toBe('POST');
-    expect(tokenOptions?.body?.toString()).toContain('refresh_token=refresh-token');
-
-    const [gmailUrl, gmailOptions] = fetchMock.mock.calls[1];
-    expect(gmailUrl).toBe('https://gmail.googleapis.com/gmail/v1/users/me/messages/send');
-    expect(gmailOptions?.headers).toEqual({
-      Authorization: 'Bearer access-token',
-      'Content-Type': 'application/json',
+    expect(createTransport).toHaveBeenCalledWith({
+      host: 'smtp.yandex.ru',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'Runich.app@ya.ru',
+        pass: 'application-password',
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 15000,
     });
-
-    const { raw } = JSON.parse(gmailOptions?.body as string) as { raw: string };
-    const mime = Buffer.from(raw, 'base64url').toString('utf8');
-    expect(mime).toContain('From: Runich <runich.sender@gmail.com>');
-    expect(mime).toContain('To: runner@example.com');
-    expect(mime).toContain('Content-ID: <runich-logo@runich.app>');
-    expect(mime).toContain('filename=runich-logo.png');
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: 'Runich <Runich.app@ya.ru>',
+        to: 'runner@example.com',
+        subject: 'Тест',
+        html: '<img src="cid:runich-logo@runich.app" />',
+        attachments: expect.arrayContaining([
+          expect.objectContaining({
+            filename: 'runich-logo.png',
+            cid: 'runich-logo@runich.app',
+            contentType: 'image/png',
+          }),
+          attachment,
+        ]),
+      }),
+    );
   });
 
-  it('reports an OAuth rejection without making the Gmail request', async () => {
-    global.fetch = jest
-      .fn<typeof fetch>()
-      .mockResolvedValue(new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 }));
+  it('propagates an SMTP authentication or delivery error', async () => {
+    sendMail.mockRejectedValueOnce(new Error('Invalid login'));
+
+    await expect(sendEmail('runner@example.com', 'Subject', '<p>Body</p>')).rejects.toThrow('Invalid login');
+    expect(console.error).toHaveBeenCalledWith(
+      '[Email] Ошибка отправки через Yandex SMTP',
+      expect.objectContaining({ to: 'runner@example.com', subject: 'Subject' }),
+    );
+  });
+
+  it('reports missing Yandex SMTP configuration', async () => {
+    delete process.env.YANDEX_SMTP_USER;
 
     await expect(sendEmail('runner@example.com', 'Subject', '<p>Body</p>')).rejects.toThrow(
-      'Ошибка авторизации Google (код 400): {"error":"invalid_grant"}',
+      'Не настроена обязательная переменная окружения: YANDEX_SMTP_USER',
     );
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    process.env.YANDEX_SMTP_USER = 'Runich.app@ya.ru';
+    delete process.env.YANDEX_SMTP_PASSWORD;
+
+    await expect(sendEmail('runner@example.com', 'Subject', '<p>Body</p>')).rejects.toThrow(
+      'Не настроена обязательная переменная окружения: YANDEX_SMTP_PASSWORD',
+    );
   });
 });

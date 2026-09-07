@@ -2,6 +2,8 @@ import { applyDecorators, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 export const RATE_LIMITS = {
+  photoUpload: { limit: 30, ttl: 10 * 60_000 },
+  photoDelete: { limit: 60, ttl: 10 * 60_000 },
   authAttempt: { limit: 5, ttl: 60_000 },
   emailCode: { limit: 5, ttl: 10 * 60_000 },
   passwordChange: { limit: 5, ttl: 10 * 60_000 },

@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ActivityMigrationService } from 'src/activity/activity-migration.service';
+import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { getLogLevels } from 'src/common/utils/log-levels';
 import { ActivityMigrationWorkerModule } from './activity-migration-worker.module';
 
@@ -10,13 +11,17 @@ async function bootstrap() {
     logger: getLogLevels(process.env.NODE_ENV === 'production'),
   });
   const migrationService = app.get(ActivityMigrationService);
-  const stopWorker = () => migrationService.requestStop();
+  const cleanupService = app.get(MediaCleanupService);
+  const stopWorker = () => {
+    migrationService.requestStop();
+    cleanupService.requestStop();
+  };
 
   process.once('SIGINT', stopWorker);
   process.once('SIGTERM', stopWorker);
 
   try {
-    await migrationService.runWorker();
+    await Promise.all([migrationService.runWorker(), cleanupService.runWorker()]);
   } finally {
     process.off('SIGINT', stopWorker);
     process.off('SIGTERM', stopWorker);

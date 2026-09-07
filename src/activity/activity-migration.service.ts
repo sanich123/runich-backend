@@ -13,6 +13,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-with-coordinates';
 import { parseCsvFileIntoArray } from 'src/common/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
+import { ACTIVITY_MIGRATION_CONFIG } from './activity-migration-config';
 
 type EnqueueMigrationInput = {
   userId: string;
@@ -46,19 +47,9 @@ type MigratedActivity = ActivityDto & {
 
 type MigrationProgress = Pick<MigrationJob, 'processedActivities' | 'importedActivities' | 'skippedActivities'>;
 
-const DEFAULT_BATCH_SIZE = 8;
-const DEFAULT_BATCH_PAUSE_MS = 25;
-const DEFAULT_POLL_INTERVAL_MS = 10_000;
-
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message.slice(0, 4_000);
   return String(error).slice(0, 4_000);
-}
-
-function readIntegerSetting(value: string | undefined, fallback: number, minimum: number, maximum: number) {
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) return fallback;
-  return parsed;
 }
 
 async function fileExists(filePath: string) {
@@ -73,24 +64,9 @@ async function fileExists(filePath: string) {
 @Injectable()
 export class ActivityMigrationService {
   private readonly logger = new Logger(ActivityMigrationService.name);
-  private readonly batchSize = readIntegerSetting(
-    process.env.MIGRATION_ACTIVITY_BATCH_SIZE,
-    DEFAULT_BATCH_SIZE,
-    1,
-    100,
-  );
-  private readonly batchPauseMs = readIntegerSetting(
-    process.env.MIGRATION_BATCH_PAUSE_MS,
-    DEFAULT_BATCH_PAUSE_MS,
-    0,
-    60_000,
-  );
-  private readonly pollIntervalMs = readIntegerSetting(
-    process.env.MIGRATION_WORKER_POLL_INTERVAL_MS,
-    DEFAULT_POLL_INTERVAL_MS,
-    100,
-    60_000,
-  );
+  private readonly batchSize = ACTIVITY_MIGRATION_CONFIG.batchSize;
+  private readonly batchPauseMs = ACTIVITY_MIGRATION_CONFIG.batchPauseMs;
+  private readonly pollIntervalMs = ACTIVITY_MIGRATION_CONFIG.workerPollIntervalMs;
   private stopRequested = false;
 
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}

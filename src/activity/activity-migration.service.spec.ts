@@ -100,7 +100,6 @@ describe('ActivityMigrationService', () => {
   });
 
   it('uses a ten-second polling interval by default', () => {
-    delete process.env.MIGRATION_WORKER_POLL_INTERVAL_MS;
     const serviceWithDefaults = new ActivityMigrationService(prisma as unknown as PrismaService);
 
     expect(serviceWithDefaults['pollIntervalMs']).toBe(10_000);
@@ -108,9 +107,6 @@ describe('ActivityMigrationService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.MIGRATION_ACTIVITY_BATCH_SIZE = '2';
-    process.env.MIGRATION_BATCH_PAUSE_MS = '0';
-    process.env.MIGRATION_WORKER_POLL_INTERVAL_MS = '100';
     service = new ActivityMigrationService(prisma as unknown as PrismaService);
 
     access.mockResolvedValue(undefined);
@@ -128,12 +124,6 @@ describe('ActivityMigrationService', () => {
     mapActivitiesWithCoordinates.mockImplementation(async ({ parsedActivities = [] }) =>
       parsedActivities.map((activity) => mappedActivity(String(activity['Activity ID']))),
     );
-  });
-
-  afterAll(() => {
-    delete process.env.MIGRATION_ACTIVITY_BATCH_SIZE;
-    delete process.env.MIGRATION_BATCH_PAUSE_MS;
-    delete process.env.MIGRATION_WORKER_POLL_INTERVAL_MS;
   });
 
   it('creates a durable queued job without starting work in the API process', async () => {
@@ -167,9 +157,9 @@ describe('ActivityMigrationService', () => {
   });
 
   it('persists each mapped batch together with its progress', async () => {
-    const rows = [{ 'Activity ID': 'strava-1' }, { 'Activity ID': 'strava-2' }, { 'Activity ID': 'strava-3' }];
+    const rows = Array.from({ length: 9 }, (_, index) => ({ 'Activity ID': `strava-${index + 1}` }));
     parseCsvFileIntoArray.mockResolvedValue(rows);
-    createMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 1 });
+    createMany.mockResolvedValueOnce({ count: 8 }).mockResolvedValueOnce({ count: 1 });
 
     await expect(service.processNextJob()).resolves.toBe(true);
 
@@ -177,19 +167,19 @@ describe('ActivityMigrationService', () => {
     expect(transaction).toHaveBeenCalledTimes(2);
     expect(transactionJobUpdate).toHaveBeenNthCalledWith(1, {
       where: { id: queuedJob.id },
-      data: { processedActivities: 2, importedActivities: 1, skippedActivities: 1 },
+      data: { processedActivities: 8, importedActivities: 8, skippedActivities: 0 },
     });
     expect(transactionJobUpdate).toHaveBeenNthCalledWith(2, {
       where: { id: queuedJob.id },
-      data: { processedActivities: 3, importedActivities: 2, skippedActivities: 1 },
+      data: { processedActivities: 9, importedActivities: 9, skippedActivities: 0 },
     });
     expect(prisma.activityMigrationJob.update).toHaveBeenLastCalledWith({
       where: { id: queuedJob.id },
       data: expect.objectContaining({
         status: 'completed',
-        processedActivities: 3,
-        importedActivities: 2,
-        skippedActivities: 1,
+        processedActivities: 9,
+        importedActivities: 9,
+        skippedActivities: 0,
       }),
     });
     expect(rm).toHaveBeenCalledWith(queuedJob.archivePath, { force: true });
