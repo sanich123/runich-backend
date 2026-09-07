@@ -65,4 +65,4 @@ All notable project changes are documented here. The project does not currently 
 
 ## Release policy
 
-Until formal releases are introduced, changes are merged through pull requests into main and recorded under Unreleased. When a version is tagged, move completed entries into a dated version section and follow Keep a Changelog conventions.
+Until formal releases are introduced, changes are merged through pull requests into master and recorded under Unreleased. When a version is tagged, move completed entries into a dated version section and follow Keep a Changelog conventions.

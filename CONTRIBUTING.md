@@ -20,9 +20,9 @@ Use SEED_MOCK_DATA=true only with a disposable development database.
 
 ## Branches and commits
 
-Create a topic branch from develop:
+Create a topic branch from stage:
 
-    git switch develop
+    git switch stage
     git pull --ff-only
     git switch -c feature/short-description
 
@@ -92,7 +92,7 @@ executing, so generated Prisma Client code cannot become stale in CI.
 
 ## Pull requests
 
-PRs should target main unless agreed otherwise and explain:
+PRs should target master unless agreed otherwise and explain:
 
 - what changed and why;
 - migrations, API contract changes and operational impact;
