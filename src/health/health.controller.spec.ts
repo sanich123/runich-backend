@@ -1,4 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
+import { SELF_DECLARED_DEPS_METADATA } from '@nestjs/common/constants';
 import { jest } from '@jest/globals';
 import { HealthController } from './health.controller';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -11,6 +12,12 @@ describe('HealthController', () => {
   beforeEach(() => {
     queryRaw.mockReset();
     controller = new HealthController(prismaService);
+  });
+
+  it('declares the Prisma injection token required by the ESM application bootstrap', () => {
+    expect(Reflect.getMetadata(SELF_DECLARED_DEPS_METADATA, HealthController)).toEqual([
+      { index: 0, param: PrismaService },
+    ]);
   });
 
   it('reports liveness without querying the database', () => {

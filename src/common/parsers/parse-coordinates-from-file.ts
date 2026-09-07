@@ -5,12 +5,16 @@ import { existsSync } from 'node:fs';
 import { join } from 'path';
 import { LocationObject } from 'src/activity/activity.dto';
 import { Logger } from '@nestjs/common';
+import { resolveMigrationPath } from './migration-path';
 
 const logger = new Logger('CoordinatesParser');
 
-export async function parseCoordinatesFromFile(filePath: string): Promise<LocationObject[]> {
-  const inputFilePath = join(process.cwd(), 'dist', 'migration', filePath);
+export async function parseCoordinatesFromFile(
+  filePath: string,
+  migrationDirectory = join(process.cwd(), 'dist', 'migration'),
+): Promise<LocationObject[]> {
   try {
+    const inputFilePath = resolveMigrationPath(migrationDirectory, filePath);
     if (!existsSync(inputFilePath)) {
       throw new Error(`Файл с координатами не найден: ${filePath}`);
     }

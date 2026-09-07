@@ -57,11 +57,13 @@ jobs:
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
 
-            docker compose up -d --build nestjs_app
+            docker compose up -d --build nestjs_app activity_migration_worker
 
             for attempt in $(seq 1 30); do
               if curl --fail --silent --show-error --max-time 5 \
-                http://127.0.0.1:3000/health/live >/dev/null; then
+                http://127.0.0.1:3000/health/live >/dev/null \
+                && test "$(docker compose ps --status running --services activity_migration_worker)" = \
+                  "activity_migration_worker"; then
                 echo "Deployment is healthy at commit $DEPLOY_SHA"
                 exit 0
               fi
@@ -70,6 +72,6 @@ jobs:
 
             echo 'Health check failed.' >&2
             docker compose ps
-            docker compose logs --tail=100 nestjs_app
+            docker compose logs --tail=100 nestjs_app activity_migration_worker
             exit 1
           REMOTE
