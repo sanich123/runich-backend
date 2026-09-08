@@ -4,6 +4,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
+import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 
 type VkState = { codeVerifier: string };
 
@@ -45,7 +46,7 @@ export class VkAuthService {
   }
 
   async callback(code: string, state: string, error: string, response: Response, deviceId?: string) {
-    const frontendUrl = process.env.VK_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/login-from-url';
+    const frontendUrl = getAuthFrontendRedirectUri();
     if (error || !code || !state) {
       return this.redirectError(response, frontendUrl, error || 'missing_code');
     }

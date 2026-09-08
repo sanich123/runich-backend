@@ -2,6 +2,7 @@ import { Inject, Injectable, ServiceUnavailableException, UnauthorizedException 
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
+import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 
 @Injectable()
 export class YandexAuthService {
@@ -25,7 +26,7 @@ export class YandexAuthService {
   }
 
   async callback(code: string, error: string, response: Response) {
-    const frontendUrl = process.env.YANDEX_FRONTEND_REDIRECT_URI ?? 'https://runich.netlify.app/login-from-url';
+    const frontendUrl = getAuthFrontendRedirectUri();
     if (error || !code) {
       return response.redirect(`${frontendUrl}?oauthError=${encodeURIComponent(error || 'missing_code')}`);
     }

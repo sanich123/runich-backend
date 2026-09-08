@@ -5,6 +5,7 @@ import { ConfirmEmailAddressWithLinkAndCode, LoginByEmailLink, PasswordChangeCod
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EmailNotificationService } from './email-notification.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 
 function escapeHtml(value: string) {
   return value.replace(
@@ -90,7 +91,7 @@ export class EmailService {
   async sendConfirmationCode(emailAddress: string, confirmationCode: number, loginCredential: string) {
     try {
       const subject = 'Подтверждение электронной почты';
-      const loginUrl = new URL('https://stage--runich.netlify.app/login-from-url');
+      const loginUrl = new URL(getAuthFrontendRedirectUri());
       loginUrl.searchParams.set('code', loginCredential);
       const html = await render(
         ConfirmEmailAddressWithLinkAndCode({ text: confirmationCode.toString(), loginUrl: loginUrl.toString() }),
@@ -115,7 +116,7 @@ export class EmailService {
 
   async sendLoginLink(emailAddress: string, loginCredential: string) {
     try {
-      const loginUrl = new URL('https://stage--runich.netlify.app/login-from-url');
+      const loginUrl = new URL(getAuthFrontendRedirectUri());
       loginUrl.searchParams.set('code', loginCredential);
 
       const subject = 'Вход в Runich по ссылке';

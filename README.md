@@ -9,7 +9,7 @@ Backend API for Runich, a social fitness application for activities, profiles, f
 - Yarn 4.18.0
 - PostgreSQL 18.6 and Prisma 8 (RC contract/runtime)
 - JWT bearer authentication
-- Swagger/OpenAPI at /api in development; production access is disabled by default
+- Swagger/OpenAPI at /api in development; stage and production access is protected by Basic Auth
 
 ## Quick start
 
@@ -26,13 +26,15 @@ Create a local, ignored .env file:
     POSTGRES_PASSWORD=local-password
     POSTGRES_DB=runich_db
     PORT=3000
+    APP_ENV=local
     NODE_ENV=development
     SWAGGER_ENABLED=true
     YANDEX_SMTP_USER=Runich.app@ya.ru
     YANDEX_SMTP_PASSWORD=your-yandex-mail-application-password
     EMAIL_API_TIMEOUT=15000
-    IS_DEV=true
     SEED_MOCK_DATA=false
+    RUNICH_PROCESS=api
+    PHOTO_UPLOADS_ENABLED=true
     S3_ENDPOINT=https://s3.twcstorage.ru
     S3_REGION=ru-1
     S3_BUCKET=your-timeweb-bucket-name
@@ -41,11 +43,10 @@ Create a local, ignored .env file:
     YANDEX_CLIENT_ID=your-yandex-client-id
     YANDEX_CLIENT_SECRET=your-yandex-client-secret
     YANDEX_REDIRECT_URI=http://localhost:3000/auth/yandex/callback
-    YANDEX_FRONTEND_REDIRECT_URI=http://localhost:5173/login-from-url
+    AUTH_FRONTEND_REDIRECT_URI=http://localhost:5173/login-from-url
     VK_CLIENT_ID=your-vk-client-id
     VK_CLIENT_SECRET=your-vk-client-secret
     VK_REDIRECT_URI=http://localhost:3000/auth/vk/callback
-    VK_FRONTEND_REDIRECT_URI=http://localhost:5173/login-from-url
 
 Initialize the database and start development mode:
 
@@ -83,7 +84,7 @@ are stored as hashes for persistent sessions, and are rotated on every
 successful refresh.
 
 Swagger is disabled by default in every environment and is enabled only when
-`SWAGGER_ENABLED=true` is set. If enabled in production, both
+`SWAGGER_ENABLED=true` is set. In stage and production, both
 `SWAGGER_USER` and `SWAGGER_PASSWORD` are required and protect `/api` and
 `/api-json` with Basic Auth. Store these values only in Railway variables or a
 local ignored `.env` file.
@@ -117,9 +118,10 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | POSTGRES_USER, POSTGRES_DB        | Local Compose database user and database name                     |
 | POSTGRES_PASSWORD                 | Local Compose database password                                   |
 | PORT                              | HTTP port, default 3000                                           |
-| NODE_ENV                          | Runtime environment                                               |
+| APP_ENV                           | Application environment: local, stage or production               |
+| NODE_ENV                          | Node.js runtime environment                                       |
 | SWAGGER_ENABLED                   | Enable Swagger; production default is disabled                    |
-| SWAGGER_USER, SWAGGER_PASSWORD    | Basic Auth credentials when Swagger is enabled in production      |
+| SWAGGER_USER, SWAGGER_PASSWORD    | Basic Auth credentials when Swagger is enabled in stage/production |
 | YANDEX_SMTP_USER                  | Full Yandex mailbox address used as the sender                    |
 | YANDEX_SMTP_PASSWORD              | Yandex application password for Mail                             |
 | EMAIL_API_TIMEOUT                 | Yandex SMTP timeout in milliseconds, default 15000               |
@@ -134,14 +136,14 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | YANDEX_CLIENT_ID                  | Yandex ID application client ID                                   |
 | YANDEX_CLIENT_SECRET              | Yandex ID application secret, server-side only                    |
 | YANDEX_REDIRECT_URI               | Registered Yandex OAuth callback URL                              |
-| YANDEX_FRONTEND_REDIRECT_URI      | Frontend URL receiving the application JWT                        |
+| AUTH_FRONTEND_REDIRECT_URI        | Frontend URL for OAuth and email login credentials                |
 | VK_CLIENT_ID                      | VK ID application client ID                                       |
 | VK_CLIENT_SECRET                  | VK ID application secret, server-side only                        |
 | VK_REDIRECT_URI                   | Registered VK OAuth callback URL                                  |
-| VK_FRONTEND_REDIRECT_URI          | Frontend URL receiving the application JWT                        |
 | VK_API_VERSION                    | Optional VK API version, defaults to 5.199                        |
-| IS_DEV                            | Development URL selection in email templates                      |
-| SEED_MOCK_DATA                    | Create mock users and activities at startup                       |
+| SEED_MOCK_DATA                    | Create mock users and activities in the background after startup  |
+| RUNICH_PROCESS                    | Process role: api or worker                                       |
+| PHOTO_UPLOADS_ENABLED              | Enable photo writes to S3; disabled by default in stage            |
 | SEED_USER_EMAIL                   | Optional email used by the database seed                          |
 
 Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. The
@@ -156,9 +158,15 @@ URLs in both provider dashboards:
     YANDEX_REDIRECT_URI=https://api.runich-app.ru/auth/yandex/callback
     VK_REDIRECT_URI=https://api.runich-app.ru/auth/vk/callback
 
-The `YANDEX_FRONTEND_REDIRECT_URI` and `VK_FRONTEND_REDIRECT_URI` values are a
-separate post-login redirect and should point to the frontend, for example
-`https://runich.netlify.app/login-from-url`.
+`AUTH_FRONTEND_REDIRECT_URI` is the post-login redirect used by both OAuth and
+email links. It must point to the frontend belonging to the current
+environment, for example `https://runich.netlify.app/login-from-url` in
+production or `https://stage--runich.netlify.app/login-from-url` in stage.
+
+Stage may use the same S3 bucket as production, but `PHOTO_UPLOADS_ENABLED`
+must remain `false` there. Mock fixtures use external URLs and do not upload
+objects to S3. Set `RUNICH_PROCESS=worker` for the migration/cleanup worker so
+it does not run the mock seed a second time.
 
 ## Commands
 

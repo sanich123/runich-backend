@@ -9,6 +9,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
   private client: RuntimeClient;
   private readonly pool?: Pool;
+  private mockSeedPromise?: Promise<void>;
   readonly user!: DatabaseRepositories['user'];
   readonly userSession!: DatabaseRepositories['userSession'];
   readonly authExchange!: DatabaseRepositories['authExchange'];
@@ -67,8 +68,18 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     try {
       await this.$connect();
-      if (process.env.SEED_MOCK_DATA === 'true') {
-        await seedMockData(this);
+      if (process.env.SEED_MOCK_DATA === 'true' && process.env.RUNICH_PROCESS !== 'worker') {
+        this.mockSeedPromise = seedMockData(this)
+          .then(() => {
+            this.logger.log('Mock seed завершён');
+          })
+          .catch((error) => {
+            this.logger.error(
+              'Не удалось заполнить базу mock-данными',
+              error instanceof Error ? error.stack : String(error),
+            );
+          });
+        this.logger.log('Mock seed запущен в фоне');
       }
     } catch (error) {
       this.logger.error('Не удалось подключиться к базе данных', error instanceof Error ? error.stack : String(error));
@@ -78,6 +89,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     try {
+      await this.mockSeedPromise;
       await this.$disconnect();
     } catch (error) {
       this.logger.error('Не удалось отключиться от базы данных', error instanceof Error ? error.stack : String(error));

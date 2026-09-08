@@ -13,14 +13,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions';
 import { uncaughtErrorHandler, unhandledRejectionHandler } from './common/utils/handling-process';
 import { formatValidationErrors } from './common/utils/validation-errors';
 import { createSwaggerBasicAuth } from './common/security/swagger-basic-auth';
-
-const CORS_ORIGINS = [
-  'https://runich.netlify.app',
-  'https://stage--runich.netlify.app',
-  /^https?:\/\/localhost(?::\d+)?$/,
-  /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
-  /^https?:\/\/\[::1\](?::\d+)?$/,
-];
+import { getAppEnvironment, getCorsOrigins } from './common/config/environment';
 
 process.on('uncaughtException', uncaughtErrorHandler);
 process.on('unhandledRejection', (reason) => {
@@ -38,18 +31,18 @@ async function bootstrap() {
   app.set('trust proxy', 1);
   app.use(json({ limit: MAX_JSON_BODY_BYTES }));
   app.use(urlencoded({ extended: true, limit: MAX_JSON_BODY_BYTES }));
-  const isProduction = process.env.NODE_ENV === 'production';
+  const appEnvironment = getAppEnvironment();
   const swaggerEnabled = process.env.SWAGGER_ENABLED === 'true';
 
   if (swaggerEnabled) {
     const swaggerUser = process.env.SWAGGER_USER;
     const swaggerPassword = process.env.SWAGGER_PASSWORD;
 
-    if (isProduction && (!swaggerUser || !swaggerPassword)) {
-      throw new Error('SWAGGER_USER and SWAGGER_PASSWORD are required when Swagger is enabled in production');
+    if ((appEnvironment === 'production' || appEnvironment === 'stage') && (!swaggerUser || !swaggerPassword)) {
+      throw new Error('SWAGGER_USER and SWAGGER_PASSWORD are required when Swagger is enabled in production or stage');
     }
 
-    if (isProduction) {
+    if (swaggerUser && swaggerPassword) {
       app.use(['/api', '/api-json'], createSwaggerBasicAuth(swaggerUser!, swaggerPassword!));
     }
 
@@ -74,7 +67,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost)));
-  app.enableCors({ origin: CORS_ORIGINS, methods: 'GET,HEAD,PUT,PATCH,POST,DELETE' });
+  app.enableCors({ origin: getCorsOrigins(), methods: 'GET,HEAD,PUT,PATCH,POST,DELETE' });
   await app.listen(PORT);
   Logger.log(`App is listening on ${PORT}`, 'Bootstrap');
 }

@@ -29,6 +29,7 @@ services:
       - .env
     environment:
       TZ: UTC
+      RUNICH_PROCESS: api
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must be set in .env or the shell}
     ports:
       - '127.0.0.1:3000:3000'
@@ -51,6 +52,7 @@ services:
       - .env
     environment:
       TZ: UTC
+      RUNICH_PROCESS: worker
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must be set in .env or the shell}
     volumes:
       - migration_archives:/usr/src/app/dist/receivedArchive
