@@ -47,7 +47,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { PATHS, QueryParams } from 'src/common/constants';
+import { QueryParams } from 'src/common/constants';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { AccountService } from 'src/account/account.service';
@@ -55,7 +55,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
-const { activity, id } = PATHS;
+import { activity, id } from './const';
 
 @ApiTags(activity)
 @ApiBearerAuth('bearerAuth')

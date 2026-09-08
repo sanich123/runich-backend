@@ -2449,7 +2449,26 @@
                   }
                 }
               ],
-              "indexes": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "isPublic",
+                    "date",
+                    "id"
+                  ],
+                  "name": "Activity_isPublic_date_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "user_id",
+                    "date",
+                    "id"
+                  ],
+                  "name": "Activity_user_id_date_id_idx",
+                  "unique": false
+                }
+              ],
               "primaryKey": {
                 "columns": [
                   "id"
@@ -2836,7 +2855,9 @@
               "indexes": [
                 {
                   "columns": [
-                    "activityId"
+                    "activityId",
+                    "date",
+                    "id"
                   ],
                   "name": "Comment_activityId_idx",
                   "unique": false
@@ -3910,7 +3931,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "cb44b5854e2c120b5e26bfd3cc97f6f42c0d8e6ba7936af78c5c69523564e67a"
+    "storageHash": "9c05c9cf3388a3cfafb5ccf943005001032b55ac56185123139120bec3365efc"
   },
   "capabilities": {
     "postgres": {

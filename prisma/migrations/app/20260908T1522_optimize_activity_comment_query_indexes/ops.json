@@ -1,0 +1,158 @@
+[
+  {
+    "id": "index.Activity.Activity_isPublic_date_id_idx",
+    "label": "Create index \"Activity_isPublic_date_id_idx\" on \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Activity_isPublic_date_id_idx",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Activity_isPublic_date_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_isPublic_date_id_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Activity_isPublic_date_id_idx\"",
+        "sql": "CREATE INDEX \"Activity_isPublic_date_id_idx\" ON \"public\".\"Activity\" (\"isPublic\", \"date\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Activity_isPublic_date_id_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_isPublic_date_id_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Activity.Activity_user_id_date_id_idx",
+    "label": "Create index \"Activity_user_id_date_id_idx\" on \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Activity_user_id_date_id_idx",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Activity_user_id_date_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_user_id_date_id_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Activity_user_id_date_id_idx\"",
+        "sql": "CREATE INDEX \"Activity_user_id_date_id_idx\" ON \"public\".\"Activity\" (\"user_id\", \"date\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Activity_user_id_date_id_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_user_id_date_id_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropIndex.Comment.Comment_activityId_idx",
+    "label": "Drop index \"Comment_activityId_idx\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Comment_activityId_idx",
+        "table": "Comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Comment_activityId_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Comment_activityId_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop index \"Comment_activityId_idx\"",
+        "sql": "DROP INDEX \"public\".\"Comment_activityId_idx\"",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Comment_activityId_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Comment_activityId_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Comment.Comment_activityId_idx",
+    "label": "Create index \"Comment_activityId_idx\" on \"Comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Comment_activityId_idx",
+        "table": "Comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Comment_activityId_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Comment_activityId_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Comment_activityId_idx\"",
+        "sql": "CREATE INDEX \"Comment_activityId_idx\" ON \"public\".\"Comment\" (\"activityId\", \"date\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Comment_activityId_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Comment_activityId_idx\""
+        ]
+      }
+    ]
+  }
+]

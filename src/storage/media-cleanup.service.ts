@@ -3,15 +3,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/activity-migration-config';
 import { StorageService } from './storage.service';
-
-export const MEDIA_CLEANUP_STATUS = {
-  queued: 'queued',
-  processing: 'processing',
-  completed: 'completed',
-  failed: 'failed',
-} as const;
-
-type CleanupDatabase = Pick<PrismaService, 'mediaCleanupJob'>;
+import { MEDIA_CLEANUP_STATUS } from './const';
+import type { CleanupDatabase } from './type';
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);

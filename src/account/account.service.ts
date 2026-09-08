@@ -3,8 +3,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { Filtering } from './filter.decorator';
-
-type ProfileWhereInput = Record<string, unknown>;
+import type { ProfileWhereInput } from './type';
 
 function normalizeFilterValue(value: string | null | undefined) {
   const normalized = value?.trim();

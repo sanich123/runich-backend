@@ -3,6 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { accessTokenExpiresIn, emailAccessTokenExpiresIn, refreshTokenExpiresIn } from './jwt.constants';
+import { SESSION_METADATA_LIMITS } from './const';
+import type { SessionMetadata } from './type';
 
 @Injectable()
 export class AuthTokenService {
@@ -163,36 +165,6 @@ export class AuthTokenService {
     }
   }
 }
-
-export interface SessionMetadata {
-  deviceId?: string;
-  deviceName?: string;
-  platform?: string;
-  model?: string;
-  manufacturer?: string;
-  osName?: string;
-  osVersion?: string;
-  deviceType?: string;
-  appVersion?: string;
-  appBuild?: string;
-  userAgent?: string;
-  ipAddress?: string;
-}
-
-const SESSION_METADATA_LIMITS = {
-  deviceId: 128,
-  deviceName: 255,
-  platform: 64,
-  model: 128,
-  manufacturer: 128,
-  osName: 64,
-  osVersion: 64,
-  deviceType: 64,
-  appVersion: 32,
-  appBuild: 32,
-  userAgent: 512,
-  ipAddress: 128,
-} as const;
 
 function normalizeSessionMetadata(metadata: SessionMetadata) {
   return {

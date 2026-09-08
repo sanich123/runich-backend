@@ -9,8 +9,7 @@ import { chunkArray } from 'src/common/parsers/chunk-array';
 import { generateActivityTitle } from './activity-title';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
 import { ActivityPersistenceService } from './activity-persistence.service';
-
-const DEFAULT_ACTIVITY_PAGE_SIZE = 20;
+import { ACTIVITY_CARD_SELECT, ACTIVITY_FEED_SELECT, DEFAULT_ACTIVITY_PAGE_SIZE } from './const';
 
 @Injectable()
 export class ActivityService {
@@ -146,36 +145,10 @@ export class ActivityService {
       const activity = await this.prisma.activity.findUnique({
         where: { id },
         select: {
-          description: true,
-          title: true,
-          date: true,
-          sport: true,
-          id: true,
-          userId: true,
-          photoVideoUrls: true,
-          mapPhotoUrl: true,
-          mapPhotoUrlBlurhash: true,
-          duration: true,
-          distance: true,
-          steps: true,
+          ...ACTIVITY_FEED_SELECT,
           isPublic: true,
           emotion: true,
           kilometresSplit: true,
-          profile: {
-            select: {
-              surname: true,
-              name: true,
-              profilePhoto: true,
-              profilePhotoBlurhash: true,
-              emailNotifications: true,
-              user: { select: { email: true } },
-            },
-          },
-          _count: {
-            select: {
-              comments: true,
-            },
-          },
         },
       });
       if (activity && currentUserId && activity.userId !== currentUserId && activity.isPublic !== true) {
@@ -223,22 +196,7 @@ export class ActivityService {
         orderBy: { date: 'desc' },
         skip: Number(page) * Number(take),
         take: Number(take),
-        include: {
-          profile: {
-            select: {
-              surname: true,
-              name: true,
-              profilePhoto: true,
-              profilePhotoBlurhash: true,
-              emailNotifications: true,
-            },
-          },
-          _count: {
-            select: {
-              comments: true,
-            },
-          },
-        },
+        select: ACTIVITY_CARD_SELECT,
       });
       return { activities, isLastPage: !activities.length };
     } catch (error) {
@@ -258,34 +216,7 @@ export class ActivityService {
       return await this.prisma.activity.findMany({
         where: { id: searchByStringOrArray, isPublic: true },
         orderBy: { date: 'desc' },
-        select: {
-          description: true,
-          title: true,
-          date: true,
-          sport: true,
-          id: true,
-          userId: true,
-          photoVideoUrls: true,
-          mapPhotoUrl: true,
-          mapPhotoUrlBlurhash: true,
-          duration: true,
-          distance: true,
-          steps: true,
-          profile: {
-            select: {
-              surname: true,
-              name: true,
-              profilePhoto: true,
-              profilePhotoBlurhash: true,
-              emailNotifications: true,
-            },
-          },
-          _count: {
-            select: {
-              comments: true,
-            },
-          },
-        },
+        select: ACTIVITY_CARD_SELECT,
       });
     } catch (error) {
       handleServiceError(error);
@@ -304,35 +235,7 @@ export class ActivityService {
         orderBy: { date: 'desc' },
         skip: Number(page) * Number(take),
         take: Number(take),
-        select: {
-          description: true,
-          title: true,
-          date: true,
-          sport: true,
-          id: true,
-          userId: true,
-          photoVideoUrls: true,
-          mapPhotoUrl: true,
-          mapPhotoUrlBlurhash: true,
-          duration: true,
-          distance: true,
-          steps: true,
-          profile: {
-            select: {
-              surname: true,
-              name: true,
-              profilePhoto: true,
-              profilePhotoBlurhash: true,
-              emailNotifications: true,
-              user: { select: { email: true } },
-            },
-          },
-          _count: {
-            select: {
-              comments: true,
-            },
-          },
-        },
+        select: ACTIVITY_FEED_SELECT,
       });
       return { activities, isLastPage: !activities.length };
     } catch (error) {

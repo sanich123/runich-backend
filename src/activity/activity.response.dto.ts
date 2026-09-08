@@ -131,9 +131,6 @@ export class ActivityResponseDto extends ActivityDto {
 
 export class ActivityCardResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
-  description?: string | null;
-
-  @ApiPropertyOptional({ type: String, nullable: true })
   title?: string | null;
 
   @ApiProperty({ type: String, format: 'date-time' })
@@ -166,8 +163,16 @@ export class ActivityCardResponseDto {
   @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true })
   steps?: number | null;
 
-  @ApiPropertyOptional({ type: Number, nullable: true })
-  speed?: number | null;
+  @ApiProperty({ type: ActivityProfileResponseDto })
+  profile: ActivityProfileResponseDto;
+
+  @ApiProperty({ type: ActivityCountResponseDto })
+  _count: ActivityCountResponseDto;
+}
+
+export class ActivityDetailsResponseDto extends ActivityCardResponseDto {
+  @ApiPropertyOptional({ type: String, nullable: true })
+  description?: string | null;
 
   @ApiPropertyOptional({ type: Boolean, nullable: true })
   isPublic?: boolean | null;
@@ -177,21 +182,7 @@ export class ActivityCardResponseDto {
 
   @ApiPropertyOptional({ type: [ActivityKilometreSplitResponseDto], nullable: true })
   kilometresSplit?: ActivityKilometreSplitResponseDto[] | null;
-
-  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
-  createdAt?: Date | string | null;
-
-  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
-  updatedAt?: Date | string | null;
-
-  @ApiProperty({ type: ActivityProfileResponseDto })
-  profile: ActivityProfileResponseDto;
-
-  @ApiProperty({ type: ActivityCountResponseDto })
-  _count: ActivityCountResponseDto;
 }
-
-export class ActivityDetailsResponseDto extends ActivityCardResponseDto {}
 
 export class ActivityListResponseDto {
   @ApiProperty({ type: [ActivityCardResponseDto] })

@@ -105,6 +105,8 @@ model Activity {
   user                User                 @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Activity_user_id_fkey", index: false)
 
   @@unique([userId, source, sourceActivityId], map: "Activity_user_id_source_sourceActivityId_key")
+  @@index([userId, date, id], map: "Activity_user_id_date_id_idx")
+  @@index([isPublic, date, id], map: "Activity_isPublic_date_id_idx")
   @@map("Activity")
 }
 
@@ -154,10 +156,10 @@ model Comment {
   activityId   Uuid
   profileId    Uuid
   commentLikes CommentLike[]
-  activity     Activity             @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "Comment_activityId_fkey")
+  activity     Activity             @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "Comment_activityId_fkey", index: false)
   profile      Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Comment_profileId_fkey", index: false)
 
-  @@index([activityId], map: "Comment_activityId_idx")
+  @@index([activityId, date, id], map: "Comment_activityId_idx")
   @@map("Comment")
 }
 

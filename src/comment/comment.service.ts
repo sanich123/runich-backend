@@ -7,6 +7,7 @@ import { ActivityService } from 'src/activity/activity.service';
 import { CommentLikeService } from './comment-like.service';
 import { encodeCommentCursor } from './comment.pagination';
 import type { CommentCursor } from './comment.pagination';
+import { COMMENT_PROFILE_SELECT } from './const';
 
 @Injectable()
 export class CommentService {
@@ -57,23 +58,14 @@ export class CommentService {
             : {}),
         },
         orderBy: [{ date: 'desc' }, { id: 'desc' }],
-        include: {
-          profile: {
-            select: {
-              surname: true,
-              name: true,
-              profilePhoto: true,
-              profilePhotoBlurhash: true,
-              emailNotifications: true,
-              user: { select: { email: true } },
-            },
-          },
-          commentLike: {
-            select: {
-              authorId: true,
-              id: true,
-            },
-          },
+        select: {
+          date: true,
+          comment: true,
+          authorId: true,
+          activityId: true,
+          profileId: true,
+          id: true,
+          profile: { select: COMMENT_PROFILE_SELECT },
         },
         take: pageSize + 1,
       });
@@ -140,16 +132,9 @@ export class CommentService {
       await this.ensureCommentAccess(id, currentUserId);
       const comment = await this.prisma.comment.findUnique({
         where: { id },
-        include: {
-          profile: {
-            include: {
-              user: {
-                select: {
-                  email: true,
-                },
-              },
-            },
-          },
+        select: {
+          comment: true,
+          profile: { select: COMMENT_PROFILE_SELECT },
         },
       });
       return { profile: comment?.profile, email: comment?.profile.user.email, comment: comment?.comment };

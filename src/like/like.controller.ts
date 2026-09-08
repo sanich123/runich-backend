@@ -1,27 +1,12 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  HttpStatus,
-  Delete,
-  Inject,
-  UseGuards,
-  Req,
-  HttpCode,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Inject, UseGuards, Req, HttpCode } from '@nestjs/common';
 import { LikeService } from './like.service';
 import { LikeResponseDto } from './like.response.dto';
 import { LikeDto } from './like.dto';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/auth/auth-request';
-
-const { like, id, activityId } = PATHS;
-const { OK, BAD_REQUEST } = HttpStatus;
+import { like, id, activityId, OK, BAD_REQUEST } from './const';
 
 @ApiTags(like)
 @ApiBearerAuth('bearerAuth')

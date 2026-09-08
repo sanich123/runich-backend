@@ -21,6 +21,19 @@ describe('LikeService', () => {
     await expect(service.addLike({ activityId: 'activity-1' })).resolves.toEqual({ id: 'like-1' });
     await expect(service.deleteLikeById('like-1')).resolves.toEqual({ id: 'like-1' });
     await expect(service.getLikesByActivityId('activity-1')).resolves.toEqual([{ id: 'like-1' }]);
+    const listQuery = ((prisma.like.findMany.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
+      select?: Record<string, unknown>;
+      include?: unknown;
+    };
+    expect(listQuery.include).toBeUndefined();
+    expect(listQuery.select).toEqual(
+      expect.objectContaining({
+        id: true,
+        authorId: true,
+        activityId: true,
+        profile: expect.any(Object),
+      }),
+    );
     expect(prisma.like.upsert).toHaveBeenCalledWith({
       where: { authorId_activityId: { authorId: '', activityId: 'activity-1' } },
       update: {},

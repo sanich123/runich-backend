@@ -92,6 +92,33 @@ describe('CommentService', () => {
     );
   });
 
+  it('selects comment fields and profile data without loading comment likes', async () => {
+    const prisma = createPrismaMock();
+    const service = new CommentService(prisma as never, {} as never, {} as never);
+    prisma.comment.findMany.mockResolvedValue([]);
+
+    await service.getCommentsbyActivityId('activity-1');
+
+    const query = ((prisma.comment.findMany.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
+      select?: Record<string, unknown>;
+      include?: unknown;
+    };
+    expect(query.include).toBeUndefined();
+    expect(query.select).toEqual(
+      expect.objectContaining({
+        id: true,
+        date: true,
+        comment: true,
+        authorId: true,
+        activityId: true,
+        profileId: true,
+        profile: expect.any(Object),
+      }),
+    );
+    expect(query.select).not.toHaveProperty('commentLike');
+    expect(query.select).not.toHaveProperty('commentLikes');
+  });
+
   it('returns not found when a comment author has no profile', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue(null) };
