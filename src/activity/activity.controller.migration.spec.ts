@@ -7,8 +7,46 @@ const rm = asyncMock();
 const access = asyncMock();
 const readFile = asyncMock();
 const stat = asyncMock();
+const rename = asyncMock();
+const writeFile = asyncMock();
+const mkdtemp = asyncMock();
+const copyFile = asyncMock();
+const readdir = asyncMock();
+const open = asyncMock();
+const unlink = asyncMock();
+const lstat = asyncMock();
+const realpath = asyncMock();
+const readlink = asyncMock();
+const symlink = asyncMock();
+const link = asyncMock();
+const chmod = asyncMock();
+const chown = asyncMock();
+const utimes = asyncMock();
+const truncate = asyncMock();
 
-jest.unstable_mockModule('fs/promises', () => ({ access, mkdir, readFile, rm, stat }));
+jest.unstable_mockModule('fs/promises', () => ({
+  access,
+  chmod,
+  chown,
+  copyFile,
+  link,
+  lstat,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  readlink,
+  readdir,
+  rename,
+  rm,
+  realpath,
+  stat,
+  symlink,
+  truncate,
+  unlink,
+  utimes,
+  writeFile,
+}));
 
 const { ActivityController } = await import('./activity.controller');
 import { ActivityService } from './activity.service';

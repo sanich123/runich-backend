@@ -130,7 +130,7 @@ export class EmailService {
   async sendFeedback(kind: string, userId: string, text: string, deviceInfo: string, photo?: Express.Multer.File) {
     if (!this.prisma) throw new Error('PrismaService не настроен для отправки feedback');
 
-    const user = await this.prisma.users.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
         email: true,

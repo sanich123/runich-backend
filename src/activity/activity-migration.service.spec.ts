@@ -13,7 +13,7 @@ type MapInput = {
 
 type MigratedActivity = {
   id: string;
-  user_id: string;
+  userId: string;
   profileId: string;
   source: 'strava';
   sourceActivityId: string;
@@ -60,7 +60,7 @@ const prisma = {
 
 const queuedJob = {
   id: '00000000-0000-4000-8000-000000000001',
-  user_id: 'user-1',
+  userId: 'user-1',
   profileId: 'profile-1',
   archivePath: '/tmp/archive.zip',
   status: 'queued',
@@ -77,7 +77,7 @@ const queuedJob = {
 function mappedActivity(sourceActivityId: string): MigratedActivity {
   return {
     id: `activity-${sourceActivityId}`,
-    user_id: 'user-1',
+    userId: 'user-1',
     profileId: 'profile-1',
     source: 'strava',
     sourceActivityId,
@@ -133,7 +133,7 @@ describe('ActivityMigrationService', () => {
 
     expect(prisma.activityMigrationJob.create).toHaveBeenCalledWith({
       data: {
-        user_id: 'user-1',
+        userId: 'user-1',
         profileId: 'profile-1',
         archivePath: '/tmp/archive.zip',
         status: 'queued',
@@ -149,7 +149,7 @@ describe('ActivityMigrationService', () => {
       status: 'queued',
     });
     expect(prisma.activityMigrationJob.findFirst).toHaveBeenCalledWith({
-      where: { id: queuedJob.id, user_id: 'user-1' },
+      where: { id: queuedJob.id, userId: 'user-1' },
     });
 
     prisma.activityMigrationJob.findFirst.mockResolvedValueOnce(null);

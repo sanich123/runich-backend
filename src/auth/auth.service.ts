@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { handleServiceError } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/database-errors';
 import { JwtService } from '@nestjs/jwt';
 import { EmailService } from 'src/email/email.service';
 import { getRandomInt } from 'src/common/utils/utils';
@@ -73,28 +73,28 @@ export class AuthService {
 
   async signUp(email: string, password: string) {
     try {
-      const user = await this.prisma.users.findUnique({ where: { email } });
+      const user = await this.prisma.user.findUnique({ where: { email } });
 
-      if (user && !user?.email_confirmed_at) {
+      if (user && !user?.emailConfirmedAt) {
         const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
         const confirmationCode = getRandomInt(1, 100000);
         await this.sendConfirmationEmail(email, confirmationCode, loginCredential);
-        await this.prisma.users.update({
+        await this.prisma.user.update({
           where: { email },
-          data: { confirmation_sent_at: new Date(), confirmation_token: `${confirmationCode}` },
+          data: { confirmationSentAt: new Date(), confirmationToken: `${confirmationCode}` },
         });
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       } else {
         const hashedPassword = await bcrypt.hash(password, 10);
         const confirmationCode = getRandomInt(1, 100000);
 
-        const user = await this.prisma.users.create({
+        const user = await this.prisma.user.create({
           data: {
             email,
-            encrypted_password: hashedPassword,
-            confirmation_token: `${confirmationCode}`,
-            confirmation_sent_at: new Date(),
-            created_at: new Date(),
+            encryptedPassword: hashedPassword,
+            confirmationToken: `${confirmationCode}`,
+            confirmationSentAt: new Date(),
+            createdAt: new Date(),
             profile: { create: {} },
           },
         });
@@ -123,25 +123,25 @@ export class AuthService {
 
   async login(email: string, password: string, metadata: SessionMetadata = {}) {
     try {
-      const user = await this.prisma.users.findUnique({ where: { email } });
+      const user = await this.prisma.user.findUnique({ where: { email } });
       if (!user) {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       } else {
-        if (user.auth_provider === 'YANDEX' || user.auth_provider === 'VK') {
-          const providerName = user.auth_provider === 'VK' ? 'VK' : 'Яндекс';
+        if (user.authProvider === 'YANDEX' || user.authProvider === 'VK') {
+          const providerName = user.authProvider === 'VK' ? 'VK' : 'Яндекс';
           throw new UnauthorizedException(
             `Вы зарегистрированы без пароля с помощью ${providerName}. Авторизуйтесь через ${providerName}`,
           );
         }
-        const isPasswordValid = await bcrypt.compare(password, `${user.encrypted_password}`);
+        const isPasswordValid = await bcrypt.compare(password, `${user.encryptedPassword}`);
         if (!isPasswordValid) {
           throw new UnauthorizedException('Неправильный пароль');
         }
-        if (!user.email_confirmed_at) {
+        if (!user.emailConfirmedAt) {
           this.logger.warn(`Вход отклонён: учётная запись не подтверждена (${email})`);
           throw new UnauthorizedException('Данная учетная запись не подтверждена');
         }
-        await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
+        await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
         return this.tokenService.createSessionTokens(user.id, metadata);
       }
     } catch (error) {
@@ -152,7 +152,7 @@ export class AuthService {
   async sendLoginLinkByEmail(email: string) {
     try {
       const normalizedEmail = email.toLowerCase().trim();
-      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user) {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       }
@@ -166,48 +166,15 @@ export class AuthService {
     }
   }
 
-  async verifyToken(accessToken?: string, code?: string, metadata: SessionMetadata = {}) {
+  async verifyToken(code: string, metadata: SessionMetadata = {}) {
     try {
-      if (code) {
-        const userId = await this.tokenService.consumeEmailLoginCode(code);
-        await this.prisma.users.update({
-          where: { id: userId },
-          data: { email_confirmed_at: new Date(), last_sign_in_at: new Date() },
-        });
-        return this.tokenService.createSessionTokens(userId, metadata);
-      }
-
-      if (!accessToken) throw new UnauthorizedException('Не указан код входа');
-      const tokenInfo = this.tokenService.verifyAccessToken(accessToken) as {
-        userId?: string;
-        type?: string;
-        iat?: number;
-        exp?: number;
-      };
-      const isLegacyEmailToken =
-        !tokenInfo.type &&
-        tokenInfo.iat !== undefined &&
-        tokenInfo.exp !== undefined &&
-        tokenInfo.exp - tokenInfo.iat <= 5 * 60;
-      if (this.tokenService.hasPersistentStore() && tokenInfo.type !== 'email' && !isLegacyEmailToken) {
-        throw new UnauthorizedException('Недействительный код входа');
-      }
-      if (!tokenInfo?.userId) {
-        throw new UnauthorizedException('Информация о пользователе не была найдена');
-      }
-      const user = await this.prisma.users.findUnique({ where: { id: tokenInfo?.userId } });
-      if (!user) {
-        throw new NotFoundException('Пользователь не был найден');
-      }
-      if (!user?.email_confirmed_at) {
-        await this.prisma.users.update({ where: { id: user.id }, data: { email_confirmed_at: new Date() } });
-      }
-
-      return this.tokenService.createSessionTokens(user.id, metadata);
+      const userId = await this.tokenService.consumeEmailLoginCode(code);
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { emailConfirmedAt: new Date(), lastSignInAt: new Date() },
+      });
+      return this.tokenService.createSessionTokens(userId, metadata);
     } catch (error) {
-      if (error instanceof Error && error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Срок действия токена истёк');
-      }
       handleServiceError(error);
     }
   }
@@ -225,10 +192,10 @@ export class AuthService {
           }
           await transaction.friend.deleteMany({
             where: {
-              OR: [{ user_id: userId }, { friendId: userId }],
+              OR: [{ userId }, { friendId: userId }],
             },
           });
-          return transaction.users.delete({ where: { id: userId } });
+          return transaction.user.delete({ where: { id: userId } });
         },
         {
           maxWait: 10_000,
@@ -244,14 +211,14 @@ export class AuthService {
   async confirmEmailByCode(confirmationCode: string, email: string) {
     try {
       const normalizedEmail = email.toLowerCase().trim();
-      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user) {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       }
-      if (confirmationCode !== user?.confirmation_token) {
+      if (confirmationCode !== user?.confirmationToken) {
         throw new BadRequestException('Код подтверждения не соответствует высланному');
       } else {
-        await this.prisma.users.update({ where: { email: normalizedEmail }, data: { email_confirmed_at: new Date() } });
+        await this.prisma.user.update({ where: { email: normalizedEmail }, data: { emailConfirmedAt: new Date() } });
         return this.tokenService.createSessionTokens(user.id);
       }
     } catch (error) {
@@ -262,18 +229,18 @@ export class AuthService {
   async getEmailCodeForPassword(email: string) {
     try {
       const normalizedEmail = email.toLowerCase().trim();
-      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user) {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       }
 
       const recoveryCode = getRandomInt(100000, 999999);
       await this.authEmailService.sendPasswordChangeCode(normalizedEmail, recoveryCode);
-      await this.prisma.users.update({
+      await this.prisma.user.update({
         where: { id: user.id },
         data: {
-          recovery_token: `${recoveryCode}`,
-          recovery_sent_at: new Date(),
+          recoveryToken: `${recoveryCode}`,
+          recoverySentAt: new Date(),
         },
       });
 
@@ -286,17 +253,17 @@ export class AuthService {
   async verifyPasswordChangeCode(confirmationCode: string, email: string) {
     try {
       const normalizedEmail = email.toLowerCase().trim();
-      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user) {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       }
-      if (confirmationCode !== user.recovery_token) {
+      if (confirmationCode !== user.recoveryToken) {
         throw new BadRequestException('Код для смены пароля не соответствует высланному');
       }
 
-      await this.prisma.users.update({
+      await this.prisma.user.update({
         where: { id: user.id },
-        data: { recovery_token: null },
+        data: { recoveryToken: null },
       });
 
       return { message: 'Код для смены пароля подтверждён' };
@@ -315,21 +282,21 @@ export class AuthService {
       }
 
       const normalizedEmail = email.toLowerCase().trim();
-      const user = await this.prisma.users.findUnique({ where: { email: normalizedEmail } });
+      const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user) {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       }
-      if (user.recovery_token !== null || !user.recovery_sent_at) {
+      if (user.recoveryToken !== null || !user.recoverySentAt) {
         throw new BadRequestException('Сначала подтвердите код для смены пароля');
       }
 
       const encryptedPassword = await bcrypt.hash(password1, 10);
-      await this.prisma.users.update({
+      await this.prisma.user.update({
         where: { id: user.id },
         data: {
-          encrypted_password: encryptedPassword,
-          recovery_token: null,
-          recovery_sent_at: null,
+          encryptedPassword,
+          recoveryToken: null,
+          recoverySentAt: null,
         },
       });
 

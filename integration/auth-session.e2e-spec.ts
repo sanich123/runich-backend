@@ -29,11 +29,11 @@ describeIntegration('PostgreSQL auth and session e2e', () => {
 
     const suffix = randomUUID();
     email = `e2e-auth-${suffix}@example.com`;
-    const user = await prisma.users.create({
+    const user = await prisma.user.create({
       data: {
         email,
-        encrypted_password: await bcrypt.hash('Secret123', 4),
-        email_confirmed_at: new Date(),
+        encryptedPassword: await bcrypt.hash('Secret123', 4),
+        emailConfirmedAt: new Date(),
         profile: { create: {} },
       },
     });
@@ -42,7 +42,7 @@ describeIntegration('PostgreSQL auth and session e2e', () => {
 
   afterAll(async () => {
     if (prisma && userId) {
-      await prisma.users.delete({ where: { id: userId } });
+      await prisma.user.delete({ where: { id: userId } });
     }
     await app?.close();
   });
@@ -80,7 +80,7 @@ describeIntegration('PostgreSQL auth and session e2e', () => {
       .send({ refreshToken: loginResponse.body.refreshToken })
       .expect(401);
 
-    const sessionCount = await prisma.userSession.count({ where: { user_id: userId } });
+    const sessionCount = await prisma.userSession.count({ where: { userId } });
     expect(sessionCount).toBe(1);
   });
 
@@ -96,10 +96,10 @@ describeIntegration('PostgreSQL auth and session e2e', () => {
     });
 
     const exchange = await prisma.authExchange.findFirst({
-      where: { user_id: userId, purpose: 'email_login' },
-      orderBy: { created_at: 'desc' },
+      where: { userId, purpose: 'email_login' },
+      orderBy: { createdAt: 'desc' },
     });
-    expect(exchange?.consumed_at).toBeInstanceOf(Date);
+    expect(exchange?.consumedAt).toBeInstanceOf(Date);
 
     await request(app.getHttpServer()).post('/auth/verify').send({ code }).expect(401);
   });
@@ -108,10 +108,10 @@ describeIntegration('PostgreSQL auth and session e2e', () => {
     const code = `expired-${randomUUID()}`;
     await prisma.authExchange.create({
       data: {
-        user_id: userId,
-        code_hash: createHash('sha256').update(code).digest('hex'),
+        userId,
+        codeHash: createHash('sha256').update(code).digest('hex'),
         purpose: 'email_login',
-        expires_at: new Date(Date.now() - 1_000),
+        expiresAt: new Date(Date.now() - 1_000),
       },
     });
 

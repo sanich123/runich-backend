@@ -51,50 +51,57 @@ describe('authentication', () => {
   const jwtMock = { sign: jest.fn(() => 'jwt'), verify: jest.fn() };
   const jwt = jwtMock as unknown as JwtService;
   const email = { sendConfirmationCode: jest.fn() };
-  const service = new AuthService(prisma as never, jwt, email as never);
+  const tokenService = {
+    createEmailLoginCredential: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue('jwt'),
+    createSessionTokens: jest
+      .fn<(...args: unknown[]) => Promise<unknown>>()
+      .mockResolvedValue({ userId: 'user-1', accessToken: 'jwt', refreshToken: 'jwt' }),
+    consumeEmailLoginCode: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue('user-1'),
+  };
+  const service = new AuthService(prisma as never, jwt, email as never, tokenService as never);
 
   beforeEach(() => jest.clearAllMocks());
 
   it('registers a user and sends a confirmation code', async () => {
-    prisma.users.findUnique.mockResolvedValue(null);
-    prisma.users.create.mockResolvedValue({ id: 'user-1' });
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
 
     const result = await service.signUp('user@example.com', 'secret123');
 
-    expect(prisma.users.create).toHaveBeenCalled();
+    expect(prisma.user.create).toHaveBeenCalled();
     expect(email.sendConfirmationCode).toHaveBeenCalledWith('user@example.com', expect.any(Number), 'jwt');
     expect(result).toEqual({ message: 'Код подтверждения был выслан на Вашу электронную почту' });
   });
 
   it('rejects unknown users and invalid passwords during login', async () => {
-    prisma.users.findUnique.mockResolvedValueOnce(null);
+    prisma.user.findUnique.mockResolvedValueOnce(null);
     await expect(service.login('missing@example.com', 'secret')).rejects.toBeInstanceOf(NotFoundException);
 
-    prisma.users.findUnique.mockResolvedValueOnce({ encrypted_password: await bcrypt.hash('correct', 4) });
+    prisma.user.findUnique.mockResolvedValueOnce({ encryptedPassword: await bcrypt.hash('correct', 4) });
     await expect(service.login('user@example.com', 'wrong')).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('logs in confirmed users and rejects unconfirmed users', async () => {
-    prisma.users.findUnique.mockResolvedValue({
+    prisma.user.findUnique.mockResolvedValue({
       id: 'user-1',
-      encrypted_password: await bcrypt.hash('secret', 4),
-      email_confirmed_at: new Date(),
+      encryptedPassword: await bcrypt.hash('secret', 4),
+      emailConfirmedAt: new Date(),
     });
-    prisma.users.update.mockResolvedValue({});
+    prisma.user.update.mockResolvedValue({});
     await expect(service.login('user@example.com', 'secret')).resolves.toEqual({
       userId: 'user-1',
       accessToken: 'jwt',
       refreshToken: 'jwt',
     });
-    expect(prisma.users.update).toHaveBeenCalled();
+    expect(prisma.user.update).toHaveBeenCalled();
 
-    prisma.users.findUnique.mockResolvedValue({ id: 'user-1', encrypted_password: await bcrypt.hash('secret', 4) });
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-1', encryptedPassword: await bcrypt.hash('secret', 4) });
     await expect(service.login('user@example.com', 'secret')).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('confirms email by code and verifies tokens', async () => {
-    prisma.users.findUnique.mockResolvedValue({ id: 'user-1', confirmation_token: '1234' });
-    prisma.users.update.mockResolvedValue({});
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-1', confirmationToken: '1234' });
+    prisma.user.update.mockResolvedValue({});
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
       accessToken: 'jwt',
       userId: 'user-1',
@@ -102,17 +109,16 @@ describe('authentication', () => {
     });
     await expect(service.confirmEmailByCode('bad', 'user@example.com')).rejects.toBeInstanceOf(BadRequestException);
 
-    jwtMock.verify = jest.fn().mockReturnValue({ userId: 'user-1' });
-    prisma.users.findUnique.mockResolvedValue({ id: 'user-1', email_confirmed_at: null });
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-1', emailConfirmedAt: null });
     await expect(service.verifyToken('token')).resolves.toMatchObject({ userId: 'user-1', accessToken: 'jwt' });
-    expect(prisma.users.update).toHaveBeenCalled();
+    expect(prisma.user.update).toHaveBeenCalled();
   });
 
   it('validates JWT strategy users', async () => {
     const strategy = new JwtStrategy(prisma as never);
-    prisma.users.findUnique.mockResolvedValue({ id: 'user-1' });
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
     await expect(strategy.validate({ userId: 'user-1' })).resolves.toEqual({ id: 'user-1' });
-    prisma.users.findUnique.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue(null);
     await expect(strategy.validate({ userId: 'missing' })).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });
@@ -225,7 +231,7 @@ describe('activity, comments and statistics', () => {
       speed: 10,
       sport: 'run',
       title: 'Imported activity',
-      user_id: 'u1',
+      userId: 'u1',
       profileId: 'p1',
       source: 'strava' as const,
       sourceActivityId: 'strava-activity-1',

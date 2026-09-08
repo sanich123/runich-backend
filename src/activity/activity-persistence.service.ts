@@ -14,10 +14,10 @@ export class ActivityPersistenceService {
   }
 
   update(id: string, userId: string, data: Record<string, unknown>) {
-    return this.prisma.activity.update({ where: { id, user_id: userId }, data: data as never });
+    return this.prisma.activity.update({ where: { id, userId }, data: data as never });
   }
 
   delete(id: string, userId: string) {
-    return this.prisma.activity.delete({ where: { id, user_id: userId } });
+    return this.prisma.activity.delete({ where: { id, userId } });
   }
 }

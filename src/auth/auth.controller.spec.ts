@@ -18,7 +18,7 @@ describe('AuthController', () => {
     changePassword: asyncMock(),
     deleteUser: asyncMock(),
   };
-  const prismaService = { users: { findUnique: asyncMock() } };
+  const prismaService = { user: { findUnique: asyncMock() } };
   const controller = new AuthController(
     authService as unknown as AuthService,
     prismaService as unknown as PrismaService,
@@ -32,7 +32,7 @@ describe('AuthController', () => {
 
   it('returns service results for every auth endpoint', async () => {
     const auth = { id: 'user-1', accessToken: 'access-token' };
-    prismaService.users.findUnique.mockResolvedValue(null);
+    prismaService.user.findUnique.mockResolvedValue(null);
     authService.signUp.mockResolvedValue({ message: 'sent' });
     authService.login.mockResolvedValue(auth);
     authService.sendLoginLinkByEmail.mockResolvedValue({ message: 'sent' });
@@ -56,7 +56,7 @@ describe('AuthController', () => {
     await expect(controller.refresh({ refreshToken: 'refresh-token' })).resolves.toEqual({
       accessToken: 'new-access-token',
     });
-    await expect(controller.verifyTokenAndAppVersion({ accessToken: 'access-token' })).resolves.toEqual(auth);
+    await expect(controller.verifyTokenAndAppVersion({ code: 'login-code' })).resolves.toEqual(auth);
     await expect(
       controller.confirmEmailByCode({ confirmationCode: '1234', email: 'user@example.com' }),
     ).resolves.toEqual(auth);
@@ -83,7 +83,7 @@ describe('AuthController', () => {
   });
 
   it('rejects registration for an already confirmed email', async () => {
-    prismaService.users.findUnique.mockResolvedValue({ email_confirmed_at: new Date() });
+    prismaService.user.findUnique.mockResolvedValue({ emailConfirmedAt: new Date() });
 
     await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).rejects.toBeInstanceOf(
       ConflictException,
@@ -93,10 +93,10 @@ describe('AuthController', () => {
 
   it('propagates database and service errors from every auth endpoint', async () => {
     const error = new Error('service failed');
-    prismaService.users.findUnique.mockRejectedValue(error);
+    prismaService.user.findUnique.mockRejectedValue(error);
     await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
 
-    prismaService.users.findUnique.mockResolvedValue(null);
+    prismaService.user.findUnique.mockResolvedValue(null);
     authService.signUp.mockRejectedValue(error);
     authService.login.mockRejectedValue(error);
     authService.sendLoginLinkByEmail.mockRejectedValue(error);
@@ -114,7 +114,7 @@ describe('AuthController', () => {
     await expect(controller.login({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
     await expect(controller.sendLoginLinkByEmail({ email: 'user@example.com' })).rejects.toBe(error);
     await expect(controller.refresh({ refreshToken: 'refresh-token' })).rejects.toBe(error);
-    await expect(controller.verifyTokenAndAppVersion({ accessToken: 'access-token' })).rejects.toBe(error);
+    await expect(controller.verifyTokenAndAppVersion({ code: 'login-code' })).rejects.toBe(error);
     await expect(controller.confirmEmailByCode({ confirmationCode: '1234', email: 'user@example.com' })).rejects.toBe(
       error,
     );

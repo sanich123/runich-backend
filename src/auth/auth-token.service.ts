@@ -39,10 +39,10 @@ export class AuthTokenService {
     const code = randomBytes(32).toString('base64url');
     await this.prisma.authExchange.create({
       data: {
-        user_id: userId,
-        code_hash: hashToken(code),
+        userId,
+        codeHash: hashToken(code),
         purpose: 'email_login',
-        expires_at: new Date(Date.now() + 5 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
       },
     });
     return code;
@@ -56,20 +56,20 @@ export class AuthTokenService {
     const exchange = await this.prisma.$transaction(async (transaction) => {
       const consumed = await transaction.authExchange.updateMany({
         where: {
-          code_hash: codeHash,
+          codeHash,
           purpose: 'email_login',
-          consumed_at: null,
-          expires_at: { gt: now },
+          consumedAt: null,
+          expiresAt: { gt: now },
         },
-        data: { consumed_at: now },
+        data: { consumedAt: now },
       });
       if (consumed.count !== 1) throw new UnauthorizedException('Код входа недействителен или уже использован');
 
-      return transaction.authExchange.findUnique({ where: { code_hash: codeHash } });
+      return transaction.authExchange.findUnique({ where: { codeHash } });
     });
 
     if (!exchange) throw new UnauthorizedException('Недействительный код входа');
-    return exchange.user_id;
+    return exchange.userId;
   }
 
   createAuthTokens(userId: string) {
@@ -92,20 +92,20 @@ export class AuthTokenService {
     await this.prisma.userSession.create({
       data: {
         id: sessionId,
-        user_id: userId,
-        refresh_hash: hashToken(refreshToken),
-        device_id: normalizedMetadata.deviceId,
-        device_name: normalizedMetadata.deviceName,
+        userId,
+        refreshHash: hashToken(refreshToken),
+        deviceId: normalizedMetadata.deviceId,
+        deviceName: normalizedMetadata.deviceName,
         platform: normalizedMetadata.platform,
-        device_model: normalizedMetadata.model,
+        deviceModel: normalizedMetadata.model,
         manufacturer: normalizedMetadata.manufacturer,
-        os_name: normalizedMetadata.osName,
-        os_version: normalizedMetadata.osVersion,
-        device_type: normalizedMetadata.deviceType,
-        app_version: normalizedMetadata.appVersion,
-        app_build: normalizedMetadata.appBuild,
-        user_agent: normalizedMetadata.userAgent,
-        ip_address: normalizedMetadata.ipAddress,
+        osName: normalizedMetadata.osName,
+        osVersion: normalizedMetadata.osVersion,
+        deviceType: normalizedMetadata.deviceType,
+        appVersion: normalizedMetadata.appVersion,
+        appBuild: normalizedMetadata.appBuild,
+        userAgent: normalizedMetadata.userAgent,
+        ipAddress: normalizedMetadata.ipAddress,
       },
     });
     return { userId, accessToken: this.createAccessToken(userId, sessionId), refreshToken };
@@ -120,39 +120,39 @@ export class AuthTokenService {
       }
       if (!tokenInfo.sessionId || !this.prisma) return { accessToken: this.createAccessToken(tokenInfo.userId) };
       const session = await this.prisma.userSession.findUnique({ where: { id: tokenInfo.sessionId } });
-      if (!session || session.revoked_at || session.refresh_hash !== hashToken(refreshToken))
+      if (!session || session.revokedAt || session.refreshHash !== hashToken(refreshToken))
         throw new UnauthorizedException('Сессия завершена');
       const nextRefreshToken = this.createRefreshToken(tokenInfo.userId, session.id);
       const normalizedMetadata = normalizeSessionMetadata({
-        model: metadata.model ?? session.device_model ?? undefined,
+        model: metadata.model ?? session.deviceModel ?? undefined,
         manufacturer: metadata.manufacturer ?? session.manufacturer ?? undefined,
-        osName: metadata.osName ?? session.os_name ?? undefined,
-        osVersion: metadata.osVersion ?? session.os_version ?? undefined,
-        deviceType: metadata.deviceType ?? session.device_type ?? undefined,
-        appVersion: metadata.appVersion ?? session.app_version ?? undefined,
-        appBuild: metadata.appBuild ?? session.app_build ?? undefined,
-        userAgent: metadata.userAgent ?? session.user_agent ?? undefined,
-        ipAddress: metadata.ipAddress ?? session.ip_address ?? undefined,
+        osName: metadata.osName ?? session.osName ?? undefined,
+        osVersion: metadata.osVersion ?? session.osVersion ?? undefined,
+        deviceType: metadata.deviceType ?? session.deviceType ?? undefined,
+        appVersion: metadata.appVersion ?? session.appVersion ?? undefined,
+        appBuild: metadata.appBuild ?? session.appBuild ?? undefined,
+        userAgent: metadata.userAgent ?? session.userAgent ?? undefined,
+        ipAddress: metadata.ipAddress ?? session.ipAddress ?? undefined,
       });
       const updated = await this.prisma.userSession.updateMany({
         where: {
           id: session.id,
-          user_id: tokenInfo.userId,
-          refresh_hash: hashToken(refreshToken),
-          revoked_at: null,
+          userId: tokenInfo.userId,
+          refreshHash: hashToken(refreshToken),
+          revokedAt: null,
         },
         data: {
-          refresh_hash: hashToken(nextRefreshToken),
-          last_seen_at: new Date(),
-          ip_address: normalizedMetadata.ipAddress,
-          user_agent: normalizedMetadata.userAgent,
-          device_model: normalizedMetadata.model,
+          refreshHash: hashToken(nextRefreshToken),
+          lastSeenAt: new Date(),
+          ipAddress: normalizedMetadata.ipAddress,
+          userAgent: normalizedMetadata.userAgent,
+          deviceModel: normalizedMetadata.model,
           manufacturer: normalizedMetadata.manufacturer,
-          os_name: normalizedMetadata.osName,
-          os_version: normalizedMetadata.osVersion,
-          device_type: normalizedMetadata.deviceType,
-          app_version: normalizedMetadata.appVersion,
-          app_build: normalizedMetadata.appBuild,
+          osName: normalizedMetadata.osName,
+          osVersion: normalizedMetadata.osVersion,
+          deviceType: normalizedMetadata.deviceType,
+          appVersion: normalizedMetadata.appVersion,
+          appBuild: normalizedMetadata.appBuild,
         },
       });
       if (updated.count !== 1) throw new UnauthorizedException('Сессия завершена');

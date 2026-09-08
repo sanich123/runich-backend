@@ -18,7 +18,7 @@ import {
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import {
-  AccessTokenDto,
+  LoginCodeDto,
   ChangePasswordDto,
   ConfirmationCodeDto,
   EmailLoginLinkDto,
@@ -72,7 +72,7 @@ export class AuthController {
     @Query('code') code: string,
     @Query('state') state: string,
     @Query('error') error: string,
-    @Query('device_id') deviceId: string,
+    @Query('deviceId') deviceId: string,
     @Res() response: Response,
   ) {
     return this.authService.handleVkCallback(code, state, error, response, deviceId);
@@ -85,10 +85,10 @@ export class AuthController {
   @ApiOkResponse({ type: MessageEntity })
   @ApiCreatedResponse({ type: MessageEntity })
   async registerUser(@Body() { email, password }: RegisterUserDto) {
-    const user = await this.prismaService.users.findUnique({ where: { email } });
-    if (user?.email_confirmed_at) {
-      if (user.auth_provider === 'YANDEX' || user.auth_provider === 'VK') {
-        const providerName = user.auth_provider === 'VK' ? 'VK' : 'Яндекс';
+    const user = await this.prismaService.user.findUnique({ where: { email } });
+    if (user?.emailConfirmedAt) {
+      if (user.authProvider === 'YANDEX' || user.authProvider === 'VK') {
+        const providerName = user.authProvider === 'VK' ? 'VK' : 'Яндекс';
         throw new ConflictException(`Пользователь зарегистрирован с помощью провайдера ${providerName}`);
       }
       throw new ConflictException('Под этим адресом почты уже зарегистрирован пользователь');
@@ -136,7 +136,7 @@ export class AuthController {
     if (sessionId && body.latitude !== undefined && body.longitude !== undefined) {
       await this.prismaService.userSession.update({
         where: { id: sessionId },
-        data: { last_latitude: body.latitude, last_longitude: body.longitude, last_location_at: new Date() },
+        data: { lastLatitude: body.latitude, lastLongitude: body.longitude, lastLocationAt: new Date() },
       });
     }
     return { updated: Boolean(sessionId) };
@@ -160,11 +160,11 @@ export class AuthController {
   }
 
   @Post('verify')
-  @ApiBody({ type: AccessTokenDto })
+  @ApiBody({ type: LoginCodeDto })
   @ApiOkResponse({ type: LoginEntity })
   @ApiCreatedResponse({ type: LoginEntity })
-  async verifyTokenAndAppVersion(@Body() { accessToken, code }: AccessTokenDto, @Req() request?: Request) {
-    return this.authService.verifyToken(accessToken, code, request ? this.getSessionMetadata(request) : undefined);
+  async verifyTokenAndAppVersion(@Body() { code }: LoginCodeDto, @Req() request?: Request) {
+    return this.authService.verifyToken(code, request ? this.getSessionMetadata(request) : undefined);
   }
 
   @Post('confirm-email')

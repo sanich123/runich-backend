@@ -22,7 +22,7 @@ export class CommentProfileResponseDto {
   emailNotifications: boolean | null;
 
   @ApiPropertyOptional({ type: CommentUserEmailResponseDto, nullable: true })
-  users?: CommentUserEmailResponseDto | null;
+  user?: CommentUserEmailResponseDto | null;
 }
 
 export class CommentLikeSummaryResponseDto {

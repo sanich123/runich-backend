@@ -39,7 +39,6 @@ Production Compose использует следующие сервисы:
 | API и worker вместе | `docker compose logs -f --tail=200 nestjs_app activity_migration_worker` |
 | Логи за последние 30 минут | `docker compose logs -t --since=30m nestjs_app activity_migration_worker` |
 | Текущее потребление ресурсов | `docker stats --no-stream` |
-| Открыть Prisma Studio | См. раздел [Prisma Studio](#prisma-studio) |
 
 `Ctrl+C` прекращает просмотр через `logs -f`, но не останавливает контейнеры.
 
@@ -94,60 +93,47 @@ curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
 {"status":"ok","checks":{"database":"ok"}}
 ```
 
-## Prisma Studio
+## Переход базы на Prisma 8
 
-Prisma Studio предоставляет полный доступ на чтение и изменение данных. Не
-публикуйте порт `5555` во внешний интерфейс, не добавляйте его в firewall и не
-размещайте Studio за общедоступным доменом. Запускайте Studio на рабочем Mac, а
-через SSH-туннель подключайте только PostgreSQL production-сервера.
+В репозитории Prisma 8 использует контракт `prisma/contract.prisma` и
+именованный ref `db`. На чистой базе миграция создаёт все таблицы из этого
+контракта. Для существующей базы применяйте изменения в окне обслуживания.
+Сначала сделайте проверенную резервную копию PostgreSQL и остановите API/worker,
+чтобы во время операции не было записей.
 
-Понадобятся два терминала на рабочем Mac.
+На сервере:
 
-В первом терминале откройте туннель от локального порта `15432` до PostgreSQL,
-который на Timeweb-сервере доступен только через `127.0.0.1:5432`:
+```bash
+cd /opt/runich-backend/project
+docker compose exec -T nestjs_app yarn prisma db update --dry-run
+```
+
+Проверьте план. Применяйте его только после проверки:
+
+```bash
+docker compose exec -T nestjs_app \
+  yarn prisma db update --no-interactive --confirm runich_db --advance-ref db
+docker compose exec -T nestjs_app yarn prisma db verify
+docker compose exec -T nestjs_app yarn prisma migration status --ascii
+```
+
+Ожидаемый результат `db verify` — `Database marker and schema match contract`, а
+статус миграций — `Up to date`. После этого пересоберите API и worker и снова
+проверьте `/health/ready`. Не запускайте `db update` на production без backup и
+предварительного `--dry-run`: это операция, которая может изменить структуру
+базы.
+
+## Просмотр production-базы
+
+Prisma 8 RC пока не содержит Prisma Studio. Для просмотра используйте
+обычный PostgreSQL-клиент через SSH-туннель, не публикуя порт базы наружу:
 
 ```bash
 ssh -N -L 15432:127.0.0.1:5432 runich-timeweb
 ```
 
-Оставьте туннель запущенным. Он не открывает PostgreSQL во внешний интернет.
-
-Во втором локальном терминале перейдите в локальный checkout и запустите
-production-команду Studio:
-
-```bash
-cd /Users/sanich123/Desktop/runich-backend/project
-yarn db:studio:production
-```
-
-Команда проверяет локальный туннель, получает `DATABASE_URL` из уже работающего
-API-контейнера по SSH, заменяет host и port на локальный конец туннеля и запускает
-`yarn db:studio`. Значение не выводится в терминал, не попадает в историю команд
-и не записывается в файл. Параметр `schema=public` удаляется из URL намеренно:
-Prisma Studio 7 подключается к PostgreSQL напрямую, а `public` и без него
-является схемой по умолчанию.
-
-После этого откройте в браузере <http://127.0.0.1:5555>. Не выполняйте
-изменения, если нужен только просмотр: Studio сохраняет правки непосредственно
-в production PostgreSQL.
-
-Чтобы завершить работу:
-
-1. Нажмите `Ctrl+C` в терминале со Studio.
-2. Нажмите `Ctrl+C` в терминале с SSH-туннелем.
-
-Если локальный порт `15432` занят, не останавливайте неизвестный процесс.
-Выберите другой свободный порт, например `15433`, в обеих локальных командах:
-
-```bash
-ssh -N -L 15433:127.0.0.1:5432 runich-timeweb
-```
-
-Передайте тот же порт команде запуска Studio:
-
-```bash
-RUNICH_STUDIO_DATABASE_PORT=15433 yarn db:studio:production
-```
+Подключайтесь к `127.0.0.1:15432` из локального клиента. Для изменений сначала
+сделайте backup и остановите API/worker.
 
 ## Очередь миграции Strava
 
@@ -186,7 +172,6 @@ docker compose ps
 
 ## Команды, изменяющие состояние
 
-Prisma Studio из предыдущего раздела также позволяет изменять production-данные.
 Следующие команды перезапускают сервисы, поэтому используйте их только
 намеренно.
 

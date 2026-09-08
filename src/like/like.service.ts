@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { LikeDto } from './like.dto';
-import { handleServiceError, isPrismaUniqueConstraintError } from 'src/common/utils/prisma-errors';
+import { handleServiceError, isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
 
@@ -32,7 +32,7 @@ export class LikeService {
           create: { profileId: account.id, authorId, activityId },
         });
       } catch (error) {
-        if (!isPrismaUniqueConstraintError(error)) throw error;
+        if (!isUniqueConstraintError(error)) throw error;
       }
       return await this.prismaService.like.findUnique({ where });
     } catch (error) {

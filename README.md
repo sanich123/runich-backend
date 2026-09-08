@@ -4,10 +4,10 @@ Backend API for Runich, a social fitness application for activities, profiles, f
 
 ## Stack
 
-- NestJS 11, TypeScript 6 and ESM
+- NestJS 12, TypeScript 6 and ESM
 - Node.js >=26 <27
 - Yarn 4.18.0
-- PostgreSQL 18.6 and Prisma 7
+- PostgreSQL 18.6 and Prisma 8 (RC contract/runtime)
 - JWT bearer authentication
 - Swagger/OpenAPI at /api in development; production access is disabled by default
 
@@ -55,9 +55,10 @@ Start the migration worker in a second terminal:
 
     yarn worker:dev
 
-`yarn dev` generates the Prisma Client and applies all committed database
+`yarn dev` emits the Prisma 8 contract and applies all committed database
 migrations before starting the development server. To update only the database,
-run `yarn db:migrate`.
+run `yarn db:migrate`. Prisma 8 uses `prisma/contract.prisma` as the source of
+truth; the generated `contract.json` and `contract.d.ts` are runtime artifacts.
 
 The API is available at http://localhost:3000; Swagger is at http://localhost:3000/api.
 Liveness is available at `/health/live`, and Railway readiness checks should use
@@ -65,6 +66,9 @@ Liveness is available at `/health/live`, and Railway readiness checks should use
 
 Production SSH access, Docker Compose logs, health checks and Strava worker
 diagnostics are documented in [OPERATIONS.md](OPERATIONS.md).
+
+Known environment and integration limitations are tracked in
+[doc/known-issues.md](doc/known-issues.md).
 
 Sensitive endpoints have route-specific rate limits. Login and registration
 allow 5 requests per minute. Email-code and password-change endpoints allow
@@ -138,7 +142,7 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | VK_API_VERSION                    | Optional VK API version, defaults to 5.199                        |
 | IS_DEV                            | Development URL selection in email templates                      |
 | SEED_MOCK_DATA                    | Create mock users and activities at startup                       |
-| SEED_USER_EMAIL                   | Optional email used by Prisma seed                                |
+| SEED_USER_EMAIL                   | Optional email used by the database seed                          |
 
 Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. The
 `YANDEX_SMTP_USER` value is the full mailbox address (`Runich.app@ya.ru` in
@@ -177,15 +181,11 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 
 | Command                   | Description                                      |
 | ------------------------- | ------------------------------------------------ |
-| `yarn db:up`              | Start local PostgreSQL and apply migrations      |
-| `yarn db:generate`        | Generate Prisma Client                           |
-| `yarn db:migrate`         | Apply committed migrations                       |
-| `yarn db:migrate:dev`     | Create a development migration                   |
-| `yarn db:seed`            | Seed the configured database                     |
-| `yarn db:studio`          | Open Prisma Studio locally                       |
-| `yarn db:studio:production` | Open production Studio through an SSH tunnel   |
-
-Production Studio access is documented in [OPERATIONS.md](OPERATIONS.md#prisma-studio).
+| `yarn db:up`                | Start local PostgreSQL and reconcile its Prisma 8 marker |
+| `yarn db:generate`          | Emit the Prisma 8 contract artifacts                    |
+| `yarn db:migrate`           | Apply committed Prisma 8 migrations                     |
+| `yarn db:migrate:dev`       | Update a development database and advance ref           |
+| `yarn db:seed`              | Seed the configured database                             |
 
 ### Tests
 
@@ -211,7 +211,9 @@ Production Studio access is documented in [OPERATIONS.md](OPERATIONS.md#prisma-s
 
 ## Database and seed data
 
-The schema is in prisma/schema.prisma, and committed migrations are in prisma/migrations.
+The Prisma 8 contract is in `prisma/contract.prisma`, and the single initial
+migration is in `prisma/migrations`. The database column names remain stable
+through `@map(...)`; application and API names use camelCase.
 
     yarn db:generate
     yarn db:migrate
@@ -234,7 +236,7 @@ Setting SEED_MOCK_DATA=true creates 100 deterministic mock runners. Each user ge
     ├── statistic/               # Activity statistics
     ├── user/                    # User profile CRUD
     ├── common/                  # Shared DTOs, filters, parsers and utilities
-    ├── infrastructure/database/ # Prisma integration and generated client
+    ├── infrastructure/database/ # Prisma 8 runtime, repositories and migrations
     └── main.ts                  # Application bootstrap
 
 ## API
@@ -264,7 +266,7 @@ Before opening a pull request:
 
     yarn db:generate
     yarn typecheck
-    yarn eslint src
+    yarn eslint src integration
     yarn build
     yarn test:ci
     yarn test:cov

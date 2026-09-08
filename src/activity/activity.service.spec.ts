@@ -41,7 +41,7 @@ describe('ActivityService', () => {
 
     await expect(service.createActivity({ ...activityDto }, 'user-1')).resolves.toEqual({ id: 'activity-1' });
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
-      data: expect.objectContaining({ user_id: 'user-1', profileId: 'profile-1', mapPhotoUrlBlurhash: null }),
+      data: expect.objectContaining({ userId: 'user-1', profileId: 'profile-1', mapPhotoUrlBlurhash: null }),
     });
 
     process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
@@ -110,7 +110,7 @@ describe('ActivityService', () => {
 
     await service.updateActivity(pedometerActivity, 'activity-1');
     expect(prisma.activity.update).toHaveBeenCalledWith({
-      where: { id: 'activity-1', user_id: 'activity-1' },
+      where: { id: 'activity-1', userId: 'activity-1' },
       data: expect.objectContaining({ steps: 1240 }),
     });
   });
@@ -122,7 +122,7 @@ describe('ActivityService', () => {
     const activities = Array.from({ length: 101 }, (_, index) => ({
       ...activityDto,
       title: 'Импортированная активность',
-      user_id: 'user-1',
+      userId: 'user-1',
       profileId: 'profile-1',
       source: 'strava' as const,
       sourceActivityId: `strava-${index}`,
@@ -173,6 +173,19 @@ describe('ActivityService', () => {
     await expect(service.deleteActivityById('activity-1')).resolves.toEqual(activity);
   });
 
+  it('uses twenty activities as the default page size', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, { getAccountByUserId: asyncMock() } as never);
+    prisma.activity.findMany.mockResolvedValue([]);
+    prisma.friend.findMany.mockResolvedValue([]);
+
+    await service.getActivitesByUserId('user-1');
+    expect(prisma.activity.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 20 }));
+
+    await service.getAllActivitiesWithFriends('user-1');
+    expect(prisma.activity.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 0, take: 20 }));
+  });
+
   it('returns email data even when the activity does not exist', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
@@ -195,7 +208,7 @@ describe('ActivityService', () => {
     prisma.activity.createMany.mockRejectedValue(error);
     await expectInternalServerError(
       service.createActivitiesFromMigrationArchive([
-        { ...activityDto, user_id: 'u1', profileId: 'p1', source: 'strava', sourceActivityId: 's1' },
+        { ...activityDto, userId: 'u1', profileId: 'p1', source: 'strava', sourceActivityId: 's1' },
       ]),
     );
     prisma.activity.update.mockRejectedValue(error);

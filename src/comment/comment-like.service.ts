@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { isPrismaUniqueConstraintError } from 'src/common/utils/prisma-errors';
+import { isUniqueConstraintError } from 'src/common/utils/database-errors';
 
 @Injectable()
 export class CommentLikeService {
@@ -15,7 +15,7 @@ export class CommentLikeService {
         create: data,
       });
     } catch (error) {
-      if (!isPrismaUniqueConstraintError(error)) throw error;
+      if (!isUniqueConstraintError(error)) throw error;
     }
     return this.prisma.commentLike.findUnique({ where });
   }

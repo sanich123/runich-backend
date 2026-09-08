@@ -118,14 +118,14 @@ export class VkAuthService {
 
       const profileId = profile.user_id ?? String(tokens.user_id);
       const email = tokens.email ?? `vk_${profileId}@vk.local`;
-      let user = await this.prisma.users.findUnique({ where: { email } });
+      let user = await this.prisma.user.findUnique({ where: { email } });
       if (!user) {
-        user = await this.prisma.users.create({
+        user = await this.prisma.user.create({
           data: {
             email,
-            auth_provider: 'VK',
-            email_confirmed_at: new Date(),
-            created_at: new Date(),
+            authProvider: 'VK',
+            emailConfirmedAt: new Date(),
+            createdAt: new Date(),
             profile: {
               create: {
                 name: profile.first_name,
@@ -137,13 +137,13 @@ export class VkAuthService {
             },
           },
         });
-      } else if (!user.email_confirmed_at) {
-        user = await this.prisma.users.update({ where: { id: user.id }, data: { email_confirmed_at: new Date() } });
+      } else if (!user.emailConfirmedAt) {
+        user = await this.prisma.user.update({ where: { id: user.id }, data: { emailConfirmedAt: new Date() } });
       }
-      await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
+      await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
       const redirect = new URL(frontendUrl);
       const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
-      redirect.searchParams.set(this.tokenService.hasPersistentStore() ? 'code' : 'accessToken', loginCredential);
+      redirect.searchParams.set('code', loginCredential);
       return response.redirect(redirect.toString());
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Неизвестная ошибка VK';

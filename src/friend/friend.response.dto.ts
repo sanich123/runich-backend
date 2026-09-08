@@ -27,7 +27,7 @@ export class FriendResponseDto {
   updatedAt: Date | string;
 
   @ApiProperty({ type: String, format: 'uuid' })
-  user_id: string;
+  userId: string;
 
   @ApiProperty({ type: String, format: 'uuid' })
   friendId: string;
@@ -42,5 +42,5 @@ export class FriendResponseDto {
   profile?: FriendProfileResponseDto | null;
 
   @ApiPropertyOptional({ type: FriendUserResponseDto, nullable: true })
-  users?: FriendUserResponseDto | null;
+  user?: FriendUserResponseDto | null;
 }

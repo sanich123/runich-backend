@@ -26,11 +26,11 @@ describeIntegration('PostgreSQL social idempotency e2e', () => {
     const authTokenService = app.get(AuthTokenService);
     const suffix = randomUUID();
 
-    const owner = await prisma.users.create({
+    const owner = await prisma.user.create({
       data: { email: `e2e-social-owner-${suffix}@example.com`, profile: { create: {} } },
       include: { profile: true },
     });
-    const target = await prisma.users.create({
+    const target = await prisma.user.create({
       data: { email: `e2e-social-target-${suffix}@example.com`, profile: { create: {} } },
       include: { profile: true },
     });
@@ -39,7 +39,7 @@ describeIntegration('PostgreSQL social idempotency e2e', () => {
 
     const activity = await prisma.activity.create({
       data: {
-        user_id: owner.id,
+        userId: owner.id,
         profileId: owner.profile!.id,
         title: 'E2E social activity',
         sport: 'run',
@@ -66,7 +66,7 @@ describeIntegration('PostgreSQL social idempotency e2e', () => {
 
   afterAll(async () => {
     if (prisma && ownerId && targetId) {
-      await prisma.users.deleteMany({ where: { id: { in: [ownerId, targetId] } } });
+      await prisma.user.deleteMany({ where: { id: { in: [ownerId, targetId] } } });
     }
     await app?.close();
   });
@@ -79,7 +79,7 @@ describeIntegration('PostgreSQL social idempotency e2e', () => {
 
     expect(responses.map((response) => response.status)).toEqual([200, 200]);
     expect(new Set(responses.map((response) => response.body.id)).size).toBe(1);
-    await expect(prisma.friend.count({ where: { user_id: ownerId, friendId: targetId } })).resolves.toBe(1);
+    await expect(prisma.friend.count({ where: { userId: ownerId, friendId: targetId } })).resolves.toBe(1);
   });
 
   it('returns HTTP 200 and creates one activity like under concurrent requests', async () => {

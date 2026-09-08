@@ -23,7 +23,7 @@ describe('StatisticService', () => {
     await expect(service.getYearsAndTypesOfActivities('u1')).resolves.toEqual([{ year: 2025, types: ['run', 'bike'] }]);
     expect(prisma.activity.findMany).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ where: expect.objectContaining({ user_id: 'u1' }) }),
+      expect.objectContaining({ where: expect.objectContaining({ userId: 'u1' }) }),
     );
   });
 
@@ -41,7 +41,7 @@ describe('StatisticService', () => {
       },
     });
     expect(prisma.activity.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ user_id: 'u1' }) }),
+      expect.objectContaining({ where: expect.objectContaining({ userId: 'u1' }) }),
     );
   });
 
@@ -72,7 +72,7 @@ describe('StatisticService', () => {
     });
     expect(prisma.activity.findMany).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ where: expect.objectContaining({ user_id: 'u1' }) }),
+      expect.objectContaining({ where: expect.objectContaining({ userId: 'u1' }) }),
     );
     await expect(service.getAllActivitiesStatisticsByUserId('u1')).resolves.toEqual({
       totalDuration: 300,

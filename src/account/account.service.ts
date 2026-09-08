@@ -1,19 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { handleServiceError } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/database-errors';
 import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { Filtering } from './filter.decorator';
-import { Prisma } from 'src/infrastructure/database/generated/prisma/client';
+
+type ProfileWhereInput = Record<string, unknown>;
 
 function normalizeFilterValue(value: string | null | undefined) {
   const normalized = value?.trim();
   return normalized || undefined;
 }
 
-function buildProfileWhere(filter: Filtering): Prisma.ProfileWhereInput {
+function buildProfileWhere(filter: Filtering): ProfileWhereInput {
   const searchValues = [filter.name, filter.surname, filter.email];
   const searchTerms = searchValues.flatMap((value) => normalizeFilterValue(value)?.split(/\s+/) ?? []);
-  const conditions: Prisma.ProfileWhereInput[] = [];
+  const conditions: ProfileWhereInput[] = [];
 
   for (const term of searchTerms) {
     conditions.push({
@@ -21,7 +22,7 @@ function buildProfileWhere(filter: Filtering): Prisma.ProfileWhereInput {
         { name: { contains: term, mode: 'insensitive' } },
         { surname: { contains: term, mode: 'insensitive' } },
         { email: { contains: term, mode: 'insensitive' } },
-        { users: { email: { contains: term, mode: 'insensitive' } } },
+        { user: { email: { contains: term, mode: 'insensitive' } } },
       ],
     });
   }
@@ -55,7 +56,7 @@ export class AccountService {
 
   async getAccountByUserId(id: string) {
     try {
-      return await this.prisma.profile.findUnique({ where: { user_id: id } });
+      return await this.prisma.profile.findUnique({ where: { userId: id } });
     } catch (error) {
       handleServiceError(error);
     }
@@ -64,9 +65,9 @@ export class AccountService {
   async getOrCreateAccountByUserId(id: string) {
     try {
       return await this.prisma.profile.upsert({
-        where: { user_id: id },
+        where: { userId: id },
         update: {},
-        create: { user_id: id },
+        create: { userId: id },
       });
     } catch (error) {
       handleServiceError(error);

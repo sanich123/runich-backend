@@ -16,7 +16,7 @@ describe('ActivityService privacy', () => {
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);
     prisma.activity.findUnique.mockResolvedValue({
-      user_id: 'owner-1',
+      userId: 'owner-1',
       isPublic: false,
       locations: [{ coords: { latitude: 55, longitude: 37 } }],
       kilometresSplit: [],
@@ -24,12 +24,12 @@ describe('ActivityService privacy', () => {
 
     await service.getActivitesByUserId('owner-1', '0', '10', 'viewer-1');
     expect(prisma.activity.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { user_id: 'owner-1', isPublic: true } }),
+      expect.objectContaining({ where: { userId: 'owner-1', isPublic: true } }),
     );
 
     await service.getMediaByUserId('owner-1', '10', 'viewer-1');
     expect(prisma.activity.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { user_id: 'owner-1', photoVideoUrls: { not: null }, isPublic: true } }),
+      expect.objectContaining({ where: { userId: 'owner-1', photoVideoUrls: { not: null }, isPublic: true } }),
     );
 
     await expect(service.getLocationsByActivityId('activity-1', 'viewer-1')).resolves.toBeNull();
@@ -40,7 +40,7 @@ describe('ActivityService privacy', () => {
     const service = new ActivityService(prisma as never, {} as never);
     const locations = [{ coords: { latitude: 55, longitude: 37 } }];
     prisma.activity.findUnique.mockResolvedValue({
-      user_id: 'owner-1',
+      userId: 'owner-1',
       isPublic: false,
       locations,
       kilometresSplit: [],
@@ -55,7 +55,7 @@ describe('ActivityService privacy', () => {
   it('hides a private activity detail from another user', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
-    prisma.activity.findUnique.mockResolvedValue({ user_id: 'owner-1', isPublic: false });
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1', isPublic: false });
 
     await expect(service.getActivityByActivityId('activity-1', 'viewer-1')).resolves.toBeNull();
   });

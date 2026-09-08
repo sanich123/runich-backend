@@ -1,0 +1,249 @@
+// use prisma-next
+// Contract inferred from the live database schema. Edit as needed, then run `prisma contract emit`.
+model User {
+  id                       Uuid                   @id(map: "Users_pkey") @default(dbgenerated("gen_random_uuid()"))
+  instanceId               Uuid?                  @map("instance_id")
+  aud                      VarChar(255)?
+  role                     VarChar(255)?
+  email                    VarChar(255)
+  encryptedPassword        VarChar(255)?          @map("encrypted_password")
+  emailConfirmedAt         TimestamptzString(6)?  @map("email_confirmed_at")
+  invitedAt                TimestamptzString(6)?  @map("invited_at")
+  confirmationToken        VarChar(255)?          @map("confirmation_token")
+  confirmationSentAt       TimestamptzString(6)?  @map("confirmation_sent_at")
+  recoveryToken            VarChar(255)?          @map("recovery_token")
+  recoverySentAt           TimestamptzString(6)?  @map("recovery_sent_at")
+  emailChangeTokenNew      VarChar(255)?          @map("email_change_token_new")
+  emailChange              VarChar(255)?          @map("email_change")
+  emailChangeSentAt        TimestamptzString(6)?  @map("email_change_sent_at")
+  lastSignInAt             TimestamptzString(6)?  @map("last_sign_in_at")
+  rawAppMetaData           Jsonb?                 @map("raw_app_meta_data")
+  rawUserMetaData          Jsonb?                 @map("raw_user_meta_data")
+  isSuperAdmin             Boolean?               @map("is_super_admin")
+  createdAt                TimestamptzString(6)?  @map("created_at")
+  updatedAt                TimestamptzString(6)?  @map("updated_at")
+  phone                    String?
+  phoneConfirmedAt         TimestamptzString(6)?  @map("phone_confirmed_at")
+  phoneChange              String?                @default("") @map("phone_change")
+  phoneChangeToken         VarChar(255)?          @default("") @map("phone_change_token")
+  phoneChangeSentAt        TimestamptzString(6)?  @map("phone_change_sent_at")
+  emailChangeTokenCurrent  VarChar(255)?          @default("") @map("email_change_token_current")
+  emailChangeConfirmStatus SmallInt?              @default(0) @map("email_change_confirm_status")
+  bannedUntil              TimestamptzString(6)?  @map("banned_until")
+  reauthenticationToken    VarChar(255)?          @default("") @map("reauthentication_token")
+  reauthenticationSentAt   TimestamptzString(6)?  @map("reauthentication_sent_at")
+  deletedAt                TimestamptzString(6)?  @map("deleted_at")
+  authProvider             VarChar(32)?           @map("auth_provider")
+  activities               Activity[]
+  activityMigrationJobs    ActivityMigrationJob[]
+  authExchanges            AuthExchange[]
+  friends                  Friend[]
+  profile                  Profile?
+  userSessions             UserSession[]
+
+  @@unique([email], map: "Users_email_key")
+  @@unique([phone], map: "Users_phone_key")
+  @@map("Users")
+}
+
+model Profile {
+  id                    Uuid                   @id(map: "Profile_pkey") @default(dbgenerated("gen_random_uuid()"))
+  createdAt             TimestamptzString(6)   @default(now()) @map("created_at")
+  name                  String?
+  userId                Uuid                   @map("user_id")
+  bio                   String?
+  birthday              DateString?
+  city                  String?
+  gender                String?
+  profilePhoto          String?
+  sport                 String?
+  surname               String?
+  updatedAt             TimestamptzString(6)?
+  weight                String?
+  email                 String?
+  language              String?
+  emailNotifications    Boolean?               @default(false)
+  profilePhotoBlurhash  String?
+  activities            Activity[]
+  activityMigrationJobs ActivityMigrationJob[]
+  comments              Comment[]
+  commentLikes          CommentLike[]
+  friends               Friend[]
+  likes                 Like[]
+  user                  User                   @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Profile_user_id_fkey")
+
+  @@unique([userId], map: "Profile_user_id_key")
+  @@map("Profile")
+}
+
+model Activity {
+  id                  Uuid                 @id(map: "Activity_pkey") @default(dbgenerated("gen_random_uuid()"))
+  date                TimestamptzString(6) @default(now())
+  createdAt           TimestamptzString(6) @default(now())
+  updatedAt           TimestamptzString(6)
+  description         String?
+  distance            Float
+  duration            Int
+  emotion             String?
+  locations           Jsonb?
+  userId              Uuid                 @map("user_id")
+  speed               Float
+  sport               String
+  title               String?
+  kilometresSplit     Jsonb?
+  mapPhotoUrl         String?
+  photoVideoUrls      Jsonb?
+  isPublic            Boolean?             @default(true)
+  mapPhotoUrlBlurhash String?
+  profileId           Uuid
+  source              VarChar(32)?
+  sourceActivityId    VarChar(128)?
+  steps               Int?
+  comments            Comment[]
+  likes               Like[]
+  profile             Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Activity_profileId_fkey", index: false)
+  user                User                 @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Activity_user_id_fkey", index: false)
+
+  @@unique([userId, source, sourceActivityId], map: "Activity_user_id_source_sourceActivityId_key")
+  @@map("Activity")
+}
+
+model ActivityMigrationJob {
+  id                  Uuid                  @id(map: "ActivityMigrationJob_pkey") @default(dbgenerated("gen_random_uuid()"))
+  userId              Uuid                  @map("user_id")
+  profileId           Uuid
+  archivePath         VarChar(2048)
+  status              VarChar(32)
+  totalActivities     Int                   @default(0)
+  processedActivities Int                   @default(0)
+  importedActivities  Int                   @default(0)
+  skippedActivities   Int                   @default(0)
+  errorMessage        String?
+  createdAt           TimestamptzString(6)  @default(now())
+  startedAt           TimestamptzString(6)?
+  finishedAt          TimestamptzString(6)?
+  profile             Profile               @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "ActivityMigrationJob_profileId_fkey", index: false)
+  user                User                  @relation(fields:[userId], references:[id], onDelete: Cascade, map: "ActivityMigrationJob_user_id_fkey", index: false)
+
+  @@index([status, createdAt], map: "ActivityMigrationJob_status_createdAt_idx")
+  @@index([userId, createdAt], map: "ActivityMigrationJob_user_id_createdAt_idx")
+  @@map("ActivityMigrationJob")
+}
+
+model AuthExchange {
+  id         Uuid                  @id(map: "AuthExchange_pkey") @default(dbgenerated("gen_random_uuid()"))
+  userId     Uuid                  @map("user_id")
+  codeHash   VarChar(128)          @map("code_hash")
+  purpose    VarChar(32)
+  expiresAt  TimestamptzString(6)  @map("expires_at")
+  consumedAt TimestamptzString(6)? @map("consumed_at")
+  createdAt  TimestamptzString(6)  @default(now()) @map("created_at")
+  user       User                  @relation(fields:[userId], references:[id], onDelete: Cascade, map: "AuthExchange_user_id_fkey", index: false)
+
+  @@unique([codeHash], map: "AuthExchange_code_hash_key")
+  @@index([expiresAt], map: "AuthExchange_expires_at_idx")
+  @@index([userId, purpose], map: "AuthExchange_user_id_purpose_idx")
+  @@map("AuthExchange")
+}
+
+model Comment {
+  id           Uuid                 @id(map: "Comment_pkey") @default(dbgenerated("gen_random_uuid()"))
+  date         TimestamptzString(6) @default(now())
+  comment      String
+  authorId     String
+  activityId   Uuid
+  profileId    Uuid
+  commentLikes CommentLike[]
+  activity     Activity             @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "Comment_activityId_fkey")
+  profile      Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Comment_profileId_fkey", index: false)
+
+  @@index([activityId], map: "Comment_activityId_idx")
+  @@map("Comment")
+}
+
+model CommentLike {
+  id        Uuid                 @id(map: "CommentLike_pkey") @default(dbgenerated("gen_random_uuid()"))
+  date      TimestamptzString(6) @default(now())
+  authorId  String
+  commentId Uuid
+  profileId Uuid
+  comment   Comment              @relation(fields:[commentId], references:[id], onDelete: Cascade, map: "CommentLike_commentId_fkey")
+  profile   Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "CommentLike_profileId_fkey", index: false)
+
+  @@unique([authorId, commentId], map: "CommentLike_authorId_commentId_key")
+  @@index([commentId], map: "CommentLike_commentId_idx")
+  @@map("CommentLike")
+}
+
+model Friend {
+  id        Uuid                 @id(map: "Friend_pkey") @default(dbgenerated("gen_random_uuid()"))
+  createdAt TimestamptzString(6) @default(now())
+  updatedAt TimestamptzString(6)
+  userId    Uuid                 @map("user_id")
+  friendId  Uuid
+  profileId Uuid
+  profile   Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Friend_profileId_fkey", index: false)
+  user      User                 @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Friend_user_id_fkey", index: false)
+
+  @@index([friendId], map: "Friend_friendId_idx")
+  @@unique([userId, friendId], map: "Friend_user_id_friendId_key")
+  @@map("Friend")
+}
+
+model Like {
+  id         Uuid                 @id(map: "Like_pkey") @default(dbgenerated("gen_random_uuid()"))
+  date       TimestamptzString(6) @default(now())
+  authorId   String
+  activityId Uuid
+  profileId  Uuid
+  activity   Activity             @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "Like_activityId_fkey")
+  profile    Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Like_profileId_fkey", index: false)
+
+  @@index([activityId], map: "Like_activityId_idx")
+  @@unique([authorId, activityId], map: "Like_authorId_activityId_key")
+  @@map("Like")
+}
+
+model MediaCleanupJob {
+  id           Uuid                  @id(map: "MediaCleanupJob_pkey") @default(dbgenerated("gen_random_uuid()"))
+  userId       Uuid                  @map("user_id")
+  status       VarChar(32)
+  errorMessage String?
+  createdAt    TimestamptzString(6)  @default(now())
+  startedAt    TimestamptzString(6)?
+  finishedAt   TimestamptzString(6)?
+
+  @@index([status, createdAt], map: "MediaCleanupJob_status_createdAt_idx")
+  @@index([userId, createdAt], map: "MediaCleanupJob_user_id_createdAt_idx")
+  @@map("MediaCleanupJob")
+}
+
+model UserSession {
+  id             Uuid                  @id(map: "UserSession_pkey") @default(dbgenerated("gen_random_uuid()"))
+  userId         Uuid                  @map("user_id")
+  refreshHash    VarChar(128)          @map("refresh_hash")
+  deviceId       VarChar(128)          @map("device_id")
+  deviceName     VarChar(255)?         @map("device_name")
+  platform       VarChar(64)?
+  deviceModel    VarChar(128)?         @map("device_model")
+  manufacturer   VarChar(128)?
+  osName         VarChar(64)?          @map("os_name")
+  osVersion      VarChar(64)?          @map("os_version")
+  deviceType     VarChar(64)?          @map("device_type")
+  appVersion     VarChar(32)?          @map("app_version")
+  appBuild       VarChar(32)?          @map("app_build")
+  userAgent      VarChar(512)?         @map("user_agent")
+  ipAddress      VarChar(128)?         @map("ip_address")
+  lastSeenAt     TimestamptzString(6)  @default(now()) @map("last_seen_at")
+  lastLatitude   Float?                @map("last_latitude")
+  lastLongitude  Float?                @map("last_longitude")
+  lastLocationAt TimestamptzString(6)? @map("last_location_at")
+  createdAt      TimestamptzString(6)  @default(now()) @map("created_at")
+  revokedAt      TimestamptzString(6)? @map("revoked_at")
+  user           User                  @relation(fields:[userId], references:[id], onDelete: Cascade, map: "UserSession_user_id_fkey")
+
+  @@unique([refreshHash], map: "UserSession_refresh_hash_key")
+  @@index([userId, deviceId], map: "UserSession_user_id_device_id_idx")
+  @@index([userId], map: "UserSession_user_id_idx")
+  @@map("UserSession")
+}

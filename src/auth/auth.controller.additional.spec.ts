@@ -38,7 +38,7 @@ describe('AuthController additional routes', () => {
     deleteUser: asyncMock(),
   };
   const prisma = {
-    users: { findUnique: asyncMock() },
+    user: { findUnique: asyncMock() },
     userSession: { update: asyncMock() },
   };
   let controller: AuthController;
@@ -66,7 +66,7 @@ describe('AuthController additional routes', () => {
     ['YANDEX', 'Яндекс'],
     ['VK', 'VK'],
   ])('rejects registration for a confirmed %s account', async (provider, providerName) => {
-    prisma.users.findUnique.mockResolvedValue({ email_confirmed_at: new Date(), auth_provider: provider });
+    prisma.user.findUnique.mockResolvedValue({ emailConfirmedAt: new Date(), authProvider: provider });
 
     await expect(controller.registerUser({ email: 'user@example.com', password: 'password' })).rejects.toThrow(
       `Пользователь зарегистрирован с помощью провайдера ${providerName}`,
@@ -83,9 +83,7 @@ describe('AuthController additional routes', () => {
       'login',
     );
     await expect(controller.refresh({ refreshToken: 'refresh-token' }, request as never)).resolves.toBe('refresh');
-    await expect(controller.verifyTokenAndAppVersion({ accessToken: 'access-token' }, request as never)).resolves.toBe(
-      'verify',
-    );
+    await expect(controller.verifyTokenAndAppVersion({ code: 'login-code' }, request as never)).resolves.toBe('verify');
 
     expect(authService.login).toHaveBeenCalledWith(
       'user@example.com',
@@ -96,7 +94,7 @@ describe('AuthController additional routes', () => {
       }),
     );
     expect(authService.refreshAccessToken).toHaveBeenCalledWith('refresh-token', expect.any(Object));
-    expect(authService.verifyToken).toHaveBeenCalledWith('access-token', undefined, expect.any(Object));
+    expect(authService.verifyToken).toHaveBeenCalledWith('login-code', expect.any(Object));
   });
 
   it('uses the stateless overload when request metadata is absent', async () => {
@@ -106,11 +104,11 @@ describe('AuthController additional routes', () => {
 
     await controller.login({ email: 'user@example.com', password: 'password' });
     await controller.refresh({ refreshToken: 'refresh-token' });
-    await controller.verifyTokenAndAppVersion({ accessToken: 'access-token', code: 'code' });
+    await controller.verifyTokenAndAppVersion({ code: 'code' });
 
     expect(authService.login).toHaveBeenCalledWith('user@example.com', 'password');
     expect(authService.refreshAccessToken).toHaveBeenCalledWith('refresh-token');
-    expect(authService.verifyToken).toHaveBeenCalledWith('access-token', 'code', undefined);
+    expect(authService.verifyToken).toHaveBeenCalledWith('code', undefined);
   });
 
   it('updates a session location only when a session and complete coordinates exist', async () => {
@@ -124,9 +122,9 @@ describe('AuthController additional routes', () => {
     expect(prisma.userSession.update).toHaveBeenCalledWith({
       where: { id: 'session-1' },
       data: expect.objectContaining({
-        last_latitude: 55.75,
-        last_longitude: 37.61,
-        last_location_at: expect.any(Date),
+        lastLatitude: 55.75,
+        lastLongitude: 37.61,
+        lastLocationAt: expect.any(Date),
       }),
     });
 

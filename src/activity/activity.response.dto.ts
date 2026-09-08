@@ -98,7 +98,7 @@ export class ActivityProfileResponseDto {
   emailNotifications: boolean | null;
 
   @ApiPropertyOptional({ type: ActivityUserEmailResponseDto, nullable: true })
-  users?: ActivityUserEmailResponseDto | null;
+  user?: ActivityUserEmailResponseDto | null;
 }
 
 export class ActivityCountResponseDto {
@@ -111,7 +111,7 @@ export class ActivityResponseDto extends ActivityDto {
   id: string;
 
   @ApiProperty({ type: String, format: 'uuid' })
-  user_id: string;
+  userId: string;
 
   @ApiProperty({ type: String, format: 'uuid' })
   profileId: string;
@@ -146,7 +146,7 @@ export class ActivityCardResponseDto {
   id: string;
 
   @ApiProperty({ type: String, format: 'uuid' })
-  user_id: string;
+  userId: string;
 
   @ApiPropertyOptional({ type: [ActivityPhotoResponseDto], nullable: true })
   photoVideoUrls?: ActivityPhotoResponseDto[] | null;

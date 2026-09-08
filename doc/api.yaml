@@ -62,7 +62,7 @@ paths:
       security: []
   /auth/verify:
     post:
-      summary: Verify access token
+      summary: Exchange one-time login code for session tokens
       security: []
   /auth/confirm-email:
     post:

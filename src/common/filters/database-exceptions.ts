@@ -1,14 +1,14 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { PRISMA_ERR_TO_HTTP_CODES } from 'src/common/constants';
+import { DATABASE_ERROR_TO_HTTP_STATUS } from 'src/common/constants';
 
-export class PrismaException extends HttpException {
+export class DatabaseException extends HttpException {
   constructor(message: string, code?: string) {
-    const status = code ? PRISMA_ERR_TO_HTTP_CODES[code as keyof typeof PRISMA_ERR_TO_HTTP_CODES] : undefined;
-    super(code ? getPrismaMessage(code) : message, status ?? HttpStatus.INTERNAL_SERVER_ERROR);
+    const status = code ? DATABASE_ERROR_TO_HTTP_STATUS[code as keyof typeof DATABASE_ERROR_TO_HTTP_STATUS] : undefined;
+    super(code ? getDatabaseMessage(code) : message, status ?? HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
 
-function getPrismaMessage(code: string) {
+export function getDatabaseMessage(code: string) {
   switch (code) {
     case 'P2000':
       return 'Переданное значение слишком длинное';

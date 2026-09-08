@@ -16,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (payload.type && payload.type !== 'access') {
       throw new UnauthorizedException('Требуется access token');
     }
-    const user = await this.prisma.users.findUnique({ where: { id: payload.userId } });
+    const user = await this.prisma.user.findUnique({ where: { id: payload.userId } });
 
     if (!user) {
       throw new UnauthorizedException('Требуется авторизация');
@@ -24,10 +24,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     if (payload.sessionId) {
       const session = await this.prisma.userSession.findUnique({ where: { id: payload.sessionId } });
-      if (!session || session.revoked_at || session.user_id !== user.id)
+      if (!session || session.revokedAt || session.userId !== user.id)
         throw new UnauthorizedException('Сессия завершена');
-      if (Date.now() - session.last_seen_at.getTime() >= 5 * 60 * 1000) {
-        await this.prisma.userSession.update({ where: { id: session.id }, data: { last_seen_at: new Date() } });
+      if (Date.now() - session.lastSeenAt.getTime() >= 5 * 60 * 1000) {
+        await this.prisma.userSession.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } });
       }
     }
 

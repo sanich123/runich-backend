@@ -3,8 +3,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import { PrismaClientExceptionFilter } from './common/filters/prisma-client-exception.filter';
-import { MAX_JSON_BODY_BYTES, PRISMA_ERR_TO_HTTP_CODES } from './common/constants';
+import { DatabaseExceptionFilter } from './common/filters/database-exception.filter';
+import { MAX_JSON_BODY_BYTES, DATABASE_ERROR_TO_HTTP_STATUS } from './common/constants';
 import { getLogLevels } from './common/utils/log-levels';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { urlencoded, json } from 'express';
@@ -63,7 +63,7 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api', app, document);
   }
-  app.useGlobalFilters(new PrismaClientExceptionFilter(PRISMA_ERR_TO_HTTP_CODES));
+  app.useGlobalFilters(new DatabaseExceptionFilter(DATABASE_ERROR_TO_HTTP_STATUS));
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

@@ -24,7 +24,7 @@ export const enum QueryParams {
   ids = 'ids',
 }
 
-export const PRISMA_ERR_TO_HTTP_CODES = {
+export const DATABASE_ERROR_TO_HTTP_STATUS = {
   P2000: HttpStatus.BAD_REQUEST,
   P2002: HttpStatus.CONFLICT,
   P2025: HttpStatus.NOT_FOUND,

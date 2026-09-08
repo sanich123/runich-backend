@@ -12,7 +12,7 @@ function responseMock(): ResponseMock {
 
 describe('YandexAuthService', () => {
   const prisma = {
-    users: {
+    user: {
       findUnique: asyncMock(),
       create: asyncMock(),
       update: asyncMock(),
@@ -20,7 +20,6 @@ describe('YandexAuthService', () => {
   };
   const tokenService = {
     createEmailLoginCredential: asyncMock(),
-    hasPersistentStore: jest.fn<() => boolean>(),
   };
   const originalEnvironment = { ...process.env };
   let service: YandexAuthService;
@@ -32,7 +31,6 @@ describe('YandexAuthService', () => {
     process.env.YANDEX_REDIRECT_URI = 'https://api.example/auth/yandex/callback';
     process.env.YANDEX_FRONTEND_REDIRECT_URI = 'https://app.example/login-from-url';
     tokenService.createEmailLoginCredential.mockResolvedValue('login-code');
-    tokenService.hasPersistentStore.mockReturnValue(true);
     service = new YandexAuthService(prisma as never, tokenService as never);
   });
 
@@ -102,17 +100,17 @@ describe('YandexAuthService', () => {
           { status: 200 },
         ),
       );
-    prisma.users.findUnique.mockResolvedValue(null);
-    prisma.users.create.mockResolvedValue({ id: 'user-1', email_confirmed_at: new Date() });
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.user.create.mockResolvedValue({ id: 'user-1', emailConfirmedAt: new Date() });
 
     const response = responseMock();
     await service.callback('code', '', response as never);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(prisma.users.create).toHaveBeenCalledWith({
+    expect(prisma.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         email: 'runner@yandex.ru',
-        auth_provider: 'YANDEX',
+        authProvider: 'YANDEX',
         profile: {
           create: expect.objectContaining({
             name: 'Ann',
@@ -126,20 +124,18 @@ describe('YandexAuthService', () => {
     expect(response.redirect).toHaveBeenCalledWith('https://app.example/login-from-url?code=login-code');
   });
 
-  it('confirms an existing user and uses an access token without a persistent store', async () => {
+  it('confirms an existing user and always redirects with a login code', async () => {
     jest
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'yandex-token' }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ login: 'runner' }), { status: 200 }));
-    prisma.users.findUnique.mockResolvedValue({ id: 'user-1', email_confirmed_at: null });
-    prisma.users.update.mockResolvedValue({ id: 'user-1' });
-    tokenService.hasPersistentStore.mockReturnValue(false);
-
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-1', emailConfirmedAt: null });
+    prisma.user.update.mockResolvedValue({ id: 'user-1' });
     const response = responseMock();
     await service.callback('code', '', response as never);
 
-    expect(prisma.users.update).toHaveBeenCalledTimes(2);
-    expect(response.redirect).toHaveBeenCalledWith('https://app.example/login-from-url?accessToken=login-code');
+    expect(prisma.user.update).toHaveBeenCalledTimes(2);
+    expect(response.redirect).toHaveBeenCalledWith('https://app.example/login-from-url?code=login-code');
   });
 
   it('rejects a Yandex profile without an email', async () => {
