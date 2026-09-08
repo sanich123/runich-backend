@@ -15,25 +15,8 @@ import {
 import { extname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { isPhotoStorageWriteEnabled } from 'src/common/config/environment';
-
-const DEFAULT_S3_ENDPOINT = 'https://s3.twcstorage.ru';
-const DEFAULT_S3_REGION = 'ru-1';
-const MAX_DELETE_BATCH_SIZE = 1_000;
-
-type StorageFile = {
-  buffer: Buffer;
-  originalname: string;
-  mimetype: string;
-};
-
-type StorageSettings = {
-  endpoint: string;
-  region: string;
-  bucket: string;
-  accessKey: string;
-  secretKey: string;
-  publicUrl: string;
-};
+import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, MAX_DELETE_BATCH_SIZE } from './const';
+import type { StorageFile, StorageSettings } from './type';
 
 @Injectable()
 export class StorageService {

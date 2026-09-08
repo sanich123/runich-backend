@@ -48,13 +48,13 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     if (this.pool) await this.pool.end();
   }
 
-  async $queryRaw(strings: TemplateStringsArray, ...values: unknown[]) {
+  async $queryRaw<T = unknown>(strings: TemplateStringsArray, ...values: unknown[]): Promise<T> {
     if (!this.pool) throw new Error('Raw queries are unavailable inside a Prisma transaction callback');
     const text = strings.reduce(
       (query, chunk, index) => `${query}${chunk}${index < values.length ? `$${index + 1}` : ''}`,
       '',
     );
-    return (await this.pool.query(text, values)).rows;
+    return (await this.pool.query(text, values)).rows as T;
   }
 
   $transaction<T>(input: Promise<T>[], options?: unknown): Promise<T[]>;

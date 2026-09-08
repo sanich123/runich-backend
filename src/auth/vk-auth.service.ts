@@ -5,12 +5,8 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
-
-type VkState = { codeVerifier: string };
-
-const VK_AUTHORIZE_URL = 'https://id.vk.com/authorize';
-const VK_TOKEN_URL = 'https://id.vk.com/oauth2/auth';
-const VK_USER_INFO_URL = 'https://id.vk.com/oauth2/user_info';
+import { VK_AUTHORIZE_URL, VK_TOKEN_URL, VK_USER_INFO_URL } from './const';
+import type { VkState } from './type';
 
 @Injectable()
 export class VkAuthService {

@@ -1,7 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { access, rm } from 'node:fs/promises';
 import { setImmediate as yieldToEventLoop, setTimeout as delay } from 'node:timers/promises';
-import { ActivityDto } from './activity.dto';
 import {
   ACTIVITY_MIGRATION_STATUS,
   ActivityMigrationJobResponseDto,
@@ -14,38 +13,7 @@ import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-
 import { parseCsvFileIntoArray } from 'src/common/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
 import { ACTIVITY_MIGRATION_CONFIG } from './activity-migration-config';
-
-type EnqueueMigrationInput = {
-  userId: string;
-  profileId: string;
-  archivePath: string;
-};
-
-type MigrationJob = {
-  id: string;
-  userId: string;
-  profileId: string;
-  archivePath: string;
-  status: string;
-  totalActivities: number;
-  processedActivities: number;
-  importedActivities: number;
-  skippedActivities: number;
-  errorMessage: string | null;
-  createdAt: Date;
-  startedAt: Date | null;
-  finishedAt: Date | null;
-};
-
-type MigratedActivity = ActivityDto & {
-  id: string;
-  userId: string;
-  profileId: string;
-  source: 'strava';
-  sourceActivityId: string;
-};
-
-type MigrationProgress = Pick<MigrationJob, 'processedActivities' | 'importedActivities' | 'skippedActivities'>;
+import type { EnqueueMigrationInput, MigratedActivity, MigrationJob, MigrationProgress } from './type';
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message.slice(0, 4_000);

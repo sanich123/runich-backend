@@ -1,7 +1,8 @@
 import { jest } from '@jest/globals';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { asyncMock } from 'src/__tests__/helpers';
-import { MEDIA_CLEANUP_STATUS, MediaCleanupService } from './media-cleanup.service';
+import { MediaCleanupService } from './media-cleanup.service';
+import { MEDIA_CLEANUP_STATUS } from './const';
 import { StorageService } from './storage.service';
 
 describe('MediaCleanupService', () => {

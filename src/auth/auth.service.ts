@@ -15,7 +15,7 @@ import { EmailService } from 'src/email/email.service';
 import { getRandomInt } from 'src/common/utils/utils';
 import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
-import type { SessionMetadata } from './auth-token.service';
+import type { SessionMetadata } from './type';
 import { YandexAuthService } from './yandex-auth.service';
 import { AuthEmailService } from './auth-email.service';
 import { VkAuthService } from './vk-auth.service';

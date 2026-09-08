@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   HttpCode,
-  HttpStatus,
   Inject,
   Param,
   Patch,
@@ -32,14 +31,11 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import type { AuthenticatedRequest } from 'src/auth/auth-request';
 import { parseCommentCursor } from './comment.pagination';
-
-const { comment, id, like } = PATHS;
-const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
+import { comment, id, like, OK, BAD_REQUEST, CREATED, NO_CONTENT } from './const';
 
 @ApiTags(comment)
 @ApiBearerAuth('bearerAuth')
@@ -120,7 +116,7 @@ export class CommentController {
   @ApiOperation({ summary: 'Update comment by comment id' })
   @ApiParam({ name: 'id', description: 'Comment identifier' })
   @ApiBody({ type: CommentUpdateDto, required: true })
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(CREATED)
   @ApiResponse({ status: CREATED, type: CommentResponseDto, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   async updateCommentById(

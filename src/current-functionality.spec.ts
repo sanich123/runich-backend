@@ -272,22 +272,33 @@ describe('activity, comments and statistics', () => {
 
   it('reduces activity metrics and groups monthly statistics', async () => {
     const prisma = db();
+    const queryRaw = createMock();
+    Object.assign(prisma, { $queryRaw: queryRaw });
     const service = new StatisticService(prisma as never);
     const activities = [
       { duration: 100, distance: 1000, speed: 5, date: new Date('2025-01-02'), id: 'a1', sport: 'run' },
       { duration: 200, distance: 2000, speed: 6, date: new Date('2025-01-03'), id: 'a2', sport: 'bike' },
     ];
     prisma.activity.findMany.mockResolvedValue(activities);
+    queryRaw.mockResolvedValueOnce([
+      { sport: null, totalDuration: 300, totalDistance: 3000, totalItems: 2 },
+      { sport: 'bike', totalDuration: 200, totalDistance: 2000, totalItems: 1 },
+      { sport: 'run', totalDuration: 100, totalDistance: 1000, totalItems: 1 },
+    ]);
     await expect(service.getMonthStatisticsByYearMonth('u1', '2025', '0')).resolves.toMatchObject({
       activitiesReducedBySport: { all: { totalDuration: 300, totalDistance: 3000, totalItems: 2 } },
     });
+    queryRaw.mockResolvedValueOnce([{ totalDuration: 300, totalDistance: 3000, totalItems: 2 }]);
     await expect(service.getAllActivitiesStatisticsByUserId('u1')).resolves.toEqual({
       totalDistance: 3000,
       totalDuration: 300,
       totalItems: 2,
     });
+    queryRaw.mockResolvedValueOnce([
+      { year: 2025, month: 0, sport: 'run', totalDuration: 1, totalDistance: 2, totalItems: 1 },
+    ]);
     await expect(service.getStatisticByYearAndCategory('u1')).resolves.toMatchObject({ isUserHasActivities: true });
-    prisma.activity.findMany.mockResolvedValue([]);
+    queryRaw.mockResolvedValueOnce([]);
     await expect(service.getStatisticByYearAndCategory('u1')).resolves.toEqual({ isUserHasActivities: false });
     expect(service.reduceMetricsFromActivities([{ duration: 2, distance: 3 }])).toEqual({
       totalDistance: 3,

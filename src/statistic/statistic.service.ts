@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
-import { reduceAllMetricsToYearCategoryMonths } from './utils';
+import { buildYearCategoryStatistics } from './utils';
 import { ActivityMetricsService } from './activity-metrics.service';
+import type { MetricAggregateRow, MonthlyMetricAggregateRow, YearCategoryMetricAggregateRow } from './type';
 
 @Injectable()
 export class StatisticService {
@@ -15,24 +16,32 @@ export class StatisticService {
 
   private readonly metricsService: ActivityMetricsService;
 
+  private toMetricValue(value: number | string | null | undefined) {
+    return Number(value ?? 0);
+  }
+
+  private toMetrics(row?: MetricAggregateRow) {
+    return {
+      totalDuration: this.toMetricValue(row?.totalDuration),
+      totalDistance: this.toMetricValue(row?.totalDistance),
+      totalItems: this.toMetricValue(row?.totalItems),
+    };
+  }
+
   async getYearsAndTypesOfActivities(id: string) {
     try {
-      const activities = await this.prisma.activity.findMany({ where: { userId: id }, select: { date: true } });
-      const years = [...new Set(activities.map(({ date }: { date: Date }) => date.getFullYear()))];
-      return await Promise.all(
-        years.map(async (year) => {
-          const types = await this.prisma.activity.findMany({
-            where: {
-              userId: id,
-              date: {
-                ...this.metricsService.utcYearRange(year as number),
-              },
-            },
-            select: { sport: true },
-          });
-          return { year, types: [...new Set(types.map(({ sport }: { sport: string }) => sport))] };
-        }),
-      );
+      const rows = await this.prisma.$queryRaw<{ year: number; sport: string }[]>`
+        SELECT
+          EXTRACT(YEAR FROM ("date" AT TIME ZONE 'UTC'))::int AS "year",
+          "sport"
+        FROM "Activity"
+        WHERE "user_id" = ${id}::uuid
+        GROUP BY 1, "sport"
+        ORDER BY 1, "sport"
+      `;
+      const years = new Map<number, string[]>();
+      rows.forEach(({ year, sport }) => years.set(year, [...(years.get(year) ?? []), sport]));
+      return [...years].map(([year, types]) => ({ year, types }));
     } catch (error) {
       handleServiceError(error);
     }
@@ -44,42 +53,43 @@ export class StatisticService {
     month = `${new Date().getMonth()}`,
   ) {
     try {
-      const activities = await this.prisma.activity.findMany({
-        where: {
-          userId,
-          date: {
-            ...this.metricsService.utcMonthRange(+year, +month),
+      const { gte, lt } = this.metricsService.utcMonthRange(+year, +month);
+      const [activities, groupedMetrics] = await Promise.all([
+        this.prisma.activity.findMany({
+          where: { userId, date: { gte, lt } },
+          select: {
+            duration: true,
+            distance: true,
+            speed: true,
+            date: true,
+            id: true,
+            sport: true,
           },
-        },
-        select: {
-          duration: true,
-          distance: true,
-          speed: true,
-          date: true,
-          id: true,
-          sport: true,
-        },
-      });
-      const typesOfSport = [...new Set(activities.map(({ sport }: { sport: string }) => sport))];
-      const sportsObject: Record<string, { totalDuration: number; totalDistance: number; totalItems: number }> = {};
-      typesOfSport.forEach((type) => {
-        const filteredActivitiesByType = activities.filter(({ sport }: { sport: string }) => sport === type);
-        const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(filteredActivitiesByType);
-        sportsObject[type as string] = {
-          totalDuration,
-          totalDistance,
-          totalItems,
-        };
-      });
-      const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(activities);
+        }),
+        this.prisma.$queryRaw<MonthlyMetricAggregateRow[]>`
+          SELECT
+            "sport",
+            COALESCE(SUM("duration"), 0)::double precision AS "totalDuration",
+            COALESCE(SUM("distance"), 0)::double precision AS "totalDistance",
+            COUNT(*)::int AS "totalItems"
+          FROM "Activity"
+          WHERE "user_id" = ${userId}::uuid
+            AND "date" >= ${gte}::timestamptz
+            AND "date" < ${lt}::timestamptz
+          GROUP BY ROLLUP ("sport")
+          ORDER BY "sport" NULLS FIRST
+        `,
+      ]);
+      const allMetrics = groupedMetrics.find(({ sport }) => sport === null);
+      const sportsObject = Object.fromEntries(
+        groupedMetrics
+          .filter((row): row is MonthlyMetricAggregateRow & { sport: string } => row.sport !== null)
+          .map(({ sport, ...metrics }) => [sport, this.toMetrics(metrics)]),
+      );
       return {
         activities,
         activitiesReducedBySport: {
-          all: {
-            totalDuration,
-            totalDistance,
-            totalItems,
-          },
+          all: this.toMetrics(allMetrics),
           ...sportsObject,
         },
       };
@@ -111,20 +121,35 @@ export class StatisticService {
 
   async getStatisticByYearAndCategory(userId: string) {
     try {
-      const activities = await this.prisma.activity.findMany({
-        where: { userId },
-        select: {
-          date: true,
-          duration: true,
-          distance: true,
-          speed: true,
-          sport: true,
-        },
-      });
-      if (!activities.length) {
+      const rows = await this.prisma.$queryRaw<YearCategoryMetricAggregateRow[]>`
+        SELECT
+          EXTRACT(YEAR FROM ("date" AT TIME ZONE 'UTC'))::int AS "year",
+          (EXTRACT(MONTH FROM ("date" AT TIME ZONE 'UTC')) - 1)::int AS "month",
+          "sport",
+          COALESCE(SUM("duration"), 0)::double precision / 3600000 AS "totalDuration",
+          COALESCE(SUM("distance"), 0)::double precision / 1000 AS "totalDistance",
+          COUNT(*)::int AS "totalItems"
+        FROM "Activity"
+        WHERE "user_id" = ${userId}::uuid
+        GROUP BY 1, 2, "sport"
+        ORDER BY 1, 2, "sport"
+      `;
+      if (!rows.length) {
         return { isUserHasActivities: false };
       }
-      return { isUserHasActivities: true, ...activities.reduce(reduceAllMetricsToYearCategoryMonths, {}) };
+      return {
+        isUserHasActivities: true,
+        ...buildYearCategoryStatistics(
+          rows.map((row) => ({
+            year: row.year,
+            month: row.month,
+            sport: row.sport,
+            totalDuration: this.toMetricValue(row.totalDuration),
+            totalDistance: this.toMetricValue(row.totalDistance),
+            totalItems: this.toMetricValue(row.totalItems),
+          })),
+        ),
+      };
     } catch (error) {
       handleServiceError(error);
     }
@@ -137,21 +162,23 @@ export class StatisticService {
     const firstDayDate = new Date(firstDay);
     const lastDayDate = new Date(lastDay);
     try {
-      const currentWeekActivities = await this.prisma.activity.findMany({
-        where: {
-          userId,
-          date: {
-            gte: new Date(
-              Date.UTC(firstDayDate.getUTCFullYear(), firstDayDate.getUTCMonth(), firstDayDate.getUTCDate()),
-            ),
-            lt: new Date(
-              Date.UTC(lastDayDate.getUTCFullYear(), lastDayDate.getUTCMonth(), lastDayDate.getUTCDate() + 1),
-            ),
-          },
-        },
-      });
-      const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(currentWeekActivities);
-      return { totalDuration, totalDistance, totalItems };
+      const firstDayUtc = new Date(
+        Date.UTC(firstDayDate.getUTCFullYear(), firstDayDate.getUTCMonth(), firstDayDate.getUTCDate()),
+      );
+      const lastDayUtc = new Date(
+        Date.UTC(lastDayDate.getUTCFullYear(), lastDayDate.getUTCMonth(), lastDayDate.getUTCDate() + 1),
+      );
+      const [row] = await this.prisma.$queryRaw<MetricAggregateRow[]>`
+        SELECT
+          COALESCE(SUM("duration"), 0)::double precision AS "totalDuration",
+          COALESCE(SUM("distance"), 0)::double precision AS "totalDistance",
+          COUNT(*)::int AS "totalItems"
+        FROM "Activity"
+        WHERE "user_id" = ${userId}::uuid
+          AND "date" >= ${firstDayUtc}::timestamptz
+          AND "date" < ${lastDayUtc}::timestamptz
+      `;
+      return this.toMetrics(row);
     } catch (error) {
       handleServiceError(error);
     }
@@ -159,12 +186,15 @@ export class StatisticService {
 
   async getAllActivitiesStatisticsByUserId(id: string) {
     try {
-      const activities = await this.prisma.activity.findMany({
-        where: { userId: id },
-        select: { duration: true, distance: true },
-      });
-      const { totalDistance, totalDuration, totalItems } = this.reduceMetricsFromActivities(activities);
-      return { totalDistance, totalDuration, totalItems };
+      const [row] = await this.prisma.$queryRaw<MetricAggregateRow[]>`
+        SELECT
+          COALESCE(SUM("duration"), 0)::double precision AS "totalDuration",
+          COALESCE(SUM("distance"), 0)::double precision AS "totalDistance",
+          COUNT(*)::int AS "totalItems"
+        FROM "Activity"
+        WHERE "user_id" = ${id}::uuid
+      `;
+      return this.toMetrics(row);
     } catch (error) {
       handleServiceError(error);
     }

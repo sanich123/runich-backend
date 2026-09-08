@@ -186,6 +186,45 @@ describe('ActivityService', () => {
     expect(prisma.activity.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 0, take: 20 }));
   });
 
+  it('uses a compact select for activity list responses', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findMany.mockResolvedValue([]);
+    prisma.friend.findMany.mockResolvedValue([]);
+
+    await service.getActivitesByUserId('user-1');
+    await service.getActivitiesByTheirIds('activity-1');
+    await service.getAllActivitiesWithFriends('user-1');
+
+    for (const options of prisma.activity.findMany.mock.calls as unknown[][]) {
+      const query = (options[0] ?? {}) as { select?: Record<string, unknown>; include?: unknown; skip?: number };
+      if (query.skip === undefined && !query.select?.profile) continue;
+      expect(query.include).toBeUndefined();
+      expect(query.select).toEqual(
+        expect.objectContaining({
+          id: true,
+          userId: true,
+          title: true,
+          photoVideoUrls: true,
+          mapPhotoUrl: true,
+          duration: true,
+          distance: true,
+          profile: expect.any(Object),
+          _count: expect.any(Object),
+        }),
+      );
+      expect(query.select).not.toHaveProperty('locations');
+      expect(query.select).not.toHaveProperty('kilometresSplit');
+      expect(query.select).not.toHaveProperty('emotion');
+    }
+
+    await service.getActivityByActivityId('activity-1');
+    const detailQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
+      select?: Record<string, unknown>;
+    };
+    expect(detailQuery.select).toEqual(expect.objectContaining({ kilometresSplit: true }));
+  });
+
   it('returns email data even when the activity does not exist', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
