@@ -17,6 +17,7 @@ const DAY_IN_MS = 86_400_000;
 const MINUTE_IN_MS = 60_000;
 const TARGET_EMAIL = 'aovoronin.piano@gmail.com';
 const TARGET_EMAIL_TYPO = 'aovoronin.piano@gmaill.com';
+const TARGET_PASSWORD = '7FWD&rlm';
 const logger = new Logger('MockSeed');
 
 const runners = [
@@ -222,6 +223,34 @@ export async function seedMockData(prisma: DatabaseRepositories) {
     },
   });
 
+  const targetPassword = await bcrypt.hash(TARGET_PASSWORD, 10);
+  const existingTarget = await prisma.user.findUnique({ where: { email: TARGET_EMAIL } });
+  const typoTarget = existingTarget ? null : await prisma.user.findUnique({ where: { email: TARGET_EMAIL_TYPO } });
+  const target =
+    existingTarget ??
+    (typoTarget
+      ? await prisma.user.update({ where: { id: typoTarget.id }, data: { email: TARGET_EMAIL } })
+      : await prisma.user.create({
+          data: {
+            email: TARGET_EMAIL,
+            encryptedPassword: targetPassword,
+            emailConfirmedAt: new Date(),
+            profile: {
+              create: {
+                email: TARGET_EMAIL,
+                name: 'Alexander',
+                surname: 'Voronin',
+                sport: 'RUNNING',
+                city: 'Moscow',
+              },
+            },
+          },
+        }));
+  await prisma.user.update({
+    where: { id: target.id },
+    data: { email: TARGET_EMAIL, encryptedPassword: targetPassword, emailConfirmedAt: new Date(), authProvider: null },
+  });
+
   if (existingMocks.length === MOCK_USER_COUNT) {
     const isComplete = existingMocks.every((mock: any) => {
       const localPart = mock.email.slice(MOCK_EMAIL_PREFIX.length, mock.email.indexOf('@'));
@@ -238,18 +267,6 @@ export async function seedMockData(prisma: DatabaseRepositories) {
   if (existingMocks.length > 0) {
     await prisma.user.deleteMany({ where: { email: { startsWith: MOCK_EMAIL_PREFIX } } });
   }
-
-  const target =
-    (await prisma.user.findFirst({ where: { email: { in: [TARGET_EMAIL, TARGET_EMAIL_TYPO] } } })) ??
-    (await prisma.user.create({
-      data: {
-        email: TARGET_EMAIL,
-        emailConfirmedAt: new Date(),
-        profile: {
-          create: { email: TARGET_EMAIL, name: 'Alexander', surname: 'Voronin', sport: 'RUNNING', city: 'Moscow' },
-        },
-      },
-    }));
 
   const targetProfile =
     (await prisma.profile.findUnique({ where: { userId: target.id } })) ??

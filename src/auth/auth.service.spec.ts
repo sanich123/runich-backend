@@ -163,45 +163,40 @@ describe('AuthService', () => {
     expect(dependencies.prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
   });
 
-  it('verifies tokens for valid, missing and unconfirmed users', async () => {
+  it('exchanges valid login codes and rejects invalid ones', async () => {
     const dependencies = createDependencies();
+    const tokenService = {
+      consumeEmailLoginCode: asyncMock(),
+      createSessionTokens: asyncMock(),
+    };
     const service = new AuthService(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
+      tokenService as never,
     );
 
-    dependencies.jwt.verify.mockReturnValue({});
-    await expect(service.verifyToken('token')).rejects.toBeInstanceOf(UnauthorizedException);
+    tokenService.consumeEmailLoginCode.mockRejectedValueOnce(new UnauthorizedException('Недействительный код входа'));
+    await expect(service.verifyToken('invalid-code')).rejects.toBeInstanceOf(UnauthorizedException);
 
-    const expiredTokenError = new Error('jwt expired');
-    expiredTokenError.name = 'TokenExpiredError';
-    dependencies.jwt.verify.mockImplementationOnce(() => {
-      throw expiredTokenError;
-    });
-    await expect(service.verifyToken('expired-token')).rejects.toMatchObject({
-      status: 401,
-      message: 'Срок действия токена истёк',
-    });
-
-    dependencies.jwt.verify.mockReturnValue({ userId: 'missing' });
-    dependencies.prisma.user.findUnique.mockResolvedValueOnce(null);
-    await expect(service.verifyToken('token')).rejects.toBeInstanceOf(NotFoundException);
-
-    dependencies.prisma.user.findUnique.mockResolvedValueOnce({ id: 'user-1', emailConfirmedAt: null });
-    dependencies.prisma.user.update.mockResolvedValue({});
-    await expect(service.verifyToken('token')).resolves.toEqual({
+    tokenService.consumeEmailLoginCode.mockResolvedValue('user-1');
+    tokenService.createSessionTokens.mockResolvedValue({
       userId: 'user-1',
       accessToken: 'access-token',
-      refreshToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
+    dependencies.prisma.user.update.mockResolvedValue({});
+    await expect(service.verifyToken('unconfirmed-code')).resolves.toEqual({
+      userId: 'user-1',
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
     });
     expect(dependencies.prisma.user.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
-      data: { emailConfirmedAt: expect.any(Date) },
+      data: { emailConfirmedAt: expect.any(Date), lastSignInAt: expect.any(Date) },
     });
 
-    dependencies.prisma.user.findUnique.mockResolvedValueOnce({ id: 'user-1', emailConfirmedAt: new Date() });
-    await expect(service.verifyToken('token')).resolves.toMatchObject({
+    await expect(service.verifyToken('confirmed-code')).resolves.toMatchObject({
       userId: 'user-1',
       accessToken: 'access-token',
     });
@@ -451,8 +446,18 @@ describe('AuthService', () => {
     await expectInternalServerError(service.signUp('user@example.com', 'secret123'));
     await expectInternalServerError(service.login('user@example.com', 'secret123'));
     await expectInternalServerError(service.sendLoginLinkByEmail('user@example.com'));
-    dependencies.jwt.verify.mockReturnValue({ userId: 'user-1' });
-    await expectInternalServerError(service.verifyToken('token'));
+    const verifyTokenService = {
+      consumeEmailLoginCode: asyncMock().mockResolvedValue('user-1'),
+      createSessionTokens: asyncMock(),
+    };
+    const verifyService = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+      verifyTokenService as never,
+    );
+    dependencies.prisma.user.update.mockRejectedValue(error);
+    await expectInternalServerError(verifyService.verifyToken('token'));
     await expectInternalServerError(service.confirmEmailByCode('1234', 'user@example.com'));
     await expectInternalServerError(service.getEmailCodeForPassword('user@example.com'));
     await expectInternalServerError(service.verifyPasswordChangeCode('123456', 'user@example.com'));

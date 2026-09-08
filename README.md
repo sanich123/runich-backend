@@ -67,6 +67,9 @@ Liveness is available at `/health/live`, and Railway readiness checks should use
 Production SSH access, Docker Compose logs, health checks and Strava worker
 diagnostics are documented in [OPERATIONS.md](OPERATIONS.md).
 
+Known environment and integration limitations are tracked in
+[doc/known-issues.md](doc/known-issues.md).
+
 Sensitive endpoints have route-specific rate limits. Login and registration
 allow 5 requests per minute. Email-code and password-change endpoints allow
 5 requests per 10 minutes. Strava archive imports allow 2 requests per

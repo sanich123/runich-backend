@@ -228,7 +228,9 @@ function applyOptions(
   const includes = { ...(options.include ?? {}) } as AnyRecord;
   if (select) {
     for (const [key, value] of Object.entries(select)) {
-      if (value && typeof value === 'object' && relationModels[model][key]) includes[key] = value;
+      if (key === '_count' || (value && typeof value === 'object' && relationModels[model][key])) {
+        includes[key] = value;
+      }
     }
   }
   for (const [relation, config] of Object.entries(includes)) {

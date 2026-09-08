@@ -166,48 +166,15 @@ export class AuthService {
     }
   }
 
-  async verifyToken(accessToken?: string, code?: string, metadata: SessionMetadata = {}) {
+  async verifyToken(code: string, metadata: SessionMetadata = {}) {
     try {
-      if (code) {
-        const userId = await this.tokenService.consumeEmailLoginCode(code);
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { emailConfirmedAt: new Date(), lastSignInAt: new Date() },
-        });
-        return this.tokenService.createSessionTokens(userId, metadata);
-      }
-
-      if (!accessToken) throw new UnauthorizedException('Не указан код входа');
-      const tokenInfo = this.tokenService.verifyAccessToken(accessToken) as {
-        userId?: string;
-        type?: string;
-        iat?: number;
-        exp?: number;
-      };
-      const isLegacyEmailToken =
-        !tokenInfo.type &&
-        tokenInfo.iat !== undefined &&
-        tokenInfo.exp !== undefined &&
-        tokenInfo.exp - tokenInfo.iat <= 5 * 60;
-      if (this.tokenService.hasPersistentStore() && tokenInfo.type !== 'email' && !isLegacyEmailToken) {
-        throw new UnauthorizedException('Недействительный код входа');
-      }
-      if (!tokenInfo?.userId) {
-        throw new UnauthorizedException('Информация о пользователе не была найдена');
-      }
-      const user = await this.prisma.user.findUnique({ where: { id: tokenInfo?.userId } });
-      if (!user) {
-        throw new NotFoundException('Пользователь не был найден');
-      }
-      if (!user?.emailConfirmedAt) {
-        await this.prisma.user.update({ where: { id: user.id }, data: { emailConfirmedAt: new Date() } });
-      }
-
-      return this.tokenService.createSessionTokens(user.id, metadata);
+      const userId = await this.tokenService.consumeEmailLoginCode(code);
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { emailConfirmedAt: new Date(), lastSignInAt: new Date() },
+      });
+      return this.tokenService.createSessionTokens(userId, metadata);
     } catch (error) {
-      if (error instanceof Error && error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Срок действия токена истёк');
-      }
       handleServiceError(error);
     }
   }

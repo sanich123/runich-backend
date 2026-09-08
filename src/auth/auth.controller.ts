@@ -18,7 +18,7 @@ import {
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import {
-  AccessTokenDto,
+  LoginCodeDto,
   ChangePasswordDto,
   ConfirmationCodeDto,
   EmailLoginLinkDto,
@@ -160,11 +160,11 @@ export class AuthController {
   }
 
   @Post('verify')
-  @ApiBody({ type: AccessTokenDto })
+  @ApiBody({ type: LoginCodeDto })
   @ApiOkResponse({ type: LoginEntity })
   @ApiCreatedResponse({ type: LoginEntity })
-  async verifyTokenAndAppVersion(@Body() { accessToken, code }: AccessTokenDto, @Req() request?: Request) {
-    return this.authService.verifyToken(accessToken, code, request ? this.getSessionMetadata(request) : undefined);
+  async verifyTokenAndAppVersion(@Body() { code }: LoginCodeDto, @Req() request?: Request) {
+    return this.authService.verifyToken(code, request ? this.getSessionMetadata(request) : undefined);
   }
 
   @Post('confirm-email')

@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import {
-  AccessTokenDto,
+  LoginCodeDto,
   ChangePasswordDto,
   ConfirmationCodeDto,
   EmailLoginLinkDto,
@@ -43,12 +43,13 @@ describe('request DTO validation', () => {
     await expectInvalid(RegisterUserDto, { email, password: 'short' });
     await expectInvalid(RegisterUserDto, { email, password: 12345678 });
 
-    for (const dto of [AccessTokenDto, RefreshTokenDto]) {
-      await expectValid(dto, { [dto === AccessTokenDto ? 'accessToken' : 'refreshToken']: 'token' });
+    for (const dto of [LoginCodeDto, RefreshTokenDto]) {
+      await expectValid(dto, { [dto === LoginCodeDto ? 'code' : 'refreshToken']: 'token' });
       await expectInvalid(dto, {});
-      await expectInvalid(dto, { [dto === AccessTokenDto ? 'accessToken' : 'refreshToken']: '' });
-      await expectInvalid(dto, { [dto === AccessTokenDto ? 'accessToken' : 'refreshToken']: 42 });
+      await expectInvalid(dto, { [dto === LoginCodeDto ? 'code' : 'refreshToken']: '' });
+      await expectInvalid(dto, { [dto === LoginCodeDto ? 'code' : 'refreshToken']: 42 });
     }
+    await expectInvalid(LoginCodeDto, { accessToken: 'legacy-token' });
 
     await expectValid(ConfirmationCodeDto, { confirmationCode: '123456', email });
     await expectInvalid(ConfirmationCodeDto, { confirmationCode: '123456', email: 'bad' });

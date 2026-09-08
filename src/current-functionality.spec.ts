@@ -51,7 +51,14 @@ describe('authentication', () => {
   const jwtMock = { sign: jest.fn(() => 'jwt'), verify: jest.fn() };
   const jwt = jwtMock as unknown as JwtService;
   const email = { sendConfirmationCode: jest.fn() };
-  const service = new AuthService(prisma as never, jwt, email as never);
+  const tokenService = {
+    createEmailLoginCredential: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue('jwt'),
+    createSessionTokens: jest
+      .fn<(...args: unknown[]) => Promise<unknown>>()
+      .mockResolvedValue({ userId: 'user-1', accessToken: 'jwt', refreshToken: 'jwt' }),
+    consumeEmailLoginCode: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue('user-1'),
+  };
+  const service = new AuthService(prisma as never, jwt, email as never, tokenService as never);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -102,7 +109,6 @@ describe('authentication', () => {
     });
     await expect(service.confirmEmailByCode('bad', 'user@example.com')).rejects.toBeInstanceOf(BadRequestException);
 
-    jwtMock.verify = jest.fn().mockReturnValue({ userId: 'user-1' });
     prisma.user.findUnique.mockResolvedValue({ id: 'user-1', emailConfirmedAt: null });
     await expect(service.verifyToken('token')).resolves.toMatchObject({ userId: 'user-1', accessToken: 'jwt' });
     expect(prisma.user.update).toHaveBeenCalled();

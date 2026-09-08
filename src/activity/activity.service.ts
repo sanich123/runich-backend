@@ -10,6 +10,8 @@ import { generateActivityTitle } from './activity-title';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
 import { ActivityPersistenceService } from './activity-persistence.service';
 
+const DEFAULT_ACTIVITY_PAGE_SIZE = 20;
+
 @Injectable()
 export class ActivityService {
   private readonly logger = new Logger(ActivityService.name);
@@ -206,7 +208,12 @@ export class ActivityService {
     }
   }
 
-  async getActivitesByUserId(id: string, page = '0', take = '10', currentUserId?: string) {
+  async getActivitesByUserId(
+    id: string,
+    page = '0',
+    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
+    currentUserId?: string,
+  ) {
     try {
       const activities = await this.prisma.activity.findMany({
         where: {
@@ -285,7 +292,7 @@ export class ActivityService {
     }
   }
 
-  async getAllActivitiesWithFriends(id: string, page = '0', take = '10') {
+  async getAllActivitiesWithFriends(id: string, page = '0', take = String(DEFAULT_ACTIVITY_PAGE_SIZE)) {
     try {
       const friends = await this.prisma.friend.findMany({
         where: { userId: id },

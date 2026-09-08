@@ -56,7 +56,7 @@ describe('AuthController', () => {
     await expect(controller.refresh({ refreshToken: 'refresh-token' })).resolves.toEqual({
       accessToken: 'new-access-token',
     });
-    await expect(controller.verifyTokenAndAppVersion({ accessToken: 'access-token' })).resolves.toEqual(auth);
+    await expect(controller.verifyTokenAndAppVersion({ code: 'login-code' })).resolves.toEqual(auth);
     await expect(
       controller.confirmEmailByCode({ confirmationCode: '1234', email: 'user@example.com' }),
     ).resolves.toEqual(auth);
@@ -114,7 +114,7 @@ describe('AuthController', () => {
     await expect(controller.login({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
     await expect(controller.sendLoginLinkByEmail({ email: 'user@example.com' })).rejects.toBe(error);
     await expect(controller.refresh({ refreshToken: 'refresh-token' })).rejects.toBe(error);
-    await expect(controller.verifyTokenAndAppVersion({ accessToken: 'access-token' })).rejects.toBe(error);
+    await expect(controller.verifyTokenAndAppVersion({ code: 'login-code' })).rejects.toBe(error);
     await expect(controller.confirmEmailByCode({ confirmationCode: '1234', email: 'user@example.com' })).rejects.toBe(
       error,
     );

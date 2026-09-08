@@ -13,7 +13,6 @@ describe('VkAuthService', () => {
   const tokenService = {
     createAccessToken: jest.fn(() => 'app-token'),
     createEmailLoginCredential: jest.fn(() => 'app-token'),
-    hasPersistentStore: jest.fn(() => false),
   } as unknown as ConstructorParameters<typeof VkAuthService>[2];
   let service: VkAuthService;
 
@@ -124,6 +123,6 @@ describe('VkAuthService', () => {
         data: expect.objectContaining({ email: 'vk_42@vk.local', authProvider: 'VK' }),
       }),
     );
-    expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('accessToken=app-token'));
+    expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('code=app-token'));
   });
 });

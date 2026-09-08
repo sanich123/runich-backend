@@ -162,12 +162,18 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
     expect(listResponse.body.activities.map((activity: { id: string }) => activity.id)).toEqual(
       expect.arrayContaining([activityId, createdActivityId]),
     );
+    expect(listResponse.body.activities).toEqual(
+      expect.arrayContaining([expect.objectContaining({ _count: { comments: expect.any(Number) } })]),
+    );
 
     await request(app.getHttpServer())
       .get(`/activity/activityId/${activityId}`)
       .set('Authorization', `Bearer ${visitorToken}`)
       .expect(200)
-      .expect((response) => expect(response.body.id).toBe(activityId));
+      .expect((response) => {
+        expect(response.body.id).toBe(activityId);
+        expect(response.body._count.comments).toEqual(expect.any(Number));
+      });
 
     await request(app.getHttpServer())
       .get(`/activity/${activityId}/locations`)
@@ -198,6 +204,9 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .expect(200);
     expect(allResponse.body.activities.map((activity: { id: string }) => activity.id)).toEqual(
       expect.arrayContaining([activityId, createdActivityId]),
+    );
+    expect(allResponse.body.activities).toEqual(
+      expect.arrayContaining([expect.objectContaining({ _count: { comments: expect.any(Number) } })]),
     );
 
     const updateResponse = await request(app.getHttpServer())
@@ -418,9 +427,15 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200)
       .expect((response) => expect(response.body).toMatchObject({ status: 'completed', importedActivities: 1 }));
-    await expect(
-      prisma.activity.findFirst({ where: { userId: ownerId, source: 'strava', sourceActivityId } }),
-    ).resolves.toMatchObject({ title: 'E2E run', profileId: ownerProfileId });
+    const importedActivity = await prisma.activity.findFirst({
+      where: { userId: ownerId, source: 'strava', sourceActivityId },
+    });
+    expect(importedActivity).toMatchObject({ title: 'E2E run', profileId: ownerProfileId });
+    await request(app.getHttpServer())
+      .get(`/activity/activityId/${importedActivity!.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200)
+      .expect((response) => expect(response.body._count).toEqual({ comments: 0 }));
   });
 
   it('rejects protected email endpoints without authentication and redirects OAuth errors safely', async () => {

@@ -143,7 +143,7 @@ export class VkAuthService {
       await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
       const redirect = new URL(frontendUrl);
       const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
-      redirect.searchParams.set(this.tokenService.hasPersistentStore() ? 'code' : 'accessToken', loginCredential);
+      redirect.searchParams.set('code', loginCredential);
       return response.redirect(redirect.toString());
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Неизвестная ошибка VK';

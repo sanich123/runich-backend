@@ -173,6 +173,19 @@ describe('ActivityService', () => {
     await expect(service.deleteActivityById('activity-1')).resolves.toEqual(activity);
   });
 
+  it('uses twenty activities as the default page size', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, { getAccountByUserId: asyncMock() } as never);
+    prisma.activity.findMany.mockResolvedValue([]);
+    prisma.friend.findMany.mockResolvedValue([]);
+
+    await service.getActivitesByUserId('user-1');
+    expect(prisma.activity.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 20 }));
+
+    await service.getAllActivitiesWithFriends('user-1');
+    expect(prisma.activity.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 0, take: 20 }));
+  });
+
   it('returns email data even when the activity does not exist', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
