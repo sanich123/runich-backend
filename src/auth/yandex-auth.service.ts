@@ -60,14 +60,14 @@ export class YandexAuthService {
     const email = yandexUser.default_email ?? (yandexUser.login ? `${yandexUser.login}@yandex.ru` : undefined);
     if (!email) throw new UnauthorizedException('Яндекс не вернул email пользователя');
 
-    let user = await this.prisma.users.findUnique({ where: { email } });
+    let user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      user = await this.prisma.users.create({
+      user = await this.prisma.user.create({
         data: {
           email,
-          auth_provider: 'YANDEX',
-          email_confirmed_at: new Date(),
-          created_at: new Date(),
+          authProvider: 'YANDEX',
+          emailConfirmedAt: new Date(),
+          createdAt: new Date(),
           profile: {
             create: {
               name: yandexUser.first_name ?? yandexUser.real_name?.split(' ')[0],
@@ -81,10 +81,10 @@ export class YandexAuthService {
           },
         },
       });
-    } else if (!user.email_confirmed_at) {
-      user = await this.prisma.users.update({ where: { id: user.id }, data: { email_confirmed_at: new Date() } });
+    } else if (!user.emailConfirmedAt) {
+      user = await this.prisma.user.update({ where: { id: user.id }, data: { emailConfirmedAt: new Date() } });
     }
-    await this.prisma.users.update({ where: { id: user.id }, data: { last_sign_in_at: new Date() } });
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
 
     const redirect = new URL(frontendUrl);
     const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);

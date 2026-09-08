@@ -1,6 +1,6 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { handleServiceError } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/database-errors';
 import { UserDto } from './user.dto';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
 
@@ -10,7 +10,7 @@ export class UserService {
 
   async getProfileByUserId(userId: string) {
     try {
-      return await this.prisma.profile.findUnique({ where: { user_id: userId } });
+      return await this.prisma.profile.findUnique({ where: { userId } });
     } catch (error) {
       handleServiceError(error);
     }
@@ -25,7 +25,7 @@ export class UserService {
       if (id !== currentUserId) throw new ForbiddenException('Недостаточно прав');
       const profilePhotoBlurhash = accountDto.profilePhoto ? await blurhashFromUrl(accountDto.profilePhoto) : null;
       return await this.prisma.profile.create({
-        data: { ...accountDto, profilePhotoBlurhash, user_id: id },
+        data: { ...accountDto, profilePhotoBlurhash, userId: id },
       });
     } catch (error) {
       handleServiceError(error);
@@ -34,7 +34,7 @@ export class UserService {
 
   async updateProfileByProfileId(profileId: string, currentUserId: string | UserDto, accountDto?: UserDto) {
     try {
-      const legacyCall = !accountDto;
+      const hasImplicitOwner = !accountDto;
       if (!accountDto) {
         accountDto = currentUserId as UserDto;
         currentUserId = profileId;
@@ -45,10 +45,10 @@ export class UserService {
           ? null
           : undefined;
       return await this.prisma.profile.update({
-        where: legacyCall ? { id: profileId } : { id: profileId, user_id: currentUserId as string },
+        where: hasImplicitOwner ? { id: profileId } : { id: profileId, userId: currentUserId as string },
         data: {
           ...accountDto,
-          ...(legacyCall ? {} : { profilePhotoBlurhash }),
+          ...(hasImplicitOwner ? {} : { profilePhotoBlurhash }),
           updatedAt: new Date(),
         },
       });
@@ -61,11 +61,11 @@ export class UserService {
     try {
       let targetUserId = userId;
       if (userId !== currentUserId) {
-        const legacyProfile = await this.prisma.profile.findUnique({
+        const profileById = await this.prisma.profile.findUnique({
           where: { id: userId },
-          select: { user_id: true },
+          select: { userId: true },
         });
-        if (legacyProfile?.user_id !== currentUserId) throw new ForbiddenException('Недостаточно прав');
+        if (profileById?.userId !== currentUserId) throw new ForbiddenException('Недостаточно прав');
         targetUserId = currentUserId;
       }
 
@@ -81,9 +81,9 @@ export class UserService {
       };
 
       return await this.prisma.profile.upsert({
-        where: { user_id: targetUserId },
+        where: { userId: targetUserId },
         update: data,
-        create: { ...data, user_id: targetUserId },
+        create: { ...data, userId: targetUserId },
       });
     } catch (error) {
       handleServiceError(error);

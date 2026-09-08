@@ -23,9 +23,9 @@ describe('FriendService', () => {
     await expect(service.deleteFriendById('friend-1')).resolves.toEqual({ id: 'friend-1' });
     await expect(service.addFriendByFriendId('friend-user', { userId: 'user-1' })).resolves.toEqual({ id: 'friend-3' });
     expect(prisma.friend.upsert).toHaveBeenCalledWith({
-      where: { user_id_friendId: { user_id: 'user-1', friendId: 'friend-user' } },
+      where: { userId_friendId: { userId: 'user-1', friendId: 'friend-user' } },
       update: {},
-      create: { user_id: 'user-1', friendId: 'friend-user', profileId: 'profile-1' },
+      create: { userId: 'user-1', friendId: 'friend-user', profileId: 'profile-1' },
     });
   });
 

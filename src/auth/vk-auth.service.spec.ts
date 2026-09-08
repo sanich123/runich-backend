@@ -5,7 +5,7 @@ import { VkAuthService } from './vk-auth.service';
 type RedirectResponse = { redirect: jest.Mock };
 
 describe('VkAuthService', () => {
-  const prismaMock = { users: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() } };
+  const prismaMock = { user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() } };
   const jwt = {
     sign: jest.fn(() => 'signed-state'),
     verify: jest.fn(() => ({ codeVerifier: 'verifier' })),
@@ -94,10 +94,10 @@ describe('VkAuthService', () => {
           JSON.stringify({ user: { user_id: '42', first_name: 'Ivan', last_name: 'Ivanov', city: 'Moscow' } }),
         ),
       );
-    (prismaMock.users.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
-    (prismaMock.users.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
+    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
+    (prismaMock.user.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
       id: 'user-1',
-      email_confirmed_at: new Date(),
+      emailConfirmedAt: new Date(),
     });
     const response = { redirect: jest.fn() } as RedirectResponse;
 
@@ -119,9 +119,9 @@ describe('VkAuthService', () => {
     expect(String(tokenRequest.body)).toContain('device_id=device-1');
     expect(String(tokenRequest.body)).toContain('code_verifier=verifier');
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.com/oauth2/user_info', expect.any(Object));
-    expect(prismaMock.users.create).toHaveBeenCalledWith(
+    expect(prismaMock.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ email: 'vk_42@vk.local', auth_provider: 'VK' }),
+        data: expect.objectContaining({ email: 'vk_42@vk.local', authProvider: 'VK' }),
       }),
     );
     expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('accessToken=app-token'));

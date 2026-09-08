@@ -23,10 +23,10 @@ describe('ownership authorization', () => {
     await service.delete('activity-1', 'owner-1');
 
     expect(prisma.activity.update).toHaveBeenCalledWith({
-      where: { id: 'activity-1', user_id: 'owner-1' },
+      where: { id: 'activity-1', userId: 'owner-1' },
       data: { title: 'updated' },
     });
-    expect(prisma.activity.delete).toHaveBeenCalledWith({ where: { id: 'activity-1', user_id: 'owner-1' } });
+    expect(prisma.activity.delete).toHaveBeenCalledWith({ where: { id: 'activity-1', userId: 'owner-1' } });
   });
 
   it('scopes comment and comment-like mutations to their authors', async () => {
@@ -72,7 +72,7 @@ describe('ownership authorization', () => {
     friendPrisma.friend.delete.mockResolvedValue({ id: 'friend-1' });
     const friendService = new FriendService(friendPrisma as never, {} as never);
     await friendService.deleteFriendById('friend-1', 'owner-1');
-    expect(friendPrisma.friend.delete).toHaveBeenCalledWith({ where: { id: 'friend-1', user_id: 'owner-1' } });
+    expect(friendPrisma.friend.delete).toHaveBeenCalledWith({ where: { id: 'friend-1', userId: 'owner-1' } });
   });
 
   it('scopes profile updates to the authenticated user', async () => {
@@ -81,7 +81,7 @@ describe('ownership authorization', () => {
     const service = new UserService(prisma as never);
     await service.updateProfileByProfileId('profile-1', 'owner-1', { name: 'New name' });
     expect(prisma.profile.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'profile-1', user_id: 'owner-1' } }),
+      expect.objectContaining({ where: { id: 'profile-1', userId: 'owner-1' } }),
     );
   });
 

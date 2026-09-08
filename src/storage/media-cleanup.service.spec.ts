@@ -33,12 +33,12 @@ describe('MediaCleanupService', () => {
 
     await expect(service.enqueueUserCleanup('user-1', transaction as never)).resolves.toEqual({ id: 'job-1' });
     expect(transaction.mediaCleanupJob.create).toHaveBeenCalledWith({
-      data: { user_id: 'user-1', status: MEDIA_CLEANUP_STATUS.queued },
+      data: { userId: 'user-1', status: MEDIA_CLEANUP_STATUS.queued },
     });
   });
 
   it('deletes the user prefix and marks a queued job completed', async () => {
-    database.mediaCleanupJob.findFirst.mockResolvedValue({ id: 'job-1', user_id: 'user-1' });
+    database.mediaCleanupJob.findFirst.mockResolvedValue({ id: 'job-1', userId: 'user-1' });
     storageService.deleteUserFiles.mockResolvedValue({ deleted: 3 });
 
     await expect(service.processNextJob()).resolves.toBe(true);
@@ -54,7 +54,7 @@ describe('MediaCleanupService', () => {
   });
 
   it('records S3 failures without losing the cleanup job', async () => {
-    database.mediaCleanupJob.findFirst.mockResolvedValue({ id: 'job-1', user_id: 'user-1' });
+    database.mediaCleanupJob.findFirst.mockResolvedValue({ id: 'job-1', userId: 'user-1' });
     storageService.deleteUserFiles.mockRejectedValue(new Error('S3 unavailable'));
 
     await expect(service.processNextJob()).resolves.toBe(true);

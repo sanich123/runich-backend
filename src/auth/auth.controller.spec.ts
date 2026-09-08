@@ -18,7 +18,7 @@ describe('AuthController', () => {
     changePassword: asyncMock(),
     deleteUser: asyncMock(),
   };
-  const prismaService = { users: { findUnique: asyncMock() } };
+  const prismaService = { user: { findUnique: asyncMock() } };
   const controller = new AuthController(
     authService as unknown as AuthService,
     prismaService as unknown as PrismaService,
@@ -32,7 +32,7 @@ describe('AuthController', () => {
 
   it('returns service results for every auth endpoint', async () => {
     const auth = { id: 'user-1', accessToken: 'access-token' };
-    prismaService.users.findUnique.mockResolvedValue(null);
+    prismaService.user.findUnique.mockResolvedValue(null);
     authService.signUp.mockResolvedValue({ message: 'sent' });
     authService.login.mockResolvedValue(auth);
     authService.sendLoginLinkByEmail.mockResolvedValue({ message: 'sent' });
@@ -83,7 +83,7 @@ describe('AuthController', () => {
   });
 
   it('rejects registration for an already confirmed email', async () => {
-    prismaService.users.findUnique.mockResolvedValue({ email_confirmed_at: new Date() });
+    prismaService.user.findUnique.mockResolvedValue({ emailConfirmedAt: new Date() });
 
     await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).rejects.toBeInstanceOf(
       ConflictException,
@@ -93,10 +93,10 @@ describe('AuthController', () => {
 
   it('propagates database and service errors from every auth endpoint', async () => {
     const error = new Error('service failed');
-    prismaService.users.findUnique.mockRejectedValue(error);
+    prismaService.user.findUnique.mockRejectedValue(error);
     await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
 
-    prismaService.users.findUnique.mockResolvedValue(null);
+    prismaService.user.findUnique.mockResolvedValue(null);
     authService.signUp.mockRejectedValue(error);
     authService.login.mockRejectedValue(error);
     authService.sendLoginLinkByEmail.mockRejectedValue(error);

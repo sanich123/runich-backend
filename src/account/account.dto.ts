@@ -5,9 +5,9 @@ export class ProfileDto {
   @ApiPropertyOptional({ type: String, description: 'Id value (optional)' })
   id?: string;
   @ApiPropertyOptional({ type: String, description: 'User identifier (optional)' })
-  user_id?: string;
+  userId?: string;
   @ApiPropertyOptional({ type: String, format: 'date-time', description: 'Creation date (optional)' })
-  created_at?: Date | string;
+  createdAt?: Date | string;
   @ApiPropertyOptional({ type: String, description: 'Name value (optional)' })
   name?: string | null;
   @ApiPropertyOptional({ type: String, description: 'bio value (optional)' })

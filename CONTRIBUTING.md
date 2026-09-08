@@ -61,17 +61,22 @@ Keep commits small enough to review. Explain breaking changes in the commit body
 
 ## Database changes
 
-    yarn db:migrate:dev --name describe_change
     yarn db:generate
+    yarn prisma migration plan --name describe_change
+    yarn db:migrate
 
-Review the generated migration, schema and affected queries. Do not edit generated Prisma Client files manually. Test destructive or high-volume migrations against representative data.
+Edit `prisma/contract.prisma`, emit the contract, then generate the migration
+package offline with `migration plan`. Review the generated migration, contract
+and affected queries before applying it. Do not edit `contract.json`,
+`contract.d.ts` or migration snapshots manually. Test destructive or
+high-volume migrations against representative data.
 
 ## Testing and checks
 
 Run the full quality gate before pushing:
 
     yarn typecheck
-    yarn eslint src
+    yarn eslint src integration
     yarn build
     yarn test:ci
     yarn test:cov
@@ -88,7 +93,7 @@ data. Keep the client-side reduction in place; do not bypass these limits by
 raising the global parser limit for a single large route.
 
 The test, coverage and typecheck scripts run `yarn db:generate` before
-executing, so generated Prisma Client code cannot become stale in CI.
+executing, so generated Prisma 8 contract artifacts cannot become stale in CI.
 
 ## Pull requests
 

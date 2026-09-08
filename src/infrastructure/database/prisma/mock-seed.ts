@@ -1,8 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- repository payloads are intentionally dynamic at this boundary. */
 import { randomUUID } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 import { Logger } from '@nestjs/common';
 
-import { Prisma, PrismaClient } from '../generated/prisma/client';
+import type { DatabaseRepositories } from './database-repository';
+
+type AnyRecord = Record<string, any>;
 
 const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
 const MOCK_SEED_VERSION = 'runich-mock-v8';
@@ -148,7 +151,12 @@ const commentTexts = [
   'Классный результат.',
 ];
 
-type MockUser = Prisma.UsersGetPayload<{ include: { profile: true } }>;
+type MockUser = {
+  id: string;
+  email: string;
+  profile?: { id: string; bio?: string | null; [key: string]: unknown } | null;
+  [key: string]: any;
+};
 type SeedUser = { id: string; profile: NonNullable<MockUser['profile']> };
 
 function random(seed: number, max: number) {
@@ -203,8 +211,8 @@ async function createManyInBatches<T>(items: T[], createMany: (data: T[]) => Pro
   }
 }
 
-export async function seedMockData(prisma: PrismaClient) {
-  const existingMocks = await prisma.users.findMany({
+export async function seedMockData(prisma: DatabaseRepositories) {
+  const existingMocks = await prisma.user.findMany({
     where: { email: { startsWith: MOCK_EMAIL_PREFIX } },
     select: {
       id: true,
@@ -215,7 +223,7 @@ export async function seedMockData(prisma: PrismaClient) {
   });
 
   if (existingMocks.length === MOCK_USER_COUNT) {
-    const isComplete = existingMocks.every((mock) => {
+    const isComplete = existingMocks.every((mock: any) => {
       const localPart = mock.email.slice(MOCK_EMAIL_PREFIX.length, mock.email.indexOf('@'));
       const userIndex = Number(localPart) - 1;
       return (
@@ -228,15 +236,15 @@ export async function seedMockData(prisma: PrismaClient) {
     if (isComplete) return;
   }
   if (existingMocks.length > 0) {
-    await prisma.users.deleteMany({ where: { email: { startsWith: MOCK_EMAIL_PREFIX } } });
+    await prisma.user.deleteMany({ where: { email: { startsWith: MOCK_EMAIL_PREFIX } } });
   }
 
   const target =
-    (await prisma.users.findFirst({ where: { email: { in: [TARGET_EMAIL, TARGET_EMAIL_TYPO] } } })) ??
-    (await prisma.users.create({
+    (await prisma.user.findFirst({ where: { email: { in: [TARGET_EMAIL, TARGET_EMAIL_TYPO] } } })) ??
+    (await prisma.user.create({
       data: {
         email: TARGET_EMAIL,
-        email_confirmed_at: new Date(),
+        emailConfirmedAt: new Date(),
         profile: {
           create: { email: TARGET_EMAIL, name: 'Alexander', surname: 'Voronin', sport: 'RUNNING', city: 'Moscow' },
         },
@@ -244,10 +252,10 @@ export async function seedMockData(prisma: PrismaClient) {
     }));
 
   const targetProfile =
-    (await prisma.profile.findUnique({ where: { user_id: target.id } })) ??
+    (await prisma.profile.findUnique({ where: { userId: target.id } })) ??
     (await prisma.profile.create({
       data: {
-        user_id: target.id,
+        userId: target.id,
         email: target.email,
         name: 'Alexander',
         surname: 'Voronin',
@@ -257,11 +265,11 @@ export async function seedMockData(prisma: PrismaClient) {
     }));
 
   const sourceActivities = await prisma.activity.findMany({
-    where: { user_id: target.id },
+    where: { userId: target.id },
     select: { photoVideoUrls: true, mapPhotoUrl: true, locations: true, kilometresSplit: true },
     orderBy: { date: 'desc' },
   });
-  const sourcePhotoUrls = sourceActivities.flatMap((activity) => [
+  const sourcePhotoUrls = sourceActivities.flatMap((activity: any) => [
     ...extractPhotoUrls(activity.photoVideoUrls),
     ...(activity.mapPhotoUrl ? [activity.mapPhotoUrl] : []),
   ]);
@@ -272,11 +280,11 @@ export async function seedMockData(prisma: PrismaClient) {
   for (let index = 0; index < MOCK_USER_COUNT; index += 1) {
     const { name, surname, city } = mockRunner(index);
     const email = `${MOCK_EMAIL_PREFIX}${String(index + 1).padStart(3, '0')}@runich.app`;
-    const user = await prisma.users.create({
+    const user = await prisma.user.create({
       data: {
         email,
-        encrypted_password: password,
-        email_confirmed_at: new Date(),
+        encryptedPassword: password,
+        emailConfirmedAt: new Date(),
         profile: {
           create: {
             email,
@@ -313,7 +321,7 @@ export async function seedMockData(prisma: PrismaClient) {
   for (const [userIndex, user] of mockUsers.entries()) {
     const profile = user.profile!;
     const activityCount = mockActivityCount(userIndex);
-    const activityRows: Prisma.ActivityCreateManyInput[] = [];
+    const activityRows: AnyRecord[] = [];
 
     for (let activityIndex = 0; activityIndex < activityCount; activityIndex += 1) {
       const sourceActivity = sourceActivities.length
@@ -325,7 +333,7 @@ export async function seedMockData(prisma: PrismaClient) {
 
       activityRows.push({
         id: randomUUID(),
-        user_id: user.id,
+        userId: user.id,
         profileId: profile.id,
         title: `${['Morning run', 'Tempo run', 'Long run', 'Recovery run'][activityIndex % 4]} #${activityIndex + 1}`,
         description: 'Mock activity for the Runich feed',
@@ -339,15 +347,13 @@ export async function seedMockData(prisma: PrismaClient) {
         emotion: ['ENERGETIC', 'HAPPY', 'CALM'][activityIndex % 3],
         isPublic: true,
         photoVideoUrls: [{ url: photo, thumbnail: photo }],
-        locations: sourceActivity?.locations
-          ? (sourceActivity.locations as Prisma.InputJsonValue)
-          : (fallbackLocations(userIndex, activityIndex) as Prisma.InputJsonValue),
+        locations: sourceActivity?.locations ? sourceActivity.locations : fallbackLocations(userIndex, activityIndex),
         kilometresSplit: sourceActivity?.kilometresSplit
-          ? (sourceActivity.kilometresSplit as Prisma.InputJsonValue)
-          : ([
+          ? sourceActivity.kilometresSplit
+          : [
               { kilometre: 1, pace: 280 + random(userIndex + activityIndex, 45) },
               { kilometre: 2, pace: 285 + random(userIndex + activityIndex + 20, 45) },
-            ] as Prisma.InputJsonValue),
+            ],
       });
     }
 
@@ -356,9 +362,9 @@ export async function seedMockData(prisma: PrismaClient) {
 
     for (const [activityIndex, activity] of activityRows.entries()) {
       const activityDate = new Date(activity.date ?? Date.now());
-      const activityLikeRows: Prisma.LikeCreateManyInput[] = [];
-      const commentRows: Prisma.CommentCreateManyInput[] = [];
-      const commentLikeRows: Prisma.CommentLikeCreateManyInput[] = [];
+      const activityLikeRows: AnyRecord[] = [];
+      const commentRows: AnyRecord[] = [];
+      const commentLikeRows: AnyRecord[] = [];
       const activityLikeCount = random((userIndex + 1) * 20_000 + activityIndex, MAX_MOCK_RELATION_COUNT);
 
       for (let likeIndex = 0; likeIndex < activityLikeCount; likeIndex += 1) {
@@ -416,7 +422,7 @@ export async function seedMockData(prisma: PrismaClient) {
   const followerCapacity = new Map(
     allUsers.map((user, userIndex) => [user.id, random(600_000 + userIndex, MAX_MOCK_RELATION_COUNT)]),
   );
-  const friendRows: Prisma.FriendCreateManyInput[] = [];
+  const friendRows: AnyRecord[] = [];
 
   for (const [userIndex, user] of allUsers.entries()) {
     const followCount = random(500_000 + userIndex, MAX_MOCK_RELATION_COUNT);
@@ -434,14 +440,14 @@ export async function seedMockData(prisma: PrismaClient) {
     for (const friendId of followedIds) {
       const friend = usersById.get(friendId);
       if (!friend) throw new Error(`Не найден профиль тестового пользователя: ${friendId}`);
-      friendRows.push({ id: randomUUID(), user_id: user.id, friendId, profileId: friend.profile.id });
+      friendRows.push({ id: randomUUID(), userId: user.id, friendId, profileId: friend.profile.id });
     }
   }
 
   await createManyInBatches(friendRows, (data) => prisma.friend.createMany({ data }));
 
   await prisma.profile.updateMany({
-    where: { user_id: { in: mockUsers.map((user) => user.id) } },
+    where: { userId: { in: mockUsers.map((user) => user.id) } },
     data: { bio: MOCK_SEED_VERSION },
   });
 

@@ -2,7 +2,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ActivityDto } from './activity.dto';
-import { handleServiceError } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { chunkArray } from 'src/common/parsers/chunk-array';
@@ -32,10 +32,10 @@ export class ActivityService {
 
     const activity = await this.prisma.activity.findUnique({
       where: { id },
-      select: { user_id: true, isPublic: true },
+      select: { userId: true, isPublic: true },
     });
 
-    return Boolean(activity && (activity.user_id === currentUserId || activity.isPublic === true));
+    return Boolean(activity && (activity.userId === currentUserId || activity.isPublic === true));
   }
 
   async createActivity(activityDto: ActivityDto, id: string) {
@@ -57,7 +57,7 @@ export class ActivityService {
       const mapPhotoUrlBlurhash = activityDto.mapPhotoUrl ? await blurhashFromUrl(activityDto.mapPhotoUrl) : null;
 
       const data = {
-        user_id: id,
+        userId: id,
         profileId: `${account?.id}`,
         ...activityDto,
         title: activityDto.title?.trim()
@@ -77,7 +77,7 @@ export class ActivityService {
 
   async createActivitiesFromMigrationArchive(
     activities: (ActivityDto & {
-      user_id: string;
+      userId: string;
       profileId: string;
       source: 'strava';
       sourceActivityId: string;
@@ -130,12 +130,12 @@ export class ActivityService {
       select: {
         locations: true,
         kilometresSplit: true,
-        user_id: true,
+        userId: true,
         isPublic: true,
       },
     });
     if (!activity || !currentUserId) return activity;
-    if (activity.user_id !== currentUserId && activity.isPublic !== true) return null;
+    if (activity.userId !== currentUserId && activity.isPublic !== true) return null;
     return { locations: activity.locations, kilometresSplit: activity.kilometresSplit };
   }
 
@@ -149,7 +149,7 @@ export class ActivityService {
           date: true,
           sport: true,
           id: true,
-          user_id: true,
+          userId: true,
           photoVideoUrls: true,
           mapPhotoUrl: true,
           mapPhotoUrlBlurhash: true,
@@ -166,7 +166,7 @@ export class ActivityService {
               profilePhoto: true,
               profilePhotoBlurhash: true,
               emailNotifications: true,
-              users: { select: { email: true } },
+              user: { select: { email: true } },
             },
           },
           _count: {
@@ -176,7 +176,7 @@ export class ActivityService {
           },
         },
       });
-      if (activity && currentUserId && activity.user_id !== currentUserId && activity.isPublic !== true) {
+      if (activity && currentUserId && activity.userId !== currentUserId && activity.isPublic !== true) {
         return null;
       }
       return activity;
@@ -190,7 +190,7 @@ export class ActivityService {
       const photos = await this.prisma.activity.findMany({
         //@ts-ignore
         where: {
-          user_id: id,
+          userId: id,
           // @ts-ignore Prisma's generated JSON filter type does not accept SQL NULL here.
           photoVideoUrls: { not: null },
           ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
@@ -198,7 +198,7 @@ export class ActivityService {
         orderBy: { date: 'desc' },
         select: { photoVideoUrls: true },
       });
-      const flattedPhotos = photos?.map(({ photoVideoUrls }) => photoVideoUrls).flat();
+      const flattedPhotos = photos?.map(({ photoVideoUrls }: { photoVideoUrls?: unknown }) => photoVideoUrls).flat();
       const slicedPhotos = flattedPhotos?.slice(0, Number(take));
       return { photos: slicedPhotos, isLastPage: flattedPhotos?.length <= slicedPhotos?.length };
     } catch (error) {
@@ -210,7 +210,7 @@ export class ActivityService {
     try {
       const activities = await this.prisma.activity.findMany({
         where: {
-          user_id: id,
+          userId: id,
           ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
         },
         orderBy: { date: 'desc' },
@@ -257,7 +257,7 @@ export class ActivityService {
           date: true,
           sport: true,
           id: true,
-          user_id: true,
+          userId: true,
           photoVideoUrls: true,
           mapPhotoUrl: true,
           mapPhotoUrlBlurhash: true,
@@ -288,12 +288,12 @@ export class ActivityService {
   async getAllActivitiesWithFriends(id: string, page = '0', take = '10') {
     try {
       const friends = await this.prisma.friend.findMany({
-        where: { user_id: id },
+        where: { userId: id },
         select: { friendId: true },
       });
-      const ids = friends.map(({ friendId }) => friendId);
+      const ids = friends.map(({ friendId }: { friendId: string }) => friendId);
       const activities = await this.prisma.activity.findMany({
-        where: { user_id: { in: [...ids, id] }, isPublic: true },
+        where: { userId: { in: [...ids, id] }, isPublic: true },
         orderBy: { date: 'desc' },
         skip: Number(page) * Number(take),
         take: Number(take),
@@ -303,7 +303,7 @@ export class ActivityService {
           date: true,
           sport: true,
           id: true,
-          user_id: true,
+          userId: true,
           photoVideoUrls: true,
           mapPhotoUrl: true,
           mapPhotoUrlBlurhash: true,
@@ -317,7 +317,7 @@ export class ActivityService {
               profilePhoto: true,
               profilePhotoBlurhash: true,
               emailNotifications: true,
-              users: { select: { email: true } },
+              user: { select: { email: true } },
             },
           },
           _count: {
@@ -346,7 +346,7 @@ export class ActivityService {
       const activity = await this.prisma.activity.findUnique({
         where: { id: activityId },
         select: {
-          users: {
+          user: {
             select: {
               email: true,
             },
@@ -363,7 +363,7 @@ export class ActivityService {
           mapPhotoUrl: true,
         },
       });
-      return { profile: activity?.profile, email: activity?.users.email, mapPhotoUrl: activity?.mapPhotoUrl };
+      return { profile: activity?.profile, email: activity?.user.email, mapPhotoUrl: activity?.mapPhotoUrl };
     } catch (error) {
       handleServiceError(error);
     }

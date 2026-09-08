@@ -20,13 +20,11 @@ describe('PrismaService', () => {
 
   it('connects during module initialization when mock seeding is disabled', async () => {
     const connect = jest.spyOn(service, '$connect').mockResolvedValue(undefined);
-    const on = jest.spyOn(service, '$on').mockImplementation(() => service as never);
     const originalSeedFlag = process.env.SEED_MOCK_DATA;
     delete process.env.SEED_MOCK_DATA;
 
     await expect(service.onModuleInit()).resolves.toBeUndefined();
     expect(connect).toHaveBeenCalledTimes(1);
-    expect(on).toHaveBeenCalledTimes(4);
 
     if (originalSeedFlag === undefined) delete process.env.SEED_MOCK_DATA;
     else process.env.SEED_MOCK_DATA = originalSeedFlag;

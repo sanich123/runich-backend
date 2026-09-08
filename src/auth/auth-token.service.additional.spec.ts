@@ -16,19 +16,19 @@ function jwtMock() {
 function session() {
   return {
     id: 'session-1',
-    user_id: 'user-1',
-    refresh_hash: createHash('sha256').update('refresh-token').digest('hex'),
-    revoked_at: null,
-    ip_address: 'old-ip',
-    user_agent: 'old-agent',
-    device_model: 'old-model',
+    userId: 'user-1',
+    refreshHash: createHash('sha256').update('refresh-token').digest('hex'),
+    revokedAt: null,
+    ipAddress: 'old-ip',
+    userAgent: 'old-agent',
+    deviceModel: 'old-model',
     manufacturer: 'old-manufacturer',
-    os_name: 'old-os',
-    os_version: 'old-version',
-    device_type: 'old-device',
-    app_version: 'old-app',
-    app_build: 'old-build',
-    last_seen_at: new Date(),
+    osName: 'old-os',
+    osVersion: 'old-version',
+    deviceType: 'old-device',
+    appVersion: 'old-app',
+    appBuild: 'old-build',
+    lastSeenAt: new Date(),
   };
 }
 
@@ -59,22 +59,22 @@ describe('AuthTokenService persistence branches', () => {
     const code = await service.createEmailLoginCredential('user-1');
     expect(code).toEqual(expect.any(String));
     expect(prisma.authExchange.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ user_id: 'user-1', purpose: 'email_login' }),
+      data: expect.objectContaining({ userId: 'user-1', purpose: 'email_login' }),
     });
-    const createCall = prisma.authExchange.create.mock.calls[0]?.[0] as { data: { code_hash: string } };
-    expect(createCall.data.code_hash).not.toBe(code);
+    const createCall = prisma.authExchange.create.mock.calls[0]?.[0] as { data: { codeHash: string } };
+    expect(createCall.data.codeHash).not.toBe(code);
 
     const transaction = {
       authExchange: {
         updateMany: asyncMock().mockResolvedValue({ count: 1 }),
-        findUnique: asyncMock().mockResolvedValue({ user_id: 'user-1' }),
+        findUnique: asyncMock().mockResolvedValue({ userId: 'user-1' }),
       },
     };
     prisma.$transaction.mockImplementation((async (callback: (tx: typeof transaction) => unknown) =>
       callback(transaction)) as never);
     await expect(service.consumeEmailLoginCode(code)).resolves.toBe('user-1');
     expect(transaction.authExchange.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ code_hash: expect.any(String) }) }),
+      expect.objectContaining({ where: expect.objectContaining({ codeHash: expect.any(String) }) }),
     );
   });
 
@@ -122,7 +122,7 @@ describe('AuthTokenService persistence branches', () => {
       }),
     ).resolves.toMatchObject({ userId: 'user-1', accessToken: 'signed-token', refreshToken: 'signed-token' });
     expect(prisma.userSession.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ id: expect.any(String), user_id: 'user-1', device_id: 'device-1' }),
+      data: expect.objectContaining({ id: expect.any(String), userId: 'user-1', deviceId: 'device-1' }),
     });
   });
 
@@ -152,18 +152,18 @@ describe('AuthTokenService persistence branches', () => {
       data: Record<string, string>;
     };
     expect(createData.data).toMatchObject({
-      device_id: 'd'.repeat(128),
-      device_name: 'n'.repeat(255),
+      deviceId: 'd'.repeat(128),
+      deviceName: 'n'.repeat(255),
       platform: 'p'.repeat(64),
-      device_model: 'm'.repeat(128),
+      deviceModel: 'm'.repeat(128),
       manufacturer: 'f'.repeat(128),
-      os_name: 'o'.repeat(64),
-      os_version: 'v'.repeat(64),
-      device_type: 't'.repeat(64),
-      app_version: 'a'.repeat(32),
-      app_build: 'b'.repeat(32),
-      user_agent: 'u'.repeat(512),
-      ip_address: 'i'.repeat(128),
+      osName: 'o'.repeat(64),
+      osVersion: 'v'.repeat(64),
+      deviceType: 't'.repeat(64),
+      appVersion: 'a'.repeat(32),
+      appBuild: 'b'.repeat(32),
+      userAgent: 'u'.repeat(512),
+      ipAddress: 'i'.repeat(128),
     });
   });
 
@@ -185,15 +185,15 @@ describe('AuthTokenService persistence branches', () => {
       refreshToken: 'signed-token',
     });
     expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
-      where: expect.objectContaining({ id: 'session-1', user_id: 'user-1', revoked_at: null }),
-      data: expect.objectContaining({ ip_address: 'new-ip', device_model: 'new-model' }),
+      where: expect.objectContaining({ id: 'session-1', userId: 'user-1', revokedAt: null }),
+      data: expect.objectContaining({ ipAddress: 'new-ip', deviceModel: 'new-model' }),
     });
   });
 
   it.each([
     ['missing session', null],
-    ['revoked session', { ...session(), revoked_at: new Date() }],
-    ['different refresh hash', { ...session(), refresh_hash: 'different' }],
+    ['revoked session', { ...session(), revokedAt: new Date() }],
+    ['different refresh hash', { ...session(), refreshHash: 'different' }],
   ])('rejects a %s', async (_description, value) => {
     const jwt = jwtMock();
     jwt.verify.mockReturnValue({ userId: 'user-1', type: 'refresh', sessionId: 'session-1' });

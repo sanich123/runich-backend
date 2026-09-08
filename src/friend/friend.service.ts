@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { handleServiceError, isPrismaUniqueConstraintError } from 'src/common/utils/prisma-errors';
+import { handleServiceError, isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class FriendService {
   async getUsersYouFollowByUserId(id: string) {
     try {
       return await this.prismaService.friend.findMany({
-        where: { user_id: id },
+        where: { userId: id },
         include: {
           profile: {
             select: {
@@ -34,7 +34,7 @@ export class FriendService {
 
   async deleteFriendById(id: string, userId?: string) {
     try {
-      return await this.prismaService.friend.delete({ where: userId ? { id, user_id: userId } : { id } });
+      return await this.prismaService.friend.delete({ where: userId ? { id, userId } : { id } });
     } catch (error) {
       handleServiceError(error);
     }
@@ -45,7 +45,7 @@ export class FriendService {
       return await this.prismaService.friend.findMany({
         where: { friendId: id },
         include: {
-          users: {
+          user: {
             include: {
               profile: {
                 select: {
@@ -69,15 +69,15 @@ export class FriendService {
       const ownerId = typeof currentUserId === 'string' ? currentUserId : currentUserId.userId;
       const profile = await this.accountService.getAccountByUserId(id);
       if (!profile) throw new NotFoundException('Профиль пользователя не найден: userId');
-      const where = { user_id_friendId: { user_id: ownerId, friendId: id } };
+      const where = { userId_friendId: { userId: ownerId, friendId: id } };
       try {
         await this.prismaService.friend.upsert({
           where,
           update: {},
-          create: { user_id: ownerId, friendId: id, profileId: profile.id },
+          create: { userId: ownerId, friendId: id, profileId: profile.id },
         });
       } catch (error) {
-        if (!isPrismaUniqueConstraintError(error)) throw error;
+        if (!isUniqueConstraintError(error)) throw error;
       }
       return await this.prismaService.friend.findUnique({ where });
     } catch (error) {

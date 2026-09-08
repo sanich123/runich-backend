@@ -1,13 +1,9 @@
 import 'dotenv/config';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/infrastructure/database/generated/prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createDatabaseRepositories } from '../../src/infrastructure/database/prisma/database-repository';
+import { databaseClient } from '../../src/infrastructure/database/prisma/client';
 
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({
-    connectionString: process.env.DATABASE_URL!,
-  }),
-});
+const prisma = createDatabaseRepositories(databaseClient);
 
 const PHOTOS_PER_USER = 100;
 const DAY_IN_MS = 86_400_000;
@@ -18,10 +14,10 @@ function seedPhotoUrl(userId: string, photoIndex: number) {
 
 async function seedPhotosForUser(user: { id: string; email: string }) {
   const profile = await prisma.profile.upsert({
-    where: { user_id: user.id },
+    where: { userId: user.id },
     update: {},
     create: {
-      user_id: user.id,
+      userId: user.id,
       email: user.email,
     },
   });
@@ -31,7 +27,7 @@ async function seedPhotosForUser(user: { id: string; email: string }) {
       const photo = seedPhotoUrl(user.id, photoIndex);
 
       return {
-        user_id: user.id,
+        userId: user.id,
         profileId: profile.id,
         title: `Seed photo #${photoIndex + 1}`,
         sport: 'RUNNING',
@@ -50,25 +46,26 @@ async function seedPhotosForUser(user: { id: string; email: string }) {
 }
 
 async function main() {
+  await databaseClient.connect();
   const password1 = await bcrypt.hash('7FWD&rlm', 10);
   const password2 = await bcrypt.hash('7FWD&rlm', 10);
   const seedUserEmail = process.env.SEED_USER_EMAIL ?? 'demo@runich.app';
 
-  const user1 = await prisma.users.upsert({
+  const user1 = await prisma.user.upsert({
     where: { email: seedUserEmail },
-    update: { encrypted_password: password1 },
+    update: { encryptedPassword: password1 },
     create: {
       email: seedUserEmail,
-      encrypted_password: password1,
+      encryptedPassword: password1,
     },
   });
 
-  const user2 = await prisma.users.upsert({
+  const user2 = await prisma.user.upsert({
     where: { email: 'varon-in@yandex.ru' },
-    update: { encrypted_password: password2 },
+    update: { encryptedPassword: password2 },
     create: {
       email: 'varon-in@yandex.ru',
-      encrypted_password: password2,
+      encryptedPassword: password2,
     },
   });
   await Promise.all([seedPhotosForUser(user1), seedPhotosForUser(user2)]);
@@ -80,9 +77,9 @@ async function main() {
 }
 
 main()
-  .then(async () => await prisma.$disconnect())
+  .then(async () => await databaseClient.close())
   .catch(async (e) => {
     console.error(e);
-    await prisma.$disconnect();
+    await databaseClient.close();
     process.exit(1);
   });

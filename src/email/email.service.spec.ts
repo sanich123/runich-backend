@@ -34,7 +34,7 @@ describe('EmailService', () => {
     profile: { name: string | null; surname: string | null } | null;
   };
   const findUnique = jest.fn<() => Promise<FeedbackUser | null>>();
-  const prisma = { users: { findUnique } };
+  const prisma = { user: { findUnique } };
 
   beforeEach(() => {
     process.env.YANDEX_SMTP_USER = 'Runich.app@ya.ru';

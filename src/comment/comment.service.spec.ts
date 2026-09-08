@@ -29,7 +29,7 @@ describe('CommentService', () => {
     prisma.comment.delete.mockResolvedValue(comment);
     prisma.comment.update.mockResolvedValue(comment);
     prisma.comment.findUnique.mockResolvedValue({
-      profile: { users: { email: 'user@example.com' } },
+      profile: { user: { email: 'user@example.com' } },
       comment: 'Hello',
     });
     prisma.commentLike.upsert.mockResolvedValue(like);
@@ -47,7 +47,7 @@ describe('CommentService', () => {
     await expect(service.deleteCommentByCommentId('comment-1')).resolves.toEqual(comment);
     await expect(service.updateCommentByCommentId('Updated', 'comment-1')).resolves.toEqual(comment);
     await expect(service.getCommentByCommentId('comment-1')).resolves.toEqual({
-      profile: { users: { email: 'user@example.com' } },
+      profile: { user: { email: 'user@example.com' } },
       email: 'user@example.com',
       comment: 'Hello',
     });

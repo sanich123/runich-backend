@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { handleServiceError } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/database-errors';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
@@ -65,7 +65,7 @@ export class CommentService {
               profilePhoto: true,
               profilePhotoBlurhash: true,
               emailNotifications: true,
-              users: { select: { email: true } },
+              user: { select: { email: true } },
             },
           },
           commentLike: {
@@ -143,7 +143,7 @@ export class CommentService {
         include: {
           profile: {
             include: {
-              users: {
+              user: {
                 select: {
                   email: true,
                 },
@@ -152,7 +152,7 @@ export class CommentService {
           },
         },
       });
-      return { profile: comment?.profile, email: comment?.profile.users.email, comment: comment?.comment };
+      return { profile: comment?.profile, email: comment?.profile.user.email, comment: comment?.comment };
     } catch (error) {
       handleServiceError(error);
     }

@@ -39,19 +39,19 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
     const suffix = randomUUID();
     ownerEmail = `e2e-api-owner-${suffix}@example.com`;
 
-    const owner = await prisma.users.create({
+    const owner = await prisma.user.create({
       data: { email: ownerEmail, profile: { create: {} } },
       include: { profile: true },
     });
-    const visitor = await prisma.users.create({
+    const visitor = await prisma.user.create({
       data: { email: `e2e-api-visitor-${suffix}@example.com`, profile: { create: {} } },
       include: { profile: true },
     });
-    const target = await prisma.users.create({
+    const target = await prisma.user.create({
       data: { email: `e2e-api-target-${suffix}@example.com`, profile: { create: {} } },
       include: { profile: true },
     });
-    const profileless = await prisma.users.create({
+    const profileless = await prisma.user.create({
       data: { email: `e2e-api-profileless-${suffix}@example.com` },
     });
 
@@ -64,7 +64,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
 
     const activity = await prisma.activity.create({
       data: {
-        user_id: owner.id,
+        userId: owner.id,
         profileId: owner.profile!.id,
         date: activityDate,
         title: 'API smoke activity',
@@ -91,7 +91,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
 
   afterAll(async () => {
     if (prisma && ownerId && visitorId && targetId && profilelessId) {
-      await prisma.users.deleteMany({ where: { id: { in: [ownerId, visitorId, targetId, profilelessId] } } });
+      await prisma.user.deleteMany({ where: { id: { in: [ownerId, visitorId, targetId, profilelessId] } } });
     }
     await app?.close();
   });
@@ -127,14 +127,14 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .set('Authorization', `Bearer ${profilelessToken}`)
       .send({ name: 'Created', surname: 'Profile' })
       .expect(201);
-    expect(createResponse.body).toMatchObject({ user_id: profilelessId, name: 'Created' });
+    expect(createResponse.body).toMatchObject({ userId: profilelessId, name: 'Created' });
 
     const filterResponse = await request(app.getHttpServer())
       .get('/profile/filter')
       .query({ email: ownerEmail, page: '0', size: '10' })
       .set('Authorization', `Bearer ${visitorToken}`)
       .expect(200);
-    expect(filterResponse.body.items.map((profile: { user_id: string }) => profile.user_id)).toContain(ownerId);
+    expect(filterResponse.body.items.map((profile: { userId: string }) => profile.userId)).toContain(ownerId);
   });
 
   it('covers activity create, read, update, query and delete endpoints', async () => {
@@ -152,7 +152,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       })
       .expect(201);
     const createdActivityId = createResponse.body.id as string;
-    expect(createResponse.body).toMatchObject({ user_id: ownerId, title: 'Created through API' });
+    expect(createResponse.body).toMatchObject({ userId: ownerId, title: 'Created through API' });
 
     const listResponse = await request(app.getHttpServer())
       .get(`/activity/${ownerId}`)
@@ -361,7 +361,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .expect({ updated: true });
 
     const session = await prisma.userSession.findUnique({ where: { id: tokenPayload!.sessionId } });
-    expect(session).toMatchObject({ last_latitude: 55.75, last_longitude: 37.61 });
+    expect(session).toMatchObject({ lastLatitude: 55.75, lastLongitude: 37.61 });
 
     await request(app.getHttpServer()).post('/auth/by-email-link').send({ email: 'missing@example.com' }).expect(404);
     await request(app.getHttpServer())
@@ -419,7 +419,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .expect(200)
       .expect((response) => expect(response.body).toMatchObject({ status: 'completed', importedActivities: 1 }));
     await expect(
-      prisma.activity.findFirst({ where: { user_id: ownerId, source: 'strava', sourceActivityId } }),
+      prisma.activity.findFirst({ where: { userId: ownerId, source: 'strava', sourceActivityId } }),
     ).resolves.toMatchObject({ title: 'E2E run', profileId: ownerProfileId });
   });
 

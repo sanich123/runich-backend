@@ -23,7 +23,7 @@ type EnqueueMigrationInput = {
 
 type MigrationJob = {
   id: string;
-  user_id: string;
+  userId: string;
   profileId: string;
   archivePath: string;
   status: string;
@@ -39,7 +39,7 @@ type MigrationJob = {
 
 type MigratedActivity = ActivityDto & {
   id: string;
-  user_id: string;
+  userId: string;
   profileId: string;
   source: 'strava';
   sourceActivityId: string;
@@ -74,7 +74,7 @@ export class ActivityMigrationService {
   async enqueue(input: EnqueueMigrationInput) {
     const job = await this.prisma.activityMigrationJob.create({
       data: {
-        user_id: input.userId,
+        userId: input.userId,
         profileId: input.profileId,
         archivePath: input.archivePath,
         status: ACTIVITY_MIGRATION_STATUS.queued,
@@ -85,7 +85,7 @@ export class ActivityMigrationService {
   }
 
   async getJobForUser(jobId: string, userId: string) {
-    const job = await this.prisma.activityMigrationJob.findFirst({ where: { id: jobId, user_id: userId } });
+    const job = await this.prisma.activityMigrationJob.findFirst({ where: { id: jobId, userId } });
     if (!job) throw new NotFoundException('Задача миграции не найдена');
     return this.toResponse(job);
   }
@@ -201,7 +201,7 @@ export class ActivityMigrationService {
         const sourceBatch = parsedActivities.slice(offset, offset + this.batchSize);
         const mappedBatch = await mapActivitiesWithCoordinates({
           parsedActivities: sourceBatch,
-          userId: job.user_id,
+          userId: job.userId,
           profileId: job.profileId,
           migrationDirectory: workDirectory,
         });

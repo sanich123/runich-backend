@@ -27,35 +27,35 @@ describe('UserService', () => {
   it('updates or creates a profile by the authenticated user id', async () => {
     const prisma = createPrismaMock();
     const service = new UserService(prisma as never);
-    prisma.profile.upsert.mockResolvedValue({ id: 'profile-1', user_id: 'user-1', name: 'Ann' });
+    prisma.profile.upsert.mockResolvedValue({ id: 'profile-1', userId: 'user-1', name: 'Ann' });
 
     await expect(service.updateProfileByUserId('user-1', 'user-1', { name: 'Ann' })).resolves.toEqual({
       id: 'profile-1',
-      user_id: 'user-1',
+      userId: 'user-1',
       name: 'Ann',
     });
     expect(prisma.profile.upsert).toHaveBeenCalledWith({
-      where: { user_id: 'user-1' },
+      where: { userId: 'user-1' },
       update: { name: 'Ann', updatedAt: expect.any(Date) },
-      create: { name: 'Ann', updatedAt: expect.any(Date), user_id: 'user-1' },
+      create: { name: 'Ann', updatedAt: expect.any(Date), userId: 'user-1' },
     });
   });
 
-  it('keeps accepting a legacy profile id when it belongs to the authenticated user', async () => {
+  it('accepts a profile id when it belongs to the authenticated user', async () => {
     const prisma = createPrismaMock();
     const service = new UserService(prisma as never);
-    prisma.profile.findUnique.mockResolvedValue({ user_id: 'user-1' });
-    prisma.profile.upsert.mockResolvedValue({ id: 'profile-1', user_id: 'user-1', name: 'Ann' });
+    prisma.profile.findUnique.mockResolvedValue({ userId: 'user-1' });
+    prisma.profile.upsert.mockResolvedValue({ id: 'profile-1', userId: 'user-1', name: 'Ann' });
 
     await expect(service.updateProfileByUserId('profile-1', 'user-1', { name: 'Ann' })).resolves.toEqual({
       id: 'profile-1',
-      user_id: 'user-1',
+      userId: 'user-1',
       name: 'Ann',
     });
     expect(prisma.profile.upsert).toHaveBeenCalledWith({
-      where: { user_id: 'user-1' },
+      where: { userId: 'user-1' },
       update: { name: 'Ann', updatedAt: expect.any(Date) },
-      create: { name: 'Ann', updatedAt: expect.any(Date), user_id: 'user-1' },
+      create: { name: 'Ann', updatedAt: expect.any(Date), userId: 'user-1' },
     });
   });
 

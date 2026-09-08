@@ -28,11 +28,11 @@ describeIntegration('PostgreSQL activity privacy e2e', () => {
     authTokenService = app.get(AuthTokenService);
     const suffix = randomUUID();
 
-    const owner = await prisma.users.create({
+    const owner = await prisma.user.create({
       data: { email: `e2e-owner-${suffix}@example.com`, profile: { create: {} } },
       include: { profile: true },
     });
-    const visitor = await prisma.users.create({
+    const visitor = await prisma.user.create({
       data: { email: `e2e-visitor-${suffix}@example.com`, profile: { create: {} } },
       include: { profile: true },
     });
@@ -40,7 +40,7 @@ describeIntegration('PostgreSQL activity privacy e2e', () => {
     visitorId = visitor.id;
 
     const activityData = {
-      user_id: owner.id,
+      userId: owner.id,
       profileId: owner.profile!.id,
       date: new Date(),
       title: 'E2E activity',
@@ -64,7 +64,7 @@ describeIntegration('PostgreSQL activity privacy e2e', () => {
 
   afterAll(async () => {
     if (prisma && ownerId && visitorId) {
-      await prisma.users.deleteMany({ where: { id: { in: [ownerId, visitorId] } } });
+      await prisma.user.deleteMany({ where: { id: { in: [ownerId, visitorId] } } });
     }
     await app?.close();
   });

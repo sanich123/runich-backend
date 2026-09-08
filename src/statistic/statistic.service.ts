@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { handleServiceError } from 'src/common/utils/prisma-errors';
+import { handleServiceError } from 'src/common/utils/database-errors';
 import { reduceAllMetricsToYearCategoryMonths } from './utils';
 import { ActivityMetricsService } from './activity-metrics.service';
 
@@ -17,20 +17,20 @@ export class StatisticService {
 
   async getYearsAndTypesOfActivities(id: string) {
     try {
-      const activities = await this.prisma.activity.findMany({ where: { user_id: id }, select: { date: true } });
-      const years = [...new Set(activities.map(({ date }) => date.getFullYear()))];
+      const activities = await this.prisma.activity.findMany({ where: { userId: id }, select: { date: true } });
+      const years = [...new Set(activities.map(({ date }: { date: Date }) => date.getFullYear()))];
       return await Promise.all(
         years.map(async (year) => {
           const types = await this.prisma.activity.findMany({
             where: {
-              user_id: id,
+              userId: id,
               date: {
                 ...this.metricsService.utcYearRange(year as number),
               },
             },
             select: { sport: true },
           });
-          return { year, types: [...new Set(types.map(({ sport }) => sport))] };
+          return { year, types: [...new Set(types.map(({ sport }: { sport: string }) => sport))] };
         }),
       );
     } catch (error) {
@@ -46,7 +46,7 @@ export class StatisticService {
     try {
       const activities = await this.prisma.activity.findMany({
         where: {
-          user_id: userId,
+          userId,
           date: {
             ...this.metricsService.utcMonthRange(+year, +month),
           },
@@ -60,10 +60,10 @@ export class StatisticService {
           sport: true,
         },
       });
-      const typesOfSport = [...new Set(activities.map(({ sport }) => sport))];
+      const typesOfSport = [...new Set(activities.map(({ sport }: { sport: string }) => sport))];
       const sportsObject: Record<string, { totalDuration: number; totalDistance: number; totalItems: number }> = {};
       typesOfSport.forEach((type) => {
-        const filteredActivitiesByType = activities.filter(({ sport }) => sport === type);
+        const filteredActivitiesByType = activities.filter(({ sport }: { sport: string }) => sport === type);
         const { totalDuration, totalDistance, totalItems } = this.reduceMetricsFromActivities(filteredActivitiesByType);
         sportsObject[type as string] = {
           totalDuration,
@@ -92,7 +92,7 @@ export class StatisticService {
     try {
       return await this.prisma.activity.findMany({
         where: {
-          user_id: userId,
+          userId,
           date: {
             ...this.metricsService.utcMonthRange(+year, +month),
           },
@@ -112,7 +112,7 @@ export class StatisticService {
   async getStatisticByYearAndCategory(userId: string) {
     try {
       const activities = await this.prisma.activity.findMany({
-        where: { user_id: userId },
+        where: { userId },
         select: {
           date: true,
           duration: true,
@@ -139,7 +139,7 @@ export class StatisticService {
     try {
       const currentWeekActivities = await this.prisma.activity.findMany({
         where: {
-          user_id: userId,
+          userId,
           date: {
             gte: new Date(
               Date.UTC(firstDayDate.getUTCFullYear(), firstDayDate.getUTCMonth(), firstDayDate.getUTCDate()),
@@ -160,7 +160,7 @@ export class StatisticService {
   async getAllActivitiesStatisticsByUserId(id: string) {
     try {
       const activities = await this.prisma.activity.findMany({
-        where: { user_id: id },
+        where: { userId: id },
         select: { duration: true, distance: true },
       });
       const { totalDistance, totalDuration, totalItems } = this.reduceMetricsFromActivities(activities);

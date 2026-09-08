@@ -16,7 +16,7 @@ const MAX_MAP_IMAGE_LOCATIONS = 500;
 
 type MigratedActivity = ActivityDto & {
   id: string;
-  user_id: string;
+  userId: string;
   profileId: string;
   source: 'strava';
   sourceActivityId: string;
@@ -94,7 +94,7 @@ export async function mapActivitiesWithCoordinates({
               speed,
               locations,
               kilometresSplit,
-              user_id: userId,
+              userId,
               mapPhotoUrl,
               profileId,
             };
