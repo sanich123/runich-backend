@@ -12,9 +12,9 @@ Thank you for contributing. This document describes the local workflow, code org
 
     corepack enable
     yarn install
-    yarn prisma generate
-    yarn prisma migrate deploy
-    yarn start:dev
+    yarn db:generate
+    yarn db:migrate
+    yarn dev
 
 Use SEED_MOCK_DATA=true only with a disposable development database.
 
@@ -61,8 +61,8 @@ Keep commits small enough to review. Explain breaking changes in the commit body
 
 ## Database changes
 
-    yarn prisma migrate dev --name describe_change
-    yarn prisma generate
+    yarn db:migrate:dev --name describe_change
+    yarn db:generate
 
 Review the generated migration, schema and affected queries. Do not edit generated Prisma Client files manually. Test destructive or high-volume migrations against representative data.
 
@@ -87,7 +87,7 @@ Activity requests are bounded at 5,000 location points and 5 MiB of JSON body
 data. Keep the client-side reduction in place; do not bypass these limits by
 raising the global parser limit for a single large route.
 
-The test, coverage and typecheck scripts run `yarn prisma generate` before
+The test, coverage and typecheck scripts run `yarn db:generate` before
 executing, so generated Prisma Client code cannot become stale in CI.
 
 ## Pull requests

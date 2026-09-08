@@ -41,7 +41,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ['yarn', 'start:migration-worker:prod']
+    command: ['yarn', 'worker:prod']
     restart: always
     cpus: 0.50
     depends_on:

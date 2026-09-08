@@ -12,10 +12,10 @@ RUN npm install --global @yarnpkg/cli-dist@4.18.0 \
 
 COPY . .
 
-RUN yarn prisma generate
+RUN yarn db:generate
 
 RUN yarn build
 
 EXPOSE 3000
 
-CMD ["yarn", "start:migrate:prod"]
+CMD ["yarn", "start:prod"]
