@@ -9,7 +9,7 @@ Backend API for Runich, a social fitness application for activities, profiles, f
 - Yarn 4.18.0
 - PostgreSQL 18.6 and Prisma 8 (RC contract/runtime)
 - JWT bearer authentication
-- Swagger/OpenAPI at /api in development; production access is disabled by default
+- Swagger/OpenAPI at /api in development; stage and production access is protected by Basic Auth
 
 ## Quick start
 
@@ -121,7 +121,7 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | APP_ENV                           | Application environment: local, stage or production               |
 | NODE_ENV                          | Node.js runtime environment                                       |
 | SWAGGER_ENABLED                   | Enable Swagger; production default is disabled                    |
-| SWAGGER_USER, SWAGGER_PASSWORD    | Basic Auth credentials when Swagger is enabled in production      |
+| SWAGGER_USER, SWAGGER_PASSWORD    | Basic Auth credentials when Swagger is enabled in stage/production |
 | YANDEX_SMTP_USER                  | Full Yandex mailbox address used as the sender                    |
 | YANDEX_SMTP_PASSWORD              | Yandex application password for Mail                             |
 | EMAIL_API_TIMEOUT                 | Yandex SMTP timeout in milliseconds, default 15000               |
@@ -141,7 +141,7 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | VK_CLIENT_SECRET                  | VK ID application secret, server-side only                        |
 | VK_REDIRECT_URI                   | Registered VK OAuth callback URL                                  |
 | VK_API_VERSION                    | Optional VK API version, defaults to 5.199                        |
-| SEED_MOCK_DATA                    | Create mock users and activities at startup                       |
+| SEED_MOCK_DATA                    | Create mock users and activities in the background after startup  |
 | RUNICH_PROCESS                    | Process role: api or worker                                       |
 | PHOTO_UPLOADS_ENABLED              | Enable photo writes to S3; disabled by default in stage            |
 | SEED_USER_EMAIL                   | Optional email used by the database seed                          |
