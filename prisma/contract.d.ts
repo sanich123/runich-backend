@@ -33,7 +33,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'cb44b5854e2c120b5e26bfd3cc97f6f42c0d8e6ba7936af78c5c69523564e67a'>;
+  StorageHashBase<'9c05c9cf3388a3cfafb5ccf943005001032b55ac56185123139120bec3365efc'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -1063,7 +1063,18 @@ type ContractBase = Omit<
                   readonly name: 'Activity_user_id_source_sourceActivityId_key';
                 },
               ];
-              indexes: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'Activity_user_id_date_id_idx';
+                  readonly columns: readonly ['user_id', 'date', 'id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Activity_isPublic_date_id_idx';
+                  readonly columns: readonly ['isPublic', 'date', 'id'];
+                  readonly unique: false;
+                },
+              ];
               foreignKeys: readonly [
                 {
                   readonly source: {
@@ -1360,7 +1371,7 @@ type ContractBase = Omit<
               indexes: readonly [
                 {
                   readonly name: 'Comment_activityId_idx';
-                  readonly columns: readonly ['activityId'];
+                  readonly columns: readonly ['activityId', 'date', 'id'];
                   readonly unique: false;
                 },
               ];
