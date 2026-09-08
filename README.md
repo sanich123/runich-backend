@@ -49,15 +49,15 @@ Create a local, ignored .env file:
 
 Initialize the database and start development mode:
 
-    yarn start:dev
+    yarn dev
 
 Start the migration worker in a second terminal:
 
-    yarn start:migration-worker
+    yarn worker:dev
 
-`yarn start:dev` generates the Prisma Client and applies all committed database
+`yarn dev` generates the Prisma Client and applies all committed database
 migrations before starting the development server. To update only the database,
-run `yarn migrate`.
+run `yarn db:migrate`.
 
 The API is available at http://localhost:3000; Swagger is at http://localhost:3000/api.
 Liveness is available at `/health/live`, and Railway readiness checks should use
@@ -158,41 +158,71 @@ separate post-login redirect and should point to the frontend, for example
 
 ## Commands
 
-| Command                          | Description                             |
-| -------------------------------- | --------------------------------------- |
-| yarn migrate                     | Apply committed migrations              |
-| yarn start:dev                   | Development server with watch mode      |
-| yarn start:debug                 | Development server with Node inspector  |
-| yarn build                       | Build with tsup                         |
-| yarn start:prod                  | Run compiled application                |
-| yarn start:migrate:prod          | Apply migrations and start compiled app |
-| yarn start:migration-worker      | Run the Strava migration worker         |
-| yarn start:migration-worker:prod | Run the compiled migration worker       |
-| yarn typecheck                   | TypeScript check                        |
-| yarn eslint src                  | ESLint check without auto-fix           |
-| yarn test:ci                     | Serial CI test run                      |
-| yarn test:cov                    | Jest coverage run                       |
-| yarn test:integration            | PostgreSQL integration/e2e tests        |
-| yarn format                      | Format TypeScript files                 |
-| yarn prisma generate             | Generate Prisma Client                  |
-| yarn prisma migrate dev          | Create a development migration          |
-| yarn prisma migrate deploy       | Apply committed migrations              |
-| yarn madge                       | Check circular dependencies             |
-| yarn ts-prune                    | Find unused exports                     |
-| yarn depcheck                    | Inspect dependencies                    |
+Scripts are grouped by responsibility: application lifecycle, `worker:*`,
+`db:*`, `test:*`, and code-quality commands.
+
+### Application and worker
+
+| Command             | Description                            |
+| ------------------- | -------------------------------------- |
+| `yarn dev`          | Development API with watch mode        |
+| `yarn start`        | Development API without watch mode     |
+| `yarn start:debug`  | Development API with Node inspector    |
+| `yarn build`        | Build the production bundles with tsup |
+| `yarn start:prod`   | Apply migrations and run compiled API  |
+| `yarn worker:dev`   | Development Strava migration worker    |
+| `yarn worker:prod`  | Apply migrations and run built worker  |
+
+### Database
+
+| Command                   | Description                                      |
+| ------------------------- | ------------------------------------------------ |
+| `yarn db:up`              | Start local PostgreSQL and apply migrations      |
+| `yarn db:generate`        | Generate Prisma Client                           |
+| `yarn db:migrate`         | Apply committed migrations                       |
+| `yarn db:migrate:dev`     | Create a development migration                   |
+| `yarn db:seed`            | Seed the configured database                     |
+| `yarn db:studio`          | Open Prisma Studio locally                       |
+| `yarn db:studio:production` | Open production Studio through an SSH tunnel   |
+
+Production Studio access is documented in [OPERATIONS.md](OPERATIONS.md#prisma-studio).
+
+### Tests
+
+| Command                 | Description                              |
+| ----------------------- | ---------------------------------------- |
+| `yarn test`             | Default Jest run                         |
+| `yarn test:watch`       | Jest watch mode                          |
+| `yarn test:ci`          | Serial CI unit-test run                  |
+| `yarn test:cov`         | Unit tests with coverage thresholds      |
+| `yarn test:integration` | PostgreSQL integration/e2e tests         |
+| `yarn test:all`         | Local database and all test groups       |
+
+### Code quality
+
+| Command          | Description                                  |
+| ---------------- | -------------------------------------------- |
+| `yarn typecheck` | TypeScript check                             |
+| `yarn lint`      | ESLint with fixes for `src` and `integration` |
+| `yarn format`    | Format TypeScript source and integration tests |
+| `yarn madge`     | Check circular dependencies                  |
+| `yarn ts-prune`  | Find unused exports                          |
+| `yarn depcheck`  | Inspect unused dependencies                  |
 
 ## Database and seed data
 
 The schema is in prisma/schema.prisma, and committed migrations are in prisma/migrations.
 
-    yarn prisma generate
-    yarn prisma migrate deploy
-    yarn prisma db seed
+    yarn db:generate
+    yarn db:migrate
+    yarn db:seed
 
 Setting SEED_MOCK_DATA=true creates 100 deterministic mock runners. Each user gets 0–40 activities, each activity gets 0–40 comments and likes, each comment gets 0–40 likes, and each user follows 0–40 other users. Comment, like and activity timestamps are varied. The mock seed version is bumped when fixtures need recreation. Use only with a disposable development database because this fixture can create a large amount of data.
 
 ## Project structure
 
+    scripts/
+    └── database/                # Operational database helpers
     src/
     ├── account/                  # Profiles, filtering and updates
     ├── activity/                # Activities and Strava archive migration
@@ -232,7 +262,7 @@ worker removes every S3 object under that prefix after the database transaction.
 
 Before opening a pull request:
 
-    yarn prisma generate
+    yarn db:generate
     yarn typecheck
     yarn eslint src
     yarn build
