@@ -29,7 +29,7 @@ describe('YandexAuthService', () => {
     process.env.YANDEX_CLIENT_ID = 'client-id';
     process.env.YANDEX_CLIENT_SECRET = 'client-secret';
     process.env.YANDEX_REDIRECT_URI = 'https://api.example/auth/yandex/callback';
-    process.env.YANDEX_FRONTEND_REDIRECT_URI = 'https://app.example/login-from-url';
+    process.env.AUTH_FRONTEND_REDIRECT_URI = 'https://app.example/login-from-url';
     tokenService.createEmailLoginCredential.mockResolvedValue('login-code');
     service = new YandexAuthService(prisma as never, tokenService as never);
   });

@@ -67,7 +67,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     try {
       await this.$connect();
-      if (process.env.SEED_MOCK_DATA === 'true') {
+      if (process.env.SEED_MOCK_DATA === 'true' && process.env.RUNICH_PROCESS !== 'worker') {
         await seedMockData(this);
       }
     } catch (error) {
