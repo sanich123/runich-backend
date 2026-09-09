@@ -57,13 +57,13 @@ jobs:
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
 
-            docker compose up -d --build nestjs_app activity_migration_worker
+            docker compose up -d --build nestjs_app background_worker
 
             for attempt in $(seq 1 30); do
               if curl --fail --silent --show-error --max-time 5 \
                 http://127.0.0.1:3000/health/live >/dev/null \
-                && test "$(docker compose ps --status running --services activity_migration_worker)" = \
-                  "activity_migration_worker"; then
+                && test "$(docker compose ps --status running --services background_worker)" = \
+                  "background_worker"; then
                 echo "Deployment is healthy at commit $DEPLOY_SHA"
                 # Keep named volumes (PostgreSQL and migration archives) intact.
                 docker system prune --all --force || echo 'Docker cleanup failed; keeping the healthy deployment.' >&2
@@ -74,6 +74,6 @@ jobs:
 
             echo 'Health check failed.' >&2
             docker compose ps
-            docker compose logs --tail=100 nestjs_app activity_migration_worker
+            docker compose logs --tail=100 nestjs_app background_worker
             exit 1
           REMOTE
