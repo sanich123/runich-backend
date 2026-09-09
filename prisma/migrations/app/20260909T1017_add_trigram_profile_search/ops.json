@@ -1,0 +1,174 @@
+[
+  {
+    "id": "extension.pg_trgm",
+    "label": "Create extension \"pg_trgm\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create extension \"pg_trgm\"",
+        "sql": "CREATE EXTENSION IF NOT EXISTS \"pg_trgm\""
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "index.Profile.Profile_email_trgm_idx",
+    "label": "Create index \"Profile_email_trgm_idx\" on \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Profile_email_trgm_idx",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Profile_email_trgm_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Profile_email_trgm_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Profile_email_trgm_idx\"",
+        "sql": "CREATE INDEX \"Profile_email_trgm_idx\" ON \"public\".\"Profile\" USING \"gin\" (email gin_trgm_ops)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Profile_email_trgm_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Profile_email_trgm_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Profile.Profile_name_trgm_idx",
+    "label": "Create index \"Profile_name_trgm_idx\" on \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Profile_name_trgm_idx",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Profile_name_trgm_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Profile_name_trgm_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Profile_name_trgm_idx\"",
+        "sql": "CREATE INDEX \"Profile_name_trgm_idx\" ON \"public\".\"Profile\" USING \"gin\" (name gin_trgm_ops)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Profile_name_trgm_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Profile_name_trgm_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Profile.Profile_surname_trgm_idx",
+    "label": "Create index \"Profile_surname_trgm_idx\" on \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Profile_surname_trgm_idx",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Profile_surname_trgm_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Profile_surname_trgm_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Profile_surname_trgm_idx\"",
+        "sql": "CREATE INDEX \"Profile_surname_trgm_idx\" ON \"public\".\"Profile\" USING \"gin\" (surname gin_trgm_ops)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Profile_surname_trgm_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Profile_surname_trgm_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Users.Users_email_trgm_idx",
+    "label": "Create index \"Users_email_trgm_idx\" on \"Users\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Users_email_trgm_idx",
+        "table": "Users"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Users_email_trgm_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Users_email_trgm_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Users_email_trgm_idx\"",
+        "sql": "CREATE INDEX \"Users_email_trgm_idx\" ON \"public\".\"Users\" USING \"gin\" (email gin_trgm_ops)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Users_email_trgm_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Users_email_trgm_idx\""
+        ]
+      }
+    ]
+  }
+]

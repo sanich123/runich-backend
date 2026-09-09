@@ -59,6 +59,15 @@ describe('AccountService', () => {
         where: expectedWhere,
         orderBy: { id: 'asc' },
         take: 3,
+        select: {
+          id: true,
+          userId: true,
+          name: true,
+          surname: true,
+          city: true,
+          profilePhoto: true,
+          profilePhotoBlurhash: true,
+        },
       });
     }
   });

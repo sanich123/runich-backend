@@ -16,7 +16,6 @@ describe('FriendService', () => {
     prisma.friend.findMany.mockResolvedValueOnce([{ id: 'friend-1' }]).mockResolvedValueOnce([{ id: 'friend-2' }]);
     prisma.friend.delete.mockResolvedValue({ id: 'friend-1' });
     prisma.friend.upsert.mockResolvedValue({ id: 'friend-3' });
-    prisma.friend.findUnique.mockResolvedValue({ id: 'friend-3' });
 
     await expect(service.getUsersYouFollowByUserId('user-1')).resolves.toEqual([{ id: 'friend-1' }]);
     await expect(service.getFollowers('user-1')).resolves.toEqual([{ id: 'friend-2' }]);

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "index.Activity.Activity_user_id_isPublic_date_id_idx",
+    "label": "Create index \"Activity_user_id_isPublic_date_id_idx\" on \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Activity_user_id_isPublic_date_id_idx",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Activity_user_id_isPublic_date_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_user_id_isPublic_date_id_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Activity_user_id_isPublic_date_id_idx\"",
+        "sql": "CREATE INDEX \"Activity_user_id_isPublic_date_id_idx\" ON \"public\".\"Activity\" (\"user_id\", \"isPublic\", \"date\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Activity_user_id_isPublic_date_id_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_user_id_isPublic_date_id_idx\""
+        ]
+      }
+    ]
+  }
+]

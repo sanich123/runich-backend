@@ -1,7 +1,9 @@
 import type { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 
 export type StorageFile = {
-  buffer: Buffer;
+  buffer?: Buffer;
+  path?: string;
+  size?: number;
   originalname: string;
   mimetype: string;
 };

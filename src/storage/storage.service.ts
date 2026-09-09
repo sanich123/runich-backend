@@ -12,6 +12,8 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { createReadStream } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { extname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { isPhotoStorageWriteEnabled } from 'src/common/config/environment';
@@ -44,22 +46,40 @@ export class StorageService {
   }
 
   async uploadPhoto(userId: string, file: StorageFile) {
-    this.assertWritesEnabled();
-    this.assertConfigured();
-    const extension = this.getExtension(file.originalname, file.mimetype);
-    const key = `${userId}/${randomUUID()}.${extension}`;
+    let stream: ReturnType<typeof createReadStream> | undefined;
+    try {
+      this.assertWritesEnabled();
+      this.assertConfigured();
+      const extension = this.getExtension(file.originalname, file.mimetype);
+      const key = `${userId}/${randomUUID()}.${extension}`;
+      const body = file.path ? (stream = createReadStream(file.path)) : file.buffer;
 
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.settings.bucket,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        CacheControl: 'public, max-age=31536000, immutable',
-      }),
-    );
+      if (!body) throw new BadRequestException('Не удалось прочитать загруженный файл');
 
-    return { url: this.getPublicUrl(key), key, contentType: file.mimetype };
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.settings.bucket,
+          Key: key,
+          Body: body,
+          ...(file.size === undefined ? {} : { ContentLength: file.size }),
+          ContentType: file.mimetype,
+          CacheControl: 'public, max-age=31536000, immutable',
+        }),
+      );
+
+      return { url: this.getPublicUrl(key), key, contentType: file.mimetype };
+    } finally {
+      stream?.destroy();
+      if (file.path) {
+        try {
+          await rm(file.path, { force: true });
+        } catch (error) {
+          this.logger.warn(
+            `Не удалось удалить временный файл загрузки: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+    }
   }
 
   async deletePhoto(userId: string, publicUrl: string) {

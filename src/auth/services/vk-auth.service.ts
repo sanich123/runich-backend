@@ -115,7 +115,7 @@ export class VkAuthService {
 
       const profileId = profile.user_id ?? String(tokens.user_id);
       const email = tokens.email ?? `vk_${profileId}@vk.local`;
-      let user = await this.prisma.user.findUnique({ where: { email } });
+      let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
       if (!user) {
         user = await this.prisma.user.create({
           data: {

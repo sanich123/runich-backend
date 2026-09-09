@@ -33,7 +33,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'9c05c9cf3388a3cfafb5ccf943005001032b55ac56185123139120bec3365efc'>;
+  StorageHashBase<'1b3187968c7d81a0ca8577d40a63b9c9c305fd84f20c6be29bc8d712a72e78ea'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -1070,6 +1070,11 @@ type ContractBase = Omit<
                   readonly unique: false;
                 },
                 {
+                  readonly name: 'Activity_user_id_isPublic_date_id_idx';
+                  readonly columns: readonly ['user_id', 'isPublic', 'date', 'id'];
+                  readonly unique: false;
+                },
+                {
                   readonly name: 'Activity_isPublic_date_id_idx';
                   readonly columns: readonly ['isPublic', 'date', 'id'];
                   readonly unique: false;
@@ -1810,7 +1815,26 @@ type ContractBase = Omit<
               uniques: readonly [
                 { readonly columns: readonly ['user_id']; readonly name: 'Profile_user_id_key' },
               ];
-              indexes: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'Profile_name_trgm_idx';
+                  readonly columns: readonly ['name'];
+                  readonly unique: false;
+                  readonly type: 'gin';
+                },
+                {
+                  readonly name: 'Profile_surname_trgm_idx';
+                  readonly columns: readonly ['surname'];
+                  readonly unique: false;
+                  readonly type: 'gin';
+                },
+                {
+                  readonly name: 'Profile_email_trgm_idx';
+                  readonly columns: readonly ['email'];
+                  readonly unique: false;
+                  readonly type: 'gin';
+                },
+              ];
               foreignKeys: readonly [
                 {
                   readonly source: {
@@ -2049,7 +2073,14 @@ type ContractBase = Omit<
                 { readonly columns: readonly ['email']; readonly name: 'Users_email_key' },
                 { readonly columns: readonly ['phone']; readonly name: 'Users_phone_key' },
               ];
-              indexes: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'Users_email_trgm_idx';
+                  readonly columns: readonly ['email'];
+                  readonly unique: false;
+                  readonly type: 'gin';
+                },
+              ];
               foreignKeys: readonly [];
             };
             readonly UserSession: {

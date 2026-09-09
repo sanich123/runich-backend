@@ -1,4 +1,8 @@
 import { jest } from '@jest/globals';
+import { access, mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Readable } from 'node:stream';
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
@@ -61,6 +65,32 @@ describe('StorageService', () => {
       CacheControl: 'public, max-age=31536000, immutable',
     });
     expect((command as PutObjectCommand).input.Key).toMatch(/^user-1\/.+\.jpg$/);
+  });
+
+  it('streams disk uploads to S3 and removes the temporary file', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'runich-storage-test-'));
+    const path = join(directory, 'photo.jpg');
+    await writeFile(path, 'photo');
+    let streamedContent = '';
+    s3Send.mockImplementation(async (command) => {
+      const body = (command as PutObjectCommand).input.Body;
+      expect(body).toBeInstanceOf(Readable);
+      for await (const chunk of body as AsyncIterable<Uint8Array>) streamedContent += Buffer.from(chunk).toString();
+      return {} as never;
+    });
+    const service = new StorageService();
+
+    await service.uploadPhoto('user-1', {
+      path,
+      size: 5,
+      originalname: 'photo.jpg',
+      mimetype: 'image/jpeg',
+    });
+
+    expect(streamedContent).toBe('photo');
+    expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input.ContentLength).toBe(5);
+    await expect(access(path)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(access(directory)).resolves.toBeUndefined();
   });
 
   it('deletes only an object belonging to the authenticated user', async () => {

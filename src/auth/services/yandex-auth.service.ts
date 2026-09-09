@@ -61,7 +61,7 @@ export class YandexAuthService {
     const email = yandexUser.default_email ?? (yandexUser.login ? `${yandexUser.login}@yandex.ru` : undefined);
     if (!email) throw new UnauthorizedException('Яндекс не вернул email пользователя');
 
-    let user = await this.prisma.user.findUnique({ where: { email } });
+    let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
     if (!user) {
       user = await this.prisma.user.create({
         data: {

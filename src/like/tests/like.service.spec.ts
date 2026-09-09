@@ -4,6 +4,7 @@ import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 
 function createPrismaMock() {
   return {
+    activity: { findUnique: asyncMock() },
     like: { upsert: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
   };
 }
@@ -14,19 +15,20 @@ describe('LikeService', () => {
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new LikeService(prisma as never, account as never, {} as never);
     prisma.like.upsert.mockResolvedValue({ id: 'like-1' });
-    prisma.like.findUnique.mockResolvedValue({ id: 'like-1' });
     prisma.like.delete.mockResolvedValue({ id: 'like-1' });
-    prisma.like.findMany.mockResolvedValue([{ id: 'like-1' }]);
+    prisma.activity.findUnique.mockResolvedValue({ likes: [{ id: 'like-1' }] });
 
     await expect(service.addLike({ activityId: 'activity-1' })).resolves.toEqual({ id: 'like-1' });
     await expect(service.deleteLikeById('like-1')).resolves.toEqual({ id: 'like-1' });
     await expect(service.getLikesByActivityId('activity-1')).resolves.toEqual([{ id: 'like-1' }]);
-    const listQuery = ((prisma.like.findMany.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
-      select?: Record<string, unknown>;
+    const listQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
+      select?: { likes?: { select?: Record<string, unknown>; include?: unknown } };
       include?: unknown;
     };
+    const likeQuery = listQuery.select?.likes ?? {};
     expect(listQuery.include).toBeUndefined();
-    expect(listQuery.select).toEqual(
+    expect(likeQuery.include).toBeUndefined();
+    expect(likeQuery.select).toEqual(
       expect.objectContaining({
         id: true,
         authorId: true,
@@ -34,11 +36,24 @@ describe('LikeService', () => {
         profile: expect.any(Object),
       }),
     );
+    expect(prisma.like.findUnique).not.toHaveBeenCalled();
     expect(prisma.like.upsert).toHaveBeenCalledWith({
       where: { authorId_activityId: { authorId: '', activityId: 'activity-1' } },
       update: {},
       create: { profileId: 'profile-1', authorId: '', activityId: 'activity-1' },
     });
+  });
+
+  it('returns an existing like only for a unique-constraint race', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new LikeService(prisma as never, account as never, {} as never);
+    const uniqueError = { code: 'P2002' };
+    prisma.like.upsert.mockRejectedValue(uniqueError);
+    prisma.like.findUnique.mockResolvedValue({ id: 'like-1' });
+
+    await expect(service.addLike({ activityId: 'activity-1' })).resolves.toEqual({ id: 'like-1' });
+    expect(prisma.like.findUnique).toHaveBeenCalledTimes(1);
   });
 
   it('returns not found when the author profile is missing', async () => {
@@ -56,6 +71,7 @@ describe('LikeService', () => {
   it('converts database failures from every operation to an internal server error', async () => {
     const prisma = createPrismaMock();
     const error = new Error('database unavailable');
+    prisma.activity.findUnique.mockRejectedValue(error);
     Object.values(prisma.like).forEach((operation) => operation.mockRejectedValue(error));
     const service = new LikeService(
       prisma as never,

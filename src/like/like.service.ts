@@ -26,15 +26,15 @@ export class LikeService {
       const authorId = currentUserId ?? '';
       const where = { authorId_activityId: { authorId, activityId } };
       try {
-        await this.prismaService.like.upsert({
+        return await this.prismaService.like.upsert({
           where,
           update: {},
           create: { profileId: account.id, authorId, activityId },
         });
       } catch (error) {
         if (!isUniqueConstraintError(error)) throw error;
+        return await this.prismaService.like.findUnique({ where });
       }
-      return await this.prismaService.like.findUnique({ where });
     } catch (error) {
       handleServiceError(error);
     }
@@ -50,30 +50,39 @@ export class LikeService {
 
   async getLikesByActivityId(id: string, currentUserId?: string) {
     try {
-      if (currentUserId && !(await this.activityService.canAccessActivity(id, currentUserId))) {
-        throw new NotFoundException('Активность не найдена');
-      }
-      return await this.prismaService.like.findMany({
-        where: { activityId: id },
-        orderBy: { date: 'desc' },
+      const activity = await this.prismaService.activity.findUnique({
+        where: {
+          id,
+          ...(currentUserId ? { OR: [{ userId: currentUserId }, { isPublic: true }] } : {}),
+        },
         select: {
-          date: true,
-          authorId: true,
-          activityId: true,
-          profileId: true,
-          id: true,
-          profile: {
+          likes: {
+            orderBy: { date: 'desc' },
             select: {
-              name: true,
-              surname: true,
-              profilePhoto: true,
-              profilePhotoBlurhash: true,
-              city: true,
-              userId: true,
+              date: true,
+              authorId: true,
+              activityId: true,
+              profileId: true,
+              id: true,
+              profile: {
+                select: {
+                  name: true,
+                  surname: true,
+                  profilePhoto: true,
+                  profilePhotoBlurhash: true,
+                  city: true,
+                  userId: true,
+                },
+              },
             },
           },
         },
       });
+      if (!activity) {
+        if (currentUserId) throw new NotFoundException('Активность не найдена');
+        return [];
+      }
+      return activity.likes;
     } catch (error) {
       handleServiceError(error);
     }
