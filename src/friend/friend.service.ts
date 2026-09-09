@@ -2,13 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError, isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
-
-const FRIEND_PROFILE_SELECT = {
-  surname: true,
-  name: true,
-  profilePhoto: true,
-  profilePhotoBlurhash: true,
-} as const;
+import { FRIEND_PROFILE_SELECT } from './const';
 
 @Injectable()
 export class FriendService {

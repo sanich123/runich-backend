@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, NestMiddleware, Optional } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { LatencyMetricsService, SLOW_REQUEST_THRESHOLD_MS } from 'src/common/metrics/latency-metrics.service';
+import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
+import { SLOW_REQUEST_THRESHOLD_MS } from 'src/common/metrics/const';
 
 @Injectable()
 export default class LoggingService implements NestMiddleware {

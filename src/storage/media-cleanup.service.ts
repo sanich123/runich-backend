@@ -5,10 +5,7 @@ import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/activity-migration-confi
 import { StorageService } from './storage.service';
 import { MEDIA_CLEANUP_STATUS } from './const';
 import type { CleanupDatabase } from './type';
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
+import { getStorageErrorMessage } from './utils';
 
 @Injectable()
 export class MediaCleanupService {
@@ -51,7 +48,7 @@ export class MediaCleanupService {
         data: { status: MEDIA_CLEANUP_STATUS.completed, finishedAt: new Date(), errorMessage: null },
       });
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
+      const errorMessage = getStorageErrorMessage(error);
       await this.prisma.mediaCleanupJob.update({
         where: { id: job.id },
         data: { status: MEDIA_CLEANUP_STATUS.failed, finishedAt: new Date(), errorMessage },
@@ -72,7 +69,7 @@ export class MediaCleanupService {
         const foundJob = await this.processNextJob();
         if (!foundJob) await delay(this.pollIntervalMs);
       } catch (error) {
-        this.logger.error('Ошибка цикла worker очистки S3', getErrorMessage(error));
+        this.logger.error('Ошибка цикла worker очистки S3', getStorageErrorMessage(error));
         await delay(this.pollIntervalMs);
       }
     }

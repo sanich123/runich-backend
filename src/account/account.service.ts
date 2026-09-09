@@ -2,44 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { Filtering } from './filter.decorator';
-import type { ProfileWhereInput } from './type';
 import { encodeProfileCursor, type ProfileCursor } from './account.pagination';
-
-const DEFAULT_PROFILE_PAGE_SIZE = 10;
-
-const PROFILE_SEARCH_SELECT = {
-  id: true,
-  userId: true,
-  name: true,
-  surname: true,
-  city: true,
-  profilePhoto: true,
-  profilePhotoBlurhash: true,
-} as const;
-
-function normalizeFilterValue(value: string | null | undefined) {
-  const normalized = value?.trim();
-  return normalized || undefined;
-}
-
-function buildProfileWhere(filter: Filtering): ProfileWhereInput {
-  const searchValues = [filter.name, filter.surname, filter.email];
-  const searchTerms = searchValues.flatMap((value) => normalizeFilterValue(value)?.split(/\s+/) ?? []);
-  const conditions: ProfileWhereInput[] = [];
-
-  for (const term of searchTerms) {
-    conditions.push({
-      OR: [
-        { name: { contains: term, mode: 'insensitive' } },
-        { surname: { contains: term, mode: 'insensitive' } },
-        { email: { contains: term, mode: 'insensitive' } },
-        { user: { email: { contains: term, mode: 'insensitive' } } },
-      ],
-    });
-  }
-
-  return conditions.length > 0 ? { AND: conditions } : {};
-}
+import { DEFAULT_PROFILE_PAGE_SIZE, PROFILE_SEARCH_SELECT } from './const';
+import { buildProfileWhere } from './utils';
 
 @Injectable()
 export class AccountService {

@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { EmailService } from 'src/email/email.service';
+import { getEmailDeliveryReason } from './auth-email.utils';
 
 @Injectable()
 export class AuthEmailService {
@@ -12,7 +13,7 @@ export class AuthEmailService {
       await this.emailService.sendConfirmationCode(email, code, accessToken);
     } catch (error) {
       this.logger.error(`Не удалось отправить письмо с кодом подтверждения на ${email}`, error);
-      throw new ServiceUnavailableException('Сервис отправки электронной почты временно недоступен');
+      throw new ServiceUnavailableException(`Не удалось отправить письмо. Причина: ${getEmailDeliveryReason(error)}`);
     }
   }
 
@@ -21,7 +22,7 @@ export class AuthEmailService {
       await this.emailService.sendLoginLink(email, accessToken);
     } catch (error) {
       this.logger.error(`Не удалось отправить ссылку для входа на ${email}`, error);
-      throw new ServiceUnavailableException('Сервис отправки электронной почты временно недоступен');
+      throw new ServiceUnavailableException(`Не удалось отправить письмо. Причина: ${getEmailDeliveryReason(error)}`);
     }
   }
 
@@ -30,7 +31,7 @@ export class AuthEmailService {
       await this.emailService.sendPasswordChangeCode(email, code);
     } catch (error) {
       this.logger.error(`Не удалось отправить код смены пароля на ${email}`, error);
-      throw new ServiceUnavailableException('Сервис отправки электронной почты временно недоступен');
+      throw new ServiceUnavailableException(`Не удалось отправить письмо. Причина: ${getEmailDeliveryReason(error)}`);
     }
   }
 }

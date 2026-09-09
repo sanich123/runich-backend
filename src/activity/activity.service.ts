@@ -9,24 +9,20 @@ import { chunkArray } from 'src/common/parsers/chunk-array';
 import { generateActivityTitle } from './activity-title';
 import { ActivityPersistenceService } from './activity-persistence.service';
 import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.constants';
-import { ACTIVITY_CARD_SELECT, ACTIVITY_FEED_SELECT, DEFAULT_ACTIVITY_PAGE_SIZE } from './const';
+import {
+  ACTIVITY_CARD_SELECT,
+  ACTIVITY_FEED_SELECT,
+  DEFAULT_ACTIVITY_PAGE_SIZE,
+  MEDIA_ACTIVITY_BATCH_SIZE,
+} from './const';
 import {
   encodeActivityCursor,
   encodeActivityMediaCursor,
   type ActivityCursor,
   type ActivityMediaCursor,
 } from './activity.pagination';
-
-const MEDIA_ACTIVITY_BATCH_SIZE = 50;
-
-type ActivityFeedSqlRow = ActivityCursor & Record<string, unknown>;
-
-function omitMediaProcessingStatus(value: unknown) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
-  const result = { ...(value as Record<string, unknown>) };
-  delete result.mediaProcessingStatus;
-  return result;
-}
+import { omitMediaProcessingStatus } from './utils';
+import type { ActivityFeedSqlRow } from './type';
 
 @Injectable()
 export class ActivityService {

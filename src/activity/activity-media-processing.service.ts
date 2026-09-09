@@ -7,26 +7,8 @@ import {
   ACTIVITY_MEDIA_PROCESSING_CONFIG,
   ACTIVITY_MEDIA_PROCESSING_STATUS,
 } from './activity-media-processing.constants';
-import type { ActivityPhotoVideoObject } from './activity.dto';
-
-type ActivityMediaProcessingRecord = {
-  id: string;
-  photoVideoUrls: unknown;
-  mapPhotoUrl: string | null;
-  mapPhotoUrlBlurhash: string | null;
-};
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function isPhotoVideoObject(value: unknown): value is ActivityPhotoVideoObject {
-  return Boolean(value && typeof value === 'object' && 'url' in value && typeof value.url === 'string');
-}
-
-function hasBlurhash(photo: ActivityPhotoVideoObject) {
-  return typeof photo.blurhash === 'string' && photo.blurhash.length > 0;
-}
+import { getMediaProcessingErrorMessage, hasBlurhash, isPhotoVideoObject } from './activity-media-processing.utils';
+import type { ActivityMediaProcessingRecord } from './type';
 
 @Injectable()
 export class ActivityMediaProcessingService {
@@ -74,7 +56,7 @@ export class ActivityMediaProcessingService {
         const foundActivities = await this.processNextBatch();
         if (!foundActivities) await delay(this.pollIntervalMs);
       } catch (error) {
-        this.logger.error('Ошибка цикла worker обработки медиа', getErrorMessage(error));
+        this.logger.error('Ошибка цикла worker обработки медиа', getMediaProcessingErrorMessage(error));
         await delay(this.pollIntervalMs);
       }
     }
@@ -124,7 +106,7 @@ export class ActivityMediaProcessingService {
         },
         data: { mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued },
       });
-      this.logger.error(`Не удалось обработать медиа активности ${activity.id}`, getErrorMessage(error));
+      this.logger.error(`Не удалось обработать медиа активности ${activity.id}`, getMediaProcessingErrorMessage(error));
     }
   }
 

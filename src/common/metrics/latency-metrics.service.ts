@@ -1,25 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-
-export type LatencyCategory = 'db' | 'external' | 'http';
-
-export type LatencySnapshot = {
-  category: LatencyCategory;
-  name: string;
-  count: number;
-  p50: number;
-  p95: number;
-  p99: number;
-};
-
-export const SLOW_REQUEST_THRESHOLD_MS = 300;
-
-const MAX_SAMPLES_PER_METRIC = 1_000;
-const REPORT_INTERVAL_MS = 60_000;
-
-function percentile(sortedSamples: number[], percentileValue: number) {
-  const index = Math.max(0, Math.ceil((percentileValue / 100) * sortedSamples.length) - 1);
-  return sortedSamples[index] ?? 0;
-}
+import { MAX_SAMPLES_PER_METRIC, REPORT_INTERVAL_MS } from './const';
+import { percentile } from './utils';
+import type { LatencyCategory, LatencySnapshot } from './type';
 
 @Injectable()
 export class LatencyMetricsService implements OnModuleDestroy {
