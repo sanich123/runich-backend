@@ -7,13 +7,7 @@ import { EmailNotificationService } from './email-notification.service';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
-
-function escapeHtml(value: string) {
-  return value.replace(
-    /[&<>"']/g,
-    (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character,
-  );
-}
+import { escapeHtml } from './utils';
 
 @Injectable()
 export class EmailService {

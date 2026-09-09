@@ -44,4 +44,13 @@ describe('AuthEmailService', () => {
     expect(loggerError).toHaveBeenCalledTimes(3);
     loggerError.mockRestore();
   });
+
+  it('returns a safe delivery reason for the client toast', async () => {
+    const error = Object.assign(new Error('authentication failed'), { code: 'EAUTH' });
+    emailService.sendLoginLink.mockRejectedValue(error);
+
+    await expect(service.sendLoginLink('user@example.com', 'token')).rejects.toThrow(
+      'Не удалось отправить письмо. Причина: почтовый сервер отклонил авторизацию',
+    );
+  });
 });

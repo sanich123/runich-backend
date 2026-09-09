@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { access, rm } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { setImmediate as yieldToEventLoop, setTimeout as delay } from 'node:timers/promises';
 import { ACTIVITY_MIGRATION_STATUS, ActivityMigrationJobResponseDto, ActivityMigrationStatus } from './activity.dto';
 import { getMigrationWorkDirectory } from './activity-migration-storage';
@@ -10,20 +10,7 @@ import { parseCsvFileIntoArray } from 'src/common/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
 import { ACTIVITY_MIGRATION_CONFIG } from './activity-migration-config';
 import type { EnqueueMigrationInput, MigratedActivity, MigrationJob, MigrationProgress } from './type';
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) return error.message.slice(0, 4_000);
-  return String(error).slice(0, 4_000);
-}
-
-async function fileExists(filePath: string) {
-  try {
-    await access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { fileExists, getMigrationErrorMessage } from './activity-migration.utils';
 
 @Injectable()
 export class ActivityMigrationService {
@@ -70,7 +57,7 @@ export class ActivityMigrationService {
         const foundJob = await this.processNextJob();
         if (!foundJob) await delay(this.pollIntervalMs);
       } catch (error) {
-        this.logger.error('Ошибка цикла worker миграции', getErrorMessage(error));
+        this.logger.error('Ошибка цикла worker миграции', getMigrationErrorMessage(error));
         await delay(this.pollIntervalMs);
       }
     }
@@ -196,12 +183,15 @@ export class ActivityMigrationService {
         },
       });
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
+      const errorMessage = getMigrationErrorMessage(error);
       try {
         await this.markFailed(job.id, errorMessage, progress);
       } catch (statusError) {
         preserveArchiveForResume = true;
-        this.logger.error(`Не удалось сохранить ошибку задачи миграции ${job.id}`, getErrorMessage(statusError));
+        this.logger.error(
+          `Не удалось сохранить ошибку задачи миграции ${job.id}`,
+          getMigrationErrorMessage(statusError),
+        );
       }
       this.logger.error(`Не удалось обработать задачу миграции ${job.id}`, errorMessage);
     } finally {
@@ -214,7 +204,7 @@ export class ActivityMigrationService {
           if (result.status === 'rejected') {
             this.logger.error(
               `Не удалось удалить временные файлы задачи миграции ${job.id}`,
-              getErrorMessage(result.reason),
+              getMigrationErrorMessage(result.reason),
             );
           }
         });

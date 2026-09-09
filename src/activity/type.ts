@@ -1,4 +1,5 @@
 import type { ActivityDto } from './activity.dto';
+import type { ActivityCursor } from './activity.pagination';
 
 export type EnqueueMigrationInput = {
   userId: string;
@@ -31,3 +32,12 @@ export type MigratedActivity = ActivityDto & {
 };
 
 export type MigrationProgress = Pick<MigrationJob, 'processedActivities' | 'importedActivities' | 'skippedActivities'>;
+
+export type ActivityFeedSqlRow = ActivityCursor & Record<string, unknown>;
+
+export type ActivityMediaProcessingRecord = {
+  id: string;
+  photoVideoUrls: unknown;
+  mapPhotoUrl: string | null;
+  mapPhotoUrlBlurhash: string | null;
+};
