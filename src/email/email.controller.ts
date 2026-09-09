@@ -4,8 +4,8 @@ import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTa
 import { EmailService } from './email.service';
 import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
 import { PATHS } from 'src/common/constants';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import type { AuthenticatedRequest } from 'src/auth/auth-request';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 

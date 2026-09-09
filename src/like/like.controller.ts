@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Body, Param, Delete, Inject, UseGuards, Req, HttpCode } from '@nestjs/common';
 import { LikeService } from './like.service';
-import { LikeResponseDto } from './like.response.dto';
+import { LikeResponseDto } from './like.dto';
 import { LikeDto } from './like.dto';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import type { AuthenticatedRequest } from 'src/auth/auth-request';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { like, id, activityId, OK, BAD_REQUEST } from './const';
 
 @ApiTags(like)

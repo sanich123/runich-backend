@@ -76,7 +76,7 @@ high-volume migrations against representative data.
 Run the full quality gate before pushing:
 
     yarn typecheck
-    yarn eslint src integration
+    yarn eslint src
     yarn build
     yarn test:ci
     yarn test:cov

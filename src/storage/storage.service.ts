@@ -26,8 +26,8 @@ export class StorageService {
   private readonly writesEnabled: boolean;
 
   constructor() {
-    const endpoint = (process.env.S3_ENDPOINT ?? DEFAULT_S3_ENDPOINT).replace(/\/$/, '');
-    const region = process.env.S3_REGION ?? DEFAULT_S3_REGION;
+    const endpoint = DEFAULT_S3_ENDPOINT;
+    const region = DEFAULT_S3_REGION;
     const bucket = process.env.S3_BUCKET ?? '';
     const accessKey = process.env.S3_ACCESS_KEY ?? process.env.S3_ACCESS_KEY_ID ?? '';
     const secretKey = process.env.S3_SECRET_ACCESS_KEY ?? process.env.S3_SECRET_KEY ?? '';

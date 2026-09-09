@@ -1,11 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { access, rm } from 'node:fs/promises';
 import { setImmediate as yieldToEventLoop, setTimeout as delay } from 'node:timers/promises';
-import {
-  ACTIVITY_MIGRATION_STATUS,
-  ActivityMigrationJobResponseDto,
-  ActivityMigrationStatus,
-} from './activity-migration.dto';
+import { ACTIVITY_MIGRATION_STATUS, ActivityMigrationJobResponseDto, ActivityMigrationStatus } from './activity.dto';
 import { getMigrationWorkDirectory } from './activity-migration-storage';
 import { generateActivityTitle } from './activity-title';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';

@@ -79,17 +79,6 @@ function isCreateActivityRequest(request: Request) {
   return request.method === 'POST' && /^\/activity\/[^/]+\/?$/.test(path);
 }
 
-function serializeRequestBody(body: unknown) {
-  if (body === undefined) return 'тело запроса отсутствует';
-
-  try {
-    const serializedBody = JSON.stringify(body);
-    return serializedBody?.replace(/([?&]access_token=)[^&"]+/gi, '$1[скрыт]') ?? 'тело запроса отсутствует';
-  } catch {
-    return 'не удалось сериализовать тело запроса';
-  }
-}
-
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -120,7 +109,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const activityRequestDetails =
       isCreateActivityRequest(request) && statusCode >= HttpStatus.BAD_REQUEST
-        ? `; Данные создания активности: ${serializeRequestBody(request.body)}`
+        ? `; Ошибка создания активности: userId=${typeof request.params?.id === 'string' ? request.params.id : 'unknown'}`
         : '';
     const logMessage = `${statusCode} ${responseBody.path}: ${JSON.stringify(message)}${activityRequestDetails}`;
     if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {

@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
-import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { Filtering } from './filter.decorator';
 import type { ProfileWhereInput } from './type';
+import { encodeProfileCursor, type ProfileCursor } from './account.pagination';
+
+const DEFAULT_PROFILE_PAGE_SIZE = 10;
 
 function normalizeFilterValue(value: string | null | undefined) {
   const normalized = value?.trim();
@@ -33,20 +35,27 @@ function buildProfileWhere(filter: Filtering): ProfileWhereInput {
 export class AccountService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async getFilteredAccounts({ page, limit, size, offset }: Pagination, filter: Filtering) {
-    const where = buildProfileWhere(filter);
+  async getFilteredAccounts(
+    take = String(DEFAULT_PROFILE_PAGE_SIZE),
+    cursor: ProfileCursor | undefined,
+    filter: Filtering,
+  ) {
+    const filterWhere = buildProfileWhere(filter);
+    const where = cursor ? { AND: [filterWhere, { id: { gt: cursor.id } }] } : filterWhere;
 
     try {
-      const [count, profiles] = await this.prisma.$transaction([
-        this.prisma.profile.count({ where }),
-        this.prisma.profile.findMany({ where, skip: offset, take: limit }),
-      ]);
+      const profilesWithExtraItem = await this.prisma.profile.findMany({
+        where,
+        orderBy: { id: 'asc' },
+        take: Number(take) + 1,
+      });
+      const hasMore = profilesWithExtraItem.length > Number(take);
+      const profiles = profilesWithExtraItem.slice(0, Number(take));
 
       return {
-        totalItems: count,
         items: profiles,
-        page,
-        size,
+        hasMore,
+        nextCursor: hasMore && profiles.length ? encodeProfileCursor(profiles.at(-1)!) : null,
       };
     } catch (error) {
       handleServiceError(error);

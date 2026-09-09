@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PaginationResponseDto } from 'src/common/dto/pagination.dto';
 
 export class ProfileDto {
   @ApiPropertyOptional({ type: String, description: 'Id value (optional)' })
@@ -38,7 +37,13 @@ export class ProfileDto {
   email?: string | null;
 }
 
-export class ProfilePaginationResponseDto extends PaginationResponseDto<ProfileDto> {
+export class ProfilePaginationResponseDto {
   @ApiProperty({ type: [ProfileDto] })
-  declare items: ProfileDto[];
+  items: ProfileDto[];
+
+  @ApiProperty({ type: Boolean })
+  hasMore: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  nextCursor: string | null;
 }

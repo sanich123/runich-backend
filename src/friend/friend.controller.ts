@@ -1,11 +1,11 @@
 import { Controller, Get, HttpCode, Inject, Param, Delete, Post, UseGuards, Req } from '@nestjs/common';
 import { FriendService } from './friend.service';
-import { FriendResponseDto } from './friend.response.dto';
+import { FriendResponseDto } from './friend.dto';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { FriendDto } from './friend.dto';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import type { AuthenticatedRequest } from 'src/auth/auth-request';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { friend, id, OK, BAD_REQUEST, NO_CONTENT } from './const';
 
 @ApiTags(friend)
