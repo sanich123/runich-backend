@@ -4,7 +4,10 @@ import { asyncMock } from 'src/tests/helpers';
 
 describe('LikeService privacy', () => {
   it('does not create or list likes for a private activity', async () => {
-    const prisma = { like: { upsert: asyncMock(), findMany: asyncMock() } };
+    const prisma = {
+      activity: { findUnique: asyncMock().mockResolvedValue(null) },
+      like: { upsert: asyncMock(), findMany: asyncMock() },
+    };
     const accountService = { getAccountByUserId: asyncMock() };
     const activityService = { canAccessActivity: asyncMock().mockResolvedValue(false) };
     const service = new LikeService(prisma as never, accountService as never, activityService as never);

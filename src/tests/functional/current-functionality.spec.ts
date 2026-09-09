@@ -252,11 +252,11 @@ describe('activity, comments and statistics', () => {
     const prisma = db();
     const account = { getAccountByUserId: createMock().mockResolvedValue({ id: 'p1' }) };
     const service = new CommentService(prisma as never, account as never, {} as never);
-    prisma.comment.count.mockResolvedValue(1);
-    prisma.comment.findMany.mockResolvedValue([{ id: 'c1' }]);
+    prisma.activity.findUnique.mockResolvedValue({ comments: [{ id: 'c1' }] });
     prisma.comment.create.mockResolvedValue({ id: 'c1' });
     prisma.comment.update.mockResolvedValue({ id: 'c1' });
     prisma.comment.delete.mockResolvedValue({ id: 'c1' });
+    prisma.comment.findUnique.mockResolvedValue({ commentLikes: [{ id: 'cl1' }] });
     prisma.commentLike.upsert.mockResolvedValue({ id: 'cl1' });
     prisma.commentLike.findUnique.mockResolvedValue({ id: 'cl1' });
     prisma.commentLike.findMany.mockResolvedValue([{ id: 'cl1' }]);

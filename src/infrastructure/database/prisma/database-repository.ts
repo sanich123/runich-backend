@@ -1,9 +1,36 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Prisma ORM collections are dynamic at this boundary. */
 import { and, not, or } from '@prisma/orm-postgres/orm-client';
 import type { PostgresClient } from '@prisma/orm-postgres/runtime';
+import { databaseClient } from './client';
 
 type AnyRecord = Record<string, any>;
 export type RuntimeClient = PostgresClient<any>;
+type RawSqlBuilder = (strings: TemplateStringsArray, ...values: unknown[]) => AnyRecord;
+
+const SQL_CASTS: Record<string, string> = {
+  'pg/bool': 'boolean',
+  'pg/date-string': 'date',
+  'pg/float8': 'float8',
+  'pg/int2': 'int2',
+  'pg/int4': 'int4',
+  'pg/jsonb': 'jsonb',
+  'pg/text': 'text',
+  'pg/timestamptz-string': 'timestamptz',
+  'pg/uuid': 'uuid',
+  'sql/varchar': 'varchar',
+};
+
+function quoteIdentifier(identifier: string) {
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+
+function getCodecId(modelSpec: AnyRecord, field: string) {
+  return modelSpec.fields[field]?.type?.codecId as string | undefined;
+}
+
+function serializeBulkValue(value: unknown, codecId: string) {
+  return codecId === 'pg/jsonb@1' && value !== null ? JSON.stringify(value) : value;
+}
 
 type ModelName =
   | 'User'
@@ -334,16 +361,69 @@ export class ModelRepository {
     return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
   }
 
+  private executePlan(plan: AnyRecord) {
+    const client = this.client as AnyRecord;
+    if (typeof client.execute === 'function') return client.execute(plan);
+    return client.runtime().execute(plan);
+  }
+
+  private buildBulkInsertPlan(rows: AnyRecord[], fields: string[], skipDuplicates: boolean) {
+    const modelSpec = (databaseClient.contract as AnyRecord).domain.namespaces.public.models[this.model];
+    const storageFields = modelSpec.storage.fields as AnyRecord;
+    const table = modelSpec.storage.table as string;
+    const quotedColumns = fields.map((field) => quoteIdentifier(storageFields[field].column as string));
+    const parts: string[] = [
+      `INSERT INTO ${quoteIdentifier('public')}.${quoteIdentifier(table)} (${quotedColumns.join(', ')}) VALUES (`,
+    ];
+    const values: unknown[] = [];
+
+    rows.forEach((row, rowIndex) => {
+      fields.forEach((field, fieldIndex) => {
+        const codecId = getCodecId(modelSpec, field);
+        const cast = codecId ? SQL_CASTS[codecId.split('@')[0]] : undefined;
+        if (!codecId || !cast) throw new Error(`Unsupported bulk insert field codec: ${this.model}.${field}`);
+
+        values.push(serializeBulkValue(row[field], codecId));
+        const isLastField = fieldIndex === fields.length - 1;
+        const rowSeparator = rowIndex === rows.length - 1 ? ')' : '), (';
+        parts.push(`::${cast}${isLastField ? rowSeparator : ', '}`);
+      });
+    });
+
+    if (skipDuplicates) parts[parts.length - 1] += ' ON CONFLICT DO NOTHING';
+
+    const templateStrings = Object.assign([...parts], { raw: [...parts] }) as unknown as TemplateStringsArray;
+    const rawPlan = (databaseClient.raw.sql as unknown as RawSqlBuilder)(templateStrings, ...values);
+    return rawPlan.affectedCount().build();
+  }
+
   async createMany(options: AnyRecord): Promise<{ count: number }> {
-    let count = 0;
-    for (const data of options.data as AnyRecord[]) {
-      try {
-        await this.root.create(normalizeMutationInput(this.model, data));
-        count += 1;
-      } catch (error) {
-        if (!options.skipDuplicates) throw error;
-      }
+    const data = options.data as AnyRecord[];
+    if (!data.length) return { count: 0 };
+
+    const modelSpec = (databaseClient.contract as AnyRecord).domain.namespaces.public.models[this.model];
+    const modelFields = modelSpec.fields as AnyRecord;
+    const rowsByShape = new Map<string, { fields: string[]; rows: AnyRecord[] }>();
+
+    for (const item of data) {
+      const normalized = normalizeMutationInput(this.model, item) as AnyRecord;
+      const row = Object.fromEntries(
+        Object.entries(normalized).filter(([field, value]) => field in modelFields && value !== undefined),
+      );
+      const fields = Object.keys(row).sort();
+      const shape = fields.join('\u0000');
+      const group = rowsByShape.get(shape) ?? { fields, rows: [] };
+      group.rows.push(row);
+      rowsByShape.set(shape, group);
     }
+
+    let count = 0;
+    for (const { fields, rows } of rowsByShape.values()) {
+      if (!fields.length) throw new Error(`Bulk insert requires at least one scalar field: ${this.model}`);
+      const result = await this.executePlan(this.buildBulkInsertPlan(rows, fields, options.skipDuplicates === true));
+      count += Number(result.affectedRows ?? 0);
+    }
+
     return { count };
   }
 

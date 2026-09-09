@@ -4,6 +4,7 @@ import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 
 function createPrismaMock() {
   return {
+    activity: { findUnique: asyncMock() },
     comment: {
       count: asyncMock(),
       findMany: asyncMock(),
@@ -23,19 +24,21 @@ describe('CommentService', () => {
     const service = new CommentService(prisma as never, account as never, {} as never);
     const comment = { id: 'comment-1', comment: 'Hello' };
     const like = { id: 'comment-like-1' };
-    prisma.comment.count.mockResolvedValue(2);
-    prisma.comment.findMany.mockResolvedValue([comment]);
+    prisma.activity.findUnique.mockResolvedValue({
+      comments: [comment],
+      _count: { comments: 2 },
+    });
     prisma.comment.create.mockResolvedValue(comment);
     prisma.comment.delete.mockResolvedValue(comment);
     prisma.comment.update.mockResolvedValue(comment);
     prisma.comment.findUnique.mockResolvedValue({
-      profile: { user: { email: 'user@example.com' } },
       comment: 'Hello',
+      profile: { user: { email: 'user@example.com' } },
+      activity: { userId: 'user-1', isPublic: true },
+      commentLikes: [like],
     });
     prisma.commentLike.upsert.mockResolvedValue(like);
-    prisma.commentLike.findUnique.mockResolvedValue(like);
     prisma.commentLike.delete.mockResolvedValue(like);
-    prisma.commentLike.findMany.mockResolvedValue([like]);
 
     await expect(service.getCommentsbyActivityId('activity-1', '10')).resolves.toEqual({
       comments: [comment],
@@ -54,6 +57,7 @@ describe('CommentService', () => {
     await expect(service.createCommentLikeByCommentId({ commentId: 'comment-1' })).resolves.toEqual(like);
     await expect(service.deleteCommentLikeByLikeId('comment-like-1')).resolves.toEqual(like);
     await expect(service.getCommentLikesLengthByCommentId('comment-1')).resolves.toEqual([like]);
+    expect(prisma.commentLike.findUnique).not.toHaveBeenCalled();
   });
 
   it('requests one extra comment and returns a cursor when another page exists', async () => {
@@ -61,8 +65,7 @@ describe('CommentService', () => {
     const service = new CommentService(prisma as never, {} as never, {} as never);
     const firstComment = { id: 'comment-1', date: new Date('2026-08-20T10:00:00.000Z') };
     const secondComment = { id: 'comment-2', date: new Date('2026-08-20T09:00:00.000Z') };
-    prisma.comment.count.mockResolvedValue(2);
-    prisma.comment.findMany.mockResolvedValue([firstComment, secondComment]);
+    prisma.activity.findUnique.mockResolvedValue({ comments: [firstComment, secondComment] });
 
     await expect(
       service.getCommentsbyActivityId('activity-1', '1', {
@@ -77,17 +80,21 @@ describe('CommentService', () => {
         'utf8',
       ).toString('base64url'),
     });
-    expect(prisma.comment.findMany).toHaveBeenCalledWith(
+    expect(prisma.activity.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          activityId: 'activity-1',
-          OR: [
-            { date: { lt: new Date('2026-08-20T11:00:00.000Z') } },
-            { date: new Date('2026-08-20T11:00:00.000Z'), id: { lt: 'cursor-comment' } },
-          ],
+        where: { id: 'activity-1' },
+        select: {
+          comments: expect.objectContaining({
+            where: {
+              OR: [
+                { date: { lt: new Date('2026-08-20T11:00:00.000Z') } },
+                { date: new Date('2026-08-20T11:00:00.000Z'), id: { lt: 'cursor-comment' } },
+              ],
+            },
+            orderBy: [{ date: 'desc' }, { id: 'desc' }],
+            take: 2,
+          }),
         },
-        orderBy: [{ date: 'desc' }, { id: 'desc' }],
-        take: 2,
       }),
     );
   });
@@ -95,16 +102,18 @@ describe('CommentService', () => {
   it('selects comment fields and profile data without loading comment likes', async () => {
     const prisma = createPrismaMock();
     const service = new CommentService(prisma as never, {} as never, {} as never);
-    prisma.comment.findMany.mockResolvedValue([]);
+    prisma.activity.findUnique.mockResolvedValue({ comments: [] });
 
     await service.getCommentsbyActivityId('activity-1');
 
-    const query = ((prisma.comment.findMany.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
-      select?: Record<string, unknown>;
+    const query = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
+      select?: { comments?: { select?: Record<string, unknown>; include?: unknown } };
       include?: unknown;
     };
+    const commentQuery = query.select?.comments ?? {};
     expect(query.include).toBeUndefined();
-    expect(query.select).toEqual(
+    expect(commentQuery.include).toBeUndefined();
+    expect(commentQuery.select).toEqual(
       expect.objectContaining({
         id: true,
         date: true,
@@ -115,8 +124,39 @@ describe('CommentService', () => {
         profile: expect.any(Object),
       }),
     );
-    expect(query.select).not.toHaveProperty('commentLike');
-    expect(query.select).not.toHaveProperty('commentLikes');
+    expect(commentQuery.select).not.toHaveProperty('commentLike');
+    expect(commentQuery.select).not.toHaveProperty('commentLikes');
+  });
+
+  it('combines comment access and comment lookup into one query', async () => {
+    const prisma = createPrismaMock();
+    const service = new CommentService(prisma as never, {} as never, {} as never);
+    prisma.comment.findUnique.mockResolvedValue({
+      comment: 'Hello',
+      profile: { user: { email: 'user@example.com' } },
+      activity: { userId: 'owner-1', isPublic: false },
+    });
+
+    await expect(service.getCommentByCommentId('comment-1', 'owner-1')).resolves.toEqual({
+      profile: { user: { email: 'user@example.com' } },
+      email: 'user@example.com',
+      comment: 'Hello',
+    });
+    expect(prisma.comment.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('combines comment access and comment likes lookup into one query', async () => {
+    const prisma = createPrismaMock();
+    const service = new CommentService(prisma as never, {} as never, {} as never);
+    prisma.comment.findUnique.mockResolvedValue({
+      activity: { userId: 'owner-1', isPublic: false },
+      commentLikes: [{ id: 'like-1', authorId: 'author-1' }],
+    });
+
+    await expect(service.getCommentLikesLengthByCommentId('comment-1', 'owner-1')).resolves.toEqual([
+      { id: 'like-1', authorId: 'author-1' },
+    ]);
+    expect(prisma.comment.findUnique).toHaveBeenCalledTimes(1);
   });
 
   it('returns not found when a comment author has no profile', async () => {
@@ -137,6 +177,7 @@ describe('CommentService', () => {
   it('converts database failures from every operation to an internal server error', async () => {
     const prisma = createPrismaMock();
     const error = new Error('database unavailable');
+    Object.values(prisma.activity).forEach((operation) => operation.mockRejectedValue(error));
     Object.values(prisma.comment).forEach((operation) => operation.mockRejectedValue(error));
     Object.values(prisma.commentLike).forEach((operation) => operation.mockRejectedValue(error));
     const service = new CommentService(

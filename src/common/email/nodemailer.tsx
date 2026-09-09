@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { networkInterfaces } from 'node:os';
 import { join } from 'node:path';
 import nodemailer from 'nodemailer';
 
@@ -7,6 +8,24 @@ import { RUNICH_LOGO_CID } from './constants';
 const YANDEX_SMTP_HOST = 'smtp.yandex.ru';
 const YANDEX_SMTP_PORT = 465;
 const EMAIL_API_TIMEOUT_MS = 15_000;
+const DEVELOPMENT_ENVIRONMENT = 'development';
+
+function getSmtpLocalAddress(): string | undefined {
+  const configuredAddress = process.env.YANDEX_SMTP_LOCAL_ADDRESS?.trim();
+  if (configuredAddress) return configuredAddress;
+  if (process.env.NODE_ENV !== DEVELOPMENT_ENVIRONMENT) return undefined;
+
+  const candidates = Object.entries(networkInterfaces())
+    .filter(([name]) => !/^(lo|utun|tun|tap|ppp|docker|br-|veth)/i.test(name))
+    .flatMap(([name, addresses]) =>
+      (addresses ?? [])
+        .filter((address) => !address.internal && address.family === 'IPv4')
+        .map((address) => ({ name, address: address.address })),
+    );
+
+  const preferredCandidate = candidates.find(({ name }) => /^(en|eth|enp|wlan)/i.test(name));
+  return (preferredCandidate ?? candidates[0])?.address;
+}
 
 function requiredEnvironmentVariable(name: string): string {
   const value = process.env[name]?.trim();
@@ -23,7 +42,8 @@ function getYandexTransporter() {
   const password = requiredEnvironmentVariable('YANDEX_SMTP_PASSWORD');
 
   if (!yandexTransporter) {
-    yandexTransporter = nodemailer.createTransport({
+    const localAddress = getSmtpLocalAddress();
+    const transportOptions = {
       host: YANDEX_SMTP_HOST,
       port: YANDEX_SMTP_PORT,
       secure: true,
@@ -34,7 +54,10 @@ function getYandexTransporter() {
       connectionTimeout: EMAIL_API_TIMEOUT_MS,
       greetingTimeout: EMAIL_API_TIMEOUT_MS,
       socketTimeout: EMAIL_API_TIMEOUT_MS,
-    });
+      ...(localAddress ? { localAddress } : {}),
+    };
+
+    yandexTransporter = nodemailer.createTransport(transportOptions);
   }
   return yandexTransporter;
 }

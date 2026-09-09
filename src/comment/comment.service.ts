@@ -37,38 +37,49 @@ export class CommentService {
 
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
-      select: { activityId: true },
+      select: { activity: { select: { userId: true, isPublic: true } } },
     });
-    if (!comment || !(await this.activityService.canAccessActivity(comment.activityId, currentUserId))) {
+    if (!comment || (comment.activity.userId !== currentUserId && comment.activity.isPublic !== true)) {
       throw new NotFoundException('Комментарий не найден');
     }
   }
 
   async getCommentsbyActivityId(id: string, limit = '10', cursor?: CommentCursor, currentUserId?: string) {
     try {
-      await this.ensureActivityAccess(id, currentUserId);
       const pageSize = Number(limit);
-      const commentsWithExtraItem = await this.prisma.comment.findMany({
+      const activity = await this.prisma.activity.findUnique({
         where: {
-          activityId: id,
-          ...(cursor
-            ? {
-                OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
-              }
-            : {}),
+          id,
+          ...(currentUserId ? { OR: [{ userId: currentUserId }, { isPublic: true }] } : {}),
         },
-        orderBy: [{ date: 'desc' }, { id: 'desc' }],
         select: {
-          date: true,
-          comment: true,
-          authorId: true,
-          activityId: true,
-          profileId: true,
-          id: true,
-          profile: { select: COMMENT_PROFILE_SELECT },
+          comments: {
+            ...(cursor
+              ? {
+                  where: {
+                    OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
+                  },
+                }
+              : {}),
+            orderBy: [{ date: 'desc' }, { id: 'desc' }],
+            select: {
+              date: true,
+              comment: true,
+              authorId: true,
+              activityId: true,
+              profileId: true,
+              id: true,
+              profile: { select: COMMENT_PROFILE_SELECT },
+            },
+            take: pageSize + 1,
+          },
         },
-        take: pageSize + 1,
       });
+      if (!activity) {
+        if (currentUserId) throw new NotFoundException('Активность не найдена');
+        return { comments: [], hasMore: false, nextCursor: null };
+      }
+      const commentsWithExtraItem = activity.comments;
       const hasMore = commentsWithExtraItem.length > pageSize;
       const comments = commentsWithExtraItem.slice(0, pageSize);
       return {
@@ -83,8 +94,18 @@ export class CommentService {
 
   async getCommentsLengthbyActivityId(id: string, currentUserId?: string) {
     try {
-      await this.ensureActivityAccess(id, currentUserId);
-      return await this.prisma.comment.count({ where: { activityId: id } });
+      const activity = await this.prisma.activity.findUnique({
+        where: {
+          id,
+          ...(currentUserId ? { OR: [{ userId: currentUserId }, { isPublic: true }] } : {}),
+        },
+        select: { _count: { select: { comments: true } } },
+      });
+      if (!activity) {
+        if (currentUserId) throw new NotFoundException('Активность не найдена');
+        return 0;
+      }
+      return activity._count.comments;
     } catch (error) {
       handleServiceError(error);
     }
@@ -129,15 +150,25 @@ export class CommentService {
 
   async getCommentByCommentId(id: string, currentUserId?: string) {
     try {
-      await this.ensureCommentAccess(id, currentUserId);
       const comment = await this.prisma.comment.findUnique({
         where: { id },
         select: {
           comment: true,
           profile: { select: COMMENT_PROFILE_SELECT },
+          activity: { select: { userId: true, isPublic: true } },
         },
       });
-      return { profile: comment?.profile, email: comment?.profile.user.email, comment: comment?.comment };
+      if (
+        currentUserId &&
+        (!comment || (comment.activity.userId !== currentUserId && comment.activity.isPublic !== true))
+      ) {
+        throw new NotFoundException('Комментарий не найден');
+      }
+      return {
+        profile: comment?.profile,
+        email: comment?.profile?.user?.email,
+        comment: comment?.comment,
+      };
     } catch (error) {
       handleServiceError(error);
     }
@@ -164,8 +195,20 @@ export class CommentService {
 
   async getCommentLikesLengthByCommentId(id: string, currentUserId?: string) {
     try {
-      await this.ensureCommentAccess(id, currentUserId);
-      return await this.commentLikeService.findByCommentId(id);
+      const comment = await this.prisma.comment.findUnique({
+        where: { id },
+        select: {
+          activity: { select: { userId: true, isPublic: true } },
+          commentLikes: { select: { authorId: true, id: true } },
+        },
+      });
+      if (
+        currentUserId &&
+        (!comment || (comment.activity.userId !== currentUserId && comment.activity.isPublic !== true))
+      ) {
+        throw new NotFoundException('Комментарий не найден');
+      }
+      return comment?.commentLikes ?? [];
     } catch (error) {
       handleServiceError(error);
     }

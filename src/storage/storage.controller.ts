@@ -13,7 +13,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
+import { diskStorage } from 'multer';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -23,6 +23,9 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { extname, join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
@@ -48,7 +51,17 @@ export class StorageController {
   @ApiCreatedResponse({ type: PhotoUploadResponseDto })
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: memoryStorage(),
+      // Keep the upload outside of Node's heap. StorageService streams this
+      // temporary file to S3 and removes it after the request completes.
+      storage: diskStorage({
+        destination: join(tmpdir(), 'runich-photo-uploads'),
+        filename: (_request, file, callback) => {
+          const extension = extname(file.originalname)
+            .toLowerCase()
+            .replace(/[^a-z0-9.]/g, '');
+          callback(null, `${randomUUID()}${extension}`);
+        },
+      }),
       limits: { fileSize: UPLOAD_LIMITS.photoBytes, files: 1 },
       fileFilter: (_request, file, callback) => {
         if (!file.mimetype.startsWith('image/') && !file.mimetype.startsWith('video/')) {

@@ -7,6 +7,16 @@ import { encodeProfileCursor, type ProfileCursor } from './account.pagination';
 
 const DEFAULT_PROFILE_PAGE_SIZE = 10;
 
+const PROFILE_SEARCH_SELECT = {
+  id: true,
+  userId: true,
+  name: true,
+  surname: true,
+  city: true,
+  profilePhoto: true,
+  profilePhotoBlurhash: true,
+} as const;
+
 function normalizeFilterValue(value: string | null | undefined) {
   const normalized = value?.trim();
   return normalized || undefined;
@@ -48,6 +58,7 @@ export class AccountService {
         where,
         orderBy: { id: 'asc' },
         take: Number(take) + 1,
+        select: PROFILE_SEARCH_SELECT,
       });
       const hasMore = profilesWithExtraItem.length > Number(take);
       const profiles = profilesWithExtraItem.slice(0, Number(take));

@@ -88,7 +88,10 @@ export class AuthController {
   @ApiOkResponse({ type: MessageResponseDto })
   @ApiCreatedResponse({ type: MessageResponseDto })
   async registerUser(@Body() { email, password }: RegisterUserDto) {
-    const user = await this.prismaService.user.findUnique({ where: { email } });
+    const user = await this.prismaService.user.findUnique({
+      where: { email },
+      select: { emailConfirmedAt: true, authProvider: true },
+    });
     if (user?.emailConfirmedAt) {
       if (user.authProvider === 'YANDEX' || user.authProvider === 'VK') {
         const providerName = user.authProvider === 'VK' ? 'VK' : 'Яндекс';

@@ -43,6 +43,7 @@ model User {
 
   @@unique([email], map: "Users_email_key")
   @@unique([phone], map: "Users_phone_key")
+  @@index([email], type: "gin", map: "Users_email_trgm_idx")
   @@map("Users")
 }
 
@@ -73,6 +74,9 @@ model Profile {
   user                  User                   @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Profile_user_id_fkey")
 
   @@unique([userId], map: "Profile_user_id_key")
+  @@index([name], type: "gin", map: "Profile_name_trgm_idx")
+  @@index([surname], type: "gin", map: "Profile_surname_trgm_idx")
+  @@index([email], type: "gin", map: "Profile_email_trgm_idx")
   @@map("Profile")
 }
 
@@ -106,6 +110,7 @@ model Activity {
 
   @@unique([userId, source, sourceActivityId], map: "Activity_user_id_source_sourceActivityId_key")
   @@index([userId, date, id], map: "Activity_user_id_date_id_idx")
+  @@index([userId, isPublic, date, id], map: "Activity_user_id_isPublic_date_id_idx")
   @@index([isPublic, date, id], map: "Activity_isPublic_date_id_idx")
   @@map("Activity")
 }

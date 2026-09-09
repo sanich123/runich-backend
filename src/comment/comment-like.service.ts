@@ -9,15 +9,15 @@ export class CommentLikeService {
   async create(data: { profileId: string; authorId: string; commentId: string }) {
     const where = { authorId_commentId: { authorId: data.authorId, commentId: data.commentId } };
     try {
-      await this.prisma.commentLike.upsert({
+      return await this.prisma.commentLike.upsert({
         where,
         update: {},
         create: data,
       });
     } catch (error) {
       if (!isUniqueConstraintError(error)) throw error;
+      return this.prisma.commentLike.findUnique({ where });
     }
-    return this.prisma.commentLike.findUnique({ where });
   }
 
   delete(id: string, authorId?: string) {

@@ -3,6 +3,13 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { handleServiceError, isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 
+const FRIEND_PROFILE_SELECT = {
+  surname: true,
+  name: true,
+  profilePhoto: true,
+  profilePhotoBlurhash: true,
+} as const;
+
 @Injectable()
 export class FriendService {
   constructor(
@@ -16,14 +23,15 @@ export class FriendService {
     try {
       return await this.prismaService.friend.findMany({
         where: { userId: id },
-        include: {
+        select: {
+          createdAt: true,
+          updatedAt: true,
+          userId: true,
+          friendId: true,
+          profileId: true,
+          id: true,
           profile: {
-            select: {
-              surname: true,
-              name: true,
-              profilePhoto: true,
-              profilePhotoBlurhash: true,
-            },
+            select: FRIEND_PROFILE_SELECT,
           },
         },
       });
@@ -44,16 +52,17 @@ export class FriendService {
     try {
       return await this.prismaService.friend.findMany({
         where: { friendId: id },
-        include: {
+        select: {
+          createdAt: true,
+          updatedAt: true,
+          userId: true,
+          friendId: true,
+          profileId: true,
+          id: true,
           user: {
-            include: {
+            select: {
               profile: {
-                select: {
-                  surname: true,
-                  name: true,
-                  profilePhoto: true,
-                  profilePhotoBlurhash: true,
-                },
+                select: FRIEND_PROFILE_SELECT,
               },
             },
           },
@@ -71,15 +80,15 @@ export class FriendService {
       if (!profile) throw new NotFoundException('Профиль пользователя не найден: userId');
       const where = { userId_friendId: { userId: ownerId, friendId: id } };
       try {
-        await this.prismaService.friend.upsert({
+        return await this.prismaService.friend.upsert({
           where,
           update: {},
           create: { userId: ownerId, friendId: id, profileId: profile.id },
         });
       } catch (error) {
         if (!isUniqueConstraintError(error)) throw error;
+        return await this.prismaService.friend.findUnique({ where });
       }
-      return await this.prismaService.friend.findUnique({ where });
     } catch (error) {
       handleServiceError(error);
     }
