@@ -6,6 +6,7 @@ import { RUNICH_LOGO_CID } from './constants';
 
 const YANDEX_SMTP_HOST = 'smtp.yandex.ru';
 const YANDEX_SMTP_PORT = 465;
+const EMAIL_API_TIMEOUT_MS = 15_000;
 
 function requiredEnvironmentVariable(name: string): string {
   const value = process.env[name]?.trim();
@@ -15,14 +16,6 @@ function requiredEnvironmentVariable(name: string): string {
   return value;
 }
 
-function requestTimeout(): number {
-  const timeout = Number(process.env.EMAIL_API_TIMEOUT ?? 15000);
-  if (!Number.isFinite(timeout) || timeout <= 0) {
-    throw new Error(`Таймаут EMAIL_API_TIMEOUT должен быть положительным числом: ${process.env.EMAIL_API_TIMEOUT}`);
-  }
-  return timeout;
-}
-
 let yandexTransporter: ReturnType<typeof nodemailer.createTransport> | undefined;
 
 function getYandexTransporter() {
@@ -30,7 +23,6 @@ function getYandexTransporter() {
   const password = requiredEnvironmentVariable('YANDEX_SMTP_PASSWORD');
 
   if (!yandexTransporter) {
-    const timeout = requestTimeout();
     yandexTransporter = nodemailer.createTransport({
       host: YANDEX_SMTP_HOST,
       port: YANDEX_SMTP_PORT,
@@ -39,9 +31,9 @@ function getYandexTransporter() {
         user: userEmail,
         pass: password,
       },
-      connectionTimeout: timeout,
-      greetingTimeout: timeout,
-      socketTimeout: timeout,
+      connectionTimeout: EMAIL_API_TIMEOUT_MS,
+      greetingTimeout: EMAIL_API_TIMEOUT_MS,
+      socketTimeout: EMAIL_API_TIMEOUT_MS,
     });
   }
   return yandexTransporter;

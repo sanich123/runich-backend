@@ -175,9 +175,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/client-s3@npm:3.1127.0":
-  version: 3.1127.0
-  resolution: "@aws-sdk/client-s3@npm:3.1127.0"
+"@aws-sdk/client-s3@npm:3.1128.0":
+  version: 3.1128.0
+  resolution: "@aws-sdk/client-s3@npm:3.1128.0"
   dependencies:
     "@aws-sdk/checksums": "npm:^3.1000.29"
     "@aws-sdk/core": "npm:^3.977.9"
@@ -190,7 +190,7 @@ __metadata:
     "@smithy/node-http-handler": "npm:^4.11.3"
     "@smithy/types": "npm:^4.17.2"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/3374a02ebf8aed8add371f4f9ac82c6d29b9227b096aa83b3ff2d49d7dea23afe91b9ed654f22c192384377382f5c2ffbf19982d2e06b065bb1c35ee57c305c2
+  checksum: 10c0/e9172f643c0dc53d9ff90d5113cbf72bc771f950f6b027c6d8e5cff1e5e3276540328fab3d5488ba63879210100bf9679dfa198c945218bb7c38cd4287d29fb3
   languageName: node
   linkType: hard
 
@@ -3857,21 +3857,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prisma/management-api-sdk@npm:^1.55.0":
-  version: 1.72.0
-  resolution: "@prisma/management-api-sdk@npm:1.72.0"
-  dependencies:
-    openapi-fetch: "npm:0.14.0"
-  checksum: 10c0/1e4335dfccff8cc6dbb1065ed555ddbf83c7a0b098fb4cdedef923c99060945d71d85cce6c04dc6da7c98c1bdf91cac575b703d92950997e77e8fb6fe9ae3c5a
-  languageName: node
-  linkType: hard
-
 "@prisma/management-api-sdk@npm:^1.60.0":
   version: 1.71.0
   resolution: "@prisma/management-api-sdk@npm:1.71.0"
   dependencies:
     openapi-fetch: "npm:0.14.0"
   checksum: 10c0/e4f0a77788086826b61e78556945f8fea643eb348073343c1c6aaeb1a4d309f89502358b5412386b48cd17b7f4010ab1eea7dbb58af26308976cfe3e466e6b04
+  languageName: node
+  linkType: hard
+
+"@prisma/management-api-sdk@npm:^1.72.0":
+  version: 1.72.0
+  resolution: "@prisma/management-api-sdk@npm:1.72.0"
+  dependencies:
+    openapi-fetch: "npm:0.14.0"
+  checksum: 10c0/1e4335dfccff8cc6dbb1065ed555ddbf83c7a0b098fb4cdedef923c99060945d71d85cce6c04dc6da7c98c1bdf91cac575b703d92950997e77e8fb6fe9ae3c5a
   languageName: node
   linkType: hard
 
@@ -5312,7 +5312,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:^19.2.0":
+"@types/react@npm:^19.2.18":
   version: 19.2.18
   resolution: "@types/react@npm:19.2.18"
   dependencies:
@@ -11165,7 +11165,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"multer@npm:^2.2.0":
+"multer@npm:^2.3.0":
   version: 2.3.0
   resolution: "multer@npm:2.3.0"
   dependencies:
@@ -12859,7 +12859,7 @@ __metadata:
   resolution: "runich-backend@workspace:."
   dependencies:
     "@ardentcode/sports-lib": "npm:^5.4.29"
-    "@aws-sdk/client-s3": "npm:3.1127.0"
+    "@aws-sdk/client-s3": "npm:3.1128.0"
     "@eslint/js": "npm:^10.0.1"
     "@jest/globals": "npm:^30.5.1"
     "@mapbox/polyline": "npm:^1.2.1"
@@ -12874,7 +12874,7 @@ __metadata:
     "@nestjs/testing": "npm:12.0.1"
     "@nestjs/throttler": "patch:@nestjs/throttler@npm%3A6.5.0#~/.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch"
     "@prisma/cli-engine": "npm:0.3.0"
-    "@prisma/management-api-sdk": "npm:^1.55.0"
+    "@prisma/management-api-sdk": "npm:^1.72.0"
     "@prisma/orm-postgres": "npm:8.0.0-rc.8"
     "@react-email/components": "npm:^1.0.12"
     "@swc/core": "npm:^1.16.2"
@@ -12885,7 +12885,7 @@ __metadata:
     "@types/node": "npm:^26.5.0"
     "@types/passport-jwt": "npm:^4.0.1"
     "@types/pg": "npm:^8.23.1"
-    "@types/react": "npm:^19.2.0"
+    "@types/react": "npm:^19.2.18"
     "@types/supertest": "npm:^7.2.1"
     "@types/uuid": "npm:^11.0.0"
     "@we-gold/gpxjs": "npm:^1.2.0"
@@ -12904,7 +12904,7 @@ __metadata:
     jest: "npm:^30.5.1"
     js-yaml: "npm:^5.4.1"
     madge: "npm:^8.0.0"
-    multer: "npm:^2.2.0"
+    multer: "npm:^2.3.0"
     nodemailer: "npm:^10.0.1"
     passport: "npm:^0.7.0"
     passport-jwt: "npm:^4.0.1"

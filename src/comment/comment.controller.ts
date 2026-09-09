@@ -18,7 +18,7 @@ import {
   CommentLikeSummaryResponseDto,
   CommentResponseDto,
   CommentsResponseDto,
-} from './comment.response.dto';
+} from './comment.dto';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { CommentDTO, CommentLikeDto, CommentUpdateDto } from './comment.dto';
 import {
@@ -31,9 +31,9 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
-import type { AuthenticatedRequest } from 'src/auth/auth-request';
+import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { parseCommentCursor } from './comment.pagination';
 import { comment, id, like, OK, BAD_REQUEST, CREATED, NO_CONTENT } from './const';
 

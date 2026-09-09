@@ -1,0 +1,10 @@
+/opt/runich-backend/project/logs.log {
+  daily
+  rotate 2
+  maxsize 20M
+  missingok
+  notifempty
+  compress
+  delaycompress
+  copytruncate
+}

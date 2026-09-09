@@ -21,6 +21,7 @@ export const enum QueryParams {
   month = 'month',
   take = 'take',
   page = 'page',
+  cursor = 'cursor',
   ids = 'ids',
 }
 

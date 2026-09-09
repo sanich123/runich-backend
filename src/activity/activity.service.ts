@@ -10,6 +10,14 @@ import { generateActivityTitle } from './activity-title';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
 import { ActivityPersistenceService } from './activity-persistence.service';
 import { ACTIVITY_CARD_SELECT, ACTIVITY_FEED_SELECT, DEFAULT_ACTIVITY_PAGE_SIZE } from './const';
+import {
+  encodeActivityCursor,
+  encodeActivityMediaCursor,
+  type ActivityCursor,
+  type ActivityMediaCursor,
+} from './activity.pagination';
+
+const MEDIA_ACTIVITY_BATCH_SIZE = 50;
 
 @Injectable()
 export class ActivityService {
@@ -67,8 +75,11 @@ export class ActivityService {
         photoVideoUrls,
         mapPhotoUrlBlurhash,
       };
-      const serializedData = JSON.stringify(data).replace(/([?&]access_token=)[^&"]+/gi, '$1[скрыт]');
-      this.logger.log(`Структура активности перед сохранением: ${serializedData}`);
+      const photoCount = Array.isArray(photoVideoUrls) ? photoVideoUrls.length : 0;
+      const locationCount = Array.isArray(activityDto.locations) ? activityDto.locations.length : 0;
+      this.logger.log(
+        `Сохранение активности: userId=${id}, sport=${activityDto.sport}, date=${activityDto.date}, photos=${photoCount}, locations=${locationCount}`,
+      );
 
       return await this.persistenceService.create(data);
     } catch (error) {
@@ -160,22 +171,70 @@ export class ActivityService {
     }
   }
 
-  async getMediaByUserId(id: string, take = '10', currentUserId?: string) {
+  async getMediaByUserId(id: string, take = '10', cursor?: ActivityMediaCursor, currentUserId?: string) {
     try {
-      const photos = await this.prisma.activity.findMany({
-        //@ts-ignore
-        where: {
-          userId: id,
+      const pageSize = Number(take);
+      const photos: unknown[] = [];
+      const photoCursors: ActivityMediaCursor[] = [];
+      let activityCursor: ActivityCursor | undefined = cursor;
+      let includeCursorActivity = Boolean(cursor);
+      let skipPhotoIndex = cursor?.photoIndex ?? -1;
+
+      while (photos.length <= pageSize) {
+        const activities = await this.prisma.activity.findMany({
           // @ts-ignore Prisma's generated JSON filter type does not accept SQL NULL here.
-          photoVideoUrls: { not: null },
-          ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
-        },
-        orderBy: { date: 'desc' },
-        select: { photoVideoUrls: true },
-      });
-      const flattedPhotos = photos?.map(({ photoVideoUrls }: { photoVideoUrls?: unknown }) => photoVideoUrls).flat();
-      const slicedPhotos = flattedPhotos?.slice(0, Number(take));
-      return { photos: slicedPhotos, isLastPage: flattedPhotos?.length <= slicedPhotos?.length };
+          where: {
+            userId: id,
+            photoVideoUrls: { not: null },
+            ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
+            ...(activityCursor
+              ? {
+                  OR: [
+                    { date: { lt: activityCursor.date } },
+                    { date: activityCursor.date, id: { lt: activityCursor.id } },
+                    ...(includeCursorActivity ? [{ date: activityCursor.date, id: activityCursor.id }] : []),
+                  ],
+                }
+              : {}),
+          },
+          orderBy: [{ date: 'desc' }, { id: 'desc' }],
+          take: MEDIA_ACTIVITY_BATCH_SIZE,
+          select: { id: true, date: true, photoVideoUrls: true },
+        });
+
+        if (!activities.length) break;
+
+        for (const activity of activities) {
+          const activityPhotos = Array.isArray(activity.photoVideoUrls) ? activity.photoVideoUrls : [];
+          const firstPhotoIndex =
+            includeCursorActivity && activity.id === cursor?.id && activity.date.getTime() === cursor?.date.getTime()
+              ? skipPhotoIndex + 1
+              : 0;
+
+          for (let photoIndex = firstPhotoIndex; photoIndex < activityPhotos.length; photoIndex += 1) {
+            photos.push(activityPhotos[photoIndex]);
+            photoCursors.push({ date: activity.date, id: activity.id, photoIndex });
+            if (photos.length > pageSize) break;
+          }
+          if (photos.length > pageSize) break;
+        }
+
+        const lastActivity = activities.at(-1)!;
+        activityCursor = { date: lastActivity.date, id: lastActivity.id };
+        includeCursorActivity = false;
+        skipPhotoIndex = -1;
+        if (activities.length < MEDIA_ACTIVITY_BATCH_SIZE) break;
+      }
+
+      const hasMore = photos.length > pageSize;
+      const slicedPhotos = photos.slice(0, pageSize);
+      const slicedCursors = photoCursors.slice(0, pageSize);
+      return {
+        photos: slicedPhotos,
+        hasMore,
+        nextCursor: hasMore && slicedCursors.length ? encodeActivityMediaCursor(slicedCursors.at(-1)!) : null,
+        isLastPage: !hasMore,
+      };
     } catch (error) {
       handleServiceError(error);
     }
@@ -183,22 +242,33 @@ export class ActivityService {
 
   async getActivitesByUserId(
     id: string,
-    page = '0',
     take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
+    cursor?: ActivityCursor,
     currentUserId?: string,
   ) {
     try {
-      const activities = await this.prisma.activity.findMany({
+      const activitiesWithExtraItem = await this.prisma.activity.findMany({
         where: {
           userId: id,
           ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
+          ...(cursor
+            ? {
+                OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
+              }
+            : {}),
         },
-        orderBy: { date: 'desc' },
-        skip: Number(page) * Number(take),
-        take: Number(take),
+        orderBy: [{ date: 'desc' }, { id: 'desc' }],
+        take: Number(take) + 1,
         select: ACTIVITY_CARD_SELECT,
       });
-      return { activities, isLastPage: !activities.length };
+      const hasMore = activitiesWithExtraItem.length > Number(take);
+      const activities = activitiesWithExtraItem.slice(0, Number(take));
+      return {
+        activities,
+        hasMore,
+        nextCursor: hasMore && activities.length ? encodeActivityCursor(activities.at(-1)!) : null,
+        isLastPage: !hasMore,
+      };
     } catch (error) {
       handleServiceError(error);
     }
@@ -223,21 +293,35 @@ export class ActivityService {
     }
   }
 
-  async getAllActivitiesWithFriends(id: string, page = '0', take = String(DEFAULT_ACTIVITY_PAGE_SIZE)) {
+  async getAllActivitiesWithFriends(id: string, take = String(DEFAULT_ACTIVITY_PAGE_SIZE), cursor?: ActivityCursor) {
     try {
       const friends = await this.prisma.friend.findMany({
         where: { userId: id },
         select: { friendId: true },
       });
       const ids = friends.map(({ friendId }: { friendId: string }) => friendId);
-      const activities = await this.prisma.activity.findMany({
-        where: { userId: { in: [...ids, id] }, isPublic: true },
-        orderBy: { date: 'desc' },
-        skip: Number(page) * Number(take),
-        take: Number(take),
+      const activitiesWithExtraItem = await this.prisma.activity.findMany({
+        where: {
+          userId: { in: [...ids, id] },
+          isPublic: true,
+          ...(cursor
+            ? {
+                OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
+              }
+            : {}),
+        },
+        orderBy: [{ date: 'desc' }, { id: 'desc' }],
+        take: Number(take) + 1,
         select: ACTIVITY_FEED_SELECT,
       });
-      return { activities, isLastPage: !activities.length };
+      const hasMore = activitiesWithExtraItem.length > Number(take);
+      const activities = activitiesWithExtraItem.slice(0, Number(take));
+      return {
+        activities,
+        hasMore,
+        nextCursor: hasMore && activities.length ? encodeActivityCursor(activities.at(-1)!) : null,
+        isLastPage: !hasMore,
+      };
     } catch (error) {
       handleServiceError(error);
     }

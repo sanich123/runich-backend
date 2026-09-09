@@ -23,9 +23,9 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import type { AuthenticatedRequest } from 'src/auth/auth-request';
-import { getAuthenticatedUserId } from 'src/auth/auth-request';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
+import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { DeletePhotoDto, PhotoUploadResponseDto } from './storage.dto';

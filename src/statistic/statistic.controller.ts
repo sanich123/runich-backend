@@ -3,8 +3,8 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiResp
 import { ParamsId } from 'src/common/dto/params-validation';
 import { PATHS, QueryParams } from 'src/common/constants';
 import { StatisticService } from './statistic.service';
-import { MonthStatisticsResponseDto, StatisticMetricResponseDto } from './statistic.response.dto';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { MonthStatisticsResponseDto, StatisticMetricResponseDto } from './statistic.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { validateOptionalDateQuery, validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 
 @ApiTags(PATHS.statistics)

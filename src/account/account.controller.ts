@@ -1,33 +1,24 @@
-import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
 import { AccountService } from './account.service';
-import {
-  ApiBearerAuth,
-  ApiResponse,
-  ApiTags,
-  ApiOperation,
-  ApiQuery,
-  ApiExtraModels,
-  ApiOkResponse,
-} from '@nestjs/swagger';
-import { PATHS } from 'src/common/constants';
+import { ApiBearerAuth, ApiResponse, ApiTags, ApiOperation, ApiQuery, ApiOkResponse } from '@nestjs/swagger';
+import { PATHS, QueryParams } from 'src/common/constants';
 import { ProfilePaginationResponseDto } from './account.dto';
-import { type Pagination, PaginationParams } from 'src/common/decorators/pagination.decorator';
-import { PaginationResponseDto } from 'src/common/dto/pagination.dto';
 import { type Filtering, FilteringParams } from './filter.decorator';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { parseProfileCursor } from './account.pagination';
 
 @ApiTags(PATHS.profile)
 @ApiBearerAuth('bearerAuth')
 @Controller(PATHS.profile)
-@ApiExtraModels(PaginationResponseDto)
 export class AccountController {
   constructor(@Inject(AccountService) private readonly accountService: AccountService) {}
 
   @Get('/filter')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Search profiles by different fields' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page Number' })
-  @ApiQuery({ name: 'size', required: false, description: 'Count of results per page' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
+  @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
   @ApiQuery({ name: 'name', required: false, description: 'Search by name, surname or email' })
   @ApiQuery({
     name: 'surname',
@@ -38,9 +29,14 @@ export class AccountController {
   @ApiOkResponse({ type: ProfilePaginationResponseDto })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   async getFilteredAccounts(
-    @PaginationParams() paginationParams: Pagination,
+    @Query(QueryParams.cursor) cursor: string | undefined,
+    @Query(QueryParams.take) take: string | undefined,
     @FilteringParams(['name', 'email', 'surname']) filter: Filtering,
   ) {
-    return await this.accountService.getFilteredAccounts(paginationParams, filter);
+    return await this.accountService.getFilteredAccounts(
+      validateOptionalIntegerQuery(take, QueryParams.take, { min: 1, max: 100 }),
+      parseProfileCursor(cursor),
+      filter,
+    );
   }
 }

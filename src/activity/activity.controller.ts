@@ -18,7 +18,7 @@ import {
   ForbiddenException,
   Req,
 } from '@nestjs/common';
-import type { AuthenticatedRequest as RequestWithUser } from 'src/auth/auth-request';
+import type { AuthenticatedRequest as RequestWithUser } from 'src/auth/request/auth-request';
 import { mkdir, rm } from 'fs/promises';
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
@@ -31,8 +31,8 @@ import {
   ActivityLocationsResponseDto,
   ActivityMediaResponseDto,
   ActivityResponseDto,
-} from './activity.response.dto';
-import { ActivityMigrationJobParams, ActivityMigrationJobResponseDto } from './activity-migration.dto';
+} from './activity.dto';
+import { ActivityMigrationJobParams, ActivityMigrationJobResponseDto } from './activity.dto';
 import { ActivityMigrationService } from './activity-migration.service';
 import { getMigrationArchiveDirectory } from './activity-migration-storage';
 import { ParamsId } from 'src/common/dto/params-validation';
@@ -51,11 +51,12 @@ import { QueryParams } from 'src/common/constants';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { AccountService } from 'src/account/account.service';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { activity, id } from './const';
+import { parseActivityCursor, parseActivityMediaCursor } from './activity.pagination';
 
 @ApiTags(activity)
 @ApiBearerAuth('bearerAuth')
@@ -75,17 +76,20 @@ export class ActivityController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
   @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
   @ApiQuery({ name: 'take', required: false, description: 'Maximum number of photos' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getMediaByUserId(
     @Param() { id }: ParamsId,
+    @Query(QueryParams.cursor) cursor?: string,
     @Query(QueryParams.take) take?: string,
     @Req() request?: RequestWithUser,
   ) {
     return this.activityService.getMediaByUserId(
       id,
       validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 }),
+      parseActivityMediaCursor(cursor),
       request?.user.userId ?? request?.user.id,
     );
   }
@@ -230,22 +234,21 @@ export class ActivityController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by userId' })
   @ApiParam({ name: 'id', description: 'User identifier' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
   @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getActivitiesByUserId(
     @Param() { id }: ParamsId,
-    @Query(QueryParams.page) page?: string,
+    @Query(QueryParams.cursor) cursor?: string,
     @Query(QueryParams.take) take?: string,
     @Req() request?: RequestWithUser,
   ) {
-    const validatedPage = validateOptionalIntegerQuery(page, QueryParams.page);
     const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
     return await this.activityService.getActivitesByUserId(
       id,
-      validatedPage,
       validatedTake,
+      parseActivityCursor(cursor),
       request?.user.userId ?? request?.user.id,
     );
   }
@@ -255,18 +258,17 @@ export class ActivityController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activities by userId and friends ids' })
   @ApiParam({ name: 'id', description: 'User identifier' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
   @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
   async getAllActivitiesWithFriends(
     @Param() { id }: ParamsId,
-    @Query(QueryParams.page) page?: string,
+    @Query(QueryParams.cursor) cursor?: string,
     @Query(QueryParams.take) take?: string,
   ) {
-    const validatedPage = validateOptionalIntegerQuery(page, QueryParams.page);
     const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
-    return await this.activityService.getAllActivitiesWithFriends(id, validatedPage, validatedTake);
+    return await this.activityService.getAllActivitiesWithFriends(id, validatedTake, parseActivityCursor(cursor));
   }
 
   @Get(`/activityId/${id}`)
