@@ -26,6 +26,7 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DOCKERHUB_PAT: ${{ secrets.DOCKER_PAT }}
         run: |
           set -euo pipefail
 
@@ -33,12 +34,20 @@ jobs:
           : "${DEPLOY_USER:?GitHub Secret DEPLOY_USER is required}"
           : "${DEPLOY_SSH_KEY:?GitHub Secret DEPLOY_SSH_KEY is required}"
           : "${DEPLOY_KNOWN_HOSTS:?GitHub Secret DEPLOY_KNOWN_HOSTS is required}"
+          : "${DOCKERHUB_PAT:?GitHub Secret DOCKER_PAT is required}"
 
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
           chmod 600 "$HOME/.ssh/id_ed25519"
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 644 "$HOME/.ssh/known_hosts"
+
+          printf '%s' "$DOCKERHUB_PAT" |
+            ssh -i "$HOME/.ssh/id_ed25519" \
+              -o BatchMode=yes -o IdentitiesOnly=yes \
+              "$DEPLOY_USER@$DEPLOY_HOST" \
+              'docker login --username sanich123 --password-stdin >/dev/null && docker pull node:26-alpine'
+          unset DOCKERHUB_PAT
 
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes \
