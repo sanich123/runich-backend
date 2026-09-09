@@ -1,4 +1,5 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Optional } from '@nestjs/common';
+import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { UserDto } from './user.dto';
@@ -6,7 +7,10 @@ import { blurhashFromUrl } from 'src/common/images/blurhash';
 
 @Injectable()
 export class UserService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
+  ) {}
 
   async getProfileByUserId(userId: string) {
     try {
@@ -23,7 +27,9 @@ export class UserService {
         currentUserId = id;
       }
       if (id !== currentUserId) throw new ForbiddenException('Недостаточно прав');
-      const profilePhotoBlurhash = accountDto.profilePhoto ? await blurhashFromUrl(accountDto.profilePhoto) : null;
+      const profilePhotoBlurhash = accountDto.profilePhoto
+        ? await blurhashFromUrl(accountDto.profilePhoto, this.latencyMetrics)
+        : null;
       return await this.prisma.profile.create({
         data: { ...accountDto, profilePhotoBlurhash, userId: id },
       });
@@ -40,7 +46,7 @@ export class UserService {
         currentUserId = profileId;
       }
       const profilePhotoBlurhash = accountDto.profilePhoto
-        ? await blurhashFromUrl(accountDto.profilePhoto)
+        ? await blurhashFromUrl(accountDto.profilePhoto, this.latencyMetrics)
         : accountDto.profilePhoto === null
           ? null
           : undefined;
@@ -70,7 +76,7 @@ export class UserService {
       }
 
       const profilePhotoBlurhash = accountDto.profilePhoto
-        ? await blurhashFromUrl(accountDto.profilePhoto)
+        ? await blurhashFromUrl(accountDto.profilePhoto, this.latencyMetrics)
         : accountDto.profilePhoto === null
           ? null
           : undefined;

@@ -1,52 +1,86 @@
+import { EventEmitter } from 'node:events';
 import { jest } from '@jest/globals';
 import { Logger } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import LoggingService from '../logger.middleware';
 
+function createResponse(statusCode: number, statusMessage: string) {
+  const response = new EventEmitter() as Response;
+  Object.assign(response, { statusCode, statusMessage });
+  return response;
+}
+
+function createRequest() {
+  return {
+    method: 'GET',
+    path: '/activities/1',
+    params: { id: 'activity-1' },
+    route: { path: '/activities/:id' },
+  } as unknown as Request;
+}
+
 describe('LoggingService', () => {
-  it('logs successful, client-error and server-error responses', () => {
-    const loggerLog = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-    const loggerWarn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    const finishHandlers: Array<() => void> = [];
-    const response = {
-      on: jest.fn((_event: string, handler: () => void) => finishHandlers.push(handler)),
-      statusCode: 200,
-      statusMessage: 'OK',
-    };
-    const request = { method: 'GET', params: { id: 'activity-1' }, url: '/activity/activity-1' };
-    const next = jest.fn();
-    const service = new LoggingService();
-
-    service.use(request as never, response as never, next);
-    expect(next).toHaveBeenCalledTimes(1);
-
-    finishHandlers[0]();
-    response.statusCode = 404;
-    response.statusMessage = 'Not Found';
-    finishHandlers[0]();
-    response.statusCode = 500;
-    response.statusMessage = 'Internal Server Error';
-    finishHandlers[0]();
-
-    expect(loggerLog).toHaveBeenCalledWith('GET /activity/activity-1 activity-1 OK');
-    expect(loggerWarn).toHaveBeenCalledWith('GET /activity/activity-1 activity-1 Not Found');
-    expect(loggerError).toHaveBeenCalledWith('GET /activity/activity-1 activity-1 Internal Server Error');
+  afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  it('uses a no-params marker when the request has no route params', () => {
-    const loggerLog = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-    const finishHandlers: Array<() => void> = [];
-    const response = {
-      on: jest.fn((_event: string, handler: () => void) => finishHandlers.push(handler)),
-      statusCode: 200,
-      statusMessage: 'OK',
-    };
+  it('records every request but logs only slow successful requests', () => {
+    const metrics = { observeHttp: jest.fn() };
+    const service = new LoggingService(metrics as never);
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const now = jest.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValueOnce(301);
+    const response = createResponse(200, 'OK');
 
-    new LoggingService().use({ method: 'GET', params: {}, url: '/health/live' } as never, response as never, jest.fn());
-    finishHandlers[0]();
+    service.use(createRequest(), response, jest.fn());
+    response.emit('finish');
 
-    expect(loggerLog).toHaveBeenCalledWith('GET /health/live no params OK');
-    jest.restoreAllMocks();
+    expect(now).toHaveBeenCalledTimes(2);
+    expect(metrics.observeHttp).toHaveBeenCalledWith('GET /activities/:id', 301);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('301.0ms'));
+  });
+
+  it('does not log a fast successful request and still logs fast errors', () => {
+    const metrics = { observeHttp: jest.fn() };
+    const service = new LoggingService(metrics as never);
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    jest
+      .spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(20)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(20);
+    const response = createResponse(200, 'OK');
+    service.use(createRequest(), response, jest.fn());
+    response.emit('finish');
+    expect(log).not.toHaveBeenCalled();
+
+    const errorResponse = createResponse(400, 'Bad Request');
+    service.use(createRequest(), errorResponse, jest.fn());
+    errorResponse.emit('finish');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Bad Request'));
+  });
+
+  it('uses warning and error levels for slow client and server responses', () => {
+    const service = new LoggingService();
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    jest
+      .spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(301)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(301);
+
+    const clientErrorResponse = createResponse(404, 'Not Found');
+    service.use({ ...createRequest(), params: {} } as Request, clientErrorResponse, jest.fn());
+    clientErrorResponse.emit('finish');
+
+    const serverErrorResponse = createResponse(500, 'Internal Server Error');
+    service.use(createRequest(), serverErrorResponse, jest.fn());
+    serverErrorResponse.emit('finish');
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('no params'));
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('Internal Server Error'));
   });
 });

@@ -1,7 +1,7 @@
 {
   "entry": {
     "main": "src/main.ts",
-    "activity-migration-worker": "src/app/activity-migration-worker.ts"
+    "background-worker": "src/app/background-worker.ts"
   },
   "format": ["esm"],
   "target": "node26",

@@ -49,7 +49,7 @@ Initialize the database and start development mode:
 
     yarn dev
 
-Start the migration worker in a second terminal:
+Start the background worker in a second terminal:
 
     yarn worker:dev
 
@@ -62,7 +62,7 @@ The API is available at http://localhost:3000; Swagger is at http://localhost:30
 Liveness is available at `/health/live`, and Railway readiness checks should use
 `/health/ready`.
 
-Production SSH access, Docker Compose logs, health checks and Strava worker
+Production SSH access, Docker Compose logs, health checks and background worker
 diagnostics are documented in [OPERATIONS.md](OPERATIONS.md).
 
 Known environment and integration limitations are tracked in
@@ -93,7 +93,7 @@ chunks instead of increasing the global body limit.
 
 ### Docker Compose
 
-    docker compose up --build
+    docker compose up --build --remove-orphans
 
 The local Compose database uses PostgreSQL 18.6. `POSTGRES_PASSWORD` and
 `DATABASE_URL_DOCKER` are required in the ignored `.env` file. The database
@@ -159,7 +159,7 @@ production or `https://stage--runich.netlify.app/login-from-url` in stage.
 
 Stage may use the same S3 bucket as production, but `PHOTO_UPLOADS_ENABLED`
 must remain `false` there. Mock fixtures use external URLs and do not upload
-objects to S3. Set `RUNICH_PROCESS=worker` for the migration/cleanup worker so
+objects to S3. Set `RUNICH_PROCESS=worker` for the background worker so
 it does not run the mock seed a second time.
 
 ## Commands
@@ -176,8 +176,8 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 | `yarn start:debug`  | Development API with Node inspector    |
 | `yarn build`        | Build the production bundles with tsup |
 | `yarn start:prod`   | Apply migrations and run compiled API  |
-| `yarn worker:dev`   | Development Strava migration worker    |
-| `yarn worker:prod`  | Apply migrations and run built worker  |
+| `yarn worker:dev`   | Development background worker         |
+| `yarn worker:prod`  | Apply migrations and run built background worker |
 
 ### Database
 
@@ -268,6 +268,8 @@ backend keeps S3 credentials private and returns a public object URL. `DELETE
 /photo` accepts that URL and only allows objects under the authenticated user's
 prefix. Account deletion creates a durable cleanup job; the existing background
 worker removes every S3 object under that prefix after the database transaction.
+The same worker calculates missing blurhash values for activity photos, videos
+and map images after the activity has been saved.
 
 ## Quality gates
 

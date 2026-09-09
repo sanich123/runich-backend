@@ -16,12 +16,13 @@ module.exports = {
     '!src/app/**',
     '!src/main.ts',
     '!src/**/*.d.ts',
+    '!src/tests/integration/**',
     '!src/**/*.spec.ts',
   ],
   coverageDirectory: '../coverage',
   coverageThreshold: {
     global: {
-      branches: 75,
+      branches: 85,
       functions: 80,
       lines: 80,
       statements: 80,

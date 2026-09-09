@@ -31,10 +31,14 @@ describe('blurhashFromUrl', () => {
 
   it('resizes a successful image and creates a blurhash', async () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+    const metrics = { observeExternal: jest.fn() };
 
-    await expect(blurhashFromUrl('https://example.com/image.jpg')).resolves.toBe('blurhash-value');
+    await expect(blurhashFromUrl('https://api.mapbox.com/styles/v1/map/image.jpg', metrics as never)).resolves.toBe(
+      'blurhash-value',
+    );
     expect(sharp).toHaveBeenCalledWith(expect.any(Buffer));
     expect(encode).toHaveBeenCalledWith(expect.any(Uint8ClampedArray), 1, 1, 4, 3);
+    expect(metrics.observeExternal).toHaveBeenCalledWith('mapbox', 'fetch', expect.any(Number));
     jest.restoreAllMocks();
   });
 

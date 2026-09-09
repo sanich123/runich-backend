@@ -201,11 +201,13 @@ describe('activity, comments and statistics', () => {
     const prisma = db();
     const account = { getAccountByUserId: createMock().mockResolvedValue({ id: 'p1' }) };
     const service = new ActivityService(prisma as never, account as never);
+    const queryRaw = createMock();
+    Object.assign(prisma, { $queryRaw: queryRaw });
     prisma.activity.create.mockResolvedValue({ id: 'a1' });
     prisma.activity.update.mockResolvedValue({ id: 'a1' });
     prisma.activity.findUnique.mockResolvedValue({ id: 'a1', locations: [] });
     prisma.activity.findMany.mockResolvedValue([]);
-    prisma.friend.findMany.mockResolvedValue([]);
+    queryRaw.mockResolvedValue([]);
     prisma.activity.delete.mockResolvedValue({ id: 'a1' });
     const dto = { duration: 100, distance: 1000, speed: 10, sport: 'run' };
     await expect(service.createActivity(dto, 'u1')).resolves.toEqual({ id: 'a1' });

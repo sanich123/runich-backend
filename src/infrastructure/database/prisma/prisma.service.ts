@@ -1,5 +1,6 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { Pool } from 'pg';
+import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { seedMockData } from './mock-seed';
 import { createDatabaseRepositories, DatabaseRepositories, RuntimeClient } from './database-repository';
 import { databaseClient } from './client';
@@ -10,6 +11,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   private client: RuntimeClient;
   private readonly pool?: Pool;
   private mockSeedPromise?: Promise<void>;
+  private latencyMetrics?: LatencyMetricsService;
   readonly user!: DatabaseRepositories['user'];
   readonly userSession!: DatabaseRepositories['userSession'];
   readonly authExchange!: DatabaseRepositories['authExchange'];
@@ -22,19 +24,21 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   readonly commentLike!: DatabaseRepositories['commentLike'];
   readonly like!: DatabaseRepositories['like'];
 
-  constructor() {
+  constructor(@Optional() @Inject(LatencyMetricsService) latencyMetrics?: LatencyMetricsService) {
     this.client = databaseClient;
+    this.latencyMetrics = latencyMetrics;
     this.pool = new Pool({ connectionString: process.env.DATABASE_URL });
     this.assignDelegates(databaseClient);
   }
 
   private assignDelegates(client: RuntimeClient) {
-    Object.assign(this, createDatabaseRepositories(client));
+    Object.assign(this, createDatabaseRepositories(client, this.latencyMetrics));
   }
 
-  private static fromClient(client: RuntimeClient) {
+  private static fromClient(client: RuntimeClient, latencyMetrics?: LatencyMetricsService) {
     const service = Object.create(PrismaService.prototype) as PrismaService;
     service.client = client;
+    service.latencyMetrics = latencyMetrics;
     service.assignDelegates(client);
     return service;
   }
@@ -50,11 +54,16 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   async $queryRaw<T = unknown>(strings: TemplateStringsArray, ...values: unknown[]): Promise<T> {
     if (!this.pool) throw new Error('Raw queries are unavailable inside a Prisma transaction callback');
-    const text = strings.reduce(
-      (query, chunk, index) => `${query}${chunk}${index < values.length ? `$${index + 1}` : ''}`,
-      '',
-    );
-    return (await this.pool.query(text, values)).rows as T;
+    const startedAt = performance.now();
+    try {
+      const text = strings.reduce(
+        (query, chunk, index) => `${query}${chunk}${index < values.length ? `$${index + 1}` : ''}`,
+        '',
+      );
+      return (await this.pool.query(text, values)).rows as T;
+    } finally {
+      this.latencyMetrics?.observeDatabase('raw', performance.now() - startedAt);
+    }
   }
 
   $transaction<T>(input: Promise<T>[], options?: unknown): Promise<T[]>;
@@ -62,7 +71,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   async $transaction<T>(input: Promise<T>[] | ((transaction: PrismaService) => Promise<T>)): Promise<T[] | T> {
     if (Array.isArray(input)) return Promise.all(input);
     return this.client.transaction(async (transactionClient) =>
-      input(PrismaService.fromClient(transactionClient as unknown as RuntimeClient)),
+      input(PrismaService.fromClient(transactionClient as unknown as RuntimeClient, this.latencyMetrics)),
     ) as Promise<T>;
   }
   async onModuleInit() {

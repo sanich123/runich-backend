@@ -26,7 +26,7 @@ yarn build
 # 9. Проверка circular dependencies
 yarn madge
 
-# 10. Проверка неиспользуемых экспортов
+# 10. Проверка неиспользуемых экспортов (Prisma/generated/d.ts исключены в package.json)
 yarn ts-prune
 
 # 11. Проверка неиспользуемых зависимостей (диагностическая)

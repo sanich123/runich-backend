@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { StorageService } from 'src/storage/storage.service';
-import { ActivityMigrationWorkerModule } from '../activity-migration-worker.module';
+import { BackgroundWorkerModule } from '../background-worker.module';
 
-describe('ActivityMigrationWorkerModule', () => {
-  it('can bootstrap the migration and media cleanup workers', async () => {
+describe('BackgroundWorkerModule', () => {
+  it('can bootstrap the background workers', async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ActivityMigrationWorkerModule],
+      imports: [BackgroundWorkerModule],
     })
       .overrideProvider(PrismaService)
       .useValue({})
@@ -14,7 +14,7 @@ describe('ActivityMigrationWorkerModule', () => {
       .useValue({})
       .compile();
 
-    expect(module.get(ActivityMigrationWorkerModule)).toBeDefined();
+    expect(module.get(BackgroundWorkerModule)).toBeDefined();
     await module.close();
   });
 });

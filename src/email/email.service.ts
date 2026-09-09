@@ -2,8 +2,9 @@ import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto'
 import { sendEmail } from 'src/common/email/nodemailer';
 import { render } from '@react-email/components';
 import { ConfirmEmailAddressWithLinkAndCode, LoginByEmailLink, PasswordChangeCode } from './templates';
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { EmailNotificationService } from './email-notification.service';
+import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 
@@ -23,8 +24,9 @@ export class EmailService {
   constructor(
     @Inject(EmailNotificationService) notificationService?: EmailNotificationService,
     @Inject(PrismaService) private readonly prisma?: PrismaService,
+    @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
   ) {
-    this.notificationService = notificationService ?? new EmailNotificationService();
+    this.notificationService = notificationService ?? new EmailNotificationService(this.latencyMetrics);
   }
 
   async sendLikeEmailNotification({
@@ -96,7 +98,7 @@ export class EmailService {
       const html = await render(
         ConfirmEmailAddressWithLinkAndCode({ text: confirmationCode.toString(), loginUrl: loginUrl.toString() }),
       );
-      await sendEmail(emailAddress, subject, html);
+      await sendEmail(emailAddress, subject, html, [], this.latencyMetrics);
     } catch (error) {
       this.logger.error(`Не удалось отправить письмо с кодом подтверждения на ${emailAddress}`, error);
       throw error;
@@ -107,7 +109,7 @@ export class EmailService {
     try {
       const subject = 'Код для смены пароля';
       const html = await render(PasswordChangeCode({ text: recoveryCode.toString() }));
-      await sendEmail(emailAddress, subject, html);
+      await sendEmail(emailAddress, subject, html, [], this.latencyMetrics);
     } catch (error) {
       this.logger.error(`Не удалось отправить код смены пароля на ${emailAddress}`, error);
       throw error;
@@ -121,7 +123,7 @@ export class EmailService {
 
       const subject = 'Вход в Runich по ссылке';
       const html = await render(LoginByEmailLink({ loginUrl: loginUrl.toString() }));
-      await sendEmail(emailAddress, subject, html);
+      await sendEmail(emailAddress, subject, html, [], this.latencyMetrics);
     } catch (error) {
       this.logger.error(`Не удалось отправить ссылку для входа на ${emailAddress}`, error);
       throw error;
@@ -165,6 +167,7 @@ export class EmailService {
       subject,
       html,
       photo ? [{ filename: photo.originalname, content: photo.buffer, contentType: photo.mimetype }] : [],
+      this.latencyMetrics,
     );
   }
 }

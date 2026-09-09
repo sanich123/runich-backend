@@ -28,6 +28,17 @@ describe('VkAuthService', () => {
     );
   });
 
+  afterEach(() => jest.restoreAllMocks());
+
+  it.each(['VK_CLIENT_ID', 'VK_REDIRECT_URI', 'JWT_SECRET'])('rejects VK start when %s is missing', (variable) => {
+    delete process.env[variable];
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    expect(() => service.start(response as unknown as Parameters<typeof service.start>[0])).toThrow(
+      'Авторизация через VK не настроена',
+    );
+  });
+
   it('builds a VK ID authorization URL with S256 PKCE', () => {
     const response = { redirect: jest.fn() } as RedirectResponse;
 
@@ -51,6 +62,62 @@ describe('VkAuthService', () => {
     expect(state).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(state).not.toContain('.');
     expect(Buffer.from(state, 'base64url').toString('utf8')).toBe('signed-state');
+  });
+
+  it.each([
+    ['returns the provider error', 'code', 'state', 'access_denied', 'access_denied'],
+    ['uses a missing_code error when code is absent', '', 'state', '', 'missing_code'],
+    ['uses a missing_code error when state is absent', 'code', '', '', 'missing_code'],
+  ])('%s without contacting VK', async (_name, code, state, error, expectedError) => {
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      code,
+      state,
+      error,
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    const redirect = new URL(String(response.redirect.mock.calls[0][0]));
+    expect(redirect.searchParams.get('oauthError')).toBe(expectedError);
+    expect(redirect.searchParams.get('oauthErrorCode')).toBe('oauth_error');
+    expect(jwt.verify).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid signed VK state', async () => {
+    (jwt.verify as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('invalid state');
+    });
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    const redirect = new URL(String(response.redirect.mock.calls[0][0]));
+    expect(redirect.searchParams.get('oauthErrorCode')).toBe('invalid_state');
+    expect(redirect.searchParams.get('oauthError')).toBe('Недействительный state VK');
+  });
+
+  it('rejects a signed state without a code verifier', async () => {
+    (jwt.verify as jest.Mock).mockImplementationOnce(() => ({}));
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    const redirect = new URL(String(response.redirect.mock.calls[0][0]));
+    expect(redirect.searchParams.get('oauthErrorCode')).toBe('missing_verifier');
   });
 
   it('redirects to the frontend with a readable error when device_id is missing', async () => {
@@ -82,6 +149,81 @@ describe('VkAuthService', () => {
 
     expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('oauthError=invalid+code_verifier'));
     expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('oauthErrorCode=invalid_grant'));
+  });
+
+  it('uses fallback values when VK returns an incomplete token error', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 400 }));
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    const redirect = new URL(String(response.redirect.mock.calls[0][0]));
+    expect(redirect.searchParams.get('oauthError')).toBe('VK не выдал токен');
+    expect(redirect.searchParams.get('oauthErrorCode')).toBe('token_exchange_failed');
+  });
+
+  it.each([
+    ['access_token is absent', { user_id: '42' }],
+    ['user_id is absent', { access_token: 'vk-token' }],
+  ])('rejects a token when %s', async (_name, tokenPayload) => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(tokenPayload)));
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    const redirect = new URL(String(response.redirect.mock.calls[0][0]));
+    expect(redirect.searchParams.get('oauthErrorCode')).toBe('invalid_token_response');
+  });
+
+  it('uses fallback values when VK returns an incomplete profile error', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: '42' })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }));
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    const redirect = new URL(String(response.redirect.mock.calls[0][0]));
+    expect(redirect.searchParams.get('oauthError')).toBe('VK не вернул профиль пользователя');
+    expect(redirect.searchParams.get('oauthErrorCode')).toBe('profile_failed');
+  });
+
+  it('rejects a non-successful VK profile response before reading the profile', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: '42' })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 503 }));
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    const redirect = new URL(String(response.redirect.mock.calls[0][0]));
+    expect(redirect.searchParams.get('oauthErrorCode')).toBe('profile_failed');
   });
 
   it('exchanges the code and creates a user from VK ID profile', async () => {
@@ -124,5 +266,107 @@ describe('VkAuthService', () => {
       }),
     );
     expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('code=app-token'));
+  });
+
+  it('uses the token identity and email for an already confirmed user', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42, email: 'ivan@example.com' })),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ user: { first_name: 'Ivan' } })));
+    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
+      id: 'user-1',
+      emailConfirmedAt: new Date(),
+    });
+    (prismaMock.user.update as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
+      id: 'user-1',
+      emailConfirmedAt: new Date(),
+    });
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'ivan@example.com' } }),
+    );
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+    expect(prismaMock.user.update).toHaveBeenCalledTimes(1);
+    expect(response.redirect).toHaveBeenCalledWith(expect.stringContaining('code=app-token'));
+  });
+
+  it('confirms an existing VK user and falls back to the token profile id', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42 })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ user: { first_name: 'Ivan' } })));
+    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
+      id: 'user-1',
+      emailConfirmedAt: null,
+    });
+    (prismaMock.user.update as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
+      id: 'user-1',
+      emailConfirmedAt: new Date(),
+    });
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'vk_42@vk.local' } }),
+    );
+    expect(prismaMock.user.update).toHaveBeenNthCalledWith(1, {
+      where: { id: 'user-1' },
+      data: { emailConfirmedAt: expect.any(Date) },
+    });
+    expect(prismaMock.user.update).toHaveBeenNthCalledWith(2, {
+      where: { id: 'user-1' },
+      data: { lastSignInAt: expect.any(Date) },
+    });
+  });
+
+  it('redirects a VK exchange Error to the frontend', async () => {
+    jest.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('VK unavailable'));
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    const redirect = new URL(String(response.redirect.mock.calls[0][0]));
+    expect(redirect.searchParams.get('oauthError')).toBe('VK unavailable');
+    expect(redirect.searchParams.get('oauthErrorCode')).toBe('vk_auth_failed');
+  });
+
+  it('uses a generic message for a non-Error VK failure', async () => {
+    jest.spyOn(globalThis, 'fetch').mockRejectedValueOnce('VK unavailable');
+    const response = { redirect: jest.fn() } as RedirectResponse;
+
+    await service.callback(
+      'code',
+      'state',
+      '',
+      response as unknown as Parameters<typeof service.callback>[3],
+      'device-1',
+    );
+
+    const redirect = new URL(String(response.redirect.mock.calls[0][0]));
+    expect(redirect.searchParams.get('oauthError')).toBe('Неизвестная ошибка VK');
   });
 });

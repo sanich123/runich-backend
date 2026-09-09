@@ -3,6 +3,8 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  Inject,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
@@ -17,6 +19,7 @@ import { rm } from 'node:fs/promises';
 import { extname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { isPhotoStorageWriteEnabled } from 'src/common/config/environment';
+import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, MAX_DELETE_BATCH_SIZE } from './const';
 import type { StorageFile, StorageSettings } from './type';
 
@@ -27,7 +30,7 @@ export class StorageService {
   private readonly client: S3Client;
   private readonly writesEnabled: boolean;
 
-  constructor() {
+  constructor(@Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService) {
     const endpoint = DEFAULT_S3_ENDPOINT;
     const region = DEFAULT_S3_REGION;
     const bucket = process.env.S3_BUCKET ?? '';
@@ -56,15 +59,17 @@ export class StorageService {
 
       if (!body) throw new BadRequestException('Не удалось прочитать загруженный файл');
 
-      await this.client.send(
-        new PutObjectCommand({
-          Bucket: this.settings.bucket,
-          Key: key,
-          Body: body,
-          ...(file.size === undefined ? {} : { ContentLength: file.size }),
-          ContentType: file.mimetype,
-          CacheControl: 'public, max-age=31536000, immutable',
-        }),
+      await this.measureS3('putObject', () =>
+        this.client.send(
+          new PutObjectCommand({
+            Bucket: this.settings.bucket,
+            Key: key,
+            Body: body,
+            ...(file.size === undefined ? {} : { ContentLength: file.size }),
+            ContentType: file.mimetype,
+            CacheControl: 'public, max-age=31536000, immutable',
+          }),
+        ),
       );
 
       return { url: this.getPublicUrl(key), key, contentType: file.mimetype };
@@ -87,11 +92,13 @@ export class StorageService {
     this.assertConfigured();
     const key = this.getOwnedKey(userId, publicUrl);
 
-    await this.client.send(
-      new DeleteObjectCommand({
-        Bucket: this.settings.bucket,
-        Key: key,
-      }),
+    await this.measureS3('deleteObject', () =>
+      this.client.send(
+        new DeleteObjectCommand({
+          Bucket: this.settings.bucket,
+          Key: key,
+        }),
+      ),
     );
   }
 
@@ -103,22 +110,26 @@ export class StorageService {
     let deleted = 0;
 
     do {
-      const page = await this.client.send(
-        new ListObjectsV2Command({
-          Bucket: this.settings.bucket,
-          Prefix: prefix,
-          ContinuationToken: continuationToken,
-        }),
+      const page = await this.measureS3('listObjects', () =>
+        this.client.send(
+          new ListObjectsV2Command({
+            Bucket: this.settings.bucket,
+            Prefix: prefix,
+            ContinuationToken: continuationToken,
+          }),
+        ),
       );
       const keys = (page.Contents ?? []).map(({ Key }) => Key).filter((key): key is string => Boolean(key));
 
       for (let offset = 0; offset < keys.length; offset += MAX_DELETE_BATCH_SIZE) {
         const batch = keys.slice(offset, offset + MAX_DELETE_BATCH_SIZE);
-        const result = await this.client.send(
-          new DeleteObjectsCommand({
-            Bucket: this.settings.bucket,
-            Delete: { Objects: batch.map((Key) => ({ Key })), Quiet: true },
-          }),
+        const result = await this.measureS3('deleteObjects', () =>
+          this.client.send(
+            new DeleteObjectsCommand({
+              Bucket: this.settings.bucket,
+              Delete: { Objects: batch.map((Key) => ({ Key })), Quiet: true },
+            }),
+          ),
         );
         if (result.Errors?.length) {
           throw new Error(`S3 не удалил ${result.Errors.length} объектов пользователя`);
@@ -175,6 +186,15 @@ export class StorageService {
   private assertWritesEnabled() {
     if (!this.writesEnabled) {
       throw new ServiceUnavailableException('Загрузка и удаление фото отключены в этой среде');
+    }
+  }
+
+  private async measureS3<T>(operation: string, action: () => Promise<T>) {
+    const startedAt = performance.now();
+    try {
+      return await action();
+    } finally {
+      this.latencyMetrics?.observeExternal('s3', operation, performance.now() - startedAt);
     }
   }
 

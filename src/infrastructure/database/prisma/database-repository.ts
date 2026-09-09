@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Prisma ORM collections are dynamic at this boundary. */
 import { and, not, or } from '@prisma/orm-postgres/orm-client';
 import type { PostgresClient } from '@prisma/orm-postgres/runtime';
+import type { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { databaseClient } from './client';
 
 type AnyRecord = Record<string, any>;
@@ -320,6 +321,7 @@ export class ModelRepository {
   constructor(
     private readonly client: RuntimeClient,
     private readonly model: ModelName,
+    private readonly latencyMetrics?: LatencyMetricsService,
   ) {}
 
   private get root(): AnyRecord {
@@ -336,29 +338,42 @@ export class ModelRepository {
       : (normalized as unknown[]).map((item) => restoreCountShape(item, countSpecs));
   }
 
+  private async measure<T>(operation: string, action: () => Promise<T>) {
+    const startedAt = performance.now();
+    try {
+      return await action();
+    } finally {
+      this.latencyMetrics?.observeDatabase(`${this.model}.${operation}`, performance.now() - startedAt);
+    }
+  }
+
   findUnique(options: AnyRecord): Promise<any> {
-    return this.read(options, true);
+    return this.measure('findUnique', () => this.read(options, true));
   }
 
   findFirst(options: AnyRecord): Promise<any> {
-    return this.read(options, true);
+    return this.measure('findFirst', () => this.read(options, true));
   }
 
   findMany(options?: AnyRecord): Promise<any> {
-    return this.read(options, false);
+    return this.measure('findMany', () => this.read(options, false));
   }
 
-  async count(options?: AnyRecord): Promise<number> {
-    const collection = applyOptions(this.root, this.model, options, []);
-    const result = await collection.aggregate((aggregate: AnyRecord) => ({ count: aggregate.count() }));
-    return result.count;
+  count(options?: AnyRecord): Promise<number> {
+    return this.measure('count', async () => {
+      const collection = applyOptions(this.root, this.model, options, []);
+      const result = await collection.aggregate((aggregate: AnyRecord) => ({ count: aggregate.count() }));
+      return result.count;
+    });
   }
 
-  async create(options: AnyRecord): Promise<any> {
-    const countSpecs: CountSpec[] = [];
-    const collection = applyOptions(this.root, this.model, options, countSpecs);
-    const row = await collection.create(normalizeMutationInput(this.model, options.data));
-    return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
+  create(options: AnyRecord): Promise<any> {
+    return this.measure('create', async () => {
+      const countSpecs: CountSpec[] = [];
+      const collection = applyOptions(this.root, this.model, options, countSpecs);
+      const row = await collection.create(normalizeMutationInput(this.model, options.data));
+      return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
+    });
   }
 
   private executePlan(plan: AnyRecord) {
@@ -397,83 +412,95 @@ export class ModelRepository {
     return rawPlan.affectedCount().build();
   }
 
-  async createMany(options: AnyRecord): Promise<{ count: number }> {
-    const data = options.data as AnyRecord[];
-    if (!data.length) return { count: 0 };
+  createMany(options: AnyRecord): Promise<{ count: number }> {
+    return this.measure('createMany', async () => {
+      const data = options.data as AnyRecord[];
+      if (!data.length) return { count: 0 };
 
-    const modelSpec = (databaseClient.contract as AnyRecord).domain.namespaces.public.models[this.model];
-    const modelFields = modelSpec.fields as AnyRecord;
-    const rowsByShape = new Map<string, { fields: string[]; rows: AnyRecord[] }>();
+      const modelSpec = (databaseClient.contract as AnyRecord).domain.namespaces.public.models[this.model];
+      const modelFields = modelSpec.fields as AnyRecord;
+      const rowsByShape = new Map<string, { fields: string[]; rows: AnyRecord[] }>();
 
-    for (const item of data) {
-      const normalized = normalizeMutationInput(this.model, item) as AnyRecord;
-      const row = Object.fromEntries(
-        Object.entries(normalized).filter(([field, value]) => field in modelFields && value !== undefined),
-      );
-      const fields = Object.keys(row).sort();
-      const shape = fields.join('\u0000');
-      const group = rowsByShape.get(shape) ?? { fields, rows: [] };
-      group.rows.push(row);
-      rowsByShape.set(shape, group);
-    }
+      for (const item of data) {
+        const normalized = normalizeMutationInput(this.model, item) as AnyRecord;
+        const row = Object.fromEntries(
+          Object.entries(normalized).filter(([field, value]) => field in modelFields && value !== undefined),
+        );
+        const fields = Object.keys(row).sort();
+        const shape = fields.join('\u0000');
+        const group = rowsByShape.get(shape) ?? { fields, rows: [] };
+        group.rows.push(row);
+        rowsByShape.set(shape, group);
+      }
 
-    let count = 0;
-    for (const { fields, rows } of rowsByShape.values()) {
-      if (!fields.length) throw new Error(`Bulk insert requires at least one scalar field: ${this.model}`);
-      const result = await this.executePlan(this.buildBulkInsertPlan(rows, fields, options.skipDuplicates === true));
-      count += Number(result.affectedRows ?? 0);
-    }
+      let count = 0;
+      for (const { fields, rows } of rowsByShape.values()) {
+        if (!fields.length) throw new Error(`Bulk insert requires at least one scalar field: ${this.model}`);
+        const result = await this.executePlan(this.buildBulkInsertPlan(rows, fields, options.skipDuplicates === true));
+        count += Number(result.affectedRows ?? 0);
+      }
 
-    return { count };
-  }
-
-  async update(options: AnyRecord): Promise<any> {
-    const countSpecs: CountSpec[] = [];
-    const collection = applyOptions(this.root, this.model, options, countSpecs);
-    const row = await collection.update(normalizeMutationInput(this.model, options.data));
-    return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
-  }
-
-  async updateMany(options: AnyRecord): Promise<{ count: number }> {
-    const collection = applyOptions(this.root, this.model, options, []);
-    return { count: await collection.updateAndCount(normalizeMutationInput(this.model, options.data)) };
-  }
-
-  async delete(options: AnyRecord): Promise<any> {
-    const collection = applyOptions(this.root, this.model, options, []);
-    return normalizeOutput(this.model, await collection.delete());
-  }
-
-  async deleteMany(options: AnyRecord): Promise<{ count: number }> {
-    const collection = applyOptions(this.root, this.model, options, []);
-    return { count: await collection.deleteAndCount() };
-  }
-
-  async upsert(options: AnyRecord): Promise<any> {
-    const countSpecs: CountSpec[] = [];
-    const collection = applyOptions(this.root, this.model, options, countSpecs);
-    const row = await collection.upsert({
-      create: normalizeMutationInput(this.model, options.create),
-      update: normalizeMutationInput(this.model, options.update),
-      conflictOn: normalizeCriterion(this.model, options.where),
+      return { count };
     });
-    return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
+  }
+
+  update(options: AnyRecord): Promise<any> {
+    return this.measure('update', async () => {
+      const countSpecs: CountSpec[] = [];
+      const collection = applyOptions(this.root, this.model, options, countSpecs);
+      const row = await collection.update(normalizeMutationInput(this.model, options.data));
+      return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
+    });
+  }
+
+  updateMany(options: AnyRecord): Promise<{ count: number }> {
+    return this.measure('updateMany', async () => {
+      const collection = applyOptions(this.root, this.model, options, []);
+      return { count: await collection.updateAndCount(normalizeMutationInput(this.model, options.data)) };
+    });
+  }
+
+  delete(options: AnyRecord): Promise<any> {
+    return this.measure('delete', async () => {
+      const collection = applyOptions(this.root, this.model, options, []);
+      return normalizeOutput(this.model, await collection.delete());
+    });
+  }
+
+  deleteMany(options: AnyRecord): Promise<{ count: number }> {
+    return this.measure('deleteMany', async () => {
+      const collection = applyOptions(this.root, this.model, options, []);
+      return { count: await collection.deleteAndCount() };
+    });
+  }
+
+  upsert(options: AnyRecord): Promise<any> {
+    return this.measure('upsert', async () => {
+      const countSpecs: CountSpec[] = [];
+      const collection = applyOptions(this.root, this.model, options, countSpecs);
+      const row = await collection.upsert({
+        create: normalizeMutationInput(this.model, options.create),
+        update: normalizeMutationInput(this.model, options.update),
+        conflictOn: normalizeCriterion(this.model, options.where),
+      });
+      return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
+    });
   }
 }
 
-export function createDatabaseRepositories(client: RuntimeClient) {
+export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics?: LatencyMetricsService) {
   return {
-    user: new ModelRepository(client, 'User'),
-    userSession: new ModelRepository(client, 'UserSession'),
-    authExchange: new ModelRepository(client, 'AuthExchange'),
-    profile: new ModelRepository(client, 'Profile'),
-    activity: new ModelRepository(client, 'Activity'),
-    activityMigrationJob: new ModelRepository(client, 'ActivityMigrationJob'),
-    mediaCleanupJob: new ModelRepository(client, 'MediaCleanupJob'),
-    friend: new ModelRepository(client, 'Friend'),
-    comment: new ModelRepository(client, 'Comment'),
-    commentLike: new ModelRepository(client, 'CommentLike'),
-    like: new ModelRepository(client, 'Like'),
+    user: new ModelRepository(client, 'User', latencyMetrics),
+    userSession: new ModelRepository(client, 'UserSession', latencyMetrics),
+    authExchange: new ModelRepository(client, 'AuthExchange', latencyMetrics),
+    profile: new ModelRepository(client, 'Profile', latencyMetrics),
+    activity: new ModelRepository(client, 'Activity', latencyMetrics),
+    activityMigrationJob: new ModelRepository(client, 'ActivityMigrationJob', latencyMetrics),
+    mediaCleanupJob: new ModelRepository(client, 'MediaCleanupJob', latencyMetrics),
+    friend: new ModelRepository(client, 'Friend', latencyMetrics),
+    comment: new ModelRepository(client, 'Comment', latencyMetrics),
+    commentLike: new ModelRepository(client, 'CommentLike', latencyMetrics),
+    like: new ModelRepository(client, 'Like', latencyMetrics),
   };
 }
 

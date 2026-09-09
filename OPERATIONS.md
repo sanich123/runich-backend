@@ -1,6 +1,6 @@
 # Runich Backend: production operations
 
-Эта памятка содержит безопасные команды для просмотра состояния production-сервера Timeweb, логов API, worker миграции Strava и PostgreSQL.
+Эта памятка содержит безопасные команды для просмотра состояния production-сервера Timeweb, логов API, фонового worker и PostgreSQL.
 
 ## Подключение
 
@@ -22,7 +22,7 @@ Production Compose использует следующие сервисы:
 | Сервис                      | Назначение                       |
 | --------------------------- | -------------------------------- |
 | `nestjs_app`                | HTTP API                         |
-| `activity_migration_worker` | Фоновая обработка архивов Strava |
+| `background_worker`         | Миграции Strava, blurhash и очистка S3 |
 | `db`                        | PostgreSQL                       |
 
 ## Быстрый выбор команды
@@ -34,10 +34,10 @@ Production Compose использует следующие сервисы:
 | Состояние контейнеров        | `docker compose ps`                                                       |
 | Все свежие логи              | `docker compose logs -f --tail=200`                                       |
 | Логи API                     | `docker compose logs -f --tail=200 nestjs_app`                            |
-| Логи Strava worker           | `docker compose logs -f --tail=200 activity_migration_worker`             |
+| Логи background worker       | `docker compose logs -f --tail=200 background_worker`                      |
 | Логи PostgreSQL              | `docker compose logs -f --tail=100 db`                                    |
-| API и worker вместе          | `docker compose logs -f --tail=200 nestjs_app activity_migration_worker`  |
-| Логи за последние 30 минут   | `docker compose logs -t --since=30m nestjs_app activity_migration_worker` |
+| API и worker вместе          | `docker compose logs -f --tail=200 nestjs_app background_worker`          |
+| Логи за последние 30 минут   | `docker compose logs -t --since=30m nestjs_app background_worker`         |
 | Текущее потребление ресурсов | `docker stats --no-stream`                                                |
 
 `Ctrl+C` прекращает просмотр через `logs -f`, но не останавливает контейнеры.
@@ -62,7 +62,7 @@ sudo logrotate -f /etc/logrotate.d/runich-backend
 
 ```bash
 docker inspect --format '{{.Name}} {{json .HostConfig.LogConfig}}' \
-  $(docker compose ps -q db nestjs_app activity_migration_worker)
+  $(docker compose ps -q db nestjs_app background_worker)
 docker system df
 ```
 
@@ -114,21 +114,21 @@ docker compose exec -T -e TEST_EMAIL="$TEST_EMAIL" nestjs_app node --input-type=
 Ошибки, предупреждения и сообщения миграции:
 
 ```bash
-docker compose logs -f --tail=300 nestjs_app activity_migration_worker \
+docker compose logs -f --tail=300 nestjs_app background_worker \
   | grep -Ei 'error|warn|migration|ошиб'
 ```
 
 Сообщения конкретной задачи миграции:
 
 ```bash
-docker compose logs -t --since=24h activity_migration_worker \
+docker compose logs -t --since=24h background_worker \
   | grep '<JOB_ID>'
 ```
 
 Только готовый снимок логов без ожидания новых сообщений:
 
 ```bash
-docker compose logs -t --tail=500 activity_migration_worker
+docker compose logs -t --tail=500 background_worker
 ```
 
 Полезные параметры `docker compose logs`:
@@ -246,13 +246,13 @@ docker compose ps
 
 ```bash
 docker compose restart nestjs_app
-docker compose restart activity_migration_worker
+docker compose restart background_worker
 ```
 
 Пересборка и запуск API с worker:
 
 ```bash
-docker compose up -d --build nestjs_app activity_migration_worker
+docker compose up -d --build --remove-orphans nestjs_app background_worker
 ```
 
 После перезапуска снова выполните:
@@ -260,7 +260,7 @@ docker compose up -d --build nestjs_app activity_migration_worker
 ```bash
 docker compose ps
 curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
-docker compose logs -t --tail=100 nestjs_app activity_migration_worker
+docker compose logs -t --tail=100 nestjs_app background_worker
 ```
 
 ## Операции с PostgreSQL
@@ -341,7 +341,7 @@ scp runich-timeweb:/opt/runich-backups/postgres/<BACKUP_FILE> ./
 2. Для финального cutover остановите записи, сохранив named volumes:
 
    ```bash
-   docker compose stop nestjs_app activity_migration_worker
+   docker compose stop nestjs_app background_worker
    ```
 
 3. Сделайте финальный dump и перенесите файл на машину, с которой доступен новый
@@ -360,7 +360,7 @@ scp runich-timeweb:/opt/runich-backups/postgres/<BACKUP_FILE> ./
    запустите API/worker:
 
    ```bash
-   docker compose up -d --build nestjs_app activity_migration_worker
+   docker compose up -d --build --remove-orphans nestjs_app background_worker
    docker compose ps
    curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
    ```
