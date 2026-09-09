@@ -21,6 +21,7 @@ function createPrismaMock() {
       delete: asyncMock(),
     },
     friend: { findMany: asyncMock() },
+    $queryRaw: asyncMock(),
   };
 }
 
@@ -37,12 +38,18 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
-    prisma.activity.create.mockResolvedValue({ id: 'activity-1' });
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
     await expect(service.createActivity({ ...activityDto }, 'user-1')).resolves.toEqual({ id: 'activity-1' });
+    expect(global.fetch).not.toHaveBeenCalled();
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
-      data: expect.objectContaining({ userId: 'user-1', profileId: 'profile-1', mapPhotoUrlBlurhash: null }),
+      data: expect.objectContaining({
+        userId: 'user-1',
+        profileId: 'profile-1',
+        mapPhotoUrlBlurhash: null,
+        mediaProcessingStatus: 'queued',
+      }),
     });
 
     process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
@@ -143,7 +150,7 @@ describe('ActivityService', () => {
     prisma.activity.update.mockResolvedValue(activity);
     prisma.activity.findUnique.mockResolvedValue(activity);
     prisma.activity.findMany.mockResolvedValue([{ id: 'activity-1', photoVideoUrls: ['photo'] }]);
-    prisma.friend.findMany.mockResolvedValue([{ friendId: 'friend-1' }]);
+    prisma.$queryRaw.mockResolvedValue([{ id: 'activity-1', photoVideoUrls: ['photo'] }]);
     prisma.activity.delete.mockResolvedValue(activity);
 
     await expect(service.updateActivity({ ...activityDto, title: 'Morning run' }, 'activity-1')).resolves.toEqual(
@@ -180,6 +187,10 @@ describe('ActivityService', () => {
       nextCursor: null,
       isLastPage: true,
     });
+    expect(prisma.friend.findMany).not.toHaveBeenCalled();
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    const [template] = prisma.$queryRaw.mock.calls[0] as unknown as [TemplateStringsArray];
+    expect(Array.from(template).join('')).toContain('EXISTS');
     await expect(service.deleteActivityById('activity-1')).resolves.toEqual(activity);
   });
 
@@ -187,13 +198,22 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, { getAccountByUserId: asyncMock() } as never);
     prisma.activity.findMany.mockResolvedValue([]);
-    prisma.friend.findMany.mockResolvedValue([]);
+    prisma.$queryRaw.mockResolvedValue([]);
 
     await service.getActivitesByUserId('user-1');
     expect(prisma.activity.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 21 }));
 
     await service.getAllActivitiesWithFriends('user-1');
-    expect(prisma.activity.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ take: 21 }));
+    expect(prisma.$queryRaw).toHaveBeenLastCalledWith(
+      expect.anything(),
+      'user-1',
+      'user-1',
+      true,
+      null,
+      null,
+      null,
+      21,
+    );
   });
 
   it('uses a stable cursor for activities and media pages', async () => {
@@ -237,6 +257,7 @@ describe('ActivityService', () => {
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);
     prisma.friend.findMany.mockResolvedValue([]);
+    prisma.$queryRaw.mockResolvedValue([]);
 
     await service.getActivitesByUserId('user-1');
     await service.getActivitiesByTheirIds('activity-1');
@@ -305,7 +326,7 @@ describe('ActivityService', () => {
     await expectInternalServerError(service.getMediaByUserId('u1', '10'));
     await expectInternalServerError(service.getActivitesByUserId('u1'));
     await expectInternalServerError(service.getActivitiesByTheirIds('a1'));
-    prisma.friend.findMany.mockRejectedValue(error);
+    prisma.$queryRaw.mockRejectedValue(error);
     await expectInternalServerError(service.getAllActivitiesWithFriends('u1'));
     prisma.activity.delete.mockRejectedValue(error);
     await expectInternalServerError(service.deleteActivityById('a1'));

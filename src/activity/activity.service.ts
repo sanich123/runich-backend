@@ -7,8 +7,8 @@ import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { chunkArray } from 'src/common/parsers/chunk-array';
 import { generateActivityTitle } from './activity-title';
-import { blurhashFromUrl } from 'src/common/images/blurhash';
 import { ActivityPersistenceService } from './activity-persistence.service';
+import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.constants';
 import { ACTIVITY_CARD_SELECT, ACTIVITY_FEED_SELECT, DEFAULT_ACTIVITY_PAGE_SIZE } from './const';
 import {
   encodeActivityCursor,
@@ -18,6 +18,15 @@ import {
 } from './activity.pagination';
 
 const MEDIA_ACTIVITY_BATCH_SIZE = 50;
+
+type ActivityFeedSqlRow = ActivityCursor & Record<string, unknown>;
+
+function omitMediaProcessingStatus(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const result = { ...(value as Record<string, unknown>) };
+  delete result.mediaProcessingStatus;
+  return result;
+}
 
 @Injectable()
 export class ActivityService {
@@ -55,15 +64,8 @@ export class ActivityService {
         activityDto.mapPhotoUrl = getMapBoxImage(activityDto?.locations);
       }
 
-      const photoVideoUrls = activityDto.photoVideoUrls
-        ? await Promise.all(
-            activityDto.photoVideoUrls.map(async (photo) => ({
-              ...photo,
-              blurhash: photo.blurhash ?? (await blurhashFromUrl(photo.thumbnail || photo.url)),
-            })),
-          )
-        : activityDto.photoVideoUrls;
-      const mapPhotoUrlBlurhash = activityDto.mapPhotoUrl ? await blurhashFromUrl(activityDto.mapPhotoUrl) : null;
+      const photoVideoUrls = activityDto.photoVideoUrls;
+      const mapPhotoUrlBlurhash = null;
 
       const data = {
         userId: id,
@@ -74,6 +76,7 @@ export class ActivityService {
           : generateActivityTitle(activityDto.sport, activityDto.date),
         photoVideoUrls,
         mapPhotoUrlBlurhash,
+        mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued,
       };
       const photoCount = Array.isArray(photoVideoUrls) ? photoVideoUrls.length : 0;
       const locationCount = Array.isArray(activityDto.locations) ? activityDto.locations.length : 0;
@@ -81,7 +84,7 @@ export class ActivityService {
         `Сохранение активности: userId=${id}, sport=${activityDto.sport}, date=${activityDto.date}, photos=${photoCount}, locations=${locationCount}`,
       );
 
-      return await this.persistenceService.create(data);
+      return omitMediaProcessingStatus(await this.persistenceService.create(data));
     } catch (error) {
       handleServiceError(error);
     }
@@ -129,8 +132,11 @@ export class ActivityService {
         duration,
         speed,
         ...(steps === undefined ? {} : { steps }),
+        ...(Object.hasOwn(activityDto, 'photoVideoUrls')
+          ? { mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued }
+          : {}),
       };
-      return await this.persistenceService.update(id, userId, data);
+      return omitMediaProcessingStatus(await this.persistenceService.update(id, userId, data));
     } catch (error) {
       handleServiceError(error);
     }
@@ -295,25 +301,58 @@ export class ActivityService {
 
   async getAllActivitiesWithFriends(id: string, take = String(DEFAULT_ACTIVITY_PAGE_SIZE), cursor?: ActivityCursor) {
     try {
-      const friends = await this.prisma.friend.findMany({
-        where: { userId: id },
-        select: { friendId: true },
-      });
-      const ids = friends.map(({ friendId }: { friendId: string }) => friendId);
-      const activitiesWithExtraItem = await this.prisma.activity.findMany({
-        where: {
-          userId: { in: [...ids, id] },
-          isPublic: true,
-          ...(cursor
-            ? {
-                OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
-              }
-            : {}),
-        },
-        orderBy: [{ date: 'desc' }, { id: 'desc' }],
-        take: Number(take) + 1,
-        select: ACTIVITY_FEED_SELECT,
-      });
+      const activitiesWithExtraItem = await this.prisma.$queryRaw<ActivityFeedSqlRow[]>`
+        SELECT
+          a."title",
+          a."date",
+          a."sport",
+          a."id",
+          a."user_id" AS "userId",
+          a."photoVideoUrls",
+          a."mapPhotoUrl",
+          a."mapPhotoUrlBlurhash",
+          a."duration",
+          a."distance",
+          a."steps",
+          json_build_object(
+            'surname', p."surname",
+            'name', p."name",
+            'profilePhoto', p."profilePhoto",
+            'profilePhotoBlurhash', p."profilePhotoBlurhash",
+            'emailNotifications', p."emailNotifications",
+            'user', json_build_object('email', u."email")
+          ) AS "profile",
+          json_build_object(
+            'comments', (
+              SELECT COUNT(*)::int
+              FROM "Comment" AS c
+              WHERE c."activityId" = a."id"
+            )
+          ) AS "_count"
+        FROM "Activity" AS a
+        INNER JOIN "Profile" AS p ON p."id" = a."profileId"
+        INNER JOIN "Users" AS u ON u."id" = a."user_id"
+        WHERE a."isPublic" IS TRUE
+          AND (
+            a."user_id" = ${id}::uuid
+            OR EXISTS (
+              SELECT 1
+              FROM "Friend" AS f
+              WHERE f."user_id" = ${id}::uuid
+                AND f."friendId" = a."user_id"
+            )
+          )
+          AND (
+            ${cursor === undefined}
+            OR a."date" < ${cursor?.date ?? null}
+            OR (
+              a."date" = ${cursor?.date ?? null}
+              AND a."id" < ${cursor?.id ?? null}::uuid
+            )
+          )
+        ORDER BY a."date" DESC, a."id" DESC
+        LIMIT ${Number(take) + 1}::int
+      `;
       const hasMore = activitiesWithExtraItem.length > Number(take);
       const activities = activitiesWithExtraItem.slice(0, Number(take));
       return {

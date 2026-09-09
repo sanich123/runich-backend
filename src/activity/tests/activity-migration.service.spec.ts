@@ -259,4 +259,108 @@ describe('ActivityMigrationService', () => {
     await expect(service.processNextJob()).resolves.toBe(false);
     expect(prisma.activityMigrationJob.updateMany).not.toHaveBeenCalled();
   });
+
+  it('does not process a job claimed by another worker', async () => {
+    prisma.activityMigrationJob.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+
+    expect(unzipTransferArchive).not.toHaveBeenCalled();
+    expect(parseCsvFileIntoArray).not.toHaveBeenCalled();
+  });
+
+  it('marks an interrupted job failed when its archive is missing', async () => {
+    prisma.activityMigrationJob.findMany.mockResolvedValueOnce([{ ...queuedJob, status: 'processing' }]);
+    access.mockRejectedValueOnce(new Error('archive missing'));
+    const processNextJob = jest.spyOn(service, 'processNextJob').mockImplementation(async () => {
+      service.requestStop();
+      return true;
+    });
+
+    await service.runWorker();
+
+    expect(prisma.activityMigrationJob.update).toHaveBeenCalledWith({
+      where: { id: queuedJob.id },
+      data: expect.objectContaining({
+        status: 'failed',
+        errorMessage: 'Файл архива миграции не найден после перезапуска worker',
+      }),
+    });
+    expect(processNextJob).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks a claimed job failed when its archive disappears before processing', async () => {
+    access.mockRejectedValueOnce(new Error('archive missing'));
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+
+    expect(prisma.activityMigrationJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'failed', errorMessage: 'Файл архива миграции не найден' }),
+      }),
+    );
+  });
+
+  it('rejects a job whose saved progress is beyond the current CSV', async () => {
+    prisma.activityMigrationJob.findFirst.mockResolvedValueOnce({ ...queuedJob, processedActivities: 2 });
+    parseCsvFileIntoArray.mockResolvedValueOnce([{ 'Activity ID': 'strava-1' }]);
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+
+    expect(prisma.activityMigrationJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'failed',
+          errorMessage: 'Сохранённый прогресс миграции превышает количество активностей в архиве',
+        }),
+      }),
+    );
+  });
+
+  it('records skipped rows when the mapper returns an empty batch', async () => {
+    parseCsvFileIntoArray.mockResolvedValueOnce([{ 'Activity ID': 'strava-skipped' }]);
+    mapActivitiesWithCoordinates.mockResolvedValueOnce([]);
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+
+    expect(createMany).not.toHaveBeenCalled();
+    expect(transactionJobUpdate).toHaveBeenCalledWith({
+      where: { id: queuedJob.id },
+      data: { processedActivities: 1, importedActivities: 0, skippedActivities: 1 },
+    });
+  });
+
+  it('keeps the archive when saving a failure status also fails', async () => {
+    parseCsvFileIntoArray.mockRejectedValueOnce('csv failed');
+    prisma.activityMigrationJob.update.mockRejectedValueOnce('status unavailable');
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+
+    expect(rm).not.toHaveBeenCalled();
+  });
+
+  it('reports cleanup failures after a processed job', async () => {
+    parseCsvFileIntoArray.mockRejectedValueOnce(new Error('csv failed'));
+    rm.mockRejectedValueOnce(new Error('archive cleanup failed'));
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+
+    expect(rm).toHaveBeenCalledTimes(2);
+  });
+
+  it('requeues a job when shutdown is requested after persisting its batch', async () => {
+    parseCsvFileIntoArray.mockResolvedValueOnce([{ 'Activity ID': 'strava-1' }]);
+    mapActivitiesWithCoordinates.mockImplementationOnce(async () => {
+      service.requestStop();
+      return [mappedActivity('strava-1')];
+    });
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+
+    expect(prisma.activityMigrationJob.updateMany).toHaveBeenLastCalledWith({
+      where: { id: queuedJob.id, status: 'processing' },
+      data: { status: 'queued', startedAt: null },
+    });
+    expect(rm).not.toHaveBeenCalled();
+  });
 });

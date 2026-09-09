@@ -1,19 +1,22 @@
 import 'dotenv/config';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ActivityMediaProcessingService } from 'src/activity/activity-media-processing.service';
 import { ActivityMigrationService } from 'src/activity/activity-migration.service';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { getLogLevels } from 'src/common/utils/log-levels';
-import { ActivityMigrationWorkerModule } from './activity-migration-worker.module';
+import { BackgroundWorkerModule } from './background-worker.module';
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(ActivityMigrationWorkerModule, {
+  const app = await NestFactory.createApplicationContext(BackgroundWorkerModule, {
     logger: getLogLevels(process.env.NODE_ENV === 'production'),
   });
   const migrationService = app.get(ActivityMigrationService);
+  const mediaProcessingService = app.get(ActivityMediaProcessingService);
   const cleanupService = app.get(MediaCleanupService);
   const stopWorker = () => {
     migrationService.requestStop();
+    mediaProcessingService.requestStop();
     cleanupService.requestStop();
   };
 
@@ -21,7 +24,7 @@ async function bootstrap() {
   process.once('SIGTERM', stopWorker);
 
   try {
-    await Promise.all([migrationService.runWorker(), cleanupService.runWorker()]);
+    await Promise.all([migrationService.runWorker(), mediaProcessingService.runWorker(), cleanupService.runWorker()]);
   } finally {
     process.off('SIGINT', stopWorker);
     process.off('SIGTERM', stopWorker);
@@ -30,7 +33,7 @@ async function bootstrap() {
 }
 
 void bootstrap().catch((error: unknown) => {
-  const logger = new Logger('ActivityMigrationWorkerBootstrap');
-  logger.error('Worker миграции не удалось запустить', error instanceof Error ? error.stack : String(error));
+  const logger = new Logger('BackgroundWorkerBootstrap');
+  logger.error('Фоновый worker не удалось запустить', error instanceof Error ? error.stack : String(error));
   process.exitCode = 1;
 });

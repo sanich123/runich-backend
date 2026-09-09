@@ -10,7 +10,8 @@ describe('ModelRepository', () => {
       orm: { public: { Activity: {} } },
       runtime: () => ({ execute }),
     };
-    const repository = new ModelRepository(client as never, 'Activity');
+    const metrics = { observeDatabase: jest.fn() };
+    const repository = new ModelRepository(client as never, 'Activity', metrics as never);
 
     await expect(
       repository.createMany({
@@ -47,6 +48,7 @@ describe('ModelRepository', () => {
     expect(execute).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(execute.mock.calls[0]?.[0])).toContain('ON CONFLICT DO NOTHING');
     expect(JSON.stringify(execute.mock.calls[0]?.[0])).toContain('::jsonb');
+    expect(metrics.observeDatabase).toHaveBeenCalledWith('Activity.createMany', expect.any(Number));
   });
 
   it('does not execute a query for an empty createMany input', async () => {

@@ -33,7 +33,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'1b3187968c7d81a0ca8577d40a63b9c9c305fd84f20c6be29bc8d712a72e78ea'>;
+  StorageHashBase<'7f70661718650c7e441bbd1d756c20d0ad33d42fad6a26f5bdd9868d3c639526'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -257,6 +257,7 @@ export type FieldOutputTypes = {
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly mediaProcessingStatus: Varchar<16>;
       readonly isPublic: CodecTypes['pg/bool@1']['output'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
@@ -425,6 +426,7 @@ export type FieldInputTypes = {
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly mediaProcessingStatus: CodecTypes['sql/varchar@1']['input'];
       readonly isPublic: CodecTypes['pg/bool@1']['input'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
@@ -589,6 +591,7 @@ export type StorageColumnTypes = {
       readonly locations: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
+      readonly media_processing_status: Varchar<16>;
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
       readonly source: Varchar<32> | null;
@@ -757,6 +760,7 @@ export type StorageColumnInputTypes = {
       readonly locations: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
+      readonly media_processing_status: CodecTypes['sql/varchar@1']['input'];
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
       readonly source: CodecTypes['sql/varchar@1']['input'] | null;
@@ -1018,6 +1022,16 @@ type ContractBase = Omit<
                   readonly nativeType: 'jsonb';
                   readonly codecId: 'pg/jsonb@1';
                   readonly nullable: true;
+                };
+                readonly media_processing_status: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'sql/varchar@1', 'queued'>;
+                  };
+                  readonly typeParams: { readonly length: 16 };
                 };
                 readonly isPublic: {
                   readonly nativeType: 'bool';
@@ -2369,6 +2383,14 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
               };
+              readonly mediaProcessingStatus: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 16 };
+                };
+              };
               readonly isPublic: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
@@ -2462,6 +2484,7 @@ type ContractBase = Omit<
                 readonly kilometresSplit: { readonly column: 'kilometresSplit' };
                 readonly mapPhotoUrl: { readonly column: 'mapPhotoUrl' };
                 readonly photoVideoUrls: { readonly column: 'photoVideoUrls' };
+                readonly mediaProcessingStatus: { readonly column: 'media_processing_status' };
                 readonly isPublic: { readonly column: 'isPublic' };
                 readonly mapPhotoUrlBlurhash: { readonly column: 'mapPhotoUrlBlurhash' };
                 readonly profileId: { readonly column: 'profileId' };

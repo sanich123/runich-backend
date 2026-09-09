@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import nodemailer from 'nodemailer';
 
 import { RUNICH_LOGO_CID } from './constants';
+import type { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 
 const YANDEX_SMTP_HOST = 'smtp.yandex.ru';
 const YANDEX_SMTP_PORT = 465;
@@ -88,7 +89,14 @@ function emailMessage(email: string, subject: string, html: string, extraAttachm
   };
 }
 
-export const sendEmail = async (email: string, subject: string, html: string, attachments: EmailAttachment[] = []) => {
+export const sendEmail = async (
+  email: string,
+  subject: string,
+  html: string,
+  attachments: EmailAttachment[] = [],
+  latencyMetrics?: LatencyMetricsService,
+) => {
+  const startedAt = performance.now();
   try {
     await getYandexTransporter().sendMail(emailMessage(email, subject, html, attachments));
     console.log('[Email] Yandex SMTP accepted message', {
@@ -102,5 +110,7 @@ export const sendEmail = async (email: string, subject: string, html: string, at
       error: err instanceof Error ? { name: err.name, message: err.message } : err,
     });
     throw err;
+  } finally {
+    latencyMetrics?.observeExternal('smtp', 'send', performance.now() - startedAt);
   }
 };

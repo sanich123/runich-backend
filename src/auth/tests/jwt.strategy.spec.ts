@@ -6,7 +6,7 @@ const asyncMock = () => jest.fn<(...args: unknown[]) => Promise<unknown>>();
 describe('JwtStrategy', () => {
   const prisma = {
     user: { findUnique: asyncMock() },
-    userSession: { findUnique: asyncMock(), update: asyncMock() },
+    userSession: { findUnique: asyncMock(), updateMany: asyncMock() },
   };
   let strategy: JwtStrategy;
 
@@ -38,7 +38,6 @@ describe('JwtStrategy', () => {
     await expect(strategy.validate({ userId: 'user-1', sessionId: 'session-1' })).rejects.toThrow('Сессия завершена');
 
     prisma.userSession.findUnique.mockResolvedValue({
-      id: 'session-1',
       userId: 'user-1',
       revokedAt: new Date(),
       lastSeenAt: new Date(),
@@ -46,7 +45,6 @@ describe('JwtStrategy', () => {
     await expect(strategy.validate({ userId: 'user-1', sessionId: 'session-1' })).rejects.toThrow('Сессия завершена');
 
     prisma.userSession.findUnique.mockResolvedValue({
-      id: 'session-1',
       userId: 'other-user',
       revokedAt: null,
       lastSeenAt: new Date(),
@@ -56,30 +54,34 @@ describe('JwtStrategy', () => {
 
   it('refreshes an idle session timestamp and keeps a recent session untouched', async () => {
     prisma.userSession.findUnique.mockResolvedValue({
-      id: 'session-1',
       userId: 'user-1',
       revokedAt: null,
       lastSeenAt: new Date(Date.now() - 6 * 60 * 1000),
     });
-    prisma.userSession.update.mockResolvedValue(undefined);
+    prisma.userSession.updateMany.mockResolvedValue({ count: 1 });
 
     await expect(strategy.validate({ userId: 'user-1', sessionId: 'session-1' })).resolves.toMatchObject({
       id: 'user-1',
       sessionId: 'session-1',
     });
-    expect(prisma.userSession.update).toHaveBeenCalledWith({
-      where: { id: 'session-1' },
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'session-1',
+        userId: 'user-1',
+        revokedAt: null,
+        lastSeenAt: { lt: expect.any(Date) },
+      },
       data: { lastSeenAt: expect.any(Date) },
     });
 
     prisma.userSession.findUnique.mockResolvedValue({
-      id: 'session-1',
       userId: 'user-1',
       revokedAt: null,
       lastSeenAt: new Date(),
     });
-    prisma.userSession.update.mockClear();
+    prisma.userSession.updateMany.mockClear();
     await strategy.validate({ userId: 'user-1', sessionId: 'session-1' });
-    expect(prisma.userSession.update).not.toHaveBeenCalled();
+    expect(prisma.userSession.updateMany).not.toHaveBeenCalled();
   });
 });

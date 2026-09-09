@@ -71,4 +71,12 @@ describe('MediaCleanupService', () => {
     await expect(service.processNextJob()).resolves.toBe(false);
     expect(storageService.deleteUserFiles).not.toHaveBeenCalled();
   });
+
+  it('skips a job claimed by another worker', async () => {
+    database.mediaCleanupJob.findFirst.mockResolvedValue({ id: 'job-1', userId: 'user-1' });
+    database.mediaCleanupJob.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+    expect(storageService.deleteUserFiles).not.toHaveBeenCalled();
+  });
 });

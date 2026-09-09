@@ -97,6 +97,7 @@ model Activity {
   kilometresSplit     Jsonb?
   mapPhotoUrl         String?
   photoVideoUrls      Jsonb?
+  mediaProcessingStatus VarChar(16)       @default("queued") @map("media_processing_status")
   isPublic            Boolean?             @default(true)
   mapPhotoUrlBlurhash String?
   profileId           Uuid

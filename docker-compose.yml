@@ -49,7 +49,7 @@ services:
       - /app/node_modules
       - migration_archives:/usr/src/app/dist/receivedArchive
 
-  activity_migration_worker:
+  background_worker:
     build:
       context: .
       dockerfile: Dockerfile

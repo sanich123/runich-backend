@@ -42,7 +42,8 @@ describe('StorageService', () => {
 
   it('uploads a file under the authenticated user prefix and returns its public URL', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const metrics = { observeExternal: jest.fn() };
+    const service = new StorageService(metrics as never);
 
     await expect(
       service.uploadPhoto('user-1', {
@@ -65,6 +66,7 @@ describe('StorageService', () => {
       CacheControl: 'public, max-age=31536000, immutable',
     });
     expect((command as PutObjectCommand).input.Key).toMatch(/^user-1\/.+\.jpg$/);
+    expect(metrics.observeExternal).toHaveBeenCalledWith('s3', 'putObject', expect.any(Number));
   });
 
   it('streams disk uploads to S3 and removes the temporary file', async () => {

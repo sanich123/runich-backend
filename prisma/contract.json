@@ -145,6 +145,16 @@
                   "kind": "scalar"
                 }
               },
+              "mediaProcessingStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              },
               "photoVideoUrls": {
                 "nullable": true,
                 "type": {
@@ -324,6 +334,9 @@
                 },
                 "mapPhotoUrlBlurhash": {
                   "column": "mapPhotoUrlBlurhash"
+                },
+                "mediaProcessingStatus": {
+                  "column": "media_processing_status"
                 },
                 "photoVideoUrls": {
                   "column": "photoVideoUrls"
@@ -2351,6 +2364,18 @@
                   "nativeType": "text",
                   "nullable": true
                 },
+                "media_processing_status": {
+                  "codecId": "sql/varchar@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "queued"
+                  },
+                  "nativeType": "character varying",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 16
+                  }
+                },
                 "photoVideoUrls": {
                   "codecId": "pg/jsonb@1",
                   "nativeType": "jsonb",
@@ -3975,7 +4000,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "1b3187968c7d81a0ca8577d40a63b9c9c305fd84f20c6be29bc8d712a72e78ea"
+    "storageHash": "7f70661718650c7e441bbd1d756c20d0ad33d42fad6a26f5bdd9868d3c639526"
   },
   "capabilities": {
     "postgres": {
