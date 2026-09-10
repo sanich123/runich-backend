@@ -52,7 +52,7 @@ export class AuthController {
   @Get('config')
   @ApiOkResponse({ type: AppConfigResponseDto })
   getConfig() {
-    return { appVersion: '4.0.0' };
+    return { appVersion: '1.0.0' };
   }
 
   @Get('yandex')
@@ -74,7 +74,7 @@ export class AuthController {
   vkCallback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Query('error') error: string,
+    @Query('error') error: string | undefined,
     @Query('device_id') deviceId: string,
     @Res() response: Response,
   ) {
