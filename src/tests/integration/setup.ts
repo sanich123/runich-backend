@@ -10,9 +10,15 @@ import {
 } from '@aws-sdk/client-s3';
 
 process.env.JWT_SECRET ??= 'runich-integration-test-secret';
-process.env.S3_BUCKET = 'runich-integration-test';
-process.env.S3_ACCESS_KEY = 'runich-integration-access';
-process.env.S3_SECRET_ACCESS_KEY = 'runich-integration-secret';
+const hasS3Configuration = Boolean(
+  process.env.S3_BUCKET && process.env.S3_ACCESS_KEY && process.env.S3_SECRET_ACCESS_KEY,
+);
+const useRealS3 = process.env.RUNICH_INTEGRATION_REAL_S3 === 'true' && hasS3Configuration;
+if (!useRealS3) {
+  process.env.S3_BUCKET = 'runich-integration-test';
+  process.env.S3_ACCESS_KEY = 'runich-integration-access';
+  process.env.S3_SECRET_ACCESS_KEY = 'runich-integration-secret';
+}
 
 const objects = new Map<string, Uint8Array>();
 
@@ -32,7 +38,7 @@ async function toBytes(body: unknown) {
 }
 
 const s3Send = jest.spyOn(S3Client.prototype, 'send');
-s3Send.mockImplementation(async (command) => {
+const mockS3Send = async (command: Parameters<S3Client['send']>[0]) => {
   if (command instanceof PutObjectCommand) {
     const { Bucket, Key, Body } = command.input;
     if (!Bucket || !Key || Body === undefined) throw new Error('Integration S3 put request is incomplete');
@@ -73,4 +79,6 @@ s3Send.mockImplementation(async (command) => {
   }
 
   throw new Error(`Integration S3 mock does not support ${command.constructor.name}`);
-});
+};
+
+if (!useRealS3) s3Send.mockImplementation(mockS3Send);
