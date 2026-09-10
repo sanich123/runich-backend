@@ -66,9 +66,8 @@ jobs:
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
 
-            # Build the two identical images one at a time: each production
-            # dependency install can use more memory than this host has when
-            # BuildKit runs both targets concurrently.
+            # Build the two identical images one at a time so their dependency
+            # and compilation steps cannot overlap on the memory-constrained host.
             docker compose build nestjs_app
             docker compose build background_worker
             docker compose up -d --remove-orphans nestjs_app background_worker

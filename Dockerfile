@@ -17,21 +17,14 @@ RUN yarn install --immutable
 COPY . .
 
 RUN yarn db:generate && yarn build
-RUN touch .builder-complete
 
-FROM yarn-base AS production-dependencies
-
-ENV NODE_ENV=production HUSKY=0
-
-# Keep the two large Yarn installs sequential on memory-constrained builders.
-COPY --from=builder /usr/src/app/.builder-complete .builder-complete
-RUN yarn workspaces focus --all --production
-RUN rm .builder-complete
-
-FROM production-dependencies AS runtime
+FROM yarn-base AS runtime
 
 ENV NODE_ENV=production
 
+# Reuse the dependencies already installed and built by the builder. A second
+# production-only Yarn install exceeds the memory available on Timeweb.
+COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/prisma ./prisma
 COPY --from=builder /usr/src/app/prisma.config.ts ./prisma.config.ts
