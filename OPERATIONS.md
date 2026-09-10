@@ -42,6 +42,22 @@ Production Compose использует следующие сервисы:
 
 `Ctrl+C` прекращает просмотр через `logs -f`, но не останавливает контейнеры.
 
+## Как выполняется production deploy
+
+После merge в `master` GitHub Actions собирает Docker image на GitHub runner и
+публикует его в Docker Hub с immutable-тегом commit SHA. Timeweb не собирает
+image на сервере: он переключает checkout на тот же SHA, скачивает image и
+запускает `nestjs_app` и `background_worker` через Compose с `--no-build`.
+Это важно для текущего сервера с 2 ГБ RAM: тяжёлая установка зависимостей и
+компиляция не конкурируют с PostgreSQL и работающим API.
+
+Локальный Compose по-прежнему собирается обычной командой ниже и использует
+локальный тег `runich-backend:local`:
+
+```bash
+docker compose up --build --remove-orphans
+```
+
 ## Ротация логов
 
 Приложение пишет только ошибки в `/opt/runich-backend/project/logs.log` через

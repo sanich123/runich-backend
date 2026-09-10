@@ -20,6 +20,9 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Check out the exact commit
+        uses: actions/checkout@v4
+
       - name: Deploy exact commit over SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -36,6 +39,16 @@ jobs:
           : "${DEPLOY_KNOWN_HOSTS:?GitHub Secret DEPLOY_KNOWN_HOSTS is required}"
           : "${DOCKERHUB_PAT:?GitHub Secret DOCKER_PAT is required}"
 
+          DEPLOY_IMAGE="sanich123/runich-backend:${GITHUB_SHA}"
+
+          # Build on the GitHub runner instead of the 2 GB production host.
+          # The host only pulls the immutable image and starts the services.
+          printf '%s' "$DOCKERHUB_PAT" |
+            docker login --username sanich123 --password-stdin >/dev/null
+          docker build --tag "$DEPLOY_IMAGE" .
+          docker push "$DEPLOY_IMAGE"
+          docker logout >/dev/null
+
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
           chmod 600 "$HOME/.ssh/id_ed25519"
@@ -46,13 +59,13 @@ jobs:
             ssh -i "$HOME/.ssh/id_ed25519" \
               -o BatchMode=yes -o IdentitiesOnly=yes \
               "$DEPLOY_USER@$DEPLOY_HOST" \
-              'docker login --username sanich123 --password-stdin >/dev/null && docker pull node:26-alpine'
+              "docker login --username sanich123 --password-stdin >/dev/null && docker pull '$DEPLOY_IMAGE'"
           unset DOCKERHUB_PAT
 
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "DEPLOY_SHA='${{ github.sha }}' bash -s" <<'REMOTE'
+            "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_IMAGE='$DEPLOY_IMAGE' bash -s" <<'REMOTE'
             set -euo pipefail
 
             cd /opt/runich-backend/project
@@ -66,11 +79,9 @@ jobs:
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
 
-            # Build the two identical images one at a time so their dependency
-            # and compilation steps cannot overlap on the memory-constrained host.
-            docker compose build nestjs_app
-            docker compose build background_worker
-            docker compose up -d --remove-orphans nestjs_app background_worker
+            BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose pull nestjs_app background_worker
+            BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose up \
+              -d --remove-orphans --no-build nestjs_app background_worker
 
             for attempt in $(seq 1 30); do
               if curl --fail --silent --show-error --max-time 5 \
