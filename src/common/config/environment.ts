@@ -23,11 +23,13 @@ export function getAuthFrontendRedirectUri() {
   return process.env.AUTH_FRONTEND_REDIRECT_URI?.trim() || DEFAULT_AUTH_FRONTEND_REDIRECT_URIS[getAppEnvironment()];
 }
 
-export function isPhotoStorageWriteEnabled() {
-  const configuredValue = process.env.PHOTO_UPLOADS_ENABLED?.trim().toLowerCase();
-  if (configuredValue !== undefined && configuredValue !== '') return configuredValue === 'true';
+export function isSwaggerEnabled() {
+  return getAppEnvironment() !== 'production';
+}
 
-  return getAppEnvironment() !== 'stage';
+export function shouldSeedMockData() {
+  const appEnvironment = getAppEnvironment();
+  return process.env.NODE_ENV !== 'test' && (appEnvironment === 'local' || appEnvironment === 'stage');
 }
 
 export function getCorsOrigins() {

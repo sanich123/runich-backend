@@ -4,17 +4,16 @@ import { join } from 'node:path';
 import nodemailer from 'nodemailer';
 
 import { RUNICH_LOGO_CID } from './constants';
+import { getAppEnvironment } from 'src/common/config/environment';
 import type { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 
 const YANDEX_SMTP_HOST = 'smtp.yandex.ru';
 const YANDEX_SMTP_PORT = 465;
 const EMAIL_API_TIMEOUT_MS = 15_000;
-const DEVELOPMENT_ENVIRONMENT = 'development';
-
 function getSmtpLocalAddress(): string | undefined {
   const configuredAddress = process.env.YANDEX_SMTP_LOCAL_ADDRESS?.trim();
   if (configuredAddress) return configuredAddress;
-  if (process.env.NODE_ENV !== DEVELOPMENT_ENVIRONMENT) return undefined;
+  if (process.env.NODE_ENV === 'test' || getAppEnvironment() !== 'local') return undefined;
 
   const candidates = Object.entries(networkInterfaces())
     .filter(([name]) => !/^(lo|utun|tun|tap|ppp|docker|br-|veth)/i.test(name))

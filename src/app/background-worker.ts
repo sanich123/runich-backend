@@ -4,12 +4,13 @@ import { NestFactory } from '@nestjs/core';
 import { ActivityMediaProcessingService } from 'src/activity/activity-media-processing.service';
 import { ActivityMigrationService } from 'src/activity/activity-migration.service';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
+import { getAppEnvironment } from 'src/common/config/environment';
 import { getLogLevels } from 'src/common/utils/log-levels';
 import { BackgroundWorkerModule } from './background-worker.module';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(BackgroundWorkerModule, {
-    logger: getLogLevels(process.env.NODE_ENV === 'production'),
+    logger: getLogLevels(getAppEnvironment() === 'production'),
   });
   const migrationService = app.get(ActivityMigrationService);
   const mediaProcessingService = app.get(ActivityMediaProcessingService);

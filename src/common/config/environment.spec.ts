@@ -2,7 +2,8 @@ import {
   getAppEnvironment,
   getAuthFrontendRedirectUri,
   getCorsOrigins,
-  isPhotoStorageWriteEnabled,
+  isSwaggerEnabled,
+  shouldSeedMockData,
 } from './environment';
 
 describe('environment config', () => {
@@ -42,19 +43,23 @@ describe('environment config', () => {
     expect(getAuthFrontendRedirectUri()).toBe('https://stage--runich.netlify.app/login-from-url');
   });
 
-  it('parses the explicit photo upload toggle and uses environment defaults', () => {
-    process.env.PHOTO_UPLOADS_ENABLED = 'TRUE';
-    expect(isPhotoStorageWriteEnabled()).toBe(true);
+  it('enables Swagger and mock data only outside production', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.APP_ENV = 'local';
+    expect(isSwaggerEnabled()).toBe(true);
+    expect(shouldSeedMockData()).toBe(true);
 
-    process.env.PHOTO_UPLOADS_ENABLED = 'false';
-    expect(isPhotoStorageWriteEnabled()).toBe(false);
-
-    delete process.env.PHOTO_UPLOADS_ENABLED;
     process.env.APP_ENV = 'stage';
-    expect(isPhotoStorageWriteEnabled()).toBe(false);
+    expect(isSwaggerEnabled()).toBe(true);
+    expect(shouldSeedMockData()).toBe(true);
+
+    process.env.APP_ENV = 'production';
+    expect(isSwaggerEnabled()).toBe(false);
+    expect(shouldSeedMockData()).toBe(false);
 
     process.env.APP_ENV = 'local';
-    expect(isPhotoStorageWriteEnabled()).toBe(true);
+    process.env.NODE_ENV = 'test';
+    expect(shouldSeedMockData()).toBe(false);
   });
 
   it('selects the expected CORS origins for each environment', () => {

@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { Pool } from 'pg';
+import { shouldSeedMockData } from 'src/common/config/environment';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { seedMockData } from './mock-seed';
 import { createDatabaseRepositories, DatabaseRepositories, RuntimeClient } from './database-repository';
@@ -77,7 +78,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     try {
       await this.$connect();
-      if (process.env.SEED_MOCK_DATA === 'true' && process.env.RUNICH_PROCESS !== 'worker') {
+      if (shouldSeedMockData() && process.env.RUNICH_PROCESS !== 'worker') {
         this.mockSeedPromise = seedMockData(this)
           .then(() => {
             this.logger.log('Mock seed завершён');

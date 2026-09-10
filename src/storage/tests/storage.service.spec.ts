@@ -23,7 +23,6 @@ describe('StorageService', () => {
     process.env.S3_ACCESS_KEY = 'access-key';
     process.env.S3_SECRET_ACCESS_KEY = 'secret-key';
     delete process.env.APP_ENV;
-    delete process.env.PHOTO_UPLOADS_ENABLED;
     delete process.env.S3_PUBLIC_URL;
     s3Send.mockReset();
   });
@@ -36,7 +35,6 @@ describe('StorageService', () => {
     delete process.env.S3_SECRET_ACCESS_KEY;
     delete process.env.S3_PUBLIC_URL;
     delete process.env.APP_ENV;
-    delete process.env.PHOTO_UPLOADS_ENABLED;
     s3Send.mockRestore();
   });
 
@@ -163,14 +161,14 @@ describe('StorageService', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
-  it('does not write to the shared S3 bucket in stage', async () => {
+  it('writes to the shared S3 bucket in stage', async () => {
     process.env.APP_ENV = 'stage';
+    s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
 
     await expect(
       service.uploadPhoto('user-1', { buffer: Buffer.alloc(0), originalname: 'photo.jpg', mimetype: 'image/jpeg' }),
-    ).rejects.toThrow('отключены в этой среде');
-    await expect(service.deleteUserFiles('user-1')).resolves.toEqual({ deleted: 0 });
-    expect(s3Send).not.toHaveBeenCalled();
+    ).resolves.toMatchObject({ contentType: 'image/jpeg' });
+    expect(s3Send).toHaveBeenCalledTimes(1);
   });
 });

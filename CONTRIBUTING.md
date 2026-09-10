@@ -16,7 +16,8 @@ Thank you for contributing. This document describes the local workflow, code org
     yarn db:migrate
     yarn dev
 
-Use SEED_MOCK_DATA=true only with a disposable development database.
+Mock data is enabled automatically for local and stage. Use it only with a
+disposable development or stage database.
 
 ## Branches and commits
 
