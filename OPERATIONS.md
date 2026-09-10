@@ -45,7 +45,9 @@ Production Compose использует следующие сервисы:
 ## Как выполняется production deploy
 
 После merge в `master` GitHub Actions собирает Docker image на GitHub runner и
-публикует его в Docker Hub с immutable-тегом commit SHA. Timeweb не собирает
+публикует его в GitHub Container Registry (`ghcr.io`) с immutable-тегом commit SHA.
+Для публикации и скачивания используется временный `GITHUB_TOKEN`, поэтому
+отдельный Docker Hub PAT для production deploy не нужен. Timeweb не собирает
 image на сервере: он переключает checkout на тот же SHA, скачивает image и
 запускает `nestjs_app` и `background_worker` через Compose с `--no-build`.
 Это важно для текущего сервера с 2 ГБ RAM: тяжёлая установка зависимостей и

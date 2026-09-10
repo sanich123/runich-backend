@@ -22,6 +22,8 @@ FROM yarn-base AS runtime
 
 ENV NODE_ENV=production
 
+LABEL org.opencontainers.image.source="https://github.com/sanich123/runich-backend"
+
 # Reuse the dependencies already installed and built by the builder. A second
 # production-only Yarn install exceeds the memory available on Timeweb.
 COPY --from=builder /usr/src/app/node_modules ./node_modules
