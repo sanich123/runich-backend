@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   deploy:
@@ -29,7 +30,8 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          DOCKERHUB_PAT: ${{ secrets.DOCKER_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
 
@@ -37,17 +39,17 @@ jobs:
           : "${DEPLOY_USER:?GitHub Secret DEPLOY_USER is required}"
           : "${DEPLOY_SSH_KEY:?GitHub Secret DEPLOY_SSH_KEY is required}"
           : "${DEPLOY_KNOWN_HOSTS:?GitHub Secret DEPLOY_KNOWN_HOSTS is required}"
-          : "${DOCKERHUB_PAT:?GitHub Secret DOCKER_PAT is required}"
+          : "${GITHUB_TOKEN:?GitHub Actions GITHUB_TOKEN is required}"
 
-          DEPLOY_IMAGE="sanich123/runich-backend:${GITHUB_SHA}"
+          DEPLOY_IMAGE="ghcr.io/sanich123/runich-backend:${GITHUB_SHA}"
 
           # Build on the GitHub runner instead of the 2 GB production host.
           # The host only pulls the immutable image and starts the services.
-          printf '%s' "$DOCKERHUB_PAT" |
-            docker login --username sanich123 --password-stdin >/dev/null
+          printf '%s' "$GITHUB_TOKEN" |
+            docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin >/dev/null
           docker build --tag "$DEPLOY_IMAGE" .
           docker push "$DEPLOY_IMAGE"
-          docker logout >/dev/null
+          docker logout ghcr.io >/dev/null
 
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
@@ -55,12 +57,12 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 644 "$HOME/.ssh/known_hosts"
 
-          printf '%s' "$DOCKERHUB_PAT" |
+          printf '%s' "$GITHUB_TOKEN" |
             ssh -i "$HOME/.ssh/id_ed25519" \
               -o BatchMode=yes -o IdentitiesOnly=yes \
               "$DEPLOY_USER@$DEPLOY_HOST" \
-              "docker login --username sanich123 --password-stdin >/dev/null && docker pull '$DEPLOY_IMAGE'"
-          unset DOCKERHUB_PAT
+              "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null && docker pull '$DEPLOY_IMAGE' && docker logout ghcr.io >/dev/null"
+          unset GITHUB_TOKEN
 
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes \
