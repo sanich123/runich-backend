@@ -81,7 +81,9 @@ jobs:
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
 
-            BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose pull nestjs_app background_worker
+            # The immutable image was pulled and verified in the SSH command above.
+            # Avoid a second registry request after docker logout; Compose can use
+            # the image that is already present on the host.
             BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose up \
               -d --remove-orphans --no-build nestjs_app background_worker
 
