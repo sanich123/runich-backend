@@ -6,12 +6,14 @@ import { Readable } from 'node:stream';
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
 import { StorageService } from '../storage.service';
+import { decodeActivityRoute, encodeActivityRoute } from '../activity-route';
 
 const s3Send = jest.spyOn(S3Client.prototype, 'send');
 
@@ -67,6 +69,19 @@ describe('StorageService', () => {
     expect(metrics.observeExternal).toHaveBeenCalledWith('s3', 'putObject', expect.any(Number));
   });
 
+  it('uses the MIME type extension when the original file name has none', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto('user-1', {
+        buffer: Buffer.from('photo'),
+        originalname: 'photo',
+        mimetype: 'image/png',
+      }),
+    ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/.+\.png$/) });
+  });
+
   it('streams disk uploads to S3 and removes the temporary file', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'runich-storage-test-'));
     const path = join(directory, 'photo.jpg');
@@ -91,6 +106,55 @@ describe('StorageService', () => {
     expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input.ContentLength).toBe(5);
     await expect(access(path)).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(access(directory)).resolves.toBeUndefined();
+  });
+
+  it('uploads a compressed activity route under the user and activity prefix', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const locations = [{ timestamp: 1, coords: { latitude: 55.75, longitude: 37.61 } }];
+
+    await expect(service.uploadActivityRoute('user-1', 'activity-1', locations)).resolves.toMatchObject({
+      key: 'user-1/activities/activity-1/route-v1.json.gz',
+      formatVersion: 1,
+      pointCount: 1,
+      sizeBytes: expect.any(Number),
+      checksum: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+
+    const command = s3Send.mock.calls[0]?.[0] as PutObjectCommand;
+    expect(command).toBeInstanceOf(PutObjectCommand);
+    expect(command.input).toMatchObject({
+      Bucket: 'runich-test',
+      Key: 'user-1/activities/activity-1/route-v1.json.gz',
+      ContentType: 'application/json',
+      ContentEncoding: 'gzip',
+      CacheControl: 'private, no-store',
+    });
+    await expect(decodeActivityRoute(command.input.Body as Buffer)).resolves.toEqual(locations);
+  });
+
+  it('reads and decompresses an activity route from S3', async () => {
+    const locations = [{ timestamp: 1, coords: { latitude: 55.75, longitude: 37.61 } }];
+    const encoded = await encodeActivityRoute(locations);
+    s3Send.mockResolvedValue({ Body: { transformToByteArray: async () => encoded.body } } as never);
+    const service = new StorageService();
+
+    await expect(service.readActivityRoute('user-1/activities/activity-1/route-v1.json.gz')).resolves.toEqual(
+      locations,
+    );
+
+    const command = s3Send.mock.calls[0]?.[0] as GetObjectCommand;
+    expect(command).toBeInstanceOf(GetObjectCommand);
+    expect(command.input).toEqual({ Bucket: 'runich-test', Key: 'user-1/activities/activity-1/route-v1.json.gz' });
+  });
+
+  it('rejects an activity route response without a body', async () => {
+    s3Send.mockResolvedValue({ Body: undefined } as never);
+    const service = new StorageService();
+
+    await expect(service.readActivityRoute('user-1/activities/activity-1/route-v1.json.gz')).rejects.toThrow(
+      'S3 не вернул файл маршрута активности',
+    );
   });
 
   it('deletes only an object belonging to the authenticated user', async () => {
@@ -150,6 +214,15 @@ describe('StorageService', () => {
       Objects: [{ Key: 'user-1/two.jpg' }],
       Quiet: true,
     });
+  });
+
+  it('fails when S3 reports undeleted objects', async () => {
+    s3Send
+      .mockResolvedValueOnce({ Contents: [{ Key: 'user-1/one.jpg' }], IsTruncated: false } as never)
+      .mockResolvedValueOnce({ Errors: [{ Key: 'user-1/one.jpg' }] } as never);
+    const service = new StorageService();
+
+    await expect(service.deleteUserFiles('user-1')).rejects.toThrow('S3 не удалил 1 объектов пользователя');
   });
 
   it('fails clearly when S3 credentials are not configured', async () => {

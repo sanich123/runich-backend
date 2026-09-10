@@ -18,3 +18,11 @@ export type StorageSettings = {
 };
 
 export type CleanupDatabase = Pick<PrismaService, 'mediaCleanupJob'>;
+
+export type ActivityRouteStorageMetadata = {
+  key: string;
+  formatVersion: number;
+  pointCount: number;
+  sizeBytes: number;
+  checksum: string;
+};

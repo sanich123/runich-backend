@@ -14,7 +14,7 @@ describe('MediaCleanupService', () => {
       update: asyncMock(),
     },
   };
-  const storageService = { deleteUserFiles: asyncMock() };
+  const storageService = { deleteUserFiles: asyncMock(), deleteObjectByKey: asyncMock() };
   let service: MediaCleanupService;
 
   beforeEach(() => {
@@ -38,6 +38,22 @@ describe('MediaCleanupService', () => {
     });
   });
 
+  it('enqueues cleanup for one activity object using the transaction client', async () => {
+    const transaction = { mediaCleanupJob: { create: asyncMock() } };
+    transaction.mediaCleanupJob.create.mockResolvedValue({ id: 'job-1' });
+
+    await expect(
+      service.enqueueObjectCleanup('user-1', 'user-1/activities/activity-1/route-v1.json.gz', transaction as never),
+    ).resolves.toEqual({ id: 'job-1' });
+    expect(transaction.mediaCleanupJob.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user-1',
+        storageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+        status: MEDIA_CLEANUP_STATUS.queued,
+      },
+    });
+  });
+
   it('deletes the user prefix and marks a queued job completed', async () => {
     database.mediaCleanupJob.findFirst.mockResolvedValue({ id: 'job-1', userId: 'user-1' });
     storageService.deleteUserFiles.mockResolvedValue({ deleted: 3 });
@@ -54,9 +70,37 @@ describe('MediaCleanupService', () => {
     });
   });
 
+  it('deletes one queued activity object and marks the job completed', async () => {
+    database.mediaCleanupJob.findFirst.mockResolvedValue({
+      id: 'job-1',
+      userId: 'user-1',
+      storageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+    });
+    storageService.deleteObjectByKey.mockResolvedValue(undefined);
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+    expect(storageService.deleteObjectByKey).toHaveBeenCalledWith('user-1/activities/activity-1/route-v1.json.gz');
+    expect(storageService.deleteUserFiles).not.toHaveBeenCalled();
+  });
+
   it('records S3 failures without losing the cleanup job', async () => {
     database.mediaCleanupJob.findFirst.mockResolvedValue({ id: 'job-1', userId: 'user-1' });
     storageService.deleteUserFiles.mockRejectedValue(new Error('S3 unavailable'));
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+    expect(database.mediaCleanupJob.update).toHaveBeenCalledWith({
+      where: { id: 'job-1' },
+      data: expect.objectContaining({ status: MEDIA_CLEANUP_STATUS.failed, errorMessage: 'S3 unavailable' }),
+    });
+  });
+
+  it('records a failure when one activity object cannot be deleted', async () => {
+    database.mediaCleanupJob.findFirst.mockResolvedValue({
+      id: 'job-1',
+      userId: 'user-1',
+      storageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+    });
+    storageService.deleteObjectByKey.mockRejectedValue(new Error('S3 unavailable'));
 
     await expect(service.processNextJob()).resolves.toBe(true);
     expect(database.mediaCleanupJob.update).toHaveBeenCalledWith({
@@ -78,5 +122,21 @@ describe('MediaCleanupService', () => {
 
     await expect(service.processNextJob()).resolves.toBe(true);
     expect(storageService.deleteUserFiles).not.toHaveBeenCalled();
+  });
+
+  it('requeues interrupted jobs and stops after a processed job', async () => {
+    database.mediaCleanupJob.updateMany.mockResolvedValue({ count: 0 });
+    const processNextJob = jest.spyOn(service, 'processNextJob').mockImplementation(async () => {
+      service.requestStop();
+      return true;
+    });
+
+    await expect(service.runWorker()).resolves.toBeUndefined();
+
+    expect(processNextJob).toHaveBeenCalledTimes(1);
+    expect(database.mediaCleanupJob.updateMany).toHaveBeenCalledWith({
+      where: { status: MEDIA_CLEANUP_STATUS.processing },
+      data: { status: MEDIA_CLEANUP_STATUS.queued, startedAt: null, finishedAt: null, errorMessage: null },
+    });
   });
 });

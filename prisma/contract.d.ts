@@ -33,7 +33,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'7f70661718650c7e441bbd1d756c20d0ad33d42fad6a26f5bdd9868d3c639526'>;
+  StorageHashBase<'ee8f39cddf8351c8256512d9cf11fbc454016dc462950fff06d42e8a4ec64355'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -249,7 +249,11 @@ export type FieldOutputTypes = {
       readonly distance: CodecTypes['pg/float8@1']['output'];
       readonly duration: CodecTypes['pg/int4@1']['output'];
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
-      readonly locations: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly routeStorageKey: Varchar<512> | null;
+      readonly routeFormatVersion: CodecTypes['pg/int4@1']['output'] | null;
+      readonly routePointCount: CodecTypes['pg/int4@1']['output'] | null;
+      readonly routeSizeBytes: CodecTypes['pg/int4@1']['output'] | null;
+      readonly routeChecksum: Varchar<64> | null;
       readonly userId: CodecTypes['pg/uuid@1']['output'];
       readonly speed: CodecTypes['pg/float8@1']['output'];
       readonly sport: CodecTypes['pg/text@1']['output'];
@@ -322,6 +326,7 @@ export type FieldOutputTypes = {
     readonly MediaCleanupJob: {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly userId: CodecTypes['pg/uuid@1']['output'];
+      readonly storageKey: Varchar<512> | null;
       readonly status: Varchar<32>;
       readonly errorMessage: CodecTypes['pg/text@1']['output'] | null;
       readonly createdAt: TimestamptzString<6>;
@@ -418,7 +423,11 @@ export type FieldInputTypes = {
       readonly distance: CodecTypes['pg/float8@1']['input'];
       readonly duration: CodecTypes['pg/int4@1']['input'];
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
-      readonly locations: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly routeStorageKey: CodecTypes['sql/varchar@1']['input'] | null;
+      readonly routeFormatVersion: CodecTypes['pg/int4@1']['input'] | null;
+      readonly routePointCount: CodecTypes['pg/int4@1']['input'] | null;
+      readonly routeSizeBytes: CodecTypes['pg/int4@1']['input'] | null;
+      readonly routeChecksum: CodecTypes['sql/varchar@1']['input'] | null;
       readonly userId: CodecTypes['pg/uuid@1']['input'];
       readonly speed: CodecTypes['pg/float8@1']['input'];
       readonly sport: CodecTypes['pg/text@1']['input'];
@@ -491,6 +500,7 @@ export type FieldInputTypes = {
     readonly MediaCleanupJob: {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly userId: CodecTypes['pg/uuid@1']['input'];
+      readonly storageKey: CodecTypes['sql/varchar@1']['input'] | null;
       readonly status: CodecTypes['sql/varchar@1']['input'];
       readonly errorMessage: CodecTypes['pg/text@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -588,12 +598,16 @@ export type StorageColumnTypes = {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly isPublic: CodecTypes['pg/bool@1']['output'] | null;
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
-      readonly locations: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
       readonly media_processing_status: Varchar<16>;
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
+      readonly route_checksum: Varchar<64> | null;
+      readonly route_format_version: CodecTypes['pg/int4@1']['output'] | null;
+      readonly route_point_count: CodecTypes['pg/int4@1']['output'] | null;
+      readonly route_size_bytes: CodecTypes['pg/int4@1']['output'] | null;
+      readonly route_storage_key: Varchar<512> | null;
       readonly source: Varchar<32> | null;
       readonly sourceActivityId: Varchar<128> | null;
       readonly speed: CodecTypes['pg/float8@1']['output'];
@@ -664,6 +678,7 @@ export type StorageColumnTypes = {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly startedAt: TimestamptzString<6> | null;
       readonly status: Varchar<32>;
+      readonly storage_key: Varchar<512> | null;
       readonly user_id: CodecTypes['pg/uuid@1']['output'];
     };
     readonly Profile: {
@@ -757,12 +772,16 @@ export type StorageColumnInputTypes = {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly isPublic: CodecTypes['pg/bool@1']['input'] | null;
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
-      readonly locations: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
       readonly media_processing_status: CodecTypes['sql/varchar@1']['input'];
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
+      readonly route_checksum: CodecTypes['sql/varchar@1']['input'] | null;
+      readonly route_format_version: CodecTypes['pg/int4@1']['input'] | null;
+      readonly route_point_count: CodecTypes['pg/int4@1']['input'] | null;
+      readonly route_size_bytes: CodecTypes['pg/int4@1']['input'] | null;
+      readonly route_storage_key: CodecTypes['sql/varchar@1']['input'] | null;
       readonly source: CodecTypes['sql/varchar@1']['input'] | null;
       readonly sourceActivityId: CodecTypes['sql/varchar@1']['input'] | null;
       readonly speed: CodecTypes['pg/float8@1']['input'];
@@ -833,6 +852,7 @@ export type StorageColumnInputTypes = {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly startedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
       readonly status: CodecTypes['sql/varchar@1']['input'];
+      readonly storage_key: CodecTypes['sql/varchar@1']['input'] | null;
       readonly user_id: CodecTypes['pg/uuid@1']['input'];
     };
     readonly Profile: {
@@ -983,10 +1003,32 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/text@1';
                   readonly nullable: true;
                 };
-                readonly locations: {
-                  readonly nativeType: 'jsonb';
-                  readonly codecId: 'pg/jsonb@1';
+                readonly route_storage_key: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
                   readonly nullable: true;
+                  readonly typeParams: { readonly length: 512 };
+                };
+                readonly route_format_version: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                };
+                readonly route_point_count: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                };
+                readonly route_size_bytes: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                };
+                readonly route_checksum: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 64 };
                 };
                 readonly user_id: {
                   readonly nativeType: 'uuid';
@@ -1676,6 +1718,12 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/uuid@1';
                   readonly nullable: false;
                 };
+                readonly storage_key: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 512 };
+                };
                 readonly status: {
                   readonly nativeType: 'character varying';
                   readonly codecId: 'sql/varchar@1';
@@ -2351,9 +2399,33 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly locations: {
+              readonly routeStorageKey: {
                 readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 512 };
+                };
+              };
+              readonly routeFormatVersion: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly routePointCount: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly routeSizeBytes: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly routeChecksum: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 64 };
+                };
               };
               readonly userId: {
                 readonly nullable: false;
@@ -2476,7 +2548,11 @@ type ContractBase = Omit<
                 readonly distance: { readonly column: 'distance' };
                 readonly duration: { readonly column: 'duration' };
                 readonly emotion: { readonly column: 'emotion' };
-                readonly locations: { readonly column: 'locations' };
+                readonly routeStorageKey: { readonly column: 'route_storage_key' };
+                readonly routeFormatVersion: { readonly column: 'route_format_version' };
+                readonly routePointCount: { readonly column: 'route_point_count' };
+                readonly routeSizeBytes: { readonly column: 'route_size_bytes' };
+                readonly routeChecksum: { readonly column: 'route_checksum' };
                 readonly userId: { readonly column: 'user_id' };
                 readonly speed: { readonly column: 'speed' };
                 readonly sport: { readonly column: 'sport' };
@@ -2969,6 +3045,14 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
+              readonly storageKey: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 512 };
+                };
+              };
               readonly status: {
                 readonly nullable: false;
                 readonly type: {
@@ -3013,6 +3097,7 @@ type ContractBase = Omit<
               readonly fields: {
                 readonly id: { readonly column: 'id' };
                 readonly userId: { readonly column: 'user_id' };
+                readonly storageKey: { readonly column: 'storage_key' };
                 readonly status: { readonly column: 'status' };
                 readonly errorMessage: { readonly column: 'errorMessage' };
                 readonly createdAt: { readonly column: 'createdAt' };

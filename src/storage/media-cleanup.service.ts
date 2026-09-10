@@ -24,6 +24,12 @@ export class MediaCleanupService {
     });
   }
 
+  async enqueueObjectCleanup(userId: string, storageKey: string, database: CleanupDatabase = this.prisma) {
+    return await database.mediaCleanupJob.create({
+      data: { userId, storageKey, status: MEDIA_CLEANUP_STATUS.queued },
+    });
+  }
+
   requestStop() {
     this.stopRequested = true;
   }
@@ -42,7 +48,8 @@ export class MediaCleanupService {
     if (claimed.count === 0) return true;
 
     try {
-      await this.storageService.deleteUserFiles(job.userId);
+      if (job.storageKey) await this.storageService.deleteObjectByKey(job.storageKey);
+      else await this.storageService.deleteUserFiles(job.userId);
       await this.prisma.mediaCleanupJob.update({
         where: { id: job.id },
         data: { status: MEDIA_CLEANUP_STATUS.completed, finishedAt: new Date(), errorMessage: null },
@@ -53,7 +60,12 @@ export class MediaCleanupService {
         where: { id: job.id },
         data: { status: MEDIA_CLEANUP_STATUS.failed, finishedAt: new Date(), errorMessage },
       });
-      this.logger.error(`Не удалось удалить S3-файлы пользователя ${job.userId}`, errorMessage);
+      this.logger.error(
+        job.storageKey
+          ? `Не удалось удалить S3-объект ${job.storageKey}`
+          : `Не удалось удалить S3-файлы пользователя ${job.userId}`,
+        errorMessage,
+      );
     }
 
     return true;

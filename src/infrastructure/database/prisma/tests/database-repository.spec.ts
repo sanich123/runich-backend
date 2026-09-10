@@ -26,7 +26,7 @@ describe('ModelRepository', () => {
             sport: 'run',
             source: 'strava',
             sourceActivityId: 'source-1',
-            locations: [{ latitude: 55.75, longitude: 37.61 }],
+            kilometresSplit: [{ kilometer: 1, pace: 280 }],
           },
           {
             id: '00000000-0000-4000-8000-000000000004',
@@ -38,7 +38,7 @@ describe('ModelRepository', () => {
             sport: 'run',
             source: 'strava',
             sourceActivityId: 'source-2',
-            locations: [{ latitude: 55.76, longitude: 37.62 }],
+            kilometresSplit: [{ kilometer: 2, pace: 285 }],
           },
         ],
         skipDuplicates: true,

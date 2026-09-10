@@ -163,10 +163,10 @@ curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
 { "status": "ok", "checks": { "database": "ok" } }
 ```
 
-## Переход базы на Prisma 8
+## Синхронизация базы с контрактом Prisma 8
 
 В репозитории Prisma 8 использует контракт `prisma/contract.prisma` и
-именованный ref `db`. На чистой базе миграция создаёт все таблицы из этого
+именованный ref `db`. На чистой базе синхронизация создаёт все таблицы из этого
 контракта. Для существующей базы применяйте изменения в окне обслуживания.
 Сначала сделайте проверенную резервную копию PostgreSQL и остановите API/worker,
 чтобы во время операции не было записей.
@@ -184,14 +184,12 @@ docker compose exec -T nestjs_app yarn prisma db update --dry-run
 docker compose exec -T nestjs_app \
   yarn prisma db update --no-interactive --confirm runich_db --advance-ref db
 docker compose exec -T nestjs_app yarn prisma db verify
-docker compose exec -T nestjs_app yarn prisma migration status --ascii
 ```
 
-Ожидаемый результат `db verify` — `Database marker and schema match contract`, а
-статус миграций — `Up to date`. После этого пересоберите API и worker и снова
-проверьте `/health/ready`. Не запускайте `db update` на production без backup и
-предварительного `--dry-run`: это операция, которая может изменить структуру
-базы.
+Ожидаемый результат `db verify` — `Database marker and schema match contract`.
+После этого пересоберите API и worker и снова проверьте `/health/ready`. Не
+запускайте `db update` на production без backup и предварительного `--dry-run`:
+это операция, которая может изменить структуру базы.
 
 ## Просмотр production-базы
 
@@ -291,7 +289,7 @@ docker compose exec -T db sh -c \
 ```bash
 docker compose exec -T db sh -c \
   'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$1"' -- \
-  'SELECT COUNT(*) AS activities, pg_size_pretty(COALESCE(SUM(pg_column_size(locations)), 0)) AS locations_payload, pg_size_pretty(COALESCE(SUM(pg_column_size("kilometresSplit")), 0)) AS splits_payload FROM "Activity";'
+  'SELECT COUNT(*) AS activities, pg_size_pretty(COALESCE(SUM("route_size_bytes"), 0)) AS route_payload, pg_size_pretty(COALESCE(SUM(pg_column_size("kilometresSplit")), 0)) AS splits_payload FROM "Activity";'
 ```
 
 `pg_column_size` показывает размер значений, а не всей таблицы: индексы, строковые поля,

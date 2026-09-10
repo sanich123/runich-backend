@@ -10,6 +10,7 @@ import {
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -19,8 +20,10 @@ import { rm } from 'node:fs/promises';
 import { extname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
+import type { LocationObject } from 'src/activity/activity.dto';
 import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, MAX_DELETE_BATCH_SIZE } from './const';
-import type { StorageFile, StorageSettings } from './type';
+import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from './activity-route';
+import type { ActivityRouteStorageMetadata, StorageFile, StorageSettings } from './type';
 
 @Injectable()
 export class StorageService {
@@ -83,10 +86,45 @@ export class StorageService {
     }
   }
 
-  async deletePhoto(userId: string, publicUrl: string) {
+  async uploadActivityRoute(userId: string, activityId: string, locations: LocationObject[]) {
     this.assertConfigured();
-    const key = this.getOwnedKey(userId, publicUrl);
+    const { body, metadata } = await encodeActivityRoute(locations);
+    const key = getActivityRouteKey(userId, activityId);
 
+    await this.measureS3('putObject', () =>
+      this.client.send(
+        new PutObjectCommand({
+          Bucket: this.settings.bucket,
+          Key: key,
+          Body: body,
+          ContentLength: body.byteLength,
+          ContentType: 'application/json',
+          ContentEncoding: 'gzip',
+          CacheControl: 'private, no-store',
+        }),
+      ),
+    );
+
+    return { key, ...metadata } satisfies ActivityRouteStorageMetadata;
+  }
+
+  async readActivityRoute(key: string) {
+    this.assertConfigured();
+    const response = await this.measureS3('getObject', () =>
+      this.client.send(
+        new GetObjectCommand({
+          Bucket: this.settings.bucket,
+          Key: key,
+        }),
+      ),
+    );
+    if (!response.Body) throw new Error('S3 не вернул файл маршрута активности');
+
+    return await decodeActivityRoute(await response.Body.transformToByteArray());
+  }
+
+  async deleteObjectByKey(key: string) {
+    this.assertConfigured();
     await this.measureS3('deleteObject', () =>
       this.client.send(
         new DeleteObjectCommand({
@@ -95,6 +133,10 @@ export class StorageService {
         }),
       ),
     );
+  }
+
+  async deletePhoto(userId: string, publicUrl: string) {
+    await this.deleteObjectByKey(this.getOwnedKey(userId, publicUrl));
   }
 
   async deleteUserFiles(userId: string) {
@@ -142,7 +184,7 @@ export class StorageService {
     return `${this.settings.publicUrl}/${key.split('/').map(encodeURIComponent).join('/')}`;
   }
 
-  private getOwnedKey(userId: string, publicUrl: string) {
+  getOwnedKey(userId: string, publicUrl: string) {
     let parsedUrl: URL;
     let publicBaseUrl: URL;
     try {

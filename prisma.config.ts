@@ -13,8 +13,5 @@ export default definePrismaConfig({
     db: {
       connection: databaseUrl,
     },
-    migrations: {
-      dir: 'prisma/migrations',
-    },
   }),
 });

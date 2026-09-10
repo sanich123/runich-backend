@@ -89,7 +89,11 @@ model Activity {
   distance            Float
   duration            Int
   emotion             String?
-  locations           Jsonb?
+  routeStorageKey     VarChar(512)?        @map("route_storage_key")
+  routeFormatVersion  Int?                 @map("route_format_version")
+  routePointCount     Int?                 @map("route_point_count")
+  routeSizeBytes      Int?                 @map("route_size_bytes")
+  routeChecksum       VarChar(64)?         @map("route_checksum")
   userId              Uuid                 @map("user_id")
   speed               Float
   sport               String
@@ -215,6 +219,7 @@ model Like {
 model MediaCleanupJob {
   id           Uuid                  @id(map: "MediaCleanupJob_pkey") @default(dbgenerated("gen_random_uuid()"))
   userId       Uuid                  @map("user_id")
+  storageKey   VarChar(512)?         @map("storage_key")
   status       VarChar(32)
   errorMessage String?
   createdAt    TimestamptzString(6)  @default(now())

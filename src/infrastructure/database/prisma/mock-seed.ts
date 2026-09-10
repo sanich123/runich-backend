@@ -175,16 +175,6 @@ function extractPhotoUrls(value: unknown): string[] {
   });
 }
 
-function fallbackLocations(userIndex: number, activityIndex: number) {
-  const latitude = 55.75 + userIndex / 100;
-  const longitude = 37.61 + activityIndex / 100;
-  const timestamp = Date.now() - (userIndex * 20 + activityIndex) * 86_400_000;
-  return [
-    { coords: { latitude, longitude, speed: 3, timestamp } },
-    { coords: { latitude: latitude + 0.01, longitude: longitude + 0.01, speed: 3, timestamp: timestamp + 60_000 } },
-  ];
-}
-
 const stableRunnerPhotos = [3764014, 3763879, 2402777, 3621185, 2774556, 3768114, 2526878, 1128317].map(
   (photoId) =>
     `https://images.pexels.com/photos/${photoId}/pexels-photo-${photoId}.jpeg?auto=compress&cs=tinysrgb&w=256`,
@@ -283,7 +273,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
 
   const sourceActivities = await prisma.activity.findMany({
     where: { userId: target.id },
-    select: { photoVideoUrls: true, mapPhotoUrl: true, locations: true, kilometresSplit: true },
+    select: { photoVideoUrls: true, mapPhotoUrl: true, kilometresSplit: true },
     orderBy: { date: 'desc' },
   });
   const sourcePhotoUrls = sourceActivities.flatMap((activity: any) => [
@@ -364,7 +354,6 @@ export async function seedMockData(prisma: DatabaseRepositories) {
         emotion: ['ENERGETIC', 'HAPPY', 'CALM'][activityIndex % 3],
         isPublic: true,
         photoVideoUrls: [{ url: photo, thumbnail: photo }],
-        locations: sourceActivity?.locations ? sourceActivity.locations : fallbackLocations(userIndex, activityIndex),
         kilometresSplit: sourceActivity?.kilometresSplit
           ? sourceActivity.kilometresSplit
           : [

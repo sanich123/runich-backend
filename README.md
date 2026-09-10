@@ -49,10 +49,11 @@ Start the background worker in a second terminal:
 
     yarn worker:dev
 
-`yarn dev` emits the Prisma 8 contract and applies all committed database
-migrations before starting the development server. To update only the database,
-run `yarn db:migrate`. Prisma 8 uses `prisma/contract.prisma` as the source of
-truth; the generated `contract.json` and `contract.d.ts` are runtime artifacts.
+`yarn dev` emits the Prisma 8 contract and synchronizes the database with the
+current contract before starting the development server. To update only the
+database, run `yarn db:sync`. Prisma 8 uses `prisma/contract.prisma` as the
+source of truth; the generated `contract.json` and `contract.d.ts` are runtime
+artifacts.
 
 The API is available at http://localhost:3000; Swagger is at http://localhost:3000/api.
 Liveness is available at `/health/live`, and Railway readiness checks should use
@@ -101,32 +102,32 @@ Use secret management and rotated credentials in production. Never commit .env, 
 
 ## Configuration
 
-| Variable                          | Purpose                                                           |
-| --------------------------------- | ----------------------------------------------------------------- |
-| DATABASE_URL                      | PostgreSQL connection string                                      |
-| DATABASE_URL_DOCKER               | Local Compose connection string using the `db` hostname           |
-| POSTGRES_USER, POSTGRES_DB        | Local Compose database user and database name                     |
-| POSTGRES_PASSWORD                 | Local Compose database password                                   |
-| PORT                              | HTTP port, default 3000                                           |
-| APP_ENV                           | Application environment: local, stage or production               |
-| YANDEX_SMTP_USER                  | Full Yandex mailbox address used as the sender                    |
-| YANDEX_SMTP_PASSWORD              | Yandex application password for Mail                             |
-| MAPBOX_ACCESS_TOKEN               | Mapbox Static Images API access token                             |
-| S3_BUCKET                         | Public Timeweb S3 bucket name                                    |
-| S3_ACCESS_KEY                     | Server-side S3 access key                                        |
-| S3_SECRET_ACCESS_KEY              | Server-side S3 secret key                                        |
-| S3_PUBLIC_URL                     | Optional public URL prefix; defaults to fixed endpoint plus bucket |
-| JWT_SECRET                        | Secret used to sign and verify JWT tokens                         |
-| YANDEX_CLIENT_ID                  | Yandex ID application client ID                                   |
-| YANDEX_CLIENT_SECRET              | Yandex ID application secret, server-side only                    |
-| YANDEX_REDIRECT_URI               | Registered Yandex OAuth callback URL                              |
-| AUTH_FRONTEND_REDIRECT_URI        | Frontend URL for OAuth and email login credentials                |
-| VK_CLIENT_ID                      | VK ID application client ID                                       |
-| VK_CLIENT_SECRET                  | VK ID application secret, server-side only                        |
-| VK_REDIRECT_URI                   | Registered VK OAuth callback URL                                  |
-| VK_API_VERSION                    | Optional VK API version, defaults to 5.199                        |
-| RUNICH_PROCESS                    | Process role: api or worker                                       |
-| SEED_USER_EMAIL                   | Optional email used by the database seed                          |
+| Variable                   | Purpose                                                            |
+| -------------------------- | ------------------------------------------------------------------ |
+| DATABASE_URL               | PostgreSQL connection string                                       |
+| DATABASE_URL_DOCKER        | Local Compose connection string using the `db` hostname            |
+| POSTGRES_USER, POSTGRES_DB | Local Compose database user and database name                      |
+| POSTGRES_PASSWORD          | Local Compose database password                                    |
+| PORT                       | HTTP port, default 3000                                            |
+| APP_ENV                    | Application environment: local, stage or production                |
+| YANDEX_SMTP_USER           | Full Yandex mailbox address used as the sender                     |
+| YANDEX_SMTP_PASSWORD       | Yandex application password for Mail                               |
+| MAPBOX_ACCESS_TOKEN        | Mapbox Static Images API access token                              |
+| S3_BUCKET                  | Public Timeweb S3 bucket name                                      |
+| S3_ACCESS_KEY              | Server-side S3 access key                                          |
+| S3_SECRET_ACCESS_KEY       | Server-side S3 secret key                                          |
+| S3_PUBLIC_URL              | Optional public URL prefix; defaults to fixed endpoint plus bucket |
+| JWT_SECRET                 | Secret used to sign and verify JWT tokens                          |
+| YANDEX_CLIENT_ID           | Yandex ID application client ID                                    |
+| YANDEX_CLIENT_SECRET       | Yandex ID application secret, server-side only                     |
+| YANDEX_REDIRECT_URI        | Registered Yandex OAuth callback URL                               |
+| AUTH_FRONTEND_REDIRECT_URI | Frontend URL for OAuth and email login credentials                 |
+| VK_CLIENT_ID               | VK ID application client ID                                        |
+| VK_CLIENT_SECRET           | VK ID application secret, server-side only                         |
+| VK_REDIRECT_URI            | Registered VK OAuth callback URL                                   |
+| VK_API_VERSION             | Optional VK API version, defaults to 5.199                         |
+| RUNICH_PROCESS             | Process role: api or worker                                        |
+| SEED_USER_EMAIL            | Optional email used by the database seed                           |
 
 Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. The
 `YANDEX_SMTP_USER` value is the full mailbox address (`Runich.app@ya.ru` in
@@ -157,56 +158,57 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 
 ### Application and worker
 
-| Command             | Description                            |
-| ------------------- | -------------------------------------- |
-| `yarn dev`          | Development API with watch mode        |
-| `yarn start`        | Development API without watch mode     |
-| `yarn start:debug`  | Development API with Node inspector    |
-| `yarn build`        | Build the production bundles with tsup |
-| `yarn start:prod`   | Apply migrations and run compiled API  |
-| `yarn worker:dev`   | Development background worker         |
-| `yarn worker:prod`  | Apply migrations and run built background worker |
+| Command            | Description                                      |
+| ------------------ | ------------------------------------------------ |
+| `yarn dev`         | Development API with watch mode                  |
+| `yarn start`       | Development API without watch mode               |
+| `yarn start:debug` | Development API with Node inspector              |
+| `yarn build`       | Build the production bundles with tsup           |
+| `yarn start:prod`  | Synchronize the current contract and run the compiled API |
+| `yarn worker:dev`  | Development background worker                    |
+| `yarn worker:prod` | Synchronize the current contract and run the built worker |
 
 ### Database
 
-| Command                   | Description                                      |
-| ------------------------- | ------------------------------------------------ |
-| `yarn db:up`                | Start local PostgreSQL and reconcile its Prisma 8 marker |
-| `yarn db:generate`          | Emit the Prisma 8 contract artifacts                    |
-| `yarn db:migrate`           | Apply committed Prisma 8 migrations                     |
-| `yarn db:migrate:dev`       | Update a development database and advance ref           |
-| `yarn db:seed`              | Seed the configured database                             |
+| Command               | Description                                              |
+| --------------------- | -------------------------------------------------------- |
+| `yarn db:up`          | Start local PostgreSQL and reconcile its Prisma 8 marker |
+| `yarn db:generate`    | Emit the Prisma 8 contract artifacts                     |
+| `yarn db:sync`        | Synchronize the database with the current contract       |
+| `yarn db:seed`        | Seed the configured database                             |
 
 ### Tests
 
-| Command                 | Description                              |
-| ----------------------- | ---------------------------------------- |
-| `yarn test`             | Default Jest run                         |
-| `yarn test:watch`       | Jest watch mode                          |
-| `yarn test:ci`          | Serial CI unit-test run                  |
-| `yarn test:cov`         | Unit tests with coverage thresholds      |
-| `yarn test:integration` | PostgreSQL integration/e2e tests         |
-| `yarn test:all`         | Local database and all test groups       |
+| Command                 | Description                         |
+| ----------------------- | ----------------------------------- |
+| `yarn test`             | Default Jest run                    |
+| `yarn test:watch`       | Jest watch mode                     |
+| `yarn test:ci`          | Serial CI unit-test run             |
+| `yarn test:cov`         | Unit tests with coverage thresholds |
+| `yarn test:integration` | PostgreSQL integration/e2e tests    |
+| `yarn test:all`         | Local database and all test groups  |
 
 ### Code quality
 
-| Command          | Description                                  |
-| ---------------- | -------------------------------------------- |
-| `yarn typecheck` | TypeScript check                             |
+| Command          | Description                                       |
+| ---------------- | ------------------------------------------------- |
+| `yarn typecheck` | TypeScript check                                  |
 | `yarn lint`      | ESLint with fixes for `src` and integration tests |
-| `yarn format`    | Format TypeScript source and tests             |
-| `yarn madge`     | Check circular dependencies                  |
-| `yarn ts-prune`  | Find unused exports                          |
-| `yarn depcheck`  | Inspect unused dependencies                  |
+| `yarn format`    | Format TypeScript source and tests                |
+| `yarn madge`     | Check circular dependencies                       |
+| `yarn ts-prune`  | Find unused exports                               |
+| `yarn depcheck`  | Inspect unused dependencies                       |
 
 ## Database and seed data
 
-The Prisma 8 contract is in `prisma/contract.prisma`, and the single initial
-migration is in `prisma/migrations`. The database column names remain stable
-through `@map(...)`; application and API names use camelCase.
+The Prisma 8 contract is in `prisma/contract.prisma`. A fresh database is
+created directly from this contract with `yarn db:sync`. There is no schema
+migration history in the repository; `contract.prisma` is the single source of
+truth. The database column names remain stable through `@map(...)`; application
+and API names use camelCase.
 
     yarn db:generate
-    yarn db:migrate
+    yarn db:sync
     yarn db:seed
 
 In local and stage, the application creates 100 deterministic mock runners in
@@ -219,7 +221,6 @@ intended test database because this fixture can create a large amount of data.
 ## Project structure
 
     prisma/
-    ├── migrations/              # Committed database migrations
     └── seed.ts                   # Development database seed
     src/
     ├── account/                  # Profiles, filtering and updates
@@ -232,7 +233,7 @@ intended test database because this fixture can create a large amount of data.
     ├── statistic/               # Activity statistics
     ├── user/                    # User profile CRUD
     ├── common/                  # Shared DTOs, filters, parsers and utilities
-    ├── infrastructure/database/ # Prisma 8 runtime, repositories and migrations
+    ├── infrastructure/database/ # Prisma 8 runtime and repositories
     ├── tests/
     │   ├── integration/         # PostgreSQL integration/e2e tests
     │   ├── functional/          # Cross-module behavior tests
@@ -278,8 +279,8 @@ Before opening a pull request:
     yarn madge
 
 Integration tests require a disposable PostgreSQL database configured through
-`DATABASE_URL`. `yarn test:integration` applies committed migrations before
-running the e2e suite. The CI workflow starts PostgreSQL, applies migrations,
-runs all quality gates and builds the Docker image.
+`DATABASE_URL`. `yarn test:integration` synchronizes the current contract before
+running the e2e suite. The CI workflow starts PostgreSQL, synchronizes the
+contract, runs all quality gates and builds the Docker image.
 
 See CONTRIBUTING.md for development and review rules. The package is private and marked UNLICENSED.
