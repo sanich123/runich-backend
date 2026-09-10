@@ -171,4 +171,27 @@ describe('EmailService', () => {
     );
     expect(sendMail).not.toHaveBeenCalled();
   });
+
+  it('rejects feedback when Prisma is not configured', async () => {
+    const service = new EmailService();
+
+    await expect(service.sendFeedback('bug', 'user-1', 'Broken', 'Android')).rejects.toThrow(
+      'PrismaService не настроен для отправки feedback',
+    );
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it('uses a fallback author name when the feedback profile is empty', async () => {
+    findUnique.mockResolvedValue({ email: 'ann@example.com', profile: null });
+    const service = new EmailService(undefined, prisma as never);
+
+    await service.sendFeedback('unknown', 'user-1', 'Thanks', 'iOS');
+
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: '[Runich] Обратная связь от Имя не указано <ann@example.com>',
+        html: expect.stringContaining('Пользователь:</b> Имя не указано'),
+      }),
+    );
+  });
 });

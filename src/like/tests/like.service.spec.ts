@@ -68,6 +68,28 @@ describe('LikeService', () => {
     });
   });
 
+  it('returns zero for a missing activity when the count is requested without a user', async () => {
+    const prisma = createPrismaMock();
+    const service = new LikeService(prisma as never, {} as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue(null);
+
+    await expect(service.getLikesLengthByActivityId('activity-1')).resolves.toBe(0);
+    expect(prisma.activity.findUnique).toHaveBeenCalledWith({
+      where: { id: 'activity-1' },
+      select: { _count: { select: { likes: true } } },
+    });
+  });
+
+  it('rejects a count request for an inaccessible activity', async () => {
+    const prisma = createPrismaMock();
+    const service = new LikeService(prisma as never, {} as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue(null);
+
+    await expect(service.getLikesLengthByActivityId('activity-1', 'viewer-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
   it('returns not found when the author profile is missing', async () => {
     const prisma = createPrismaMock();
     const service = new LikeService(
@@ -94,5 +116,6 @@ describe('LikeService', () => {
     await expectInternalServerError(service.addLike({ activityId: 'a1' }));
     await expectInternalServerError(service.deleteLikeById('l1'));
     await expectInternalServerError(service.getLikesByActivityId('a1'));
+    await expectInternalServerError(service.getLikesLengthByActivityId('a1', 'u1'));
   });
 });

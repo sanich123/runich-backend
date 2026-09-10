@@ -8,6 +8,7 @@ describe('LikeController', () => {
     addLike: asyncMock(),
     deleteLikeById: asyncMock(),
     getLikesByActivityId: asyncMock(),
+    getLikesLengthByActivityId: asyncMock(),
   };
   const controller = new LikeController(service as unknown as LikeService);
 
@@ -18,10 +19,17 @@ describe('LikeController', () => {
     service.addLike.mockResolvedValue(like);
     service.deleteLikeById.mockResolvedValue(like);
     service.getLikesByActivityId.mockResolvedValue([like]);
+    service.getLikesLengthByActivityId.mockResolvedValue(7);
 
     await expect(controller.sendOrDeleteLike({ activityId: 'a1' })).resolves.toEqual(like);
     await expect(controller.deleteLike({ id: 'like-1' }, undefined)).resolves.toEqual(like);
     await expect(controller.getLikesByActivityId({ id: 'a1' })).resolves.toEqual([like]);
+    await expect(
+      controller.getLikesLengthByActivityId({ id: 'a1' }, { user: { userId: 'user-1' } } as never),
+    ).resolves.toBe(7);
+    await expect(
+      controller.getLikesLengthByActivityId({ id: 'a1' }, { user: { id: 'user-1' } } as never),
+    ).resolves.toBe(7);
   });
 
   it('propagates service errors from every like endpoint', async () => {
@@ -31,5 +39,6 @@ describe('LikeController', () => {
     await expect(controller.sendOrDeleteLike({ activityId: 'a1' })).rejects.toBe(error);
     await expect(controller.deleteLike({ id: 'like-1' }, undefined)).rejects.toBe(error);
     await expect(controller.getLikesByActivityId({ id: 'a1' })).rejects.toBe(error);
+    await expect(controller.getLikesLengthByActivityId({ id: 'a1' })).rejects.toBe(error);
   });
 });
