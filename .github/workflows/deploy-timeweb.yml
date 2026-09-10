@@ -66,7 +66,12 @@ jobs:
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
 
-            docker compose up -d --build --remove-orphans nestjs_app background_worker
+            # Build the two identical images one at a time: each production
+            # dependency install can use more memory than this host has when
+            # BuildKit runs both targets concurrently.
+            docker compose build nestjs_app
+            docker compose build background_worker
+            docker compose up -d --remove-orphans nestjs_app background_worker
 
             for attempt in $(seq 1 30); do
               if curl --fail --silent --show-error --max-time 5 \
