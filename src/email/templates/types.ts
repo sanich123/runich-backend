@@ -5,6 +5,7 @@ export interface NotificationEmailProps {
   recepientSurname?: string;
   profilePhoto?: string;
   mapPhotoUrl?: string;
+  activityUrl?: string;
   comment?: string;
   type: EmailType;
 }

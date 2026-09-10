@@ -87,4 +87,23 @@ export class LikeService {
       handleServiceError(error);
     }
   }
+
+  async getLikesLengthByActivityId(id: string, currentUserId?: string) {
+    try {
+      const activity = await this.prismaService.activity.findUnique({
+        where: {
+          id,
+          ...(currentUserId ? { OR: [{ userId: currentUserId }, { isPublic: true }] } : {}),
+        },
+        select: { _count: { select: { likes: true } } },
+      });
+      if (!activity) {
+        if (currentUserId) throw new NotFoundException('Активность не найдена');
+        return 0;
+      }
+      return activity._count.likes;
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }
 }

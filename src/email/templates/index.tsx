@@ -47,7 +47,7 @@ function EmailLayout({ preview, children }: { preview: string; children: React.R
           margin: 0,
           padding: '28px 14px',
         }}>
-        <Container style={{ margin: '0 auto', maxWidth: '560px', width: '100%' }}>
+        <Container style={{ margin: '0 auto', maxWidth: '720px', width: '100%' }}>
           <Section
             style={{
               backgroundColor: colors.ink,
@@ -201,15 +201,16 @@ export function ConfirmEmailAddressWithLinkAndCode({ text, loginUrl }: { text: s
         Подтвердите email
       </Heading>
       <Text style={paragraphStyle}>
-        Ваш аккаунт почти готов. Введите код ниже в приложении Runich, чтобы подтвердить адрес электронной почты.
+        Ваш аккаунт почти готов. Сначала попробуйте войти по кнопке ниже. Если ссылка не откроется, используйте код в
+        приложении Runich.
       </Text>
-      <Text style={codeLabelStyle}>Код подтверждения:</Text>
-      <Text style={codeStyle}>{text}</Text>
       <Section style={{ margin: '4px 0 26px', textAlign: 'center' }}>
         <Link href={loginUrl} style={loginButtonStyle}>
           Войти в Runich
         </Link>
       </Section>
+      <Text style={codeLabelStyle}>Или введите код подтверждения:</Text>
+      <Text style={codeStyle}>{text}</Text>
       <Text style={{ ...securityNoteStyle, marginTop: 0 }}>
         Кнопка входа действительна 5 минут. После этого войдите обычным способом или запросите новую ссылку.
       </Text>
@@ -271,6 +272,7 @@ export function NotificationEmail({
   recepientSurname,
   profilePhoto,
   mapPhotoUrl,
+  activityUrl,
   comment,
 }: NotificationEmailProps) {
   return (
@@ -341,20 +343,33 @@ export function NotificationEmail({
 
       {mapPhotoUrl && (
         <Section style={{ paddingBottom: '22px' }}>
-          <Img
-            src={mapPhotoUrl}
-            width="100%"
-            alt="Изображение активности"
-            style={{ borderRadius: '14px', display: 'block', maxWidth: '100%' }}
-          />
+          {activityUrl ? (
+            <Link href={activityUrl}>
+              <Img
+                src={mapPhotoUrl}
+                width="100%"
+                alt="Открыть активность в Runich"
+                style={{ borderRadius: '14px', display: 'block', maxWidth: '100%' }}
+              />
+            </Link>
+          ) : (
+            <Img
+              src={mapPhotoUrl}
+              width="100%"
+              alt="Изображение активности"
+              style={{ borderRadius: '14px', display: 'block', maxWidth: '100%' }}
+            />
+          )}
         </Section>
       )}
 
       <Text style={{ color: colors.muted, fontFamily, fontSize: '14px', lineHeight: '21px', margin: 0 }}>
         Откройте приложение Runich, чтобы посмотреть подробности.
       </Text>
-      <Link href="https://runich.expo.app" style={{ color: colors.accentDark, fontFamily, fontSize: '14px' }}>
-        Открыть Runich
+      <Link
+        href={activityUrl ?? 'https://runich.netlify.app'}
+        style={{ color: colors.accentDark, fontFamily, fontSize: '14px' }}>
+        {activityUrl ? 'Открыть активность в Runich' : 'Открыть Runich'}
       </Link>
     </EmailLayout>
   );

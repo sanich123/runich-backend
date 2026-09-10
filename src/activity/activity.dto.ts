@@ -430,6 +430,9 @@ export class ActivityProfileResponseDto {
 export class ActivityCountResponseDto {
   @ApiProperty({ type: Number })
   comments: number;
+
+  @ApiProperty({ type: Number })
+  likes: number;
 }
 
 export class ActivityResponseDto extends ActivityDto {

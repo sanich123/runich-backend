@@ -7,6 +7,7 @@ const baseEmail = {
   name: 'Ann',
   surname: 'Runner',
   profilePhoto: 'https://example.com/profile.jpg',
+  activityId: 'a1',
   recepientName: 'Bob',
   recepientSurname: 'Runner',
   recepientEmail: 'bob@example.com',

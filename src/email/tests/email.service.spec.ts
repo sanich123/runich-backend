@@ -15,6 +15,7 @@ const baseEmail = {
   name: 'Ann',
   surname: 'Runner',
   profilePhoto: 'https://example.com/profile.jpg',
+  activityId: 'a1',
   recepientName: 'Bob',
   recepientSurname: 'Runner',
   recepientEmail: 'bob@example.com',
@@ -78,6 +79,20 @@ describe('EmailService', () => {
     await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).resolves.toBeUndefined();
     mockEmailDelivery();
     await expect(service.sendLoginLink('bob@example.com', 'access-token')).resolves.toBeUndefined();
+  });
+
+  it('links notification emails to the activity and puts the login link before the confirmation code', async () => {
+    const service = new EmailService();
+    mockEmailDelivery();
+    await service.sendLikeEmailNotification({ ...baseEmail, mapPhotoUrl: 'map', activityId: 'activity-1' });
+    const notificationHtml = (sendMail.mock.calls.at(-1) as unknown as [{ html: string }])[0].html;
+    expect(notificationHtml).toContain('/activity/activity-1');
+    expect(notificationHtml).toContain('href="http://localhost:5173/activity/activity-1"');
+
+    mockEmailDelivery();
+    await service.sendConfirmationCode('bob@example.com', 1234, 'credential');
+    const confirmationHtml = (sendMail.mock.calls.at(-1) as unknown as [{ html: string }])[0].html;
+    expect(confirmationHtml.indexOf('login-from-url?code=credential')).toBeLessThan(confirmationHtml.indexOf('1234'));
   });
 
   it('propagates Yandex SMTP failures from every email type', async () => {

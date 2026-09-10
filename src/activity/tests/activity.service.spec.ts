@@ -119,7 +119,17 @@ describe('ActivityService', () => {
     await service.updateActivity(pedometerActivity, 'activity-1');
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1', userId: 'activity-1' },
-      data: expect.objectContaining({ steps: 1240 }),
+      data: {
+        title: undefined,
+        sport: 'walk',
+        isPublic: undefined,
+        emotion: undefined,
+        date: undefined,
+        description: null,
+        distance: 1000,
+        duration: 100,
+        speed: 10,
+      },
     });
   });
 

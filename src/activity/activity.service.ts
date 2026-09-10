@@ -114,23 +114,17 @@ export class ActivityService {
 
   async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
-      const { date, description, emotion, isPublic, photoVideoUrls, sport, title, distance, duration, speed, steps } =
-        activityDto;
+      const { date, description, emotion, isPublic, sport, title, distance, duration, speed } = activityDto;
       const data = {
         title,
         sport,
-        photoVideoUrls,
         isPublic,
         emotion,
         date,
-        description,
+        description: description?.trim() || null,
         distance,
         duration,
         speed,
-        ...(steps === undefined ? {} : { steps }),
-        ...(Object.hasOwn(activityDto, 'photoVideoUrls')
-          ? { mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued }
-          : {}),
       };
       return omitMediaProcessingStatus(await this.persistenceService.update(id, userId, data));
     } catch (error) {
@@ -323,6 +317,11 @@ export class ActivityService {
               SELECT COUNT(*)::int
               FROM "Comment" AS c
               WHERE c."activityId" = a."id"
+            ),
+            'likes', (
+              SELECT COUNT(*)::int
+              FROM "Like" AS l
+              WHERE l."activityId" = a."id"
             )
           ) AS "_count"
         FROM "Activity" AS a

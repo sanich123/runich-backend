@@ -56,6 +56,18 @@ describe('LikeService', () => {
     expect(prisma.like.findUnique).toHaveBeenCalledTimes(1);
   });
 
+  it('returns only the likes count for an accessible activity', async () => {
+    const prisma = createPrismaMock();
+    const service = new LikeService(prisma as never, {} as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue({ _count: { likes: 7 } });
+
+    await expect(service.getLikesLengthByActivityId('activity-1', 'viewer-1')).resolves.toBe(7);
+    expect(prisma.activity.findUnique).toHaveBeenCalledWith({
+      where: { id: 'activity-1', OR: [{ userId: 'viewer-1' }, { isPublic: true }] },
+      select: { _count: { select: { likes: true } } },
+    });
+  });
+
   it('returns not found when the author profile is missing', async () => {
     const prisma = createPrismaMock();
     const service = new LikeService(
