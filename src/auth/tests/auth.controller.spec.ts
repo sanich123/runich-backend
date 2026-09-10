@@ -27,7 +27,7 @@ describe('AuthController', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('returns the minimum supported app version', () => {
-    expect(controller.getConfig()).toEqual({ appVersion: '4.0.0' });
+    expect(controller.getConfig()).toEqual({ appVersion: '1.0.0' });
   });
 
   it('returns service results for every auth endpoint', async () => {

@@ -41,7 +41,7 @@ export class VkAuthService {
     return response.redirect(url.toString());
   }
 
-  async callback(code: string, state: string, error: string, response: Response, deviceId?: string) {
+  async callback(code: string, state: string, error: string | undefined, response: Response, deviceId?: string) {
     const frontendUrl = getAuthFrontendRedirectUri();
     if (error || !code || !state) {
       return this.redirectError(response, frontendUrl, error || 'missing_code');

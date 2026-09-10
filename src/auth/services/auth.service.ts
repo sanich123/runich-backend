@@ -59,7 +59,7 @@ export class AuthService {
     return this.vkAuthService.start(response);
   }
 
-  handleVkCallback(code: string, state: string, error: string, response: Response, deviceId?: string) {
+  handleVkCallback(code: string, state: string, error: string | undefined, response: Response, deviceId?: string) {
     return this.vkAuthService.callback(code, state, error, response, deviceId);
   }
 
