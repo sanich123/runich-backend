@@ -26,6 +26,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-runich-backend:local}
     restart: always
     logging:
       driver: json-file
@@ -53,6 +54,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-runich-backend:local}
     command: ['yarn', 'worker:prod']
     restart: always
     logging:
