@@ -18,7 +18,6 @@ import { createReadStream } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { extname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { isPhotoStorageWriteEnabled } from 'src/common/config/environment';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, MAX_DELETE_BATCH_SIZE } from './const';
 import type { StorageFile, StorageSettings } from './type';
@@ -28,7 +27,6 @@ export class StorageService {
   private readonly logger = new Logger(StorageService.name);
   private readonly settings: StorageSettings;
   private readonly client: S3Client;
-  private readonly writesEnabled: boolean;
 
   constructor(@Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService) {
     const endpoint = DEFAULT_S3_ENDPOINT;
@@ -39,7 +37,6 @@ export class StorageService {
     const publicUrl = (process.env.S3_PUBLIC_URL ?? `${endpoint}/${bucket}`).replace(/\/$/, '');
 
     this.settings = { endpoint, region, bucket, accessKey, secretKey, publicUrl };
-    this.writesEnabled = isPhotoStorageWriteEnabled();
     this.client = new S3Client({
       endpoint,
       region,
@@ -51,7 +48,6 @@ export class StorageService {
   async uploadPhoto(userId: string, file: StorageFile) {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
-      this.assertWritesEnabled();
       this.assertConfigured();
       const extension = this.getExtension(file.originalname, file.mimetype);
       const key = `${userId}/${randomUUID()}.${extension}`;
@@ -88,7 +84,6 @@ export class StorageService {
   }
 
   async deletePhoto(userId: string, publicUrl: string) {
-    this.assertWritesEnabled();
     this.assertConfigured();
     const key = this.getOwnedKey(userId, publicUrl);
 
@@ -103,7 +98,6 @@ export class StorageService {
   }
 
   async deleteUserFiles(userId: string) {
-    if (!this.writesEnabled) return { deleted: 0 };
     this.assertConfigured();
     const prefix = `${userId}/`;
     let continuationToken: string | undefined;
@@ -180,12 +174,6 @@ export class StorageService {
   private assertConfigured() {
     if (!this.settings.bucket || !this.settings.accessKey || !this.settings.secretKey) {
       throw new ServiceUnavailableException('S3-хранилище не настроено на сервере');
-    }
-  }
-
-  private assertWritesEnabled() {
-    if (!this.writesEnabled) {
-      throw new ServiceUnavailableException('Загрузка и удаление фото отключены в этой среде');
     }
   }
 

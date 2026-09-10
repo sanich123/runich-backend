@@ -48,4 +48,15 @@ export class LikeController {
   async getLikesByActivityId(@Param() { id }: ParamsId, @Req() request?: AuthenticatedRequest) {
     return await this.likeService.getLikesByActivityId(id, request?.user.userId ?? request?.user.id);
   }
+
+  @Get(`${id}/count`)
+  @ApiOkResponse({ type: Number })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get likes length by activity id' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiResponse({ status: OK, description: 'Success' })
+  @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
+  async getLikesLengthByActivityId(@Param() { id }: ParamsId, @Req() request?: AuthenticatedRequest) {
+    return await this.likeService.getLikesLengthByActivityId(id, request?.user.userId ?? request?.user.id);
+  }
 }

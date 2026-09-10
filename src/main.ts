@@ -12,8 +12,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AllExceptionsFilter } from './common/filters/all-exceptions';
 import { uncaughtErrorHandler, unhandledRejectionHandler } from './common/utils/handling-process';
 import { formatValidationErrors } from './common/utils/validation-errors';
-import { createSwaggerBasicAuth } from './common/security/swagger-basic-auth';
-import { getAppEnvironment, getCorsOrigins } from './common/config/environment';
+import { getAppEnvironment, getCorsOrigins, isSwaggerEnabled } from './common/config/environment';
 
 process.on('uncaughtException', uncaughtErrorHandler);
 process.on('unhandledRejection', (reason) => {
@@ -24,28 +23,15 @@ process.on('unhandledRejection', (reason) => {
 async function bootstrap() {
   const PORT = Number(process.env.PORT) || 3000;
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: getLogLevels(process.env.NODE_ENV === 'production'),
+    logger: getLogLevels(getAppEnvironment() === 'production'),
   });
   // Railway terminates the public connection at a proxy. Trust the first proxy
   // hop so request IPs, rate limiting and session metadata use the client IP.
   app.set('trust proxy', 1);
   app.use(json({ limit: MAX_JSON_BODY_BYTES }));
   app.use(urlencoded({ extended: true, limit: MAX_JSON_BODY_BYTES }));
-  const appEnvironment = getAppEnvironment();
-  const swaggerEnabled = process.env.SWAGGER_ENABLED === 'true';
 
-  if (swaggerEnabled) {
-    const swaggerUser = process.env.SWAGGER_USER;
-    const swaggerPassword = process.env.SWAGGER_PASSWORD;
-
-    if ((appEnvironment === 'production' || appEnvironment === 'stage') && (!swaggerUser || !swaggerPassword)) {
-      throw new Error('SWAGGER_USER and SWAGGER_PASSWORD are required when Swagger is enabled in production or stage');
-    }
-
-    if (swaggerUser && swaggerPassword) {
-      app.use(['/api', '/api-json'], createSwaggerBasicAuth(swaggerUser!, swaggerPassword!));
-    }
-
+  if (isSwaggerEnabled()) {
     const config = new DocumentBuilder()
       .setTitle('Runich')
       .setDescription('Runich API')

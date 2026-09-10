@@ -2,10 +2,12 @@ import { jest } from '@jest/globals';
 
 const sendMail = jest.fn<() => Promise<{ messageId: string }>>().mockResolvedValue({ messageId: 'message-id' });
 const createTransport = jest.fn(() => ({ sendMail }));
+const networkInterfaces = jest.fn(() => ({}));
 
 jest.unstable_mockModule('nodemailer', () => ({
   default: { createTransport },
 }));
+jest.unstable_mockModule('node:os', () => ({ networkInterfaces }));
 
 const { sendEmail } = await import('../nodemailer');
 
@@ -27,6 +29,9 @@ describe('sendEmail through Yandex SMTP', () => {
   });
 
   it('sends a message with the inline logo and configured attachments', async () => {
+    process.env.APP_ENV = 'local';
+    process.env.NODE_ENV = 'development';
+
     const attachment = {
       filename: 'feedback.jpg',
       content: Buffer.from('photo'),

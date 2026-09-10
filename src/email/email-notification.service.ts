@@ -10,17 +10,17 @@ import { EmailType } from './templates/types';
 export class EmailNotificationService {
   constructor(@Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService) {}
 
-  async sendLike(data: LikeEmailDTO) {
+  async sendLike(data: LikeEmailDTO & { activityUrl: string }) {
     const html = await render(NotificationEmail({ type: EmailType.like, ...data }));
     return sendEmail(data.recepientEmail, 'Лайк к активности', html, [], this.latencyMetrics);
   }
 
-  async sendComment(data: CommentEmailDTO) {
+  async sendComment(data: CommentEmailDTO & { activityUrl: string }) {
     const html = await render(NotificationEmail({ type: EmailType.comment, ...data }));
     return sendEmail(data.recepientEmail, 'Новый комментарий к вашей активности', html, [], this.latencyMetrics);
   }
 
-  async sendCommentLike(data: CommentLikeEmailDTO) {
+  async sendCommentLike(data: CommentLikeEmailDTO & { activityUrl: string }) {
     const html = await render(NotificationEmail({ type: EmailType.commentLike, ...data }));
     return sendEmail(data.recepientEmail, 'Лайк к вашему комментарию', html, [], this.latencyMetrics);
   }

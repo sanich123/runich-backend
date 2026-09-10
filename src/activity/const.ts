@@ -31,7 +31,7 @@ export const ACTIVITY_CARD_SELECT = {
   distance: true,
   steps: true,
   profile: { select: ACTIVITY_CARD_PROFILE_SELECT },
-  _count: { select: { comments: true } },
+  _count: { select: { comments: true, likes: true } },
 } as const;
 
 export const ACTIVITY_FEED_SELECT = {

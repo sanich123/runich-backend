@@ -163,7 +163,11 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       expect.arrayContaining([activityId, createdActivityId]),
     );
     expect(listResponse.body.activities).toEqual(
-      expect.arrayContaining([expect.objectContaining({ _count: { comments: expect.any(Number) } })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          _count: { comments: expect.any(Number), likes: expect.any(Number) },
+        }),
+      ]),
     );
 
     await request(app.getHttpServer())
@@ -206,7 +210,11 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       expect.arrayContaining([activityId, createdActivityId]),
     );
     expect(allResponse.body.activities).toEqual(
-      expect.arrayContaining([expect.objectContaining({ _count: { comments: expect.any(Number) } })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          _count: { comments: expect.any(Number), likes: expect.any(Number) },
+        }),
+      ]),
     );
 
     const updateResponse = await request(app.getHttpServer())
@@ -435,7 +443,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .get(`/activity/activityId/${importedActivity!.id}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200)
-      .expect((response) => expect(response.body._count).toEqual({ comments: 0 }));
+      .expect((response) => expect(response.body._count).toEqual({ comments: 0, likes: 0 }));
   });
 
   it('rejects protected email endpoints without authentication and redirects OAuth errors safely', async () => {

@@ -9,6 +9,14 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { escapeHtml } from './utils';
 
+function getActivityFrontendUrl(activityId: string) {
+  const activityUrl = new URL(getAuthFrontendRedirectUri());
+  activityUrl.pathname = `/activity/${encodeURIComponent(activityId)}`;
+  activityUrl.search = '';
+  activityUrl.hash = '';
+  return activityUrl.toString();
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -31,15 +39,18 @@ export class EmailService {
     recepientName,
     recepientSurname,
     mapPhotoUrl,
+    activityId,
   }: LikeEmailDTO) {
     return this.notificationService.sendLike({
       profilePhoto,
       name,
       surname,
+      activityId,
       recepientEmail,
       recepientName,
       recepientSurname,
       mapPhotoUrl,
+      activityUrl: getActivityFrontendUrl(activityId),
     });
   }
 
@@ -52,16 +63,19 @@ export class EmailService {
     recepientName,
     recepientSurname,
     mapPhotoUrl,
+    activityId,
   }: CommentEmailDTO) {
     return this.notificationService.sendComment({
       profilePhoto,
       name,
       surname,
+      activityId,
       comment,
       recepientEmail,
       recepientName,
       recepientSurname,
       mapPhotoUrl,
+      activityUrl: getActivityFrontendUrl(activityId),
     });
   }
 
@@ -73,15 +87,18 @@ export class EmailService {
     recepientEmail,
     recepientName,
     recepientSurname,
+    activityId,
   }: CommentLikeEmailDTO) {
     return this.notificationService.sendCommentLike({
       profilePhoto,
       name,
       surname,
+      activityId,
       comment,
       recepientEmail,
       recepientName,
       recepientSurname,
+      activityUrl: getActivityFrontendUrl(activityId),
     });
   }
   async sendConfirmationCode(emailAddress: string, confirmationCode: number, loginCredential: string) {

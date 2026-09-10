@@ -187,6 +187,7 @@ describe('request DTO validation', () => {
       name: 'Ann',
       surname: 'Runner',
       profilePhoto: 'https://example.com/profile.jpg',
+      activityId: uuid,
       recepientName: 'Bob',
       recepientSurname: 'Runner',
       recepientEmail: email,

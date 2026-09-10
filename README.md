@@ -9,7 +9,7 @@ Backend API for Runich, a social fitness application for activities, profiles, f
 - Yarn 4.18.0
 - PostgreSQL 18.6 and Prisma 8 (RC contract/runtime)
 - JWT bearer authentication
-- Swagger/OpenAPI at /api in development; stage and production access is protected by Basic Auth
+- Swagger/OpenAPI at /api in local and stage; production access is disabled
 
 ## Quick start
 
@@ -27,13 +27,9 @@ Create a local, ignored .env file:
     POSTGRES_DB=runich_db
     PORT=3000
     APP_ENV=local
-    NODE_ENV=development
-    SWAGGER_ENABLED=true
     YANDEX_SMTP_USER=Runich.app@ya.ru
     YANDEX_SMTP_PASSWORD=your-yandex-mail-application-password
-    SEED_MOCK_DATA=false
     RUNICH_PROCESS=api
-    PHOTO_UPLOADS_ENABLED=true
     S3_BUCKET=your-timeweb-bucket-name
     S3_ACCESS_KEY=your-timeweb-access-key
     S3_SECRET_ACCESS_KEY=your-timeweb-secret-key
@@ -80,11 +76,8 @@ JWT access tokens expire after 1 day. Refresh tokens expire after 30 days,
 are stored as hashes for persistent sessions, and are rotated on every
 successful refresh.
 
-Swagger is disabled by default in every environment and is enabled only when
-`SWAGGER_ENABLED=true` is set. In stage and production, both
-`SWAGGER_USER` and `SWAGGER_PASSWORD` are required and protect `/api` and
-`/api-json` with Basic Auth. Store these values only in Railway variables or a
-local ignored `.env` file.
+Swagger is enabled automatically in local and stage without a separate
+variable or authentication. It is disabled automatically in production.
 
 Tracked activities are reduced by the mobile client to at most 5,000 location
 points before sending. The API accepts the same maximum and limits JSON request
@@ -116,9 +109,6 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | POSTGRES_PASSWORD                 | Local Compose database password                                   |
 | PORT                              | HTTP port, default 3000                                           |
 | APP_ENV                           | Application environment: local, stage or production               |
-| NODE_ENV                          | Node.js runtime environment                                       |
-| SWAGGER_ENABLED                   | Enable Swagger; production default is disabled                    |
-| SWAGGER_USER, SWAGGER_PASSWORD    | Basic Auth credentials when Swagger is enabled in stage/production |
 | YANDEX_SMTP_USER                  | Full Yandex mailbox address used as the sender                    |
 | YANDEX_SMTP_PASSWORD              | Yandex application password for Mail                             |
 | MAPBOX_ACCESS_TOKEN               | Mapbox Static Images API access token                             |
@@ -135,9 +125,7 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | VK_CLIENT_SECRET                  | VK ID application secret, server-side only                        |
 | VK_REDIRECT_URI                   | Registered VK OAuth callback URL                                  |
 | VK_API_VERSION                    | Optional VK API version, defaults to 5.199                        |
-| SEED_MOCK_DATA                    | Create mock users and activities in the background after startup  |
 | RUNICH_PROCESS                    | Process role: api or worker                                       |
-| PHOTO_UPLOADS_ENABLED              | Enable photo writes to S3; disabled by default in stage            |
 | SEED_USER_EMAIL                   | Optional email used by the database seed                          |
 
 Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. The
@@ -157,10 +145,10 @@ email links. It must point to the frontend belonging to the current
 environment, for example `https://runich.netlify.app/login-from-url` in
 production or `https://stage--runich.netlify.app/login-from-url` in stage.
 
-Stage may use the same S3 bucket as production, but `PHOTO_UPLOADS_ENABLED`
-must remain `false` there. Mock fixtures use external URLs and do not upload
-objects to S3. Set `RUNICH_PROCESS=worker` for the background worker so
-it does not run the mock seed a second time.
+Stage may use the same S3 bucket as production and photo writes are enabled in
+both environments. Mock data is created automatically only in local and stage;
+production never runs the mock seed. Set `RUNICH_PROCESS=worker` for the
+background worker so it does not run the mock seed a second time.
 
 ## Commands
 
@@ -221,7 +209,12 @@ through `@map(...)`; application and API names use camelCase.
     yarn db:migrate
     yarn db:seed
 
-Setting SEED_MOCK_DATA=true creates 100 deterministic mock runners. Each user gets 0–40 activities, each activity gets 0–40 comments and likes, each comment gets 0–40 likes, and each user follows 0–40 other users. Comment, like and activity timestamps are varied. The mock seed version is bumped when fixtures need recreation. Use only with a disposable development database because this fixture can create a large amount of data.
+In local and stage, the application creates 100 deterministic mock runners in
+the background. Each user gets 0–40 activities, each activity gets 0–40
+comments and likes, each comment gets 0–40 likes, and each user follows 0–40
+other users. Comment, like and activity timestamps are varied. The mock seed
+version is bumped when fixtures need recreation. Use stage only with its
+intended test database because this fixture can create a large amount of data.
 
 ## Project structure
 

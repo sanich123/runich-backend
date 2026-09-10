@@ -67,7 +67,10 @@ docker system df
 ```
 
 Не используйте `docker compose down -v` или `docker system prune --volumes` для
-освобождения места: это может удалить named volume `pgdata`.
+освобождения места: это может удалить named volume `pgdata`. После успешного
+health check можно отдельно удалить только rebuildable BuildKit-кэш командой
+`docker builder prune --all --force`; именованные volumes она не удаляет, но
+следующая сборка заново скачает и соберёт очищенные слои.
 
 ### Проверка Yandex SMTP
 

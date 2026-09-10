@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class EmailDTO {
   @IsString()
@@ -13,9 +13,16 @@ export class EmailDTO {
   surname: string;
 
   @IsString()
+  @IsOptional()
   @IsNotEmpty()
-  @ApiProperty({ title: 'Author photo', nullable: false, required: true, type: String })
-  profilePhoto: string;
+  @ApiProperty({ title: 'Author photo', nullable: true, required: false, type: String })
+  profilePhoto?: string;
+
+  @IsString()
+  @IsUUID()
+  @IsNotEmpty()
+  @ApiProperty({ title: 'Activity identifier', format: 'uuid', nullable: false, required: true, type: String })
+  activityId: string;
 
   @IsString()
   @IsNotEmpty()
@@ -36,9 +43,10 @@ export class EmailDTO {
 
 export class LikeEmailDTO extends EmailDTO {
   @IsString()
+  @IsOptional()
   @IsNotEmpty()
-  @ApiProperty({ title: 'Author comment', nullable: false, required: true, type: String })
-  mapPhotoUrl: string;
+  @ApiProperty({ title: 'Activity map', nullable: true, required: false, type: String })
+  mapPhotoUrl?: string;
 }
 
 export class CommentLikeEmailDTO extends EmailDTO {
@@ -50,7 +58,8 @@ export class CommentLikeEmailDTO extends EmailDTO {
 
 export class CommentEmailDTO extends CommentLikeEmailDTO {
   @IsString()
+  @IsOptional()
   @IsNotEmpty()
-  @ApiProperty({ title: 'Author comment', nullable: false, required: true, type: String })
-  mapPhotoUrl: string;
+  @ApiProperty({ title: 'Activity map', nullable: true, required: false, type: String })
+  mapPhotoUrl?: string;
 }
