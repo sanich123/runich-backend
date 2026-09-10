@@ -8,9 +8,16 @@ import { AccountModule } from '../account/account.module';
 import { ActivityPersistenceService } from './activity-persistence.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ActivityMigrationService } from './activity-migration.service';
+import { StorageModule } from 'src/storage/storage.module';
 
 @Module({
-  imports: [PrismaModule, FriendModule, AccountModule, PassportModule.register({ defaultStrategy: 'jwt' })],
+  imports: [
+    PrismaModule,
+    FriendModule,
+    AccountModule,
+    StorageModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+  ],
   controllers: [ActivityController],
   providers: [ActivityService, ActivityPersistenceService, ActivityMigrationService, ThrottlerGuard],
   exports: [ActivityService, ActivityPersistenceService, ActivityMigrationService],

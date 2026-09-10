@@ -9,12 +9,14 @@ import { AppModule } from 'src/app/app.module';
 import { ActivityMigrationService } from 'src/activity/activity-migration.service';
 import { AuthTokenService } from 'src/auth/services/auth-token.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { StorageService } from 'src/storage/storage.service';
 
 const describeIntegration = process.env.RUNICH_INTEGRATION === 'true' ? describe : describe.skip;
 
 describeIntegration('PostgreSQL API smoke e2e', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let storageService: StorageService;
   let jwtService: JwtService;
   let ownerId: string;
   let visitorId: string;
@@ -34,6 +36,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
     await app.init();
 
     prisma = app.get(PrismaService);
+    storageService = app.get(StorageService);
     jwtService = app.get(JwtService);
     const authTokenService = app.get(AuthTokenService);
     const suffix = randomUUID();
@@ -62,8 +65,13 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
     ownerProfileId = owner.profile!.id;
     activityDate = new Date();
 
+    const activityIdForRoute = randomUUID();
+    const routeMetadata = await storageService.uploadActivityRoute(owner.id, activityIdForRoute, [
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+    ]);
     const activity = await prisma.activity.create({
       data: {
+        id: activityIdForRoute,
         userId: owner.id,
         profileId: owner.profile!.id,
         date: activityDate,
@@ -74,7 +82,11 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         distance: 10,
         speed: 10,
         isPublic: true,
-        locations: [{ coords: { latitude: 55.75, longitude: 37.61 } }],
+        routeStorageKey: routeMetadata.key,
+        routeFormatVersion: routeMetadata.formatVersion,
+        routePointCount: routeMetadata.pointCount,
+        routeSizeBytes: routeMetadata.sizeBytes,
+        routeChecksum: routeMetadata.checksum,
         photoVideoUrls: [{ url: 'https://example.com/photo.jpg', thumbnail: null, blurhash: 'test-blurhash' }],
       },
     });

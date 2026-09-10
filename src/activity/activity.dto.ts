@@ -87,9 +87,15 @@ export class ActivityLocationDto {
   @ValidateNested()
   @Type(() => ActivityCoordinatesDto)
   coords: ActivityCoordinatesDto;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @IsOptional()
+  timestamp?: number;
 }
 
 export type LocationObject = {
+  timestamp?: number;
   coords: {
     latitude: number;
     longitude: number;
@@ -226,6 +232,7 @@ export class ActivityDto {
     items: {
       type: 'object',
       properties: {
+        timestamp: { type: 'number' },
         coords: {
           type: 'object',
           properties: {

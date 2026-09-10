@@ -48,7 +48,6 @@ describeIntegration('PostgreSQL activity privacy e2e', () => {
       duration: 60,
       distance: 1,
       speed: 1,
-      locations: [{ coords: { latitude: 55.75, longitude: 37.61 } }],
       photoVideoUrls: [{ url: 'https://example.com/photo.jpg', thumbnail: null }],
     };
     const privateActivity = await prisma.activity.create({ data: { ...activityData, isPublic: false } });

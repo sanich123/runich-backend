@@ -20,6 +20,7 @@ function createPrismaMock() {
       findMany: asyncMock(),
       delete: asyncMock(),
     },
+    $transaction: jest.fn(),
     friend: { findMany: asyncMock() },
     $queryRaw: asyncMock(),
   };
@@ -64,6 +65,117 @@ describe('ActivityService', () => {
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({ mapPhotoUrl: expect.stringContaining('mapbox-token') }),
     });
+  });
+
+  it('stores a route in S3 and keeps only route metadata in the activity row', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const storage = {
+      uploadActivityRoute: asyncMock().mockResolvedValue({
+        key: 'user-1/activities/activity-1/route-v1.json.gz',
+        formatVersion: 1,
+        pointCount: 1,
+        sizeBytes: 123,
+        checksum: 'a'.repeat(64),
+      }),
+      deleteObjectByKey: asyncMock(),
+    };
+    const service = new ActivityService(prisma as never, account as never, undefined, storage as never);
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    const locations = [{ timestamp: 1, coords: { latitude: 55.75, longitude: 37.61 } }];
+
+    await expect(service.createActivity({ ...activityDto, locations }, 'user-1')).resolves.toEqual({
+      id: 'activity-1',
+    });
+
+    expect(storage.uploadActivityRoute).toHaveBeenCalledWith('user-1', expect.any(String), locations);
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        routeStorageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+        routeFormatVersion: 1,
+        routePointCount: 1,
+        routeSizeBytes: 123,
+        routeChecksum: 'a'.repeat(64),
+      }),
+    });
+    expect(prisma.activity.create).toHaveBeenLastCalledWith({
+      data: expect.not.objectContaining({ locations: expect.anything() }),
+    });
+  });
+
+  it('removes an uploaded route when the activity row cannot be saved', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const storage = {
+      uploadActivityRoute: asyncMock().mockResolvedValue({ key: 'user-1/activities/activity-1/route-v1.json.gz' }),
+      deleteObjectByKey: asyncMock(),
+    };
+    const service = new ActivityService(prisma as never, account as never, undefined, storage as never);
+    prisma.activity.create.mockRejectedValue(new Error('database unavailable'));
+
+    await expectInternalServerError(
+      service.createActivity(
+        { ...activityDto, locations: [{ coords: { latitude: 55.75, longitude: 37.61 } }] },
+        'user-1',
+      ),
+    );
+
+    expect(storage.deleteObjectByKey).toHaveBeenCalledWith('user-1/activities/activity-1/route-v1.json.gz');
+  });
+
+  it('queues every S3 object linked to an activity before deleting its row', async () => {
+    const prisma = createPrismaMock();
+    const transaction = {
+      activity: { findFirst: asyncMock(), delete: asyncMock() },
+    };
+    prisma.$transaction.mockImplementation((async (callback: (client: unknown) => Promise<unknown>) =>
+      callback(transaction)) as never);
+    transaction.activity.findFirst.mockResolvedValue({
+      routeStorageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+      photoVideoUrls: [
+        {
+          url: 'https://s3.twcstorage.ru/runich-test/user-1/photo.jpg',
+          thumbnail: 'https://s3.twcstorage.ru/runich-test/user-1/photo-thumb.jpg',
+        },
+      ],
+    });
+    transaction.activity.delete.mockResolvedValue({ id: 'activity-1' });
+    const storage = {
+      getOwnedKey: jest.fn((_userId: string, url: string) =>
+        url.endsWith('thumb.jpg') ? 'user-1/photo-thumb.jpg' : 'user-1/photo.jpg',
+      ),
+    };
+    const cleanup = { enqueueObjectCleanup: asyncMock() };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, cleanup as never);
+
+    await expect(service.deleteActivityById('activity-1', 'user-1')).resolves.toEqual({ id: 'activity-1' });
+
+    expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith(
+      'user-1',
+      'user-1/activities/activity-1/route-v1.json.gz',
+      transaction,
+    );
+    expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith('user-1', 'user-1/photo.jpg', transaction);
+    expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith('user-1', 'user-1/photo-thumb.jpg', transaction);
+    expect(transaction.activity.delete).toHaveBeenCalledWith({ where: { id: 'activity-1', userId: 'user-1' } });
+  });
+
+  it('reads a stored route while keeping the locations endpoint response unchanged', async () => {
+    const prisma = createPrismaMock();
+    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    prisma.activity.findUnique.mockResolvedValue({
+      routeStorageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+      kilometresSplit: [],
+      userId: 'user-1',
+      isPublic: false,
+    });
+
+    await expect(service.getLocationsByActivityId('activity-1', 'user-1')).resolves.toEqual({
+      locations: [{ coords: { latitude: 55, longitude: 37 } }],
+      kilometresSplit: [],
+    });
+    expect(storage.readActivityRoute).toHaveBeenCalledWith('user-1/activities/activity-1/route-v1.json.gz');
   });
 
   it('generates a title from the activity time and sport when title is missing', async () => {

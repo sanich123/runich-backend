@@ -124,13 +124,6 @@
                   "kind": "scalar"
                 }
               },
-              "locations": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/jsonb@1",
-                  "kind": "scalar"
-                }
-              },
               "mapPhotoUrl": {
                 "nullable": true,
                 "type": {
@@ -167,6 +160,47 @@
                 "type": {
                   "codecId": "pg/uuid@1",
                   "kind": "scalar"
+                }
+              },
+              "routeChecksum": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 64
+                  }
+                }
+              },
+              "routeFormatVersion": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "routePointCount": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "routeSizeBytes": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "routeStorageKey": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 512
+                  }
                 }
               },
               "source": {
@@ -326,9 +360,6 @@
                 "kilometresSplit": {
                   "column": "kilometresSplit"
                 },
-                "locations": {
-                  "column": "locations"
-                },
                 "mapPhotoUrl": {
                   "column": "mapPhotoUrl"
                 },
@@ -343,6 +374,21 @@
                 },
                 "profileId": {
                   "column": "profileId"
+                },
+                "routeChecksum": {
+                  "column": "route_checksum"
+                },
+                "routeFormatVersion": {
+                  "column": "route_format_version"
+                },
+                "routePointCount": {
+                  "column": "route_point_count"
+                },
+                "routeSizeBytes": {
+                  "column": "route_size_bytes"
+                },
+                "routeStorageKey": {
+                  "column": "route_storage_key"
                 },
                 "source": {
                   "column": "source"
@@ -1146,6 +1192,16 @@
                   }
                 }
               },
+              "storageKey": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 512
+                  }
+                }
+              },
               "userId": {
                 "nullable": false,
                 "type": {
@@ -1174,6 +1230,9 @@
                 },
                 "status": {
                   "column": "status"
+                },
+                "storageKey": {
+                  "column": "storage_key"
                 },
                 "userId": {
                   "column": "user_id"
@@ -2349,11 +2408,6 @@
                   "nativeType": "jsonb",
                   "nullable": true
                 },
-                "locations": {
-                  "codecId": "pg/jsonb@1",
-                  "nativeType": "jsonb",
-                  "nullable": true
-                },
                 "mapPhotoUrl": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -2385,6 +2439,37 @@
                   "codecId": "pg/uuid@1",
                   "nativeType": "uuid",
                   "nullable": false
+                },
+                "route_checksum": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 64
+                  }
+                },
+                "route_format_version": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
+                "route_point_count": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
+                "route_size_bytes": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
+                "route_storage_key": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 512
+                  }
                 },
                 "source": {
                   "codecId": "sql/varchar@1",
@@ -3272,6 +3357,14 @@
                     "length": 32
                   }
                 },
+                "storage_key": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 512
+                  }
+                },
                 "user_id": {
                   "codecId": "pg/uuid@1",
                   "nativeType": "uuid",
@@ -4000,7 +4093,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "7f70661718650c7e441bbd1d756c20d0ad33d42fad6a26f5bdd9868d3c639526"
+    "storageHash": "ee8f39cddf8351c8256512d9cf11fbc454016dc462950fff06d42e8a4ec64355"
   },
   "capabilities": {
     "postgres": {

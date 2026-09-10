@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ActivityDto } from './activity.dto';
+import { ActivityDto, type LocationObject } from './activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
@@ -23,6 +24,8 @@ import {
 } from './activity.pagination';
 import { omitMediaProcessingStatus } from './utils';
 import type { ActivityFeedSqlRow } from './type';
+import { MediaCleanupService } from 'src/storage/media-cleanup.service';
+import { StorageService } from 'src/storage/storage.service';
 
 @Injectable()
 export class ActivityService {
@@ -35,11 +38,21 @@ export class ActivityService {
     private readonly accountService: AccountService,
     @Inject(ActivityPersistenceService)
     persistenceService?: ActivityPersistenceService,
+    @Optional()
+    @Inject(StorageService)
+    storageService?: StorageService,
+    @Optional()
+    @Inject(MediaCleanupService)
+    mediaCleanupService?: MediaCleanupService,
   ) {
     this.persistenceService = persistenceService ?? new ActivityPersistenceService(this.prisma);
+    this.storageService = storageService;
+    this.mediaCleanupService = mediaCleanupService;
   }
 
   private readonly persistenceService: ActivityPersistenceService;
+  private readonly storageService?: StorageService;
+  private readonly mediaCleanupService?: MediaCleanupService;
 
   async canAccessActivity(id: string, currentUserId?: string) {
     if (!currentUserId) return true;
@@ -53,24 +66,48 @@ export class ActivityService {
   }
 
   async createActivity(activityDto: ActivityDto, id: string) {
+    let uploadedRouteKey: string | undefined;
     try {
       const account = await this.accountService.getAccountByUserId(id);
-
-      if (activityDto?.photoVideoUrls?.length && activityDto?.locations?.length && activityDto?.locations?.length > 1) {
-        activityDto.mapPhotoUrl = getMapBoxImage(activityDto?.locations);
+      const locations = activityDto.locations;
+      const storageService = this.storageService;
+      let activityId: string | undefined;
+      let routeMetadata;
+      if (storageService && locations?.length) {
+        activityId = randomUUID();
+        routeMetadata = await storageService.uploadActivityRoute(id, activityId, locations);
       }
+      uploadedRouteKey = routeMetadata?.key;
+
+      const mapPhotoUrl =
+        activityDto?.photoVideoUrls?.length && locations?.length && locations.length > 1
+          ? getMapBoxImage(locations)
+          : activityDto.mapPhotoUrl;
 
       const photoVideoUrls = activityDto.photoVideoUrls;
       const mapPhotoUrlBlurhash = null;
+      const activityFields = { ...activityDto };
+      delete activityFields.locations;
 
       const data = {
+        ...(activityId ? { id: activityId } : {}),
         userId: id,
         profileId: `${account?.id}`,
-        ...activityDto,
+        ...activityFields,
         title: activityDto.title?.trim()
           ? activityDto.title
           : generateActivityTitle(activityDto.sport, activityDto.date),
         photoVideoUrls,
+        ...(routeMetadata
+          ? {
+              routeStorageKey: routeMetadata.key,
+              routeFormatVersion: routeMetadata.formatVersion,
+              routePointCount: routeMetadata.pointCount,
+              routeSizeBytes: routeMetadata.sizeBytes,
+              routeChecksum: routeMetadata.checksum,
+            }
+          : {}),
+        mapPhotoUrl,
         mapPhotoUrlBlurhash,
         mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued,
       };
@@ -82,6 +119,7 @@ export class ActivityService {
 
       return omitMediaProcessingStatus(await this.persistenceService.create(data));
     } catch (error) {
+      await this.deleteUploadedRoute(uploadedRouteKey);
       handleServiceError(error);
     }
   }
@@ -101,9 +139,18 @@ export class ActivityService {
       }));
       const chunkedActivities = chunkArray(activitiesWithTitles, 100);
       await Promise.all(
-        chunkedActivities.map(async (activities) => {
-          this.logger.debug(`Writing activity batch (${activities.length} records)`);
-          return await this.persistenceService.createMany(activities);
+        chunkedActivities.map(async (activityBatch) => {
+          const preparedActivities: Awaited<ReturnType<typeof this.prepareActivityRoute>>[] = [];
+          try {
+            for (const activity of activityBatch) preparedActivities.push(await this.prepareActivityRoute(activity));
+            this.logger.debug(`Writing activity batch (${activityBatch.length} records)`);
+            return await this.persistenceService.createMany(
+              preparedActivities.map(({ data }) => data as unknown as Record<string, unknown>),
+            );
+          } catch (error) {
+            await Promise.all(preparedActivities.map(({ routeKey }) => this.deleteUploadedRoute(routeKey)));
+            throw error;
+          }
         }),
       );
       return { success: true };
@@ -136,7 +183,7 @@ export class ActivityService {
     const activity = await this.prisma.activity.findUnique({
       where: { id },
       select: {
-        locations: true,
+        routeStorageKey: true,
         kilometresSplit: true,
         userId: true,
         isPublic: true,
@@ -144,7 +191,12 @@ export class ActivityService {
     });
     if (!activity || !currentUserId) return activity;
     if (activity.userId !== currentUserId && activity.isPublic !== true) return null;
-    return { locations: activity.locations, kilometresSplit: activity.kilometresSplit };
+    let locations: LocationObject[] | undefined;
+    if (activity.routeStorageKey) {
+      if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');
+      locations = await this.storageService.readActivityRoute(activity.routeStorageKey);
+    }
+    return { locations, kilometresSplit: activity.kilometresSplit };
   }
 
   async getActivityByActivityId(id: string, currentUserId?: string) {
@@ -363,10 +415,87 @@ export class ActivityService {
 
   async deleteActivityById(id: string, userId = id) {
     try {
-      return await this.persistenceService.delete(id, userId);
+      if (!this.mediaCleanupService) return await this.persistenceService.delete(id, userId);
+
+      return await this.prisma.$transaction(async (transaction) => {
+        const activity = await transaction.activity.findFirst({
+          where: { id, userId },
+          select: { routeStorageKey: true, photoVideoUrls: true },
+        });
+        const storageKeys = this.getActivityStorageKeys(userId, activity);
+        await Promise.all(
+          storageKeys.map((storageKey) =>
+            this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey, transaction as never),
+          ),
+        );
+        return await transaction.activity.delete({ where: { id, userId } });
+      });
     } catch (error) {
       handleServiceError(error);
     }
+  }
+
+  private async prepareActivityRoute<T extends ActivityDto & { userId: string; profileId: string }>(activity: T) {
+    if (!activity.locations?.length || !this.storageService) return { data: activity, routeKey: undefined };
+
+    const activityId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
+    const routeMetadata = await this.storageService.uploadActivityRoute(
+      activity.userId,
+      activityId,
+      activity.locations,
+    );
+    const dataWithoutLocations = { ...activity };
+    delete dataWithoutLocations.locations;
+    return {
+      data: {
+        ...dataWithoutLocations,
+        id: activityId,
+        routeStorageKey: routeMetadata.key,
+        routeFormatVersion: routeMetadata.formatVersion,
+        routePointCount: routeMetadata.pointCount,
+        routeSizeBytes: routeMetadata.sizeBytes,
+        routeChecksum: routeMetadata.checksum,
+      },
+      routeKey: routeMetadata.key,
+    };
+  }
+
+  private async deleteUploadedRoute(routeKey?: string) {
+    if (!routeKey || !this.storageService) return;
+    try {
+      await this.storageService.deleteObjectByKey(routeKey);
+    } catch (error) {
+      this.logger.error(`Не удалось удалить незавершённый маршрут ${routeKey}`, error);
+    }
+  }
+
+  private getActivityStorageKeys(
+    userId: string,
+    activity: { routeStorageKey: string | null; photoVideoUrls: unknown } | null,
+  ) {
+    const keys = new Set<string>();
+    if (activity?.routeStorageKey?.startsWith(`${userId}/`)) keys.add(activity.routeStorageKey);
+
+    if (!this.storageService || !Array.isArray(activity?.photoVideoUrls)) return [...keys];
+    for (const media of activity.photoVideoUrls) {
+      for (const url of this.getMediaUrls(media)) {
+        try {
+          keys.add(this.storageService.getOwnedKey(userId, url));
+        } catch {
+          this.logger.warn(`Пропускаю внешний или некорректный медиа-файл активности: ${url}`);
+        }
+      }
+    }
+    return [...keys];
+  }
+
+  private getMediaUrls(media: unknown) {
+    if (typeof media === 'string') return [media];
+    if (!media || typeof media !== 'object') return [];
+
+    return ['url' in media ? media.url : undefined, 'thumbnail' in media ? media.thumbnail : undefined].filter(
+      (url): url is string => typeof url === 'string',
+    );
   }
 
   async getActivityWithEmailData(activityId: string) {

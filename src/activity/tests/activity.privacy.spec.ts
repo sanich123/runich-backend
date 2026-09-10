@@ -18,7 +18,6 @@ describe('ActivityService privacy', () => {
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       isPublic: false,
-      locations: [{ coords: { latitude: 55, longitude: 37 } }],
       kilometresSplit: [],
     });
 
@@ -37,12 +36,13 @@ describe('ActivityService privacy', () => {
 
   it('allows an owner to read private activity locations', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
     const locations = [{ coords: { latitude: 55, longitude: 37 } }];
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       isPublic: false,
-      locations,
+      routeStorageKey: 'owner-1/activities/activity-1/route-v1.json.gz',
       kilometresSplit: [],
     });
 
@@ -50,6 +50,7 @@ describe('ActivityService privacy', () => {
       locations,
       kilometresSplit: [],
     });
+    expect(storage.readActivityRoute).toHaveBeenCalledWith('owner-1/activities/activity-1/route-v1.json.gz');
   });
 
   it('hides a private activity detail from another user', async () => {
