@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { AuthService } from '../services/auth.service';
 import { AuthController } from '../controllers/auth.controller';
@@ -48,7 +48,7 @@ describe('AuthController', () => {
     });
     authService.deleteUser.mockResolvedValue(undefined);
 
-    await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).resolves.toEqual({
+    await expect(controller.registerUser({ email: 'user@yandex.ru', password: 'secret123' })).resolves.toEqual({
       message: 'sent',
     });
     await expect(controller.login({ email: 'user@example.com', password: 'secret123' })).resolves.toEqual(auth);
@@ -74,7 +74,7 @@ describe('AuthController', () => {
       }),
     ).resolves.toEqual({ userId: 'user-1', accessToken: 'access-token', refreshToken: 'refresh-token' });
     await expect(controller.deleteUser({ userId: 'user-1' })).resolves.toBeUndefined();
-    expect(authService.signUp).toHaveBeenCalledWith('user@example.com', 'secret123');
+    expect(authService.signUp).toHaveBeenCalledWith('user@yandex.ru', 'secret123');
     expect(authService.sendLoginLinkByEmail).toHaveBeenCalledWith('user@example.com');
     expect(authService.refreshAccessToken).toHaveBeenCalledWith('refresh-token');
     expect(authService.getEmailCodeForPassword).toHaveBeenCalledWith('user@example.com');
@@ -85,16 +85,24 @@ describe('AuthController', () => {
   it('rejects registration for an already confirmed email', async () => {
     prismaService.user.findUnique.mockResolvedValue({ emailConfirmedAt: new Date() });
 
-    await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).rejects.toBeInstanceOf(
+    await expect(controller.registerUser({ email: 'user@yandex.ru', password: 'secret123' })).rejects.toBeInstanceOf(
       ConflictException,
     );
+    expect(authService.signUp).not.toHaveBeenCalled();
+  });
+
+  it('rejects registration with a foreign email domain', async () => {
+    await expect(controller.registerUser({ email: 'user@gmail.com', password: 'secret123' })).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(prismaService.user.findUnique).not.toHaveBeenCalled();
     expect(authService.signUp).not.toHaveBeenCalled();
   });
 
   it('propagates database and service errors from every auth endpoint', async () => {
     const error = new Error('service failed');
     prismaService.user.findUnique.mockRejectedValue(error);
-    await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
+    await expect(controller.registerUser({ email: 'user@yandex.ru', password: 'secret123' })).rejects.toBe(error);
 
     prismaService.user.findUnique.mockResolvedValue(null);
     authService.signUp.mockRejectedValue(error);
@@ -110,7 +118,7 @@ describe('AuthController', () => {
     authService.changePassword.mockRejectedValue(error);
     authService.deleteUser.mockRejectedValue(error);
 
-    await expect(controller.registerUser({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
+    await expect(controller.registerUser({ email: 'user@yandex.ru', password: 'secret123' })).rejects.toBe(error);
     await expect(controller.login({ email: 'user@example.com', password: 'secret123' })).rejects.toBe(error);
     await expect(controller.sendLoginLinkByEmail({ email: 'user@example.com' })).rejects.toBe(error);
     await expect(controller.refresh({ refreshToken: 'refresh-token' })).rejects.toBe(error);

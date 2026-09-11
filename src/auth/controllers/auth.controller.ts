@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   ConflictException,
   Controller,
   Delete,
@@ -38,6 +39,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../request/auth-request';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
+import { isRussianEmailAddress, RUSSIAN_EMAIL_REGISTRATION_ERROR } from '../utils/russian-email';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -88,6 +90,10 @@ export class AuthController {
   @ApiOkResponse({ type: MessageResponseDto })
   @ApiCreatedResponse({ type: MessageResponseDto })
   async registerUser(@Body() { email, password }: RegisterUserDto) {
+    if (!isRussianEmailAddress(email)) {
+      throw new BadRequestException(RUSSIAN_EMAIL_REGISTRATION_ERROR);
+    }
+
     const user = await this.prismaService.user.findUnique({
       where: { email },
       select: { emailConfirmedAt: true, authProvider: true },

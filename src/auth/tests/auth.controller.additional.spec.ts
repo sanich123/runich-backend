@@ -68,7 +68,7 @@ describe('AuthController additional routes', () => {
   ])('rejects registration for a confirmed %s account', async (provider, providerName) => {
     prisma.user.findUnique.mockResolvedValue({ emailConfirmedAt: new Date(), authProvider: provider });
 
-    await expect(controller.registerUser({ email: 'user@example.com', password: 'password' })).rejects.toThrow(
+    await expect(controller.registerUser({ email: 'user@yandex.ru', password: 'password' })).rejects.toThrow(
       `Пользователь зарегистрирован с помощью провайдера ${providerName}`,
     );
   });
