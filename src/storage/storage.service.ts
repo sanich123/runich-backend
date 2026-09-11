@@ -20,6 +20,7 @@ import { rm } from 'node:fs/promises';
 import { extname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
+import { normalizeImage } from 'src/common/images/image-processing';
 import type { LocationObject } from 'src/activity/activity.dto';
 import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, MAX_DELETE_BATCH_SIZE } from './const';
 import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from './activity-route';
@@ -52,11 +53,15 @@ export class StorageService {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
       this.assertConfigured();
-      const extension = this.getExtension(file.originalname, file.mimetype);
-      const key = `${userId}/${randomUUID()}.${extension}`;
-      const body = file.path ? (stream = createReadStream(file.path)) : file.buffer;
+      const input = file.path ?? file.buffer;
+      if (!input) throw new BadRequestException('Не удалось прочитать загруженный файл');
 
-      if (!body) throw new BadRequestException('Не удалось прочитать загруженный файл');
+      const normalizedImage = file.mimetype.startsWith('image/') ? await this.normalizeImage(input) : undefined;
+      const extension = normalizedImage ? 'webp' : this.getExtension(file.originalname, file.mimetype);
+      const key = `${userId}/${randomUUID()}.${extension}`;
+      const body = normalizedImage ?? (file.path ? (stream = createReadStream(file.path)) : file.buffer);
+      const contentType = normalizedImage ? 'image/webp' : file.mimetype;
+      const contentLength = normalizedImage?.length ?? file.size;
 
       await this.measureS3('putObject', () =>
         this.client.send(
@@ -64,14 +69,14 @@ export class StorageService {
             Bucket: this.settings.bucket,
             Key: key,
             Body: body,
-            ...(file.size === undefined ? {} : { ContentLength: file.size }),
-            ContentType: file.mimetype,
+            ...(contentLength === undefined ? {} : { ContentLength: contentLength }),
+            ContentType: contentType,
             CacheControl: 'public, max-age=31536000, immutable',
           }),
         ),
       );
 
-      return { url: this.getPublicUrl(key), key, contentType: file.mimetype };
+      return { url: this.getPublicUrl(key), key, contentType };
     } finally {
       stream?.destroy();
       if (file.path) {
@@ -186,19 +191,31 @@ export class StorageService {
 
   getOwnedKey(userId: string, publicUrl: string) {
     let parsedUrl: URL;
-    let publicBaseUrl: URL;
     try {
       parsedUrl = new URL(publicUrl);
-      publicBaseUrl = new URL(this.settings.publicUrl);
     } catch {
       throw new BadRequestException('Некорректная ссылка на фото');
     }
 
-    const basePath = publicBaseUrl.pathname.replace(/\/$/, '');
-    if (parsedUrl.origin !== publicBaseUrl.origin || !parsedUrl.pathname.startsWith(`${basePath}/`)) {
+    const publicBaseUrl = [this.settings.publicUrl, `${this.settings.endpoint}/${this.settings.bucket}`]
+      .map((value) => {
+        try {
+          return new URL(value);
+        } catch {
+          return undefined;
+        }
+      })
+      .find((baseUrl) => {
+        if (!baseUrl || parsedUrl.origin !== baseUrl.origin) return false;
+        const basePath = baseUrl.pathname.replace(/\/$/, '');
+        return parsedUrl.pathname.startsWith(`${basePath}/`);
+      });
+
+    if (!publicBaseUrl) {
       throw new BadRequestException('Ссылка на фото не принадлежит S3-хранилищу Runich');
     }
 
+    const basePath = publicBaseUrl.pathname.replace(/\/$/, '');
     let key: string;
     try {
       key = decodeURIComponent(parsedUrl.pathname.slice(basePath.length + 1));
@@ -240,5 +257,14 @@ export class StorageService {
       ?.toLowerCase()
       .replace(/[^a-z0-9]/g, '');
     return fallback || 'bin';
+  }
+
+  private async normalizeImage(input: string | Buffer) {
+    try {
+      return await normalizeImage(input);
+    } catch (error) {
+      this.logger.warn(`Не удалось обработать изображение: ${error instanceof Error ? error.message : String(error)}`);
+      throw new BadRequestException('Не удалось обработать изображение');
+    }
   }
 }
