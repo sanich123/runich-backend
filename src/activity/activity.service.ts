@@ -12,7 +12,7 @@ import { ActivityPersistenceService } from './activity-persistence.service';
 import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.constants';
 import {
   ACTIVITY_CARD_SELECT,
-  ACTIVITY_FEED_SELECT,
+  ACTIVITY_DETAILS_SELECT,
   DEFAULT_ACTIVITY_PAGE_SIZE,
   MEDIA_ACTIVITY_BATCH_SIZE,
 } from './const';
@@ -26,6 +26,7 @@ import { omitMediaProcessingStatus } from './utils';
 import type { ActivityFeedSqlRow } from './type';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { StorageService } from 'src/storage/storage.service';
+import type { ActivityDatabase } from './activity-persistence.service';
 
 @Injectable()
 export class ActivityService {
@@ -88,12 +89,14 @@ export class ActivityService {
       const mapPhotoUrlBlurhash = null;
       const activityFields = { ...activityDto };
       delete activityFields.locations;
+      const description = activityDto.description?.trim() || null;
 
       const data = {
         ...(activityId ? { id: activityId } : {}),
         userId: id,
         profileId: `${account?.id}`,
         ...activityFields,
+        description,
         title: activityDto.title?.trim()
           ? activityDto.title
           : generateActivityTitle(activityDto.sport, activityDto.date),
@@ -131,6 +134,7 @@ export class ActivityService {
       source: 'strava';
       sourceActivityId: string;
     })[],
+    database: ActivityDatabase = this.prisma,
   ) {
     try {
       const activitiesWithTitles = activities.map((activity) => ({
@@ -138,7 +142,7 @@ export class ActivityService {
         title: activity.title?.trim() ? activity.title : generateActivityTitle(activity.sport, activity.date),
       }));
       const chunkedActivities = chunkArray(activitiesWithTitles, 100);
-      await Promise.all(
+      const insertedCounts = await Promise.all(
         chunkedActivities.map(async (activityBatch) => {
           const preparedActivities: Awaited<ReturnType<typeof this.prepareActivityRoute>>[] = [];
           try {
@@ -146,6 +150,7 @@ export class ActivityService {
             this.logger.debug(`Writing activity batch (${activityBatch.length} records)`);
             return await this.persistenceService.createMany(
               preparedActivities.map(({ data }) => data as unknown as Record<string, unknown>),
+              database,
             );
           } catch (error) {
             await Promise.all(preparedActivities.map(({ routeKey }) => this.deleteUploadedRoute(routeKey)));
@@ -153,7 +158,10 @@ export class ActivityService {
           }
         }),
       );
-      return { success: true };
+      return {
+        success: true,
+        importedActivities: insertedCounts.reduce((total, result) => total + result.count, 0),
+      };
     } catch (error) {
       handleServiceError(error);
     }
@@ -203,12 +211,7 @@ export class ActivityService {
     try {
       const activity = await this.prisma.activity.findUnique({
         where: { id },
-        select: {
-          ...ACTIVITY_FEED_SELECT,
-          isPublic: true,
-          emotion: true,
-          kilometresSplit: true,
-        },
+        select: ACTIVITY_DETAILS_SELECT,
       });
       if (activity && currentUserId && activity.userId !== currentUserId && activity.isPublic !== true) {
         return null;
@@ -436,7 +439,11 @@ export class ActivityService {
   }
 
   private async prepareActivityRoute<T extends ActivityDto & { userId: string; profileId: string }>(activity: T) {
-    if (!activity.locations?.length || !this.storageService) return { data: activity, routeKey: undefined };
+    if (!activity.locations?.length || !this.storageService) {
+      const dataWithoutLocations = { ...activity };
+      delete dataWithoutLocations.locations;
+      return { data: dataWithoutLocations, routeKey: undefined };
+    }
 
     const activityId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
     const routeMetadata = await this.storageService.uploadActivityRoute(

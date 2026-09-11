@@ -38,3 +38,11 @@ export const ACTIVITY_FEED_SELECT = {
   ...ACTIVITY_CARD_SELECT,
   profile: { select: ACTIVITY_FEED_PROFILE_SELECT },
 } as const;
+
+export const ACTIVITY_DETAILS_SELECT = {
+  ...ACTIVITY_FEED_SELECT,
+  description: true,
+  isPublic: true,
+  emotion: true,
+  kilometresSplit: true,
+} as const;

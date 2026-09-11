@@ -246,7 +246,10 @@ describe('activity, comments and statistics', () => {
     };
     prisma.activity.createMany.mockResolvedValue({ count: 1 });
 
-    await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual({ success: true });
+    await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual({
+      success: true,
+      importedActivities: 1,
+    });
     expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: [activity], skipDuplicates: true });
   });
 

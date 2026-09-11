@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 
+export type ActivityDatabase = Pick<PrismaService, 'activity'>;
+
 @Injectable()
 export class ActivityPersistenceService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -9,8 +11,8 @@ export class ActivityPersistenceService {
     return this.prisma.activity.create({ data: data as never });
   }
 
-  createMany(data: Record<string, unknown>[]) {
-    return this.prisma.activity.createMany({ data: data as never, skipDuplicates: true });
+  createMany(data: Record<string, unknown>[], database: ActivityDatabase = this.prisma) {
+    return database.activity.createMany({ data: data as never, skipDuplicates: true });
   }
 
   update(id: string, userId: string, data: Record<string, unknown>) {
