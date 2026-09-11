@@ -303,6 +303,15 @@ export class ActivityMigrationJobResponseDto {
   @ApiProperty({ enum: Object.values(ACTIVITY_MIGRATION_STATUS) })
   status: ActivityMigrationStatus;
 
+  @ApiPropertyOptional({ type: Number, nullable: true, description: '1-based position in the active queue' })
+  queuePosition: number | null;
+
+  @ApiProperty({ type: Number, description: 'Number of active migration jobs ahead of this job' })
+  queueAhead: number;
+
+  @ApiProperty({ type: Number, description: 'Total number of active and queued migration jobs' })
+  queueSize: number;
+
   @ApiProperty({ type: Number })
   totalActivities: number;
 

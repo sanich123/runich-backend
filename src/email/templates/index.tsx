@@ -363,14 +363,11 @@ export function NotificationEmail({
         </Section>
       )}
 
-      <Text style={{ color: colors.muted, fontFamily, fontSize: '14px', lineHeight: '21px', margin: 0 }}>
-        Откройте приложение Runich, чтобы посмотреть подробности.
-      </Text>
-      <Link
-        href={activityUrl ?? 'https://runich.netlify.app'}
-        style={{ color: colors.accentDark, fontFamily, fontSize: '14px' }}>
-        {activityUrl ? 'Открыть активность в Runich' : 'Открыть Runich'}
-      </Link>
+      <Section style={{ margin: '4px 0 0', textAlign: 'center' }}>
+        <Link href={activityUrl ?? 'https://runich.netlify.app'} style={loginButtonStyle}>
+          {activityUrl ? 'Открыть активность в Runich' : 'Открыть приложение Runich'}
+        </Link>
+      </Section>
     </EmailLayout>
   );
 }

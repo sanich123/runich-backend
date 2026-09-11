@@ -156,6 +156,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .send({
         date: activityDate.toISOString(),
         title: 'Created through API',
+        description: 'Description created through API',
         sport: 'ride',
         duration: 120,
         distance: 4,
@@ -164,7 +165,11 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       })
       .expect(201);
     const createdActivityId = createResponse.body.id as string;
-    expect(createResponse.body).toMatchObject({ userId: ownerId, title: 'Created through API' });
+    expect(createResponse.body).toMatchObject({
+      userId: ownerId,
+      title: 'Created through API',
+      description: 'Description created through API',
+    });
 
     const listResponse = await request(app.getHttpServer())
       .get(`/activity/${ownerId}`)
@@ -181,6 +186,9 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         }),
       ]),
     );
+    for (const listActivity of listResponse.body.activities as Array<Record<string, unknown>>) {
+      expect(listActivity).not.toHaveProperty('description');
+    }
 
     await request(app.getHttpServer())
       .get(`/activity/activityId/${activityId}`)
@@ -188,6 +196,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .expect(200)
       .expect((response) => {
         expect(response.body.id).toBe(activityId);
+        expect(response.body.description).toBe('Activity used by PostgreSQL API tests');
         expect(response.body._count.comments).toEqual(expect.any(Number));
       });
 
@@ -413,10 +422,21 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
     const sourceActivityId = `e2e-strava-${randomUUID()}`;
     const zip = new AdmZip();
     zip.addFile(
+      'activities/run.gpx',
+      Buffer.from(
+        '<?xml version="1.0" encoding="UTF-8"?>' +
+          '<gpx version="1.1" creator="Runich" xmlns="http://www.topografix.com/GPX/1/1">' +
+          '<trk><name>E2E run</name><trkseg>' +
+          '<trkpt lat="55.75" lon="37.61"><time>2026-09-07T08:00:00.000Z</time></trkpt>' +
+          '<trkpt lat="55.76" lon="37.62"><time>2026-09-07T08:01:00.000Z</time></trkpt>' +
+          '</trkseg></trk></gpx>',
+      ),
+    );
+    zip.addFile(
       'activities.csv',
       Buffer.from(
         'Activity ID,Filename,Activity Date,Activity Name,Activity Type,Activity Description,Elapsed Time,Moving Time,Distance\n' +
-          `${sourceActivityId},,2026-09-07T08:00:00.000Z,E2E run,Run,Imported in e2e,300,240,1.25\n`,
+          `${sourceActivityId},activities/run.gpx,2026-09-07T08:00:00.000Z,E2E run,Run,Imported in e2e,300,240,1.25\n`,
       ),
     );
 
@@ -426,6 +446,13 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .attach('archive', zip.toBuffer(), 'strava-export.zip')
       .expect(202);
     expect(uploadResponse.body).toMatchObject({ status: 'queued', processedActivities: 0 });
+    expect(uploadResponse.body).toEqual(
+      expect.objectContaining({
+        queuePosition: expect.any(Number),
+        queueAhead: expect.any(Number),
+        queueSize: expect.any(Number),
+      }),
+    );
 
     const migrationService = app.get(ActivityMigrationService);
     let job = await prisma.activityMigrationJob.findUnique({ where: { id: uploadResponse.body.jobId } });
@@ -446,16 +473,37 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .get(`/activity/migration-strava/jobs/${uploadResponse.body.jobId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200)
-      .expect((response) => expect(response.body).toMatchObject({ status: 'completed', importedActivities: 1 }));
+      .expect((response) =>
+        expect(response.body).toMatchObject({
+          status: 'completed',
+          importedActivities: 1,
+          queuePosition: null,
+          queueAhead: 0,
+          queueSize: 0,
+        }),
+      );
     const importedActivity = await prisma.activity.findFirst({
       where: { userId: ownerId, source: 'strava', sourceActivityId },
     });
-    expect(importedActivity).toMatchObject({ title: 'E2E run', profileId: ownerProfileId });
+    expect(importedActivity).toMatchObject({
+      title: 'E2E run',
+      description: 'Imported in e2e',
+      profileId: ownerProfileId,
+      routeStorageKey: expect.stringContaining(`/activities/${importedActivity!.id}/route-v1.json.gz`),
+    });
+    await request(app.getHttpServer())
+      .get(`/activity/${importedActivity!.id}/locations`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200)
+      .expect((response) => expect(response.body.locations).toHaveLength(2));
     await request(app.getHttpServer())
       .get(`/activity/activityId/${importedActivity!.id}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200)
-      .expect((response) => expect(response.body._count).toEqual({ comments: 0, likes: 0 }));
+      .expect((response) => {
+        expect(response.body.description).toBe('Imported in e2e');
+        expect(response.body._count).toEqual({ comments: 0, likes: 0 });
+      });
   });
 
   it('rejects protected email endpoints without authentication and redirects OAuth errors safely', async () => {

@@ -11,6 +11,7 @@ import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
 import { ACTIVITY_MIGRATION_CONFIG } from './activity-migration-config';
 import type { EnqueueMigrationInput, MigratedActivity, MigrationJob, MigrationProgress } from './type';
 import { fileExists, getMigrationErrorMessage } from './activity-migration.utils';
+import { ActivityService } from './activity.service';
 
 @Injectable()
 export class ActivityMigrationService {
@@ -20,7 +21,10 @@ export class ActivityMigrationService {
   private readonly pollIntervalMs = ACTIVITY_MIGRATION_CONFIG.workerPollIntervalMs;
   private stopRequested = false;
 
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ActivityService) private readonly activityService: ActivityService,
+  ) {}
 
   async enqueue(input: EnqueueMigrationInput) {
     const job = await this.prisma.activityMigrationJob.create({
@@ -32,13 +36,13 @@ export class ActivityMigrationService {
       },
     });
 
-    return this.toResponse(job);
+    return await this.toResponse(job);
   }
 
   async getJobForUser(jobId: string, userId: string) {
     const job = await this.prisma.activityMigrationJob.findFirst({ where: { id: jobId, userId } });
     if (!job) throw new NotFoundException('Задача миграции не найдена');
-    return this.toResponse(job);
+    return await this.toResponse(job);
   }
 
   requestStop() {
@@ -68,7 +72,7 @@ export class ActivityMigrationService {
   async processNextJob() {
     const job = await this.prisma.activityMigrationJob.findFirst({
       where: { status: ACTIVITY_MIGRATION_STATUS.queued },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
     if (!job) return false;
 
@@ -224,13 +228,14 @@ export class ActivityMigrationService {
     }));
 
     return await this.prisma.$transaction(async (transaction) => {
-      const inserted = activitiesWithTitles.length
-        ? await transaction.activity.createMany({ data: activitiesWithTitles as never, skipDuplicates: true })
-        : { count: 0 };
+      const result = activitiesWithTitles.length
+        ? await this.activityService.createActivitiesFromMigrationArchive(activitiesWithTitles, transaction)
+        : { importedActivities: 0 };
+      const importedActivities = result?.importedActivities ?? 0;
       const nextProgress = {
         processedActivities: progress.processedActivities + sourceBatchSize,
-        importedActivities: progress.importedActivities + inserted.count,
-        skippedActivities: progress.skippedActivities + sourceBatchSize - inserted.count,
+        importedActivities: progress.importedActivities + importedActivities,
+        skippedActivities: progress.skippedActivities + sourceBatchSize - importedActivities,
       };
 
       await transaction.activityMigrationJob.update({
@@ -260,10 +265,12 @@ export class ActivityMigrationService {
     });
   }
 
-  private toResponse(job: MigrationJob): ActivityMigrationJobResponseDto {
+  private async toResponse(job: MigrationJob): Promise<ActivityMigrationJobResponseDto> {
+    const queue = await this.getQueueInfo(job);
     return {
       jobId: job.id,
       status: job.status as ActivityMigrationStatus,
+      ...queue,
       totalActivities: job.totalActivities,
       processedActivities: job.processedActivities,
       importedActivities: job.importedActivities,
@@ -272,6 +279,35 @@ export class ActivityMigrationService {
       createdAt: job.createdAt,
       startedAt: job.startedAt,
       finishedAt: job.finishedAt,
+    };
+  }
+
+  private async getQueueInfo(job: MigrationJob) {
+    if (job.status !== ACTIVITY_MIGRATION_STATUS.queued && job.status !== ACTIVITY_MIGRATION_STATUS.processing) {
+      return { queuePosition: null, queueAhead: 0, queueSize: 0 };
+    }
+
+    const [processingCount, queuedCount] = await Promise.all([
+      this.prisma.activityMigrationJob.count({ where: { status: ACTIVITY_MIGRATION_STATUS.processing } }),
+      this.prisma.activityMigrationJob.count({ where: { status: ACTIVITY_MIGRATION_STATUS.queued } }),
+    ]);
+
+    if (job.status === ACTIVITY_MIGRATION_STATUS.processing) {
+      return { queuePosition: null, queueAhead: 0, queueSize: processingCount + queuedCount };
+    }
+
+    const queuedAhead = await this.prisma.activityMigrationJob.count({
+      where: {
+        status: ACTIVITY_MIGRATION_STATUS.queued,
+        OR: [{ createdAt: { lt: job.createdAt } }, { createdAt: job.createdAt, id: { lt: job.id } }],
+      },
+    });
+    const queueAhead = processingCount + queuedAhead;
+
+    return {
+      queuePosition: queueAhead + 1,
+      queueAhead,
+      queueSize: processingCount + queuedCount,
     };
   }
 }

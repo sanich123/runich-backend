@@ -88,6 +88,9 @@ describe('EmailService', () => {
     const notificationHtml = (sendMail.mock.calls.at(-1) as unknown as [{ html: string }])[0].html;
     expect(notificationHtml).toContain('/activity/activity-1');
     expect(notificationHtml).toContain('href="http://localhost:5173/activity/activity-1"');
+    expect(notificationHtml).not.toContain('Откройте приложение Runich, чтобы посмотреть подробности.');
+    expect(notificationHtml).toContain('Открыть активность в Runich');
+    expect(notificationHtml).toContain('background-color:#F15A3E');
 
     mockEmailDelivery();
     await service.sendConfirmationCode('bob@example.com', 1234, 'credential');

@@ -42,12 +42,15 @@ describe('ActivityService', () => {
     prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
-    await expect(service.createActivity({ ...activityDto }, 'user-1')).resolves.toEqual({ id: 'activity-1' });
+    await expect(
+      service.createActivity({ ...activityDto, description: '  Activity description  ' }, 'user-1'),
+    ).resolves.toEqual({ id: 'activity-1' });
     expect(global.fetch).not.toHaveBeenCalled();
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({
         userId: 'user-1',
         profileId: 'profile-1',
+        description: 'Activity description',
         mapPhotoUrlBlurhash: null,
         mediaProcessingStatus: 'queued',
       }),
@@ -248,7 +251,7 @@ describe('ActivityService', () => {
   it('writes migration activities in chunks and skips duplicate records', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
-    prisma.activity.createMany.mockResolvedValue({ count: 100 });
+    prisma.activity.createMany.mockResolvedValueOnce({ count: 100 }).mockResolvedValueOnce({ count: 1 });
     const activities = Array.from({ length: 101 }, (_, index) => ({
       ...activityDto,
       title: 'Импортированная активность',
@@ -258,11 +261,73 @@ describe('ActivityService', () => {
       sourceActivityId: `strava-${index}`,
     }));
 
-    await expect(service.createActivitiesFromMigrationArchive(activities)).resolves.toEqual({ success: true });
+    await expect(service.createActivitiesFromMigrationArchive(activities)).resolves.toEqual({
+      success: true,
+      importedActivities: 101,
+    });
     expect(prisma.activity.createMany).toHaveBeenCalledTimes(2);
     expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: activities.slice(0, 100), skipDuplicates: true });
     expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: activities.slice(100), skipDuplicates: true });
-    await expect(service.createActivitiesFromMigrationArchive([])).resolves.toEqual({ success: true });
+    await expect(service.createActivitiesFromMigrationArchive([])).resolves.toEqual({
+      success: true,
+      importedActivities: 0,
+    });
+  });
+
+  it('uploads imported activity routes and stores only their metadata', async () => {
+    const prisma = createPrismaMock();
+    const storage = {
+      uploadActivityRoute: asyncMock().mockResolvedValue({
+        key: 'user-1/activities/activity-1/route-v1.json.gz',
+        formatVersion: 1,
+        pointCount: 2,
+        sizeBytes: 123,
+        checksum: 'a'.repeat(64),
+      }),
+      deleteObjectByKey: asyncMock(),
+    };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const locations = [
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+      { coords: { latitude: 55.76, longitude: 37.62 } },
+    ];
+    const activity = {
+      ...activityDto,
+      id: 'activity-1',
+      description: 'Imported activity description',
+      userId: 'user-1',
+      profileId: 'profile-1',
+      source: 'strava' as const,
+      sourceActivityId: 'strava-1',
+      locations,
+    };
+    prisma.activity.createMany.mockResolvedValue({ count: 1 });
+
+    await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual({
+      success: true,
+      importedActivities: 1,
+    });
+
+    expect(storage.uploadActivityRoute).toHaveBeenCalledWith('user-1', 'activity-1', locations);
+    expect(prisma.activity.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          id: 'activity-1',
+          description: 'Imported activity description',
+          routeStorageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+          routeFormatVersion: 1,
+          routePointCount: 2,
+          routeSizeBytes: 123,
+          routeChecksum: 'a'.repeat(64),
+        }),
+      ],
+      skipDuplicates: true,
+    });
+    const createManyInput = (
+      prisma.activity.createMany.mock.calls as unknown as Array<[{ data: Record<string, unknown>[] }]>
+    )[0]?.[0];
+    expect(createManyInput).toBeDefined();
+    expect(createManyInput!.data[0]).not.toHaveProperty('locations');
   });
 
   it('updates, reads, paginates and deletes activities', async () => {
@@ -405,13 +470,14 @@ describe('ActivityService', () => {
       expect(query.select).not.toHaveProperty('locations');
       expect(query.select).not.toHaveProperty('kilometresSplit');
       expect(query.select).not.toHaveProperty('emotion');
+      expect(query.select).not.toHaveProperty('description');
     }
 
     await service.getActivityByActivityId('activity-1');
     const detailQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
       select?: Record<string, unknown>;
     };
-    expect(detailQuery.select).toEqual(expect.objectContaining({ kilometresSplit: true }));
+    expect(detailQuery.select).toEqual(expect.objectContaining({ description: true, kilometresSplit: true }));
   });
 
   it('returns email data even when the activity does not exist', async () => {

@@ -30,10 +30,12 @@ const rm = asyncMock();
 const unzipTransferArchive = asyncMock();
 const parseCsvFileIntoArray = asyncMock();
 const mapActivitiesWithCoordinates = jest.fn<(input: MapInput) => Promise<MigratedActivity[]>>();
-const createMany = jest.fn<(input: unknown) => Promise<{ count: number }>>();
+const createActivitiesFromMigrationArchive =
+  jest.fn<(activities: unknown[], database: unknown) => Promise<{ success: true; importedActivities: number }>>();
+const migrationJobCount = jest.fn<() => Promise<number>>();
 const transactionJobUpdate = jest.fn<(input: unknown) => Promise<unknown>>();
 type TransactionClient = {
-  activity: { createMany: typeof createMany };
+  activity: Record<string, never>;
   activityMigrationJob: { update: typeof transactionJobUpdate };
 };
 const transaction = jest.fn<(callback: (client: TransactionClient) => Promise<unknown>) => Promise<unknown>>();
@@ -46,6 +48,7 @@ jest.unstable_mockModule('src/common/parsers/map-activities-with-coordinates', (
 }));
 
 const { ActivityMigrationService } = await import('../activity-migration.service');
+const { ActivityService } = await import('../activity.service');
 
 const prisma = {
   activityMigrationJob: {
@@ -54,6 +57,7 @@ const prisma = {
     findMany: asyncMock(),
     update: asyncMock(),
     updateMany: asyncMock(),
+    count: migrationJobCount,
   },
   $transaction: transaction,
 };
@@ -95,19 +99,23 @@ describe('ActivityMigrationService', () => {
 
   it('declares the Prisma injection token required by the ESM worker bootstrap', () => {
     expect(Reflect.getMetadata(SELF_DECLARED_DEPS_METADATA, ActivityMigrationService)).toEqual([
+      { index: 1, param: ActivityService },
       { index: 0, param: PrismaService },
     ]);
   });
 
   it('uses a ten-second polling interval by default', () => {
-    const serviceWithDefaults = new ActivityMigrationService(prisma as unknown as PrismaService);
+    const serviceWithDefaults = new ActivityMigrationService(prisma as unknown as PrismaService, {} as never);
 
     expect(serviceWithDefaults['pollIntervalMs']).toBe(10_000);
   });
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ActivityMigrationService(prisma as unknown as PrismaService);
+    service = new ActivityMigrationService(
+      prisma as unknown as PrismaService,
+      { createActivitiesFromMigrationArchive } as never,
+    );
 
     access.mockResolvedValue(undefined);
     rm.mockResolvedValue(undefined);
@@ -117,10 +125,12 @@ describe('ActivityMigrationService', () => {
     prisma.activityMigrationJob.findMany.mockResolvedValue([]);
     prisma.activityMigrationJob.update.mockResolvedValue(queuedJob);
     prisma.activityMigrationJob.updateMany.mockResolvedValue({ count: 1 });
+    migrationJobCount.mockResolvedValue(0);
     transactionJobUpdate.mockResolvedValue(queuedJob);
     transaction.mockImplementation(async (callback) =>
-      callback({ activity: { createMany }, activityMigrationJob: { update: transactionJobUpdate } }),
+      callback({ activity: {}, activityMigrationJob: { update: transactionJobUpdate } }),
     );
+    createActivitiesFromMigrationArchive.mockResolvedValue({ success: true, importedActivities: 1 });
     mapActivitiesWithCoordinates.mockImplementation(async ({ parsedActivities = [] }) =>
       parsedActivities.map((activity) => mappedActivity(String(activity['Activity ID']))),
     );
@@ -156,14 +166,45 @@ describe('ActivityMigrationService', () => {
     await expect(service.getJobForUser(queuedJob.id, 'other-user')).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('reports the current job position without exposing other users', async () => {
+    prisma.activityMigrationJob.findFirst.mockResolvedValueOnce({
+      ...queuedJob,
+      createdAt: new Date('2026-09-07T00:03:00.000Z'),
+    });
+    migrationJobCount.mockResolvedValueOnce(1).mockResolvedValueOnce(3).mockResolvedValueOnce(2);
+
+    await expect(service.getJobForUser(queuedJob.id, 'user-1')).resolves.toMatchObject({
+      queuePosition: 4,
+      queueAhead: 3,
+      queueSize: 4,
+    });
+    expect(migrationJobCount).toHaveBeenNthCalledWith(3, {
+      where: {
+        status: 'queued',
+        OR: [
+          { createdAt: { lt: new Date('2026-09-07T00:03:00.000Z') } },
+          { createdAt: new Date('2026-09-07T00:03:00.000Z'), id: { lt: queuedJob.id } },
+        ],
+      },
+    });
+  });
+
   it('persists each mapped batch together with its progress', async () => {
     const rows = Array.from({ length: 9 }, (_, index) => ({ 'Activity ID': `strava-${index + 1}` }));
     parseCsvFileIntoArray.mockResolvedValue(rows);
-    createMany.mockResolvedValueOnce({ count: 8 }).mockResolvedValueOnce({ count: 1 });
+    createActivitiesFromMigrationArchive
+      .mockResolvedValueOnce({ success: true, importedActivities: 8 })
+      .mockResolvedValueOnce({ success: true, importedActivities: 1 });
 
     await expect(service.processNextJob()).resolves.toBe(true);
 
     expect(mapActivitiesWithCoordinates).toHaveBeenCalledTimes(2);
+    expect(createActivitiesFromMigrationArchive).toHaveBeenCalledTimes(2);
+    expect(createActivitiesFromMigrationArchive).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Array),
+      expect.objectContaining({ activity: {}, activityMigrationJob: expect.any(Object) }),
+    );
     expect(transaction).toHaveBeenCalledTimes(2);
     expect(transactionJobUpdate).toHaveBeenNthCalledWith(1, {
       where: { id: queuedJob.id },
@@ -198,7 +239,7 @@ describe('ActivityMigrationService', () => {
       { 'Activity ID': 'strava-2' },
       { 'Activity ID': 'strava-3' },
     ]);
-    createMany.mockResolvedValue({ count: 1 });
+    createActivitiesFromMigrationArchive.mockResolvedValue({ success: true, importedActivities: 1 });
 
     await service.processNextJob();
 
@@ -234,7 +275,7 @@ describe('ActivityMigrationService', () => {
       where: { id: queuedJob.id, status: 'processing' },
       data: { status: 'queued', startedAt: null },
     });
-    expect(createMany).not.toHaveBeenCalled();
+    expect(createActivitiesFromMigrationArchive).not.toHaveBeenCalled();
     expect(rm).not.toHaveBeenCalled();
   });
 
@@ -323,7 +364,7 @@ describe('ActivityMigrationService', () => {
 
     await expect(service.processNextJob()).resolves.toBe(true);
 
-    expect(createMany).not.toHaveBeenCalled();
+    expect(createActivitiesFromMigrationArchive).not.toHaveBeenCalled();
     expect(transactionJobUpdate).toHaveBeenCalledWith({
       where: { id: queuedJob.id },
       data: { processedActivities: 1, importedActivities: 0, skippedActivities: 1 },
