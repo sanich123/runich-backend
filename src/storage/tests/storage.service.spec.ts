@@ -3,6 +3,7 @@ import { access, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
+import sharp from 'sharp';
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
@@ -16,6 +17,14 @@ import { StorageService } from '../storage.service';
 import { decodeActivityRoute, encodeActivityRoute } from '../activity-route';
 
 const s3Send = jest.spyOn(S3Client.prototype, 'send');
+
+async function createTestImage() {
+  return await sharp({
+    create: { width: 2000, height: 1000, channels: 3, background: { r: 220, g: 120, b: 40 } },
+  })
+    .png()
+    .toBuffer();
+}
 
 describe('StorageService', () => {
   beforeEach(() => {
@@ -40,52 +49,56 @@ describe('StorageService', () => {
     s3Send.mockRestore();
   });
 
-  it('uploads a file under the authenticated user prefix and returns its public URL', async () => {
+  it('normalizes an image and uploads it under the authenticated user prefix', async () => {
     s3Send.mockResolvedValue({} as never);
     const metrics = { observeExternal: jest.fn() };
     const service = new StorageService(metrics as never);
+    const image = await createTestImage();
 
     await expect(
       service.uploadPhoto('user-1', {
-        buffer: Buffer.from('photo'),
+        buffer: image,
         originalname: 'avatar.JPG',
         mimetype: 'image/jpeg',
       }),
     ).resolves.toMatchObject({
-      url: expect.stringMatching(/^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/.+\.jpg$/),
-      key: expect.stringMatching(/^user-1\/.+\.jpg$/),
-      contentType: 'image/jpeg',
+      url: expect.stringMatching(/^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/.+\.webp$/),
+      key: expect.stringMatching(/^user-1\/.+\.webp$/),
+      contentType: 'image/webp',
     });
 
     const command = s3Send.mock.calls[0]?.[0];
     expect(command).toBeInstanceOf(PutObjectCommand);
+    const body = (command as PutObjectCommand).input.Body as Buffer;
     expect((command as PutObjectCommand).input).toMatchObject({
       Bucket: 'runich-test',
-      Body: Buffer.from('photo'),
-      ContentType: 'image/jpeg',
+      Body: expect.any(Buffer),
+      ContentLength: body.length,
+      ContentType: 'image/webp',
       CacheControl: 'public, max-age=31536000, immutable',
     });
-    expect((command as PutObjectCommand).input.Key).toMatch(/^user-1\/.+\.jpg$/);
+    await expect(sharp(body).metadata()).resolves.toMatchObject({ format: 'webp', width: 1600, height: 800 });
     expect(metrics.observeExternal).toHaveBeenCalledWith('s3', 'putObject', expect.any(Number));
   });
 
-  it('uses the MIME type extension when the original file name has none', async () => {
+  it('uses webp for images even when the original file name has no extension', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
+    const image = await createTestImage();
 
     await expect(
       service.uploadPhoto('user-1', {
-        buffer: Buffer.from('photo'),
+        buffer: image,
         originalname: 'photo',
         mimetype: 'image/png',
       }),
-    ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/.+\.png$/) });
+    ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/.+\.webp$/), contentType: 'image/webp' });
   });
 
-  it('streams disk uploads to S3 and removes the temporary file', async () => {
+  it('streams video disk uploads to S3 and removes the temporary file', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'runich-storage-test-'));
-    const path = join(directory, 'photo.jpg');
-    await writeFile(path, 'photo');
+    const path = join(directory, 'video.mp4');
+    await writeFile(path, 'video');
     let streamedContent = '';
     s3Send.mockImplementation(async (command) => {
       const body = (command as PutObjectCommand).input.Body;
@@ -98,11 +111,11 @@ describe('StorageService', () => {
     await service.uploadPhoto('user-1', {
       path,
       size: 5,
-      originalname: 'photo.jpg',
-      mimetype: 'image/jpeg',
+      originalname: 'video.mp4',
+      mimetype: 'video/mp4',
     });
 
-    expect(streamedContent).toBe('photo');
+    expect(streamedContent).toBe('video');
     expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input.ContentLength).toBe(5);
     await expect(access(path)).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(access(directory)).resolves.toBeUndefined();
@@ -178,6 +191,21 @@ describe('StorageService', () => {
     expect(s3Send).toHaveBeenCalledTimes(1);
   });
 
+  it('deletes legacy direct S3 URLs after switching public URLs to CDN', async () => {
+    process.env.S3_PUBLIC_URL = 'https://cdn.example.com';
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.deletePhoto('user-1', 'https://s3.twcstorage.ru/runich-test/user-1/legacy-photo.jpg'),
+    ).resolves.toBeUndefined();
+
+    expect((s3Send.mock.calls[0]?.[0] as DeleteObjectCommand).input).toEqual({
+      Bucket: 'runich-test',
+      Key: 'user-1/legacy-photo.jpg',
+    });
+  });
+
   it('removes every object under a user prefix across paginated S3 listings', async () => {
     s3Send
       .mockResolvedValueOnce({
@@ -238,10 +266,25 @@ describe('StorageService', () => {
     process.env.APP_ENV = 'stage';
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
+    const image = await createTestImage();
 
     await expect(
-      service.uploadPhoto('user-1', { buffer: Buffer.alloc(0), originalname: 'photo.jpg', mimetype: 'image/jpeg' }),
-    ).resolves.toMatchObject({ contentType: 'image/jpeg' });
+      service.uploadPhoto('user-1', { buffer: image, originalname: 'photo.jpg', mimetype: 'image/jpeg' }),
+    ).resolves.toMatchObject({ contentType: 'image/webp' });
     expect(s3Send).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects image bytes that sharp cannot process', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto('user-1', {
+        buffer: Buffer.from('not-an-image'),
+        originalname: 'photo.jpg',
+        mimetype: 'image/jpeg',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(s3Send).not.toHaveBeenCalled();
   });
 });
