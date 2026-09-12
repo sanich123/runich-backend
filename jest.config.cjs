@@ -14,6 +14,8 @@ module.exports = {
     '!src/infrastructure/database/**',
     '!src/**/*.module.ts',
     '!src/app/**',
+    // The stage-only worker is exercised against the disposable Railway database.
+    '!src/load-test/load-test.service.ts',
     '!src/main.ts',
     '!src/**/*.d.ts',
     '!src/tests/integration/**',

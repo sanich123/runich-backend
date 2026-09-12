@@ -32,6 +32,10 @@
       "model": "Like",
       "namespace": "public"
     },
+    "LoadTestSeedJob": {
+      "model": "LoadTestSeedJob",
+      "namespace": "public"
+    },
     "MediaCleanupJob": {
       "model": "MediaCleanupJob",
       "namespace": "public"
@@ -1157,6 +1161,205 @@
               },
               "namespaceId": "public",
               "table": "Like"
+            }
+          },
+          "LoadTestSeedJob": {
+            "fields": {
+              "config": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/jsonb@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdActivities": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "createdCommentLikes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdComments": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdLikes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "errorMessage": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "finishedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "manifestKey": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 512
+                  }
+                }
+              },
+              "processedActivities": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "runId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 64
+                  }
+                }
+              },
+              "startedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 32
+                  }
+                }
+              },
+              "targetUserId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "totalActivities": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "totalUsers": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "config": {
+                  "column": "config"
+                },
+                "createdActivities": {
+                  "column": "created_activities"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "createdCommentLikes": {
+                  "column": "created_comment_likes"
+                },
+                "createdComments": {
+                  "column": "created_comments"
+                },
+                "createdLikes": {
+                  "column": "created_likes"
+                },
+                "errorMessage": {
+                  "column": "error_message"
+                },
+                "finishedAt": {
+                  "column": "finished_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "manifestKey": {
+                  "column": "manifest_key"
+                },
+                "processedActivities": {
+                  "column": "processed_activities"
+                },
+                "runId": {
+                  "column": "run_id"
+                },
+                "startedAt": {
+                  "column": "started_at"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "targetUserId": {
+                  "column": "target_user_id"
+                },
+                "totalActivities": {
+                  "column": "total_activities"
+                },
+                "totalUsers": {
+                  "column": "total_users"
+                }
+              },
+              "namespaceId": "public",
+              "table": "LoadTestSeedJob"
             }
           },
           "MediaCleanupJob": {
@@ -3336,6 +3539,174 @@
                 }
               ]
             },
+            "LoadTestSeedJob": {
+              "columns": {
+                "config": {
+                  "codecId": "pg/jsonb@1",
+                  "nativeType": "jsonb",
+                  "nullable": false
+                },
+                "created_activities": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "created_comment_likes": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "created_comments": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "created_likes": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "error_message": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "finished_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "manifest_key": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 512
+                  }
+                },
+                "processed_activities": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "run_id": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 64
+                  }
+                },
+                "started_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "status": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 32
+                  }
+                },
+                "target_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "total_activities": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "total_users": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "status",
+                    "created_at"
+                  ],
+                  "name": "LoadTestSeedJob_status_createdAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ],
+                "name": "LoadTestSeedJob_pkey"
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "run_id"
+                  ],
+                  "name": "LoadTestSeedJob_runId_key"
+                }
+              ]
+            },
             "MediaCleanupJob": {
               "columns": {
                 "createdAt": {
@@ -4090,7 +4461,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "89d47a3c0fe6aeb3485ebc02d2ab079b1c196daac20fee0d6f43a1aec8c982d0"
+    "storageHash": "d7c8b3629355cd49849b45bb896516ff5de7d4901ffe3f6c75203a2b0934fdc1"
   },
   "capabilities": {
     "postgres": {

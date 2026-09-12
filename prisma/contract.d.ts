@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'89d47a3c0fe6aeb3485ebc02d2ab079b1c196daac20fee0d6f43a1aec8c982d0'>;
+  StorageHashBase<'d7c8b3629355cd49849b45bb896516ff5de7d4901ffe3f6c75203a2b0934fdc1'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -325,6 +325,25 @@ export type FieldOutputTypes = {
       readonly activityId: CodecTypes['pg/uuid@1']['output'];
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
     };
+    readonly LoadTestSeedJob: {
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly runId: Varchar<64>;
+      readonly targetUserId: CodecTypes['pg/uuid@1']['output'];
+      readonly manifestKey: Varchar<512>;
+      readonly config: CodecTypes['pg/jsonb@1']['output'];
+      readonly status: Varchar<32>;
+      readonly totalUsers: CodecTypes['pg/int4@1']['output'];
+      readonly totalActivities: CodecTypes['pg/int4@1']['output'];
+      readonly processedActivities: CodecTypes['pg/int4@1']['output'];
+      readonly createdActivities: CodecTypes['pg/int4@1']['output'];
+      readonly createdLikes: CodecTypes['pg/int4@1']['output'];
+      readonly createdComments: CodecTypes['pg/int4@1']['output'];
+      readonly createdCommentLikes: CodecTypes['pg/int4@1']['output'];
+      readonly errorMessage: CodecTypes['pg/text@1']['output'] | null;
+      readonly createdAt: TimestamptzString<6>;
+      readonly startedAt: TimestamptzString<6> | null;
+      readonly finishedAt: TimestamptzString<6> | null;
+    };
     readonly MediaCleanupJob: {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly userId: CodecTypes['pg/uuid@1']['output'];
@@ -499,6 +518,25 @@ export type FieldInputTypes = {
       readonly authorId: CodecTypes['pg/text@1']['input'];
       readonly activityId: CodecTypes['pg/uuid@1']['input'];
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
+    };
+    readonly LoadTestSeedJob: {
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly runId: CodecTypes['sql/varchar@1']['input'];
+      readonly targetUserId: CodecTypes['pg/uuid@1']['input'];
+      readonly manifestKey: CodecTypes['sql/varchar@1']['input'];
+      readonly config: CodecTypes['pg/jsonb@1']['input'];
+      readonly status: CodecTypes['sql/varchar@1']['input'];
+      readonly totalUsers: CodecTypes['pg/int4@1']['input'];
+      readonly totalActivities: CodecTypes['pg/int4@1']['input'];
+      readonly processedActivities: CodecTypes['pg/int4@1']['input'];
+      readonly createdActivities: CodecTypes['pg/int4@1']['input'];
+      readonly createdLikes: CodecTypes['pg/int4@1']['input'];
+      readonly createdComments: CodecTypes['pg/int4@1']['input'];
+      readonly createdCommentLikes: CodecTypes['pg/int4@1']['input'];
+      readonly errorMessage: CodecTypes['pg/text@1']['input'] | null;
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly startedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly finishedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
     };
     readonly MediaCleanupJob: {
       readonly id: CodecTypes['pg/uuid@1']['input'];
@@ -675,6 +713,25 @@ export type StorageColumnTypes = {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
     };
+    readonly LoadTestSeedJob: {
+      readonly config: CodecTypes['pg/jsonb@1']['output'];
+      readonly created_activities: CodecTypes['pg/int4@1']['output'];
+      readonly created_at: TimestamptzString<6>;
+      readonly created_comment_likes: CodecTypes['pg/int4@1']['output'];
+      readonly created_comments: CodecTypes['pg/int4@1']['output'];
+      readonly created_likes: CodecTypes['pg/int4@1']['output'];
+      readonly error_message: CodecTypes['pg/text@1']['output'] | null;
+      readonly finished_at: TimestamptzString<6> | null;
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly manifest_key: Varchar<512>;
+      readonly processed_activities: CodecTypes['pg/int4@1']['output'];
+      readonly run_id: Varchar<64>;
+      readonly started_at: TimestamptzString<6> | null;
+      readonly status: Varchar<32>;
+      readonly target_user_id: CodecTypes['pg/uuid@1']['output'];
+      readonly total_activities: CodecTypes['pg/int4@1']['output'];
+      readonly total_users: CodecTypes['pg/int4@1']['output'];
+    };
     readonly MediaCleanupJob: {
       readonly createdAt: TimestamptzString<6>;
       readonly errorMessage: CodecTypes['pg/text@1']['output'] | null;
@@ -849,6 +906,25 @@ export type StorageColumnInputTypes = {
       readonly date: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
+    };
+    readonly LoadTestSeedJob: {
+      readonly config: CodecTypes['pg/jsonb@1']['input'];
+      readonly created_activities: CodecTypes['pg/int4@1']['input'];
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly created_comment_likes: CodecTypes['pg/int4@1']['input'];
+      readonly created_comments: CodecTypes['pg/int4@1']['input'];
+      readonly created_likes: CodecTypes['pg/int4@1']['input'];
+      readonly error_message: CodecTypes['pg/text@1']['input'] | null;
+      readonly finished_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly manifest_key: CodecTypes['sql/varchar@1']['input'];
+      readonly processed_activities: CodecTypes['pg/int4@1']['input'];
+      readonly run_id: CodecTypes['sql/varchar@1']['input'];
+      readonly started_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly status: CodecTypes['sql/varchar@1']['input'];
+      readonly target_user_id: CodecTypes['pg/uuid@1']['input'];
+      readonly total_activities: CodecTypes['pg/int4@1']['input'];
+      readonly total_users: CodecTypes['pg/int4@1']['input'];
     };
     readonly MediaCleanupJob: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -1712,6 +1788,152 @@ type ContractBase = Omit<
                 },
               ];
             };
+            readonly LoadTestSeedJob: {
+              columns: {
+                readonly id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'gen_random_uuid()';
+                  };
+                };
+                readonly run_id: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 64 };
+                };
+                readonly target_user_id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                };
+                readonly manifest_key: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 512 };
+                };
+                readonly config: {
+                  readonly nativeType: 'jsonb';
+                  readonly codecId: 'pg/jsonb@1';
+                  readonly nullable: false;
+                };
+                readonly status: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 32 };
+                };
+                readonly total_users: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly total_activities: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly processed_activities: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly created_activities: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly created_likes: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly created_comments: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly created_comment_likes: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly error_message: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly created_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly started_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly finished_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              primaryKey: {
+                readonly columns: readonly ['id'];
+                readonly name: 'LoadTestSeedJob_pkey';
+              };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['run_id'];
+                  readonly name: 'LoadTestSeedJob_runId_key';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'LoadTestSeedJob_status_createdAt_idx';
+                  readonly columns: readonly ['status', 'created_at'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [];
+            };
             readonly MediaCleanupJob: {
               columns: {
                 readonly id: {
@@ -2327,6 +2549,10 @@ type ContractBase = Omit<
     readonly MediaCleanupJob: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'MediaCleanupJob';
+    };
+    readonly LoadTestSeedJob: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'LoadTestSeedJob';
     };
     readonly UserSession: {
       readonly namespace: 'public' & NamespaceId;
@@ -3021,6 +3247,126 @@ type ContractBase = Omit<
                 readonly authorId: { readonly column: 'authorId' };
                 readonly activityId: { readonly column: 'activityId' };
                 readonly profileId: { readonly column: 'profileId' };
+              };
+            };
+          };
+          readonly LoadTestSeedJob: {
+            readonly fields: {
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly runId: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 64 };
+                };
+              };
+              readonly targetUserId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly manifestKey: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 512 };
+                };
+              };
+              readonly config: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 32 };
+                };
+              };
+              readonly totalUsers: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly totalActivities: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly processedActivities: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly createdActivities: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly createdLikes: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly createdComments: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly createdCommentLikes: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly errorMessage: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly startedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly finishedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+            };
+            readonly relations: Record<string, never>;
+            readonly storage: {
+              readonly table: 'LoadTestSeedJob';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly id: { readonly column: 'id' };
+                readonly runId: { readonly column: 'run_id' };
+                readonly targetUserId: { readonly column: 'target_user_id' };
+                readonly manifestKey: { readonly column: 'manifest_key' };
+                readonly config: { readonly column: 'config' };
+                readonly status: { readonly column: 'status' };
+                readonly totalUsers: { readonly column: 'total_users' };
+                readonly totalActivities: { readonly column: 'total_activities' };
+                readonly processedActivities: { readonly column: 'processed_activities' };
+                readonly createdActivities: { readonly column: 'created_activities' };
+                readonly createdLikes: { readonly column: 'created_likes' };
+                readonly createdComments: { readonly column: 'created_comments' };
+                readonly createdCommentLikes: { readonly column: 'created_comment_likes' };
+                readonly errorMessage: { readonly column: 'error_message' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly startedAt: { readonly column: 'started_at' };
+                readonly finishedAt: { readonly column: 'finished_at' };
               };
             };
           };

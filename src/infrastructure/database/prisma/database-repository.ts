@@ -41,6 +41,7 @@ type ModelName =
   | 'Activity'
   | 'ActivityMigrationJob'
   | 'MediaCleanupJob'
+  | 'LoadTestSeedJob'
   | 'Friend'
   | 'Comment'
   | 'CommentLike'
@@ -72,6 +73,7 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
   Friend: { profile: 'Profile', user: 'User' },
   Like: { activity: 'Activity', profile: 'Profile' },
   MediaCleanupJob: {},
+  LoadTestSeedJob: {},
   UserSession: { user: 'User' },
 };
 
@@ -100,6 +102,7 @@ const dateFields: Record<ModelName, ReadonlySet<string>> = {
   Friend: new Set(['createdAt', 'updatedAt']),
   Like: new Set(['date']),
   MediaCleanupJob: new Set(['createdAt', 'startedAt', 'finishedAt']),
+  LoadTestSeedJob: new Set(['createdAt', 'startedAt', 'finishedAt']),
   UserSession: new Set(['lastSeenAt', 'lastLocationAt', 'createdAt', 'revokedAt']),
 };
 
@@ -497,6 +500,7 @@ export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics
     activity: new ModelRepository(client, 'Activity', latencyMetrics),
     activityMigrationJob: new ModelRepository(client, 'ActivityMigrationJob', latencyMetrics),
     mediaCleanupJob: new ModelRepository(client, 'MediaCleanupJob', latencyMetrics),
+    loadTestSeedJob: new ModelRepository(client, 'LoadTestSeedJob', latencyMetrics),
     friend: new ModelRepository(client, 'Friend', latencyMetrics),
     comment: new ModelRepository(client, 'Comment', latencyMetrics),
     commentLike: new ModelRepository(client, 'CommentLike', latencyMetrics),

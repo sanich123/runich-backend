@@ -14,6 +14,7 @@ import { HealthModule } from 'src/health/health.module';
 import LoggingService from 'src/common/logger/logger.middleware';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { StorageModule } from 'src/storage/storage.module';
+import { LoadTestModule } from 'src/load-test/load-test.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { StorageModule } from 'src/storage/storage.module';
     AuthModule,
     HealthModule,
     StorageModule,
+    LoadTestModule,
   ],
 })
 export class AppModule {
