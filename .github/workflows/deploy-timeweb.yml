@@ -84,22 +84,25 @@ jobs:
             # The immutable image was pulled and verified in the SSH command above.
             # Avoid a second registry request after docker logout; Compose can use
             # the image that is already present on the host.
-            BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose up \
+            BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose \
+              -f docker-compose.timeweb.yml up \
               -d --remove-orphans --no-build nestjs_app background_worker
 
             for attempt in $(seq 1 30); do
               if curl --fail --silent --show-error --max-time 5 \
                 http://127.0.0.1:3000/health/live >/dev/null \
-                && test "$(docker compose ps --status running --services background_worker)" = \
+                && test "$(docker compose -f docker-compose.timeweb.yml ps --status running --services background_worker)" = \
                   "background_worker"; then
                 echo "Deployment is healthy at commit $DEPLOY_SHA"
-                # Keep named volumes (PostgreSQL and migration archives) intact.
+                # Keep the migration-archive volume intact; PostgreSQL is an
+                # external Timeweb DBaaS service and has no Docker volume here.
                 # --remove-orphans above removes services retired from Compose;
                 # this prune removes their now-unused images and other Docker data.
                 docker system prune --all --force || echo 'Docker cleanup failed; keeping the healthy deployment.' >&2
                 # The two-stage Dockerfile leaves large, rebuildable BuildKit caches
                 # for the development and production dependency installs. Volumes
-                # are intentionally not pruned because PostgreSQL data must survive.
+                # are intentionally not pruned because rebuildable caches are
+                # safe to remove, while the migration archive must survive.
                 docker builder prune --all --force || echo 'Build cache cleanup failed; keeping the healthy deployment.' >&2
                 exit 0
               fi
@@ -107,7 +110,7 @@ jobs:
             done
 
             echo 'Health check failed.' >&2
-            docker compose ps
-            docker compose logs --tail=100 nestjs_app background_worker
+            docker compose -f docker-compose.timeweb.yml ps
+            docker compose -f docker-compose.timeweb.yml logs --tail=100 nestjs_app background_worker
             exit 1
           REMOTE

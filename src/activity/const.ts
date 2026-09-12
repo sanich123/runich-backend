@@ -29,7 +29,9 @@ export const ACTIVITY_CARD_SELECT = {
   mapPhotoUrlBlurhash: true,
   duration: true,
   distance: true,
+  elevationGain: true,
   steps: true,
+  kilometresSplit: true,
   profile: { select: ACTIVITY_CARD_PROFILE_SELECT },
   _count: { select: { comments: true, likes: true } },
 } as const;

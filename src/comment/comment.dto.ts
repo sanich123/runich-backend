@@ -77,8 +77,8 @@ export class CommentResponseDto {
   @ApiPropertyOptional({ type: CommentProfileResponseDto, nullable: true })
   profile?: CommentProfileResponseDto | null;
 
-  @ApiPropertyOptional({ type: [CommentLikeSummaryResponseDto] })
-  commentLike?: CommentLikeSummaryResponseDto[];
+  @ApiProperty({ type: [CommentLikeSummaryResponseDto] })
+  commentLike: CommentLikeSummaryResponseDto[];
 }
 
 export class CommentsResponseDto {

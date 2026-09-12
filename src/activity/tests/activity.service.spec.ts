@@ -70,6 +70,22 @@ describe('ActivityService', () => {
     });
   });
 
+  it('persists elevation gain calculated from activity locations', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new ActivityService(prisma as never, account as never);
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    const locations = [100, 100, 100, 120, 120, 120].map((altitude) => ({
+      coords: { latitude: 55.75, longitude: 37.61, altitude },
+    }));
+
+    await service.createActivity({ ...activityDto, locations }, 'user-1');
+
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ elevationGain: 20 }),
+    });
+  });
+
   it('stores a route in S3 and keeps only route metadata in the activity row', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
@@ -266,8 +282,15 @@ describe('ActivityService', () => {
       importedActivities: 101,
     });
     expect(prisma.activity.createMany).toHaveBeenCalledTimes(2);
-    expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: activities.slice(0, 100), skipDuplicates: true });
-    expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: activities.slice(100), skipDuplicates: true });
+    const persistedActivities = activities.map((activity) => ({ ...activity, elevationGain: 0 }));
+    expect(prisma.activity.createMany).toHaveBeenCalledWith({
+      data: persistedActivities.slice(0, 100),
+      skipDuplicates: true,
+    });
+    expect(prisma.activity.createMany).toHaveBeenCalledWith({
+      data: persistedActivities.slice(100),
+      skipDuplicates: true,
+    });
     await expect(service.createActivitiesFromMigrationArchive([])).resolves.toEqual({
       success: true,
       importedActivities: 0,
@@ -468,7 +491,7 @@ describe('ActivityService', () => {
         }),
       );
       expect(query.select).not.toHaveProperty('locations');
-      expect(query.select).not.toHaveProperty('kilometresSplit');
+      expect(query.select).toHaveProperty('kilometresSplit', true);
       expect(query.select).not.toHaveProperty('emotion');
       expect(query.select).not.toHaveProperty('description');
     }

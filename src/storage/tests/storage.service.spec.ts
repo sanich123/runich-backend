@@ -28,8 +28,8 @@ async function createTestImage() {
 
 describe('StorageService', () => {
   beforeEach(() => {
-    process.env.S3_ENDPOINT = 'https://ignored.example';
-    process.env.S3_REGION = 'ignored-region';
+    process.env.S3_ENDPOINT = 'https://s3.twcstorage.ru';
+    process.env.S3_REGION = 'ru-1';
     process.env.S3_BUCKET = 'runich-test';
     process.env.S3_ACCESS_KEY = 'access-key';
     process.env.S3_SECRET_ACCESS_KEY = 'secret-key';
@@ -79,6 +79,23 @@ describe('StorageService', () => {
     });
     await expect(sharp(body).metadata()).resolves.toMatchObject({ format: 'webp', width: 1600, height: 800 });
     expect(metrics.observeExternal).toHaveBeenCalledWith('s3', 'putObject', expect.any(Number));
+  });
+
+  it('uses the configured S3 endpoint for generated file URLs', async () => {
+    s3Send.mockResolvedValue({} as never);
+    process.env.S3_ENDPOINT = 'https://s3.stage.example';
+    process.env.S3_REGION = 'stage-1';
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto('user-1', {
+        buffer: Buffer.from('video'),
+        originalname: 'clip.mp4',
+        mimetype: 'video/mp4',
+      }),
+    ).resolves.toMatchObject({
+      url: expect.stringMatching(/^https:\/\/s3\.stage\.example\/runich-test\/user-1\/.+\.mp4$/),
+    });
   });
 
   it('uses webp for images even when the original file name has no extension', async () => {

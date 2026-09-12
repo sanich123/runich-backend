@@ -22,6 +22,7 @@ import type {
 
 import type {
   ContractWithTypeMaps,
+  RelationKeys,
   TypeMaps as TypeMapsType,
 } from '@prisma/orm-postgres/family-contract/types';
 import type {
@@ -33,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'ee8f39cddf8351c8256512d9cf11fbc454016dc462950fff06d42e8a4ec64355'>;
+  StorageHashBase<'89d47a3c0fe6aeb3485ebc02d2ab079b1c196daac20fee0d6f43a1aec8c982d0'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -247,6 +248,7 @@ export type FieldOutputTypes = {
       readonly updatedAt: TimestamptzString<6>;
       readonly description: CodecTypes['pg/text@1']['output'] | null;
       readonly distance: CodecTypes['pg/float8@1']['output'];
+      readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly duration: CodecTypes['pg/int4@1']['output'];
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
       readonly routeStorageKey: Varchar<512> | null;
@@ -421,6 +423,7 @@ export type FieldInputTypes = {
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly description: CodecTypes['pg/text@1']['input'] | null;
       readonly distance: CodecTypes['pg/float8@1']['input'];
+      readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly duration: CodecTypes['pg/int4@1']['input'];
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
       readonly routeStorageKey: CodecTypes['sql/varchar@1']['input'] | null;
@@ -594,6 +597,7 @@ export type StorageColumnTypes = {
       readonly description: CodecTypes['pg/text@1']['output'] | null;
       readonly distance: CodecTypes['pg/float8@1']['output'];
       readonly duration: CodecTypes['pg/int4@1']['output'];
+      readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly isPublic: CodecTypes['pg/bool@1']['output'] | null;
@@ -768,6 +772,7 @@ export type StorageColumnInputTypes = {
       readonly description: CodecTypes['pg/text@1']['input'] | null;
       readonly distance: CodecTypes['pg/float8@1']['input'];
       readonly duration: CodecTypes['pg/int4@1']['input'];
+      readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly isPublic: CodecTypes['pg/bool@1']['input'] | null;
@@ -992,6 +997,11 @@ type ContractBase = Omit<
                   readonly nativeType: 'float8';
                   readonly codecId: 'pg/float8@1';
                   readonly nullable: false;
+                };
+                readonly elevationGain: {
+                  readonly nativeType: 'float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: true;
                 };
                 readonly duration: {
                   readonly nativeType: 'int4';
@@ -1877,26 +1887,7 @@ type ContractBase = Omit<
               uniques: readonly [
                 { readonly columns: readonly ['user_id']; readonly name: 'Profile_user_id_key' },
               ];
-              indexes: readonly [
-                {
-                  readonly name: 'Profile_name_trgm_idx';
-                  readonly columns: readonly ['name'];
-                  readonly unique: false;
-                  readonly type: 'gin';
-                },
-                {
-                  readonly name: 'Profile_surname_trgm_idx';
-                  readonly columns: readonly ['surname'];
-                  readonly unique: false;
-                  readonly type: 'gin';
-                },
-                {
-                  readonly name: 'Profile_email_trgm_idx';
-                  readonly columns: readonly ['email'];
-                  readonly unique: false;
-                  readonly type: 'gin';
-                },
-              ];
+              indexes: readonly [];
               foreignKeys: readonly [
                 {
                   readonly source: {
@@ -2135,14 +2126,7 @@ type ContractBase = Omit<
                 { readonly columns: readonly ['email']; readonly name: 'Users_email_key' },
                 { readonly columns: readonly ['phone']; readonly name: 'Users_phone_key' },
               ];
-              indexes: readonly [
-                {
-                  readonly name: 'Users_email_trgm_idx';
-                  readonly columns: readonly ['email'];
-                  readonly unique: false;
-                  readonly type: 'gin';
-                },
-              ];
+              indexes: readonly [];
               foreignKeys: readonly [];
             };
             readonly UserSession: {
@@ -2391,6 +2375,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
               };
+              readonly elevationGain: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
               readonly duration: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
@@ -2546,6 +2534,7 @@ type ContractBase = Omit<
                 readonly updatedAt: { readonly column: 'updatedAt' };
                 readonly description: { readonly column: 'description' };
                 readonly distance: { readonly column: 'distance' };
+                readonly elevationGain: { readonly column: 'elevationGain' };
                 readonly duration: { readonly column: 'duration' };
                 readonly emotion: { readonly column: 'emotion' };
                 readonly routeStorageKey: { readonly column: 'route_storage_key' };

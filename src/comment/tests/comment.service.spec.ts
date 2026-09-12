@@ -25,7 +25,7 @@ describe('CommentService', () => {
     const comment = { id: 'comment-1', comment: 'Hello' };
     const like = { id: 'comment-like-1' };
     prisma.activity.findUnique.mockResolvedValue({
-      comments: [comment],
+      comments: [{ ...comment, commentLikes: [like] }],
       _count: { comments: 2 },
     });
     prisma.comment.create.mockResolvedValue(comment);
@@ -41,7 +41,7 @@ describe('CommentService', () => {
     prisma.commentLike.delete.mockResolvedValue(like);
 
     await expect(service.getCommentsbyActivityId('activity-1', '10')).resolves.toEqual({
-      comments: [comment],
+      comments: [{ ...comment, commentLike: [like] }],
       hasMore: false,
       nextCursor: null,
     });
@@ -125,7 +125,7 @@ describe('CommentService', () => {
       }),
     );
     expect(commentQuery.select).not.toHaveProperty('commentLike');
-    expect(commentQuery.select).not.toHaveProperty('commentLikes');
+    expect(commentQuery.select).toHaveProperty('commentLikes', { select: { authorId: true, id: true } });
   });
 
   it('combines comment access and comment lookup into one query', async () => {

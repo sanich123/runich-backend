@@ -199,7 +199,16 @@ describe('activity, comments and statistics', () => {
 
   it('creates, updates, reads and deletes activities', async () => {
     const prisma = db();
-    const account = { getAccountByUserId: createMock().mockResolvedValue({ id: 'p1' }) };
+    const account = {
+      getAccountByUserId: createMock().mockResolvedValue({
+        id: 'p1',
+        name: 'Ann',
+        surname: 'Runner',
+        profilePhoto: 'avatar',
+        profilePhotoBlurhash: null,
+        emailNotifications: true,
+      }),
+    };
     const service = new ActivityService(prisma as never, account as never);
     const queryRaw = createMock();
     Object.assign(prisma, { $queryRaw: queryRaw });
@@ -223,6 +232,13 @@ describe('activity, comments and statistics', () => {
     await expect(service.getActivitiesByTheirIds('a1')).resolves.toEqual([]);
     await expect(service.getAllActivitiesWithFriends('u1')).resolves.toEqual({
       activities: [],
+      currentUserProfile: {
+        name: 'Ann',
+        surname: 'Runner',
+        profilePhoto: 'avatar',
+        profilePhotoBlurhash: null,
+        emailNotifications: true,
+      },
       hasMore: false,
       nextCursor: null,
       isLastPage: true,
@@ -250,7 +266,10 @@ describe('activity, comments and statistics', () => {
       success: true,
       importedActivities: 1,
     });
-    expect(prisma.activity.createMany).toHaveBeenCalledWith({ data: [activity], skipDuplicates: true });
+    expect(prisma.activity.createMany).toHaveBeenCalledWith({
+      data: [{ ...activity, elevationGain: 0 }],
+      skipDuplicates: true,
+    });
   });
 
   it('creates comments, likes and returns comment collections', async () => {
@@ -267,7 +286,7 @@ describe('activity, comments and statistics', () => {
     prisma.commentLike.findMany.mockResolvedValue([{ id: 'cl1' }]);
     prisma.commentLike.delete.mockResolvedValue({ id: 'cl1' });
     await expect(service.getCommentsbyActivityId('a1', '10')).resolves.toEqual({
-      comments: [{ id: 'c1' }],
+      comments: [{ id: 'c1', commentLike: [] }],
       hasMore: false,
       nextCursor: null,
     });

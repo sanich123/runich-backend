@@ -43,7 +43,6 @@ model User {
 
   @@unique([email], map: "Users_email_key")
   @@unique([phone], map: "Users_phone_key")
-  @@index([email], type: "gin", map: "Users_email_trgm_idx")
   @@map("Users")
 }
 
@@ -74,9 +73,6 @@ model Profile {
   user                  User                   @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Profile_user_id_fkey")
 
   @@unique([userId], map: "Profile_user_id_key")
-  @@index([name], type: "gin", map: "Profile_name_trgm_idx")
-  @@index([surname], type: "gin", map: "Profile_surname_trgm_idx")
-  @@index([email], type: "gin", map: "Profile_email_trgm_idx")
   @@map("Profile")
 }
 
@@ -87,6 +83,7 @@ model Activity {
   updatedAt           TimestamptzString(6)
   description         String?
   distance            Float
+  elevationGain       Float?
   duration            Int
   emotion             String?
   routeStorageKey     VarChar(512)?        @map("route_storage_key")
