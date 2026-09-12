@@ -77,6 +77,16 @@ jobs:
               exit 1
             fi
 
+            # This file used to be created manually on the host before it became
+            # part of the repository. Preserve that legacy untracked copy so the
+            # exact-commit checkout can materialize the tracked version.
+            if ! git ls-files --error-unmatch docker-compose.timeweb.yml >/dev/null 2>&1 \
+              && [ -f docker-compose.timeweb.yml ]; then
+              LEGACY_COMPOSE_BACKUP="/tmp/docker-compose.timeweb.yml.$(date +%s)"
+              mv -- docker-compose.timeweb.yml "$LEGACY_COMPOSE_BACKUP"
+              echo "Moved legacy untracked compose file to $LEGACY_COMPOSE_BACKUP"
+            fi
+
             git fetch --prune origin master
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
