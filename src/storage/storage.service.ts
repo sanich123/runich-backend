@@ -33,12 +33,12 @@ export class StorageService {
   private readonly client: S3Client;
 
   constructor(@Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService) {
-    const endpoint = DEFAULT_S3_ENDPOINT;
-    const region = DEFAULT_S3_REGION;
-    const bucket = process.env.S3_BUCKET ?? '';
-    const accessKey = process.env.S3_ACCESS_KEY ?? process.env.S3_ACCESS_KEY_ID ?? '';
-    const secretKey = process.env.S3_SECRET_ACCESS_KEY ?? process.env.S3_SECRET_KEY ?? '';
-    const publicUrl = (process.env.S3_PUBLIC_URL ?? `${endpoint}/${bucket}`).replace(/\/$/, '');
+    const endpoint = process.env.S3_ENDPOINT?.trim() || DEFAULT_S3_ENDPOINT;
+    const region = process.env.S3_REGION?.trim() || DEFAULT_S3_REGION;
+    const bucket = process.env.S3_BUCKET?.trim() || '';
+    const accessKey = process.env.S3_ACCESS_KEY?.trim() || '';
+    const secretKey = process.env.S3_SECRET_ACCESS_KEY?.trim() || '';
+    const publicUrl = (process.env.S3_PUBLIC_URL?.trim() || `${endpoint}/${bucket}`).replace(/\/$/, '');
 
     this.settings = { endpoint, region, bucket, accessKey, secretKey, publicUrl };
     this.client = new S3Client({
