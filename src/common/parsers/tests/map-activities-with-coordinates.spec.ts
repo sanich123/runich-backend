@@ -83,6 +83,43 @@ describe('mapActivitiesWithCoordinates', () => {
     expect(getMapBoxImage).toHaveBeenCalledWith(createRoute());
   });
 
+  it('uses the CSV distance to keep imported split count consistent with the activity', async () => {
+    const route = [0, 500, 1_000, 1_500, 2_000].map((meters, index) => ({
+      coords: {
+        latitude: 0,
+        longitude: meters / METERS_PER_EQUATOR_DEGREE,
+        altitude: 100,
+        timestamp: index * 60_000,
+      },
+    }));
+    parseCoordinatesFromFile.mockResolvedValueOnce(route);
+
+    const [activity] = await mapActivitiesWithCoordinates({
+      userId: 'user-1',
+      profileId: 'profile-1',
+      migrationDirectory: '/tmp/migration-job-distance',
+      parsedActivities: [
+        {
+          'Activity ID': 'strava-distance',
+          Filename: 'activities/run.fit',
+          'Activity Date': '2026-08-18T10:00:00.000Z',
+          'Activity Name': 'Run',
+          'Activity Type': 'Run',
+          'Activity Description': '',
+          'Elapsed Time': 120,
+          'Moving Time': 120,
+          Distance: 1_250,
+        },
+      ],
+    });
+
+    expect(activity.kilometresSplit).toHaveLength(1);
+    expect(activity.kilometresSplit?.[0].kilometerPoint.coords.longitude).toBeCloseTo(
+      1_600 / METERS_PER_EQUATOR_DEGREE,
+      5,
+    );
+  });
+
   it('returns an empty batch when every row is invalid so the worker can record skips and continue', async () => {
     await expect(
       mapActivitiesWithCoordinates({

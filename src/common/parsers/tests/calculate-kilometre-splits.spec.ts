@@ -70,4 +70,20 @@ describe('calculateKilometreSplits', () => {
     expect(splits[0].lastKilometerAltitude).toBeCloseTo(36, 3);
     expect(splits[1].lastKilometerAltitude).toBeCloseTo(-12, 3);
   });
+
+  it('uses the declared distance when the route geometry is longer than the activity distance', () => {
+    const route = [0, 500, 1_000, 1_500, 2_000].map((meters, index) => ({
+      coords: {
+        latitude: 0,
+        longitude: meters / METERS_PER_EQUATOR_DEGREE,
+        altitude: 100,
+        timestamp: index * 60_000,
+      },
+    }));
+
+    const splits = calculateKilometreSplits(route, 120_000, 1_250);
+
+    expect(splits).toHaveLength(1);
+    expect(splits[0].kilometerPoint.coords.longitude).toBeCloseTo(1_600 / METERS_PER_EQUATOR_DEGREE, 5);
+  });
 });

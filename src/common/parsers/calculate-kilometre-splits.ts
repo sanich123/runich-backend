@@ -104,7 +104,7 @@ function addElevationChangeToKilometres(
   }
 }
 
-function getElevationChangesByKilometre(locations: LocationObject[], kilometreCount: number) {
+function getElevationChangesByKilometre(locations: LocationObject[], kilometreCount: number, distanceScale = 1) {
   const smoothedLocations = getSmoothedLocations(locations);
   const elevationChangeByKilometre = Array.from(
     { length: Math.max(0, Math.floor(kilometreCount)) },
@@ -117,7 +117,9 @@ function getElevationChangesByKilometre(locations: LocationObject[], kilometreCo
 
   const distances = [0];
   for (let index = 1; index < smoothedLocations.length; index += 1) {
-    distances.push(distances[index - 1] + distanceBetween(smoothedLocations[index - 1], smoothedLocations[index]));
+    distances.push(
+      distances[index - 1] + distanceBetween(smoothedLocations[index - 1], smoothedLocations[index]) * distanceScale,
+    );
   }
 
   elevationChangeByKilometre.fill(0);
@@ -177,17 +179,24 @@ function interpolateLocation(first: LocationObject, second: LocationObject, frac
 export function calculateKilometreSplits(
   locations: LocationObject[],
   totalDuration: number,
+  declaredDistance?: number,
 ): ActivityKilometreSplitObject[] {
   const validLocations = locations.filter(
     ({ coords }) => isFiniteNumber(coords.latitude) && isFiniteNumber(coords.longitude),
   );
   if (validLocations.length < 2) return [];
 
-  const segmentDistances = validLocations
+  const geometricSegmentDistances = validLocations
     .slice(1)
     .map((location, index) => distanceBetween(validLocations[index], location));
+  const geometricTotalDistance = geometricSegmentDistances.reduce((sum, distance) => sum + distance, 0);
+  if (geometricTotalDistance <= 0) return [];
+
+  const hasDeclaredDistance = isFiniteNumber(declaredDistance) && declaredDistance >= 0;
+  if (hasDeclaredDistance && declaredDistance === 0) return [];
+  const distanceScale = hasDeclaredDistance ? declaredDistance / geometricTotalDistance : 1;
+  const segmentDistances = geometricSegmentDistances.map((distance) => distance * distanceScale);
   const totalDistance = segmentDistances.reduce((sum, distance) => sum + distance, 0);
-  if (totalDistance <= 0) return [];
 
   const firstTimestamp = validLocations[0].coords.timestamp;
   const lastTimestamp = validLocations.at(-1)?.coords.timestamp;
@@ -232,7 +241,7 @@ export function calculateKilometreSplits(
     durationInCurrentKilometer += segmentDuration;
   });
 
-  const elevationChangesByKilometre = getElevationChangesByKilometre(validLocations, splits.length);
+  const elevationChangesByKilometre = getElevationChangesByKilometre(validLocations, splits.length, distanceScale);
 
   return splits.map((split, index) => ({
     ...split,

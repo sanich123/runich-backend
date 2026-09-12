@@ -74,7 +74,7 @@ export async function mapActivitiesWithCoordinates({
             const description = activity['Activity Description'];
             const date = new Date(activity['Activity Date']).toISOString();
             const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
-            const kilometresSplit = calculateKilometreSplits(rawLocations, duration);
+            const kilometresSplit = calculateKilometreSplits(rawLocations, duration, distance);
             const locations = reduceLocations(rawLocations);
             const mapPhotoUrl =
               rawLocations.length > 1 && process.env.MAPBOX_ACCESS_TOKEN
