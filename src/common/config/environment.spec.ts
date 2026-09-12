@@ -67,10 +67,20 @@ describe('environment config', () => {
     expect(getCorsOrigins()).toHaveLength(3);
 
     process.env.APP_ENV = 'stage';
-    expect(getCorsOrigins()).toEqual(['https://stage--runich.netlify.app']);
+    expect(getCorsOrigins()).toEqual([
+      'https://stage--runich.netlify.app',
+      /^https?:\/\/localhost(?::\d+)?$/,
+      /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
+      /^https?:\/\/\[::1\](?::\d+)?$/,
+    ]);
 
     process.env.APP_ENV = 'production';
-    expect(getCorsOrigins()).toEqual(['https://runich.netlify.app']);
+    expect(getCorsOrigins()).toEqual([
+      'https://runich.netlify.app',
+      /^https?:\/\/localhost(?::\d+)?$/,
+      /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
+      /^https?:\/\/\[::1\](?::\d+)?$/,
+    ]);
 
     process.env.APP_ENV = 'unknown';
     process.env.NODE_ENV = 'test';
