@@ -21,6 +21,7 @@
     "db:generate": "yarn prisma contract emit",
     "db:sync": "node prisma/db-sync.mjs",
     "db:seed": "tsx prisma/seed.ts",
+    "load-test:prepare": "tsx prisma/prepare-load-test-assets.ts",
     "db:up": "docker compose up -d db --wait && (yarn prisma db sign || yarn db:sync)",
     "test": "yarn db:generate && jest",
     "test:watch": "yarn db:generate && node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",

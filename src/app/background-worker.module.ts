@@ -4,6 +4,7 @@ import { ActivityModule } from 'src/activity/activity.module';
 import { ActivityMediaProcessingService } from 'src/activity/activity-media-processing.service';
 import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { StorageModule } from 'src/storage/storage.module';
+import { LoadTestModule } from 'src/load-test/load-test.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { StorageModule } from 'src/storage/storage.module';
     PrismaModule,
     StorageModule,
     ActivityModule,
+    LoadTestModule,
   ],
   providers: [ActivityMediaProcessingService],
 })

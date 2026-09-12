@@ -114,6 +114,14 @@ export class StorageService {
   }
 
   async readActivityRoute(key: string) {
+    return await decodeActivityRoute(await this.readObject(key, 'S3 не вернул файл маршрута активности'));
+  }
+
+  async readJson<T>(key: string): Promise<T> {
+    return JSON.parse(Buffer.from(await this.readObject(key)).toString('utf8')) as T;
+  }
+
+  async readObject(key: string, missingObjectMessage = `S3 не вернул объект ${key}`) {
     this.assertConfigured();
     const response = await this.measureS3('getObject', () =>
       this.client.send(
@@ -123,9 +131,25 @@ export class StorageService {
         }),
       ),
     );
-    if (!response.Body) throw new Error('S3 не вернул файл маршрута активности');
+    if (!response.Body) throw new Error(missingObjectMessage);
+    return await response.Body.transformToByteArray();
+  }
 
-    return await decodeActivityRoute(await response.Body.transformToByteArray());
+  async uploadObject(key: string, body: Buffer | Uint8Array, contentType: string, cacheControl?: string) {
+    this.assertConfigured();
+    await this.measureS3('putObject', () =>
+      this.client.send(
+        new PutObjectCommand({
+          Bucket: this.settings.bucket,
+          Key: key,
+          Body: body,
+          ContentLength: body.byteLength,
+          ContentType: contentType,
+          ...(cacheControl ? { CacheControl: cacheControl } : {}),
+        }),
+      ),
+    );
+    return { key, url: this.getPublicUrl(key) };
   }
 
   async deleteObjectByKey(key: string) {

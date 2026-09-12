@@ -110,34 +110,36 @@ Use secret management and rotated credentials in production. Never commit .env, 
 
 ## Configuration
 
-| Variable                   | Purpose                                                            |
-| -------------------------- | ------------------------------------------------------------------ |
-| DATABASE_URL               | PostgreSQL connection string                                       |
-| DATABASE_URL_DOCKER        | Connection string used inside Docker; local uses `db`, Timeweb uses the private DBaaS IP |
-| POSTGRES_USER, POSTGRES_DB | Local Compose database user and database name                      |
-| POSTGRES_PASSWORD          | Local Compose database password                                    |
-| PORT                       | HTTP port, default 3000                                            |
-| APP_ENV                    | Application environment: local, stage or production                |
-| YANDEX_SMTP_USER           | Full Yandex mailbox address used as the sender                     |
-| YANDEX_SMTP_PASSWORD       | Yandex application password for Mail                               |
-| MAPBOX_ACCESS_TOKEN        | Mapbox Static Images API access token                              |
-| S3_ENDPOINT                | S3-compatible endpoint, defaults to `https://s3.twcstorage.ru`      |
-| S3_REGION                  | S3 region, defaults to `ru-1`                                      |
-| S3_BUCKET                  | S3 bucket name                                                     |
-| S3_ACCESS_KEY              | Server-side S3 access key                                          |
-| S3_SECRET_ACCESS_KEY       | Server-side S3 secret key                                          |
-| S3_PUBLIC_URL              | Optional public URL prefix; defaults to endpoint plus bucket       |
-| JWT_SECRET                 | Secret used to sign and verify JWT tokens                          |
-| YANDEX_CLIENT_ID           | Yandex ID application client ID                                    |
-| YANDEX_CLIENT_SECRET       | Yandex ID application secret, server-side only                     |
-| YANDEX_REDIRECT_URI        | Registered Yandex OAuth callback URL                               |
-| AUTH_FRONTEND_REDIRECT_URI | Frontend URL for OAuth and email login credentials                 |
-| VK_CLIENT_ID               | VK ID application client ID                                        |
-| VK_CLIENT_SECRET           | VK ID application secret, server-side only                         |
-| VK_REDIRECT_URI            | Registered VK OAuth callback URL                                   |
-| VK_API_VERSION             | Optional VK API version, defaults to 5.199                         |
-| RUNICH_PROCESS             | Process role: api or worker                                        |
-| SEED_USER_EMAIL            | Optional email used by the database seed                           |
+| Variable                     | Purpose                                                                                  |
+| ---------------------------- | ---------------------------------------------------------------------------------------- |
+| DATABASE_URL                 | PostgreSQL connection string                                                             |
+| DATABASE_URL_DOCKER          | Connection string used inside Docker; local uses `db`, Timeweb uses the private DBaaS IP |
+| POSTGRES_USER, POSTGRES_DB   | Local Compose database user and database name                                            |
+| POSTGRES_PASSWORD            | Local Compose database password                                                          |
+| PORT                         | HTTP port, default 3000                                                                  |
+| APP_ENV                      | Application environment: local, stage or production                                      |
+| YANDEX_SMTP_USER             | Full Yandex mailbox address used as the sender                                           |
+| YANDEX_SMTP_PASSWORD         | Yandex application password for Mail                                                     |
+| MAPBOX_ACCESS_TOKEN          | Mapbox Static Images API access token                                                    |
+| S3_ENDPOINT                  | S3-compatible endpoint, defaults to `https://s3.twcstorage.ru`                           |
+| S3_REGION                    | S3 region, defaults to `ru-1`                                                            |
+| S3_BUCKET                    | S3 bucket name                                                                           |
+| S3_ACCESS_KEY                | Server-side S3 access key                                                                |
+| S3_SECRET_ACCESS_KEY         | Server-side S3 secret key                                                                |
+| S3_PUBLIC_URL                | Optional public URL prefix; defaults to endpoint plus bucket                             |
+| JWT_SECRET                   | Secret used to sign and verify JWT tokens                                                |
+| YANDEX_CLIENT_ID             | Yandex ID application client ID                                                          |
+| YANDEX_CLIENT_SECRET         | Yandex ID application secret, server-side only                                           |
+| YANDEX_REDIRECT_URI          | Registered Yandex OAuth callback URL                                                     |
+| AUTH_FRONTEND_REDIRECT_URI   | Frontend URL for OAuth and email login credentials                                       |
+| VK_CLIENT_ID                 | VK ID application client ID                                                              |
+| VK_CLIENT_SECRET             | VK ID application secret, server-side only                                               |
+| VK_REDIRECT_URI              | Registered VK OAuth callback URL                                                         |
+| VK_API_VERSION               | Optional VK API version, defaults to 5.199                                               |
+| RUNICH_PROCESS               | Process role: api or worker                                                              |
+| SEED_USER_EMAIL              | Optional email used by the database seed                                                 |
+| LOAD_TEST_SEED_TOKEN         | Required only to enqueue the protected stage/local load-test job                         |
+| LOAD_TEST_ASSET_MANIFEST_KEY | Optional S3 key of the prepared load-test manifest                                       |
 
 Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. The
 `YANDEX_SMTP_USER` value is the full mailbox address (`Runich.app@ya.ru` in
@@ -162,6 +164,42 @@ automatically only in local and stage; production never runs the mock seed.
 Set `RUNICH_PROCESS=worker` for the background worker so it does not run the
 mock seed a second time.
 
+### Stage feed load-test
+
+The controlled load-test fixture is separate from the automatic mock seed. It
+uses 100 dedicated mock users, 100 activities per user, 10 activity likes, 10
+comments and one comment like per activity. The target user both follows those
+100 users (so their activities appear in the feed) and is followed by them (so
+the target has 100 followers). The fixture is written by the background
+worker in batches and can be resumed safely after a restart.
+
+Prepare the archive assets from a machine that has the stage S3 variables:
+
+    yarn load-test:prepare /path/to/export.zip stage-feed-v1
+
+Before a real upload, append `--dry-run` to validate the archive and report the
+asset counts without writing to S3.
+
+The command uploads only 25 photo variants, 100 compressed route templates and
+one manifest under `load-test/stage-feed-v1/`. It does not upload the full
+Strava archive. Then set a strong `LOAD_TEST_SEED_TOKEN` in both Railway
+stage services and enqueue the job:
+
+    curl -X POST https://runich-backend-stage.up.railway.app/load-test/seed \
+      -H 'content-type: application/json' \
+      -H 'x-load-test-token: <token>' \
+      -d '{"runId":"stage-feed-v1"}'
+
+Poll `GET /load-test/seed/:runId` with the same header. To remove only this
+fixture, call `DELETE /load-test/seed/:runId`; it removes users whose email is
+scoped to that run, their activities and relations, and the job record. Shared
+S3 templates remain available for another run.
+
+The seed marks copied activities as media-processing `completed`, so the
+regular media worker does not download the same 25 photos 10,000 times. This
+test measures the feed/database path; media blurhash processing should be
+tested as a separate workload.
+
 ### Railway stage
 
 Railway stage uses a separate PostgreSQL service and the same application
@@ -185,24 +223,25 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 
 ### Application and worker
 
-| Command            | Description                                      |
-| ------------------ | ------------------------------------------------ |
-| `yarn dev`         | Development API with watch mode                  |
-| `yarn start`       | Development API without watch mode               |
-| `yarn start:debug` | Development API with Node inspector              |
-| `yarn build`       | Build the production bundles with tsup           |
+| Command            | Description                                               |
+| ------------------ | --------------------------------------------------------- |
+| `yarn dev`         | Development API with watch mode                           |
+| `yarn start`       | Development API without watch mode                        |
+| `yarn start:debug` | Development API with Node inspector                       |
+| `yarn build`       | Build the production bundles with tsup                    |
 | `yarn start:prod`  | Synchronize the current contract and run the compiled API |
-| `yarn worker:dev`  | Development background worker                    |
+| `yarn worker:dev`  | Development background worker                             |
 | `yarn worker:prod` | Synchronize the current contract and run the built worker |
 
 ### Database
 
-| Command               | Description                                              |
-| --------------------- | -------------------------------------------------------- |
-| `yarn db:up`          | Start local PostgreSQL and reconcile its Prisma 8 marker |
-| `yarn db:generate`    | Emit the Prisma 8 contract artifacts                     |
-| `yarn db:sync`        | Synchronize the database with the current contract       |
-| `yarn db:seed`        | Seed the configured database                             |
+| Command                                      | Description                                               |
+| -------------------------------------------- | --------------------------------------------------------- |
+| `yarn db:up`                                 | Start local PostgreSQL and reconcile its Prisma 8 marker  |
+| `yarn db:generate`                           | Emit the Prisma 8 contract artifacts                      |
+| `yarn db:sync`                               | Synchronize the database with the current contract        |
+| `yarn db:seed`                               | Seed the configured database                              |
+| `yarn load-test:prepare [archive] [version]` | Upload 25 photo variants, 100 routes and a manifest to S3 |
 
 ### Tests
 
