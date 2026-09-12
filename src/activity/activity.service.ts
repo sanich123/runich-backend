@@ -22,7 +22,13 @@ import {
   type ActivityCursor,
   type ActivityMediaCursor,
 } from './activity.pagination';
-import { omitMediaProcessingStatus } from './utils';
+import {
+  getElevationGainFromKilometreSplits,
+  getElevationGainFromLocations,
+  normalizeActivityCard,
+  normalizeActivityDetails,
+  omitMediaProcessingStatus,
+} from './utils';
 import type { ActivityFeedSqlRow } from './type';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { StorageService } from 'src/storage/storage.service';
@@ -97,6 +103,9 @@ export class ActivityService {
         profileId: `${account?.id}`,
         ...activityFields,
         description,
+        elevationGain: activityDto.locations?.length
+          ? getElevationGainFromLocations(activityDto.locations)
+          : getElevationGainFromKilometreSplits(activityDto.kilometresSplit),
         title: activityDto.title?.trim()
           ? activityDto.title
           : generateActivityTitle(activityDto.sport, activityDto.date),
@@ -181,7 +190,10 @@ export class ActivityService {
         duration,
         speed,
       };
-      return omitMediaProcessingStatus(await this.persistenceService.update(id, userId, data));
+      const activity = await this.persistenceService.update(id, userId, data);
+      return omitMediaProcessingStatus(
+        activity ? normalizeActivityDetails(activity as Record<string, unknown>) : activity,
+      );
     } catch (error) {
       handleServiceError(error);
     }
@@ -216,7 +228,7 @@ export class ActivityService {
       if (activity && currentUserId && activity.userId !== currentUserId && activity.isPublic !== true) {
         return null;
       }
-      return activity;
+      return activity ? normalizeActivityDetails(activity as Record<string, unknown>) : activity;
     } catch (error) {
       handleServiceError(error);
     }
@@ -313,7 +325,9 @@ export class ActivityService {
         select: ACTIVITY_CARD_SELECT,
       });
       const hasMore = activitiesWithExtraItem.length > Number(take);
-      const activities = activitiesWithExtraItem.slice(0, Number(take));
+      const activities = activitiesWithExtraItem
+        .slice(0, Number(take))
+        .map((activity: Record<string, unknown>) => normalizeActivityCard(activity as Record<string, unknown>));
       return {
         activities,
         hasMore,
@@ -334,11 +348,12 @@ export class ActivityService {
 
     const searchByStringOrArray = normalizedIds.length === 1 ? normalizedIds[0] : { in: normalizedIds };
     try {
-      return await this.prisma.activity.findMany({
+      const activities = await this.prisma.activity.findMany({
         where: { id: searchByStringOrArray, isPublic: true },
         orderBy: { date: 'desc' },
         select: ACTIVITY_CARD_SELECT,
       });
+      return activities.map((activity: Record<string, unknown>) => normalizeActivityCard(activity));
     } catch (error) {
       handleServiceError(error);
     }
@@ -359,6 +374,8 @@ export class ActivityService {
           a."duration",
           a."distance",
           a."steps",
+          a."elevationGain",
+          a."kilometresSplit",
           json_build_object(
             'surname', p."surname",
             'name', p."name",
@@ -404,11 +421,29 @@ export class ActivityService {
         LIMIT ${Number(take) + 1}::int
       `;
       const hasMore = activitiesWithExtraItem.length > Number(take);
-      const activities = activitiesWithExtraItem.slice(0, Number(take));
+      const activities = activitiesWithExtraItem
+        .slice(0, Number(take))
+        .map((activity: ActivityFeedSqlRow) => normalizeActivityCard(activity as Record<string, unknown>));
+      const currentUserProfile =
+        typeof this.accountService.getAccountByUserId === 'function'
+          ? await this.accountService.getAccountByUserId(id)
+          : undefined;
       return {
         activities,
+        ...(currentUserProfile
+          ? {
+              currentUserProfile: {
+                surname: currentUserProfile.surname,
+                name: currentUserProfile.name,
+                profilePhoto: currentUserProfile.profilePhoto,
+                profilePhotoBlurhash: currentUserProfile.profilePhotoBlurhash,
+                emailNotifications: currentUserProfile.emailNotifications,
+              },
+            }
+          : {}),
         hasMore,
-        nextCursor: hasMore && activities.length ? encodeActivityCursor(activities.at(-1)!) : null,
+        nextCursor:
+          hasMore && activities.length ? encodeActivityCursor(activities.at(-1)! as unknown as ActivityCursor) : null,
         isLastPage: !hasMore,
       };
     } catch (error) {
@@ -439,10 +474,19 @@ export class ActivityService {
   }
 
   private async prepareActivityRoute<T extends ActivityDto & { userId: string; profileId: string }>(activity: T) {
+    const elevationGain = activity.locations?.length
+      ? getElevationGainFromLocations(activity.locations)
+      : getElevationGainFromKilometreSplits(activity.kilometresSplit);
     if (!activity.locations?.length || !this.storageService) {
       const dataWithoutLocations = { ...activity };
       delete dataWithoutLocations.locations;
-      return { data: dataWithoutLocations, routeKey: undefined };
+      return {
+        data: {
+          ...dataWithoutLocations,
+          elevationGain,
+        },
+        routeKey: undefined,
+      };
     }
 
     const activityId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
@@ -456,6 +500,7 @@ export class ActivityService {
     return {
       data: {
         ...dataWithoutLocations,
+        elevationGain,
         id: activityId,
         routeStorageKey: routeMetadata.key,
         routeFormatVersion: routeMetadata.formatVersion,

@@ -467,6 +467,9 @@ export class ActivityResponseDto extends ActivityDto {
   @ApiProperty({ type: String, format: 'date-time' })
   updatedAt: Date | string;
 
+  @ApiProperty({ type: Number, minimum: 0 })
+  elevationGain: number;
+
   @ApiPropertyOptional({ type: String, nullable: true })
   source?: string | null;
 
@@ -505,6 +508,9 @@ export class ActivityCardResponseDto {
   @ApiProperty({ type: Number })
   distance: number;
 
+  @ApiProperty({ type: Number, minimum: 0 })
+  elevationGain: number;
+
   @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true })
   steps?: number | null;
 
@@ -532,6 +538,9 @@ export class ActivityDetailsResponseDto extends ActivityCardResponseDto {
 export class ActivityListResponseDto {
   @ApiProperty({ type: [ActivityCardResponseDto] })
   activities: ActivityCardResponseDto[];
+
+  @ApiPropertyOptional({ type: ActivityProfileResponseDto, nullable: true })
+  currentUserProfile?: ActivityProfileResponseDto | null;
 
   @ApiProperty({ type: Boolean })
   hasMore: boolean;

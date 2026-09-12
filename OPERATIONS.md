@@ -1,6 +1,6 @@
 # Runich Backend: production operations
 
-Эта памятка содержит безопасные команды для просмотра состояния production-сервера Timeweb, логов API, фонового worker и PostgreSQL.
+Эта памятка содержит безопасные команды для просмотра состояния production-сервера Timeweb и логов API/worker. Production PostgreSQL работает как отдельный Timeweb DBaaS-кластер и не запускается локальным Compose.
 
 ## Подключение
 
@@ -14,16 +14,15 @@ cd /opt/runich-backend/project
 Одноразовую команду можно выполнить без открытия интерактивной SSH-сессии:
 
 ```bash
-ssh runich-timeweb 'cd /opt/runich-backend/project && docker compose ps'
+ssh runich-timeweb 'cd /opt/runich-backend/project && docker compose -f docker-compose.timeweb.yml ps'
 ```
 
-Production Compose использует следующие сервисы:
+Production Compose (`docker-compose.timeweb.yml`) использует следующие сервисы:
 
 | Сервис                      | Назначение                       |
 | --------------------------- | -------------------------------- |
 | `nestjs_app`                | HTTP API                         |
 | `background_worker`         | Миграции Strava, blurhash и очистка S3 |
-| `db`                        | PostgreSQL                       |
 
 ## Быстрый выбор команды
 
@@ -31,13 +30,12 @@ Production Compose использует следующие сервисы:
 
 | Что посмотреть               | Команда                                                                   |
 | ---------------------------- | ------------------------------------------------------------------------- |
-| Состояние контейнеров        | `docker compose ps`                                                       |
-| Все свежие логи              | `docker compose logs -f --tail=200`                                       |
-| Логи API                     | `docker compose logs -f --tail=200 nestjs_app`                            |
-| Логи background worker       | `docker compose logs -f --tail=200 background_worker`                      |
-| Логи PostgreSQL              | `docker compose logs -f --tail=100 db`                                    |
-| API и worker вместе          | `docker compose logs -f --tail=200 nestjs_app background_worker`          |
-| Логи за последние 30 минут   | `docker compose logs -t --since=30m nestjs_app background_worker`         |
+| Состояние контейнеров        | `docker compose -f docker-compose.timeweb.yml ps`                         |
+| Все свежие логи              | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200`         |
+| Логи API                     | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200 nestjs_app` |
+| Логи background worker       | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200 background_worker` |
+| API и worker вместе          | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200 nestjs_app background_worker` |
+| Логи за последние 30 минут   | `docker compose -f docker-compose.timeweb.yml logs -t --since=30m nestjs_app background_worker` |
 | Текущее потребление ресурсов | `docker stats --no-stream`                                                |
 
 `Ctrl+C` прекращает просмотр через `logs -f`, но не останавливает контейнеры.
@@ -60,6 +58,25 @@ image на сервере: он переключает checkout на тот же
 docker compose up --build --remove-orphans
 ```
 
+Production Compose на Timeweb запускается отдельным файлом и подключается к
+внешнему PostgreSQL через приватный IP. В production `.env` переменная
+`DATABASE_URL_DOCKER` должна содержать URL базы Timeweb; пароль не выводите и
+не добавляйте в Git:
+
+```text
+DATABASE_URL_DOCKER=postgresql://gen_user:<пароль>@192.168.0.4:5432/default_db?schema=public
+```
+
+`db-sync` перед синхронизацией включает расширение `pg_trgm`, а после
+успешного `db update` создаёт trigram GIN-индексы для поиска по email, имени и
+фамилии. Эти индексы намеренно создаются bootstrap-SQL: текущий Prisma 8 RC
+не сохраняет `gin_trgm_ops` при генерации DDL из контракта.
+
+```bash
+docker compose -f docker-compose.timeweb.yml ps
+docker compose -f docker-compose.timeweb.yml logs -f --tail=200 nestjs_app background_worker
+```
+
 ## Ротация логов
 
 Приложение пишет только ошибки в `/opt/runich-backend/project/logs.log` через
@@ -80,7 +97,7 @@ sudo logrotate -f /etc/logrotate.d/runich-backend
 
 ```bash
 docker inspect --format '{{.Name}} {{json .HostConfig.LogConfig}}' \
-  $(docker compose ps -q db nestjs_app background_worker)
+  $(docker compose -f docker-compose.timeweb.yml ps -q nestjs_app background_worker)
 docker system df
 ```
 
@@ -96,7 +113,7 @@ health check можно отдельно удалить только rebuildable
 отправляет письмо:
 
 ```bash
-docker compose exec -T nestjs_app node --input-type=module -e '
+docker compose -f docker-compose.timeweb.yml exec -T nestjs_app node --input-type=module -e '
   import nodemailer from "nodemailer";
   const timeout = 15000;
   const transporter = nodemailer.createTransport({
@@ -119,7 +136,7 @@ docker compose exec -T nestjs_app node --input-type=module -e '
 
 ```bash
 : "${TEST_EMAIL:?Set TEST_EMAIL to an explicitly approved test recipient}"
-docker compose exec -T -e TEST_EMAIL="$TEST_EMAIL" nestjs_app node --input-type=module -e '
+docker compose -f docker-compose.timeweb.yml exec -T -e TEST_EMAIL="$TEST_EMAIL" nestjs_app node --input-type=module -e '
   import nodemailer from "nodemailer";
   const user = process.env.YANDEX_SMTP_USER;
   const recipient = process.env.TEST_EMAIL;
@@ -135,21 +152,21 @@ docker compose exec -T -e TEST_EMAIL="$TEST_EMAIL" nestjs_app node --input-type=
 Ошибки, предупреждения и сообщения миграции:
 
 ```bash
-docker compose logs -f --tail=300 nestjs_app background_worker \
+docker compose -f docker-compose.timeweb.yml logs -f --tail=300 nestjs_app background_worker \
   | grep -Ei 'error|warn|migration|ошиб'
 ```
 
 Сообщения конкретной задачи миграции:
 
 ```bash
-docker compose logs -t --since=24h background_worker \
+docker compose -f docker-compose.timeweb.yml logs -t --since=24h background_worker \
   | grep '<JOB_ID>'
 ```
 
 Только готовый снимок логов без ожидания новых сообщений:
 
 ```bash
-docker compose logs -t --tail=500 background_worker
+docker compose -f docker-compose.timeweb.yml logs -t --tail=500 background_worker
 ```
 
 Полезные параметры `docker compose logs`:
@@ -193,15 +210,15 @@ curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
 
 ```bash
 cd /opt/runich-backend/project
-docker compose exec -T nestjs_app yarn prisma db update --dry-run
+docker compose -f docker-compose.timeweb.yml exec -T nestjs_app yarn prisma db update --dry-run
 ```
 
 Проверьте план. Применяйте его только после проверки:
 
 ```bash
-docker compose exec -T nestjs_app \
-  yarn prisma db update --no-interactive --confirm runich_db --advance-ref db
-docker compose exec -T nestjs_app yarn prisma db verify
+docker compose -f docker-compose.timeweb.yml exec -T nestjs_app \
+  yarn prisma db update --no-interactive --confirm default_db --advance-ref db
+docker compose -f docker-compose.timeweb.yml exec -T nestjs_app yarn prisma db verify
 ```
 
 Ожидаемый результат `db verify` — `Database marker and schema match contract`.
@@ -215,7 +232,7 @@ Prisma 8 RC пока не содержит Prisma Studio. Для просмот�
 обычный PostgreSQL-клиент через SSH-туннель, не публикуя порт базы наружу:
 
 ```bash
-ssh -N -L 15432:127.0.0.1:5432 runich-timeweb
+ssh -N -L 15432:192.168.0.4:5432 runich-timeweb
 ```
 
 Подключайтесь к `127.0.0.1:15432` из локального клиента. Для изменений сначала
@@ -246,8 +263,8 @@ docker compose exec -T db sh -c \
 ```bash
 git rev-parse --short HEAD
 git status --short
-docker compose images
-docker compose ps
+docker compose -f docker-compose.timeweb.yml images
+docker compose -f docker-compose.timeweb.yml ps
 ```
 
 Параметры миграции зафиксированы в коде: архивы находятся в
@@ -264,25 +281,31 @@ docker compose ps
 Перезапуск одного сервиса:
 
 ```bash
-docker compose restart nestjs_app
-docker compose restart background_worker
+docker compose -f docker-compose.timeweb.yml restart nestjs_app
+docker compose -f docker-compose.timeweb.yml restart background_worker
 ```
 
 Пересборка и запуск API с worker:
 
 ```bash
-docker compose up -d --build --remove-orphans nestjs_app background_worker
+docker compose -f docker-compose.timeweb.yml up -d --build --remove-orphans nestjs_app background_worker
 ```
 
 После перезапуска снова выполните:
 
 ```bash
-docker compose ps
+docker compose -f docker-compose.timeweb.yml ps
 curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
-docker compose logs -t --tail=100 nestjs_app background_worker
+docker compose -f docker-compose.timeweb.yml logs -t --tail=100 nestjs_app background_worker
 ```
 
 ## Операции с PostgreSQL
+
+В production PostgreSQL находится в отдельном Timeweb DBaaS-кластере, поэтому
+команды `docker compose exec -T db ...` ниже относятся только к локальному
+`docker-compose.yml` и на production не используются. Для production backup и
+управление кластером выполняются в панели Timeweb; API и worker подключаются к
+нему через `DATABASE_URL_DOCKER`.
 
 ### Размер базы, таблиц и соединений
 
@@ -360,7 +383,7 @@ scp runich-timeweb:/opt/runich-backups/postgres/<BACKUP_FILE> ./
 2. Для финального cutover остановите записи, сохранив named volumes:
 
    ```bash
-   docker compose stop nestjs_app background_worker
+   docker compose -f docker-compose.timeweb.yml stop nestjs_app background_worker
    ```
 
 3. Сделайте финальный dump и перенесите файл на машину, с которой доступен новый
@@ -379,8 +402,8 @@ scp runich-timeweb:/opt/runich-backups/postgres/<BACKUP_FILE> ./
    запустите API/worker:
 
    ```bash
-   docker compose up -d --build --remove-orphans nestjs_app background_worker
-   docker compose ps
+   docker compose -f docker-compose.timeweb.yml up -d --build --remove-orphans nestjs_app background_worker
+   docker compose -f docker-compose.timeweb.yml ps
    curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
    ```
 

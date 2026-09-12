@@ -70,6 +70,7 @@ export class CommentService {
               profileId: true,
               id: true,
               profile: { select: COMMENT_PROFILE_SELECT },
+              commentLikes: { select: { authorId: true, id: true } },
             },
             take: pageSize + 1,
           },
@@ -81,7 +82,10 @@ export class CommentService {
       }
       const commentsWithExtraItem = activity.comments;
       const hasMore = commentsWithExtraItem.length > pageSize;
-      const comments = commentsWithExtraItem.slice(0, pageSize);
+      const comments = commentsWithExtraItem.slice(0, pageSize).map((value: Record<string, unknown>) => {
+        const { commentLikes, ...comment } = value;
+        return { ...comment, commentLike: commentLikes ?? [] };
+      });
       return {
         comments,
         hasMore,

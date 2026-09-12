@@ -30,6 +30,8 @@ Create a local, ignored .env file:
     YANDEX_SMTP_USER=Runich.app@ya.ru
     YANDEX_SMTP_PASSWORD=your-yandex-mail-application-password
     RUNICH_PROCESS=api
+    S3_ENDPOINT=https://s3.twcstorage.ru
+    S3_REGION=ru-1
     S3_BUCKET=your-timeweb-bucket-name
     S3_ACCESS_KEY=your-timeweb-access-key
     S3_SECRET_ACCESS_KEY=your-timeweb-secret-key
@@ -89,10 +91,16 @@ chunks instead of increasing the global body limit.
 
     docker compose up --build --remove-orphans
 
-The local Compose database uses PostgreSQL 18.6. `POSTGRES_PASSWORD` and
-`DATABASE_URL_DOCKER` are required in the ignored `.env` file. The database
+The local Compose database uses PostgreSQL 18.6. `POSTGRES_PASSWORD` and the
+local `DATABASE_URL_DOCKER` are required in the ignored `.env` file. The database
 port is bound only to `127.0.0.1` for local migrations; Railway uses private
 service networking and does not use this Compose port mapping.
+
+Production on Timeweb uses `docker-compose.timeweb.yml`. It does not start a
+local PostgreSQL container: `DATABASE_URL_DOCKER` must contain the connection
+string of the separate Timeweb PostgreSQL service over the private network.
+The deployment workflow starts the API and worker with this file and keeps the
+local `docker-compose.yml` workflow unchanged.
 
 For Railway, add `DATABASE_URL` as a reference to the PostgreSQL service's
 Railway variable, for example `${{Postgres.DATABASE_URL}}`. Do not copy the
@@ -105,7 +113,7 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | Variable                   | Purpose                                                            |
 | -------------------------- | ------------------------------------------------------------------ |
 | DATABASE_URL               | PostgreSQL connection string                                       |
-| DATABASE_URL_DOCKER        | Local Compose connection string using the `db` hostname            |
+| DATABASE_URL_DOCKER        | Connection string used inside Docker; local uses `db`, Timeweb uses the private DBaaS IP |
 | POSTGRES_USER, POSTGRES_DB | Local Compose database user and database name                      |
 | POSTGRES_PASSWORD          | Local Compose database password                                    |
 | PORT                       | HTTP port, default 3000                                            |
@@ -113,10 +121,12 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | YANDEX_SMTP_USER           | Full Yandex mailbox address used as the sender                     |
 | YANDEX_SMTP_PASSWORD       | Yandex application password for Mail                               |
 | MAPBOX_ACCESS_TOKEN        | Mapbox Static Images API access token                              |
-| S3_BUCKET                  | Public Timeweb S3 bucket name                                      |
+| S3_ENDPOINT                | S3-compatible endpoint, defaults to `https://s3.twcstorage.ru`      |
+| S3_REGION                  | S3 region, defaults to `ru-1`                                      |
+| S3_BUCKET                  | S3 bucket name                                                     |
 | S3_ACCESS_KEY              | Server-side S3 access key                                          |
 | S3_SECRET_ACCESS_KEY       | Server-side S3 secret key                                          |
-| S3_PUBLIC_URL              | Optional public URL prefix; defaults to fixed endpoint plus bucket |
+| S3_PUBLIC_URL              | Optional public URL prefix; defaults to endpoint plus bucket       |
 | JWT_SECRET                 | Secret used to sign and verify JWT tokens                          |
 | YANDEX_CLIENT_ID           | Yandex ID application client ID                                    |
 | YANDEX_CLIENT_SECRET       | Yandex ID application secret, server-side only                     |
@@ -146,10 +156,27 @@ email links. It must point to the frontend belonging to the current
 environment, for example `https://runich.netlify.app/login-from-url` in
 production or `https://stage--runich.netlify.app/login-from-url` in stage.
 
-Stage may use the same S3 bucket as production and photo writes are enabled in
-both environments. Mock data is created automatically only in local and stage;
-production never runs the mock seed. Set `RUNICH_PROCESS=worker` for the
-background worker so it does not run the mock seed a second time.
+Stage uses its own S3 bucket (`runich-stage`) and production uses a separate
+bucket. Photo writes are enabled in both environments. Mock data is created
+automatically only in local and stage; production never runs the mock seed.
+Set `RUNICH_PROCESS=worker` for the background worker so it does not run the
+mock seed a second time.
+
+### Railway stage
+
+Railway stage uses a separate PostgreSQL service and the same application
+contract as production. Set `DATABASE_URL` in the API and worker services to a
+Railway reference such as `${{Postgres.DATABASE_URL}}`. Set the same S3
+variables in both services, using the stage-only Timeweb bucket:
+
+    APP_ENV=stage
+    S3_ENDPOINT=https://s3.twcstorage.ru
+    S3_REGION=ru-1
+    S3_BUCKET=runich-stage
+    S3_PUBLIC_URL=https://s3.twcstorage.ru/runich-stage
+
+Keep the S3 access key and secret in Railway variables. They are not committed
+to `.env.example` or copied from the local `.env` file.
 
 ## Commands
 

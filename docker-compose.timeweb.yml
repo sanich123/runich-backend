@@ -1,0 +1,50 @@
+services:
+  nestjs_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-runich-backend:local}
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    env_file:
+      - .env
+    environment:
+      TZ: UTC
+      RUNICH_PROCESS: api
+      LOG_FILE_PATH: /app/logs.log
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - migration_archives:/usr/src/app/dist/receivedArchive
+
+  background_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-runich-backend:local}
+    command: ['yarn', 'worker:prod']
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    cpus: 0.50
+    env_file:
+      - .env
+    environment:
+      TZ: UTC
+      RUNICH_PROCESS: worker
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}
+    volumes:
+      - migration_archives:/usr/src/app/dist/receivedArchive
+
+volumes:
+  migration_archives:
