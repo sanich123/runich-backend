@@ -74,15 +74,24 @@ export class ActivityService {
 
   async createActivity(activityDto: ActivityDto, id: string) {
     let uploadedRouteKey: string | undefined;
+    let uploadedActivityMediaKeys: string[] = [];
     try {
       const account = await this.accountService.getAccountByUserId(id);
       const locations = activityDto.locations;
       const storageService = this.storageService;
       let activityId: string | undefined;
       let routeMetadata;
-      if (storageService && locations?.length) {
+      let photoVideoUrls = activityDto.photoVideoUrls;
+      if (storageService && (locations?.length || photoVideoUrls?.length)) {
         activityId = randomUUID();
-        routeMetadata = await storageService.uploadActivityRoute(id, activityId, locations);
+        if (locations?.length) {
+          routeMetadata = await storageService.uploadActivityRoute(id, activityId, locations);
+        }
+        if (photoVideoUrls?.length) {
+          const promotedMedia = await storageService.promoteActivityPhotos(id, activityId, photoVideoUrls);
+          photoVideoUrls = promotedMedia.photos;
+          uploadedActivityMediaKeys = promotedMedia.keys;
+        }
       }
       uploadedRouteKey = routeMetadata?.key;
 
@@ -91,7 +100,6 @@ export class ActivityService {
           ? getMapBoxImage(locations)
           : activityDto.mapPhotoUrl;
 
-      const photoVideoUrls = activityDto.photoVideoUrls;
       const mapPhotoUrlBlurhash = null;
       const activityFields = { ...activityDto };
       delete activityFields.locations;
@@ -132,6 +140,7 @@ export class ActivityService {
       return omitMediaProcessingStatus(await this.persistenceService.create(data));
     } catch (error) {
       await this.deleteUploadedRoute(uploadedRouteKey);
+      await Promise.all(uploadedActivityMediaKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);
     }
   }

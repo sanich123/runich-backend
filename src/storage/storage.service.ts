@@ -8,6 +8,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
@@ -15,15 +16,22 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { createReadStream } from 'node:fs';
-import { rm } from 'node:fs/promises';
-import { extname } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { mkdir, rm, stat } from 'node:fs/promises';
+import { dirname, extname } from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { normalizeImage } from 'src/common/images/image-processing';
-import type { LocationObject } from 'src/activity/activity.dto';
+import type { ActivityPhotoVideoObject, LocationObject } from 'src/activity/activity.dto';
 import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, MAX_DELETE_BATCH_SIZE } from './const';
 import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from './activity-route';
+import {
+  getActivityPhotoKey,
+  getExtensionFromStorageKey,
+  getMigrationArchiveKey,
+  getProfilePhotoKey,
+  getUserUploadKey,
+} from './storage-key';
 import type { ActivityRouteStorageMetadata, StorageFile, StorageSettings } from './type';
 
 @Injectable()
@@ -45,6 +53,12 @@ export class StorageService {
       endpoint,
       region,
       forcePathStyle: true,
+      // Timeweb S3 is compatible with the AWS API, but its object storage does
+      // not require the optional flexible checksum headers that newer AWS SDK
+      // versions add to PutObject requests. Avoid signing those headers unless
+      // an operation explicitly requires a checksum.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
       credentials: accessKey && secretKey ? { accessKeyId: accessKey, secretAccessKey: secretKey } : undefined,
     });
   }
@@ -58,7 +72,7 @@ export class StorageService {
 
       const normalizedImage = file.mimetype.startsWith('image/') ? await this.normalizeImage(input) : undefined;
       const extension = normalizedImage ? 'webp' : this.getExtension(file.originalname, file.mimetype);
-      const key = `${userId}/${randomUUID()}.${extension}`;
+      const key = getUserUploadKey(userId, extension);
       const body = normalizedImage ?? (file.path ? (stream = createReadStream(file.path)) : file.buffer);
       const contentType = normalizedImage ? 'image/webp' : file.mimetype;
       const contentLength = normalizedImage?.length ?? file.size;
@@ -88,6 +102,34 @@ export class StorageService {
           );
         }
       }
+    }
+  }
+
+  async uploadMigrationArchive(userId: string, migrationId: string, filePath: string) {
+    let stream: ReturnType<typeof createReadStream> | undefined;
+    try {
+      this.assertConfigured();
+      const { size } = await stat(filePath);
+      const key = getMigrationArchiveKey(userId, migrationId);
+      stream = createReadStream(filePath);
+
+      await this.measureS3('putObject', () =>
+        this.client.send(
+          new PutObjectCommand({
+            Bucket: this.settings.bucket,
+            Key: key,
+            Body: stream,
+            ContentLength: size,
+            ContentType: 'application/zip',
+            CacheControl: 'private, no-store',
+          }),
+        ),
+      );
+
+      return { key, url: this.getPublicUrl(key) };
+    } finally {
+      stream?.destroy();
+      await rm(filePath, { force: true });
     }
   }
 
@@ -135,6 +177,27 @@ export class StorageService {
     return await response.Body.transformToByteArray();
   }
 
+  async downloadObjectToFile(key: string, filePath: string, missingObjectMessage = `S3 не вернул объект ${key}`) {
+    this.assertConfigured();
+    await mkdir(dirname(filePath), { recursive: true });
+
+    try {
+      const response = await this.measureS3('getObject', () =>
+        this.client.send(
+          new GetObjectCommand({
+            Bucket: this.settings.bucket,
+            Key: key,
+          }),
+        ),
+      );
+      if (!response.Body) throw new Error(missingObjectMessage);
+      await pipeline(response.Body as NodeJS.ReadableStream, createWriteStream(filePath));
+    } catch (error) {
+      if (this.isMissingObjectError(error)) throw new Error(missingObjectMessage, { cause: error });
+      throw error;
+    }
+  }
+
   async uploadObject(key: string, body: Buffer | Uint8Array, contentType: string, cacheControl?: string) {
     this.assertConfigured();
     await this.measureS3('putObject', () =>
@@ -150,6 +213,51 @@ export class StorageService {
       ),
     );
     return { key, url: this.getPublicUrl(key) };
+  }
+
+  async promoteProfilePhoto(userId: string, publicUrl: string) {
+    const sourceKey = this.getPromotablePhotoKey(userId, publicUrl);
+    if (!sourceKey) return publicUrl;
+
+    const destinationKey = getProfilePhotoKey(userId, getExtensionFromStorageKey(sourceKey));
+    await this.copyObject(sourceKey, destinationKey);
+    await this.deleteObjectByKey(sourceKey);
+    return this.getPublicUrl(destinationKey);
+  }
+
+  async promoteActivityPhotos(userId: string, activityId: string, photos: ActivityPhotoVideoObject[]) {
+    const movedKeys: string[] = [];
+    const movedBySourceKey = new Map<string, string>();
+
+    const promoteUrl = async (publicUrl: string) => {
+      const sourceKey = this.getPromotablePhotoKey(userId, publicUrl);
+      if (!sourceKey) return publicUrl;
+
+      const existingDestinationKey = movedBySourceKey.get(sourceKey);
+      if (existingDestinationKey) return this.getPublicUrl(existingDestinationKey);
+
+      const destinationKey = getActivityPhotoKey(userId, activityId, getExtensionFromStorageKey(sourceKey));
+      await this.copyObject(sourceKey, destinationKey);
+      movedKeys.push(destinationKey);
+      await this.deleteObjectByKey(sourceKey);
+      movedBySourceKey.set(sourceKey, destinationKey);
+      return this.getPublicUrl(destinationKey);
+    };
+
+    try {
+      const promotedPhotos: ActivityPhotoVideoObject[] = [];
+      for (const photo of photos) {
+        promotedPhotos.push({
+          ...photo,
+          url: await promoteUrl(photo.url),
+          thumbnail: photo.thumbnail ? await promoteUrl(photo.thumbnail) : null,
+        });
+      }
+      return { photos: promotedPhotos, keys: movedKeys };
+    } catch (error) {
+      await Promise.allSettled(movedKeys.map((key) => this.deleteObjectByKey(key)));
+      throw error;
+    }
   }
 
   async deleteObjectByKey(key: string) {
@@ -290,5 +398,47 @@ export class StorageService {
       this.logger.warn(`Не удалось обработать изображение: ${error instanceof Error ? error.message : String(error)}`);
       throw new BadRequestException('Не удалось обработать изображение');
     }
+  }
+
+  private async copyObject(sourceKey: string, destinationKey: string) {
+    this.assertConfigured();
+    await this.measureS3('copyObject', () =>
+      this.client.send(
+        new CopyObjectCommand({
+          Bucket: this.settings.bucket,
+          Key: destinationKey,
+          CopySource: `${this.settings.bucket}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`,
+          CacheControl: 'public, max-age=31536000, immutable',
+          MetadataDirective: 'COPY',
+        }),
+      ),
+    );
+  }
+
+  private getPromotablePhotoKey(userId: string, publicUrl: string) {
+    let key: string;
+    try {
+      key = this.getOwnedKey(userId, publicUrl);
+    } catch {
+      return undefined;
+    }
+
+    const userPrefix = `${userId}/`;
+    if (!key.startsWith(userPrefix)) return undefined;
+    const relativeKey = key.slice(userPrefix.length);
+    if (relativeKey.startsWith('profile/') || relativeKey.startsWith('activities/')) return undefined;
+    if (!relativeKey.startsWith('uploads/') && relativeKey.includes('/')) return undefined;
+    return key;
+  }
+
+  private isMissingObjectError(error: unknown) {
+    if (!error || typeof error !== 'object') return false;
+    const candidate = error as { name?: unknown; $metadata?: { httpStatusCode?: unknown } };
+    return (
+      candidate.$metadata?.httpStatusCode === 404 ||
+      candidate.name === 'NoSuchKey' ||
+      candidate.name === 'NotFound' ||
+      candidate.name === 'NoSuchObject'
+    );
   }
 }

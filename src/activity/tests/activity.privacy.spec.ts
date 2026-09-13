@@ -42,7 +42,7 @@ describe('ActivityService privacy', () => {
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       isPublic: false,
-      routeStorageKey: 'owner-1/activities/activity-1/route-v1.json.gz',
+      routeStorageKey: 'owner-1/activities/activity-1/locations/locations-v1.json.gz',
       kilometresSplit: [],
     });
 
@@ -50,7 +50,9 @@ describe('ActivityService privacy', () => {
       locations,
       kilometresSplit: [],
     });
-    expect(storage.readActivityRoute).toHaveBeenCalledWith('owner-1/activities/activity-1/route-v1.json.gz');
+    expect(storage.readActivityRoute).toHaveBeenCalledWith(
+      'owner-1/activities/activity-1/locations/locations-v1.json.gz',
+    );
   });
 
   it('hides a private activity detail from another user', async () => {

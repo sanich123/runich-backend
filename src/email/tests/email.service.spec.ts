@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import { EMAIL_DELIVERY_NOTICE } from '../../common/email/constants';
 
 const sendMail = jest.fn<() => Promise<{ messageId: string }>>().mockResolvedValue({ messageId: 'message-id' });
 const createTransport = jest.fn(() => ({ sendMail }));
@@ -96,6 +97,22 @@ describe('EmailService', () => {
     await service.sendConfirmationCode('bob@example.com', 1234, 'credential');
     const confirmationHtml = (sendMail.mock.calls.at(-1) as unknown as [{ html: string }])[0].html;
     expect(confirmationHtml.indexOf('login-from-url?code=credential')).toBeLessThan(confirmationHtml.indexOf('1234'));
+  });
+
+  it('adds spam delivery guidance to authentication emails', async () => {
+    const service = new EmailService();
+    const senders = [
+      () => service.sendConfirmationCode('bob@example.com', 1234, 'credential'),
+      () => service.sendPasswordChangeCode('bob@example.com', 123456),
+      () => service.sendLoginLink('bob@example.com', 'credential'),
+    ];
+
+    for (const send of senders) {
+      mockEmailDelivery();
+      await send();
+      const html = (sendMail.mock.calls.at(-1) as unknown as [{ html: string }])[0].html;
+      expect(html).toContain(EMAIL_DELIVERY_NOTICE);
+    }
   });
 
   it('propagates Yandex SMTP failures from every email type', async () => {

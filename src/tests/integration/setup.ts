@@ -8,6 +8,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { Readable } from 'node:stream';
 
 process.env.JWT_SECRET ??= 'runich-integration-test-secret';
 const hasS3Configuration = Boolean(
@@ -50,7 +51,10 @@ const mockS3Send = async (command: Parameters<S3Client['send']>[0]) => {
     const { Bucket, Key } = command.input;
     const body = Bucket && Key ? objects.get(`${Bucket}/${Key}`) : undefined;
     if (!body) throw new Error(`Integration S3 object not found: ${Bucket}/${Key}`);
-    return { Body: { transformToByteArray: async () => body } } as never;
+    const stream = Object.assign(Readable.from(body), {
+      transformToByteArray: async () => body,
+    });
+    return { Body: stream } as never;
   }
 
   if (command instanceof DeleteObjectCommand) {

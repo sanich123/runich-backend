@@ -48,7 +48,6 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-      - migration_archives:/usr/src/app/dist/receivedArchive
 
   background_worker:
     build:
@@ -72,9 +71,6 @@ services:
       TZ: UTC
       RUNICH_PROCESS: worker
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must be set in .env or the shell}
-    volumes:
-      - migration_archives:/usr/src/app/dist/receivedArchive
 
 volumes:
   pgdata:
-  migration_archives:

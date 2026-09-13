@@ -80,5 +80,5 @@ export async function decodeActivityRoute(body: Uint8Array): Promise<LocationObj
 }
 
 export function getActivityRouteKey(userId: string, activityId: string) {
-  return `${userId}/activities/${activityId}/route-v${ACTIVITY_ROUTE_FORMAT_VERSION}.json.gz`;
+  return `${userId}/activities/${activityId}/locations/locations-v${ACTIVITY_ROUTE_FORMAT_VERSION}.json.gz`;
 }

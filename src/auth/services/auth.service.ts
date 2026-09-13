@@ -244,7 +244,7 @@ export class AuthService {
         },
       });
 
-      return { message: 'Код для смены email был выслан на указанную почту' };
+      return { message: 'Код для смены пароля был выслан на указанную почту' };
     } catch (error) {
       handleServiceError(error);
     }

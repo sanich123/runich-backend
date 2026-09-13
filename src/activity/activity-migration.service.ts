@@ -1,5 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { rm } from 'node:fs/promises';
+import { isAbsolute } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { setImmediate as yieldToEventLoop, setTimeout as delay } from 'node:timers/promises';
 import { ACTIVITY_MIGRATION_STATUS, ActivityMigrationJobResponseDto, ActivityMigrationStatus } from './activity.dto';
 import { getMigrationWorkDirectory } from './activity-migration-storage';
@@ -12,6 +14,7 @@ import { ACTIVITY_MIGRATION_CONFIG } from './activity-migration-config';
 import type { EnqueueMigrationInput, MigratedActivity, MigrationJob, MigrationProgress } from './type';
 import { fileExists, getMigrationErrorMessage } from './activity-migration.utils';
 import { ActivityService } from './activity.service';
+import { StorageService } from 'src/storage/storage.service';
 
 @Injectable()
 export class ActivityMigrationService {
@@ -24,17 +27,37 @@ export class ActivityMigrationService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ActivityService) private readonly activityService: ActivityService,
+    @Inject(StorageService) private readonly storageService: StorageService,
   ) {}
 
   async enqueue(input: EnqueueMigrationInput) {
-    const job = await this.prisma.activityMigrationJob.create({
-      data: {
-        userId: input.userId,
-        profileId: input.profileId,
-        archivePath: input.archivePath,
-        status: ACTIVITY_MIGRATION_STATUS.queued,
-      },
-    });
+    const migrationId = randomUUID();
+    const archiveKey = (await this.storageService.uploadMigrationArchive(input.userId, migrationId, input.archivePath))
+      .key;
+
+    let job: MigrationJob;
+    try {
+      job = await this.prisma.activityMigrationJob.create({
+        data: {
+          userId: input.userId,
+          profileId: input.profileId,
+          // The legacy column is retained for compatibility, but now stores an
+          // S3 object key rather than a path on the API container filesystem.
+          archivePath: archiveKey,
+          status: ACTIVITY_MIGRATION_STATUS.queued,
+        },
+      });
+    } catch (error) {
+      try {
+        await this.storageService.deleteObjectByKey(archiveKey);
+      } catch (cleanupError) {
+        this.logger.error(
+          `Не удалось удалить архив незавершённой миграции ${archiveKey}`,
+          getMigrationErrorMessage(cleanupError),
+        );
+      }
+      throw error;
+    }
 
     return await this.toResponse(job);
   }
@@ -99,7 +122,7 @@ export class ActivityMigrationService {
     });
 
     for (const job of interruptedJobs) {
-      if (!(await fileExists(job.archivePath))) {
+      if (isAbsolute(job.archivePath) && !(await fileExists(job.archivePath))) {
         await this.markFailed(job.id, 'Файл архива миграции не найден после перезапуска worker');
         continue;
       }
@@ -118,6 +141,9 @@ export class ActivityMigrationService {
 
   private async processJob(job: MigrationJob) {
     const workDirectory = getMigrationWorkDirectory(job.id);
+    const downloadedArchivePath = `${workDirectory}.zip`;
+    const isLegacyLocalArchive = isAbsolute(job.archivePath);
+    const archivePath = isLegacyLocalArchive ? job.archivePath : downloadedArchivePath;
     let preserveArchiveForResume = false;
     let progress: MigrationProgress = {
       processedActivities: job.processedActivities,
@@ -126,11 +152,17 @@ export class ActivityMigrationService {
     };
 
     try {
-      if (!(await fileExists(job.archivePath))) {
-        throw new Error('Файл архива миграции не найден');
+      if (isLegacyLocalArchive) {
+        if (!(await fileExists(job.archivePath))) throw new Error('Файл архива миграции не найден');
+      } else {
+        await this.storageService.downloadObjectToFile(
+          job.archivePath,
+          downloadedArchivePath,
+          'Файл архива миграции не найден',
+        );
       }
 
-      const archiveStats = await unzipTransferArchive(job.archivePath, workDirectory);
+      const archiveStats = await unzipTransferArchive(archivePath, workDirectory);
       this.logger.log(
         `Migration job ${job.id}: ${archiveStats.compressedBytes} compressed bytes, ` +
           `${archiveStats.uncompressedBytes} uncompressed bytes, ${archiveStats.entries} entries`,
@@ -201,13 +233,28 @@ export class ActivityMigrationService {
     } finally {
       if (!preserveArchiveForResume) {
         const cleanupResults = await Promise.allSettled([
-          rm(job.archivePath, { force: true }),
+          ...(isLegacyLocalArchive
+            ? [rm(job.archivePath, { force: true })]
+            : [this.storageService.deleteObjectByKey(job.archivePath)]),
+          ...(isLegacyLocalArchive ? [] : [rm(downloadedArchivePath, { force: true })]),
           rm(workDirectory, { recursive: true, force: true }),
         ]);
         cleanupResults.forEach((result) => {
           if (result.status === 'rejected') {
             this.logger.error(
               `Не удалось удалить временные файлы задачи миграции ${job.id}`,
+              getMigrationErrorMessage(result.reason),
+            );
+          }
+        });
+      }
+
+      if (!isLegacyLocalArchive) {
+        const cleanupResult = await Promise.allSettled([rm(downloadedArchivePath, { force: true })]);
+        cleanupResult.forEach((result) => {
+          if (result.status === 'rejected') {
+            this.logger.error(
+              `Не удалось удалить временный архив задачи миграции ${job.id}`,
               getMigrationErrorMessage(result.reason),
             );
           }

@@ -26,7 +26,9 @@ type MigratedActivity = {
 };
 
 const access = asyncMock();
+const mkdir = asyncMock();
 const rm = asyncMock();
+const stat = asyncMock();
 const unzipTransferArchive = asyncMock();
 const parseCsvFileIntoArray = asyncMock();
 const mapActivitiesWithCoordinates = jest.fn<(input: MapInput) => Promise<MigratedActivity[]>>();
@@ -40,7 +42,7 @@ type TransactionClient = {
 };
 const transaction = jest.fn<(callback: (client: TransactionClient) => Promise<unknown>) => Promise<unknown>>();
 
-jest.unstable_mockModule('node:fs/promises', () => ({ access, rm }));
+jest.unstable_mockModule('node:fs/promises', () => ({ access, mkdir, rm, stat }));
 jest.unstable_mockModule('src/common/parsers/unzip-archive', () => ({ unzipTransferArchive }));
 jest.unstable_mockModule('src/common/parsers/parse-csv', () => ({ parseCsvFileIntoArray }));
 jest.unstable_mockModule('src/common/parsers/map-activities-with-coordinates', () => ({
@@ -60,6 +62,12 @@ const prisma = {
     count: migrationJobCount,
   },
   $transaction: transaction,
+};
+
+const storage = {
+  uploadMigrationArchive: asyncMock(),
+  downloadObjectToFile: asyncMock(),
+  deleteObjectByKey: asyncMock(),
 };
 
 const queuedJob = {
@@ -99,13 +107,18 @@ describe('ActivityMigrationService', () => {
 
   it('declares the Prisma injection token required by the ESM worker bootstrap', () => {
     expect(Reflect.getMetadata(SELF_DECLARED_DEPS_METADATA, ActivityMigrationService)).toEqual([
+      { index: 2, param: expect.anything() },
       { index: 1, param: ActivityService },
       { index: 0, param: PrismaService },
     ]);
   });
 
   it('uses a ten-second polling interval by default', () => {
-    const serviceWithDefaults = new ActivityMigrationService(prisma as unknown as PrismaService, {} as never);
+    const serviceWithDefaults = new ActivityMigrationService(
+      prisma as unknown as PrismaService,
+      {} as never,
+      {} as never,
+    );
 
     expect(serviceWithDefaults['pollIntervalMs']).toBe(10_000);
   });
@@ -115,6 +128,7 @@ describe('ActivityMigrationService', () => {
     service = new ActivityMigrationService(
       prisma as unknown as PrismaService,
       { createActivitiesFromMigrationArchive } as never,
+      storage as never,
     );
 
     access.mockResolvedValue(undefined);
@@ -125,6 +139,12 @@ describe('ActivityMigrationService', () => {
     prisma.activityMigrationJob.findMany.mockResolvedValue([]);
     prisma.activityMigrationJob.update.mockResolvedValue(queuedJob);
     prisma.activityMigrationJob.updateMany.mockResolvedValue({ count: 1 });
+    storage.uploadMigrationArchive.mockResolvedValue({
+      key: 'user-1/migrations/migration-1/archive.zip',
+      url: 'https://s3.example/runich-test/user-1/migrations/migration-1/archive.zip',
+    });
+    storage.downloadObjectToFile.mockResolvedValue(undefined);
+    storage.deleteObjectByKey.mockResolvedValue(undefined);
     migrationJobCount.mockResolvedValue(0);
     transactionJobUpdate.mockResolvedValue(queuedJob);
     transaction.mockImplementation(async (callback) =>
@@ -145,12 +165,31 @@ describe('ActivityMigrationService', () => {
       data: {
         userId: 'user-1',
         profileId: 'profile-1',
-        archivePath: '/tmp/archive.zip',
+        archivePath: 'user-1/migrations/migration-1/archive.zip',
         status: 'queued',
       },
     });
+    expect(storage.uploadMigrationArchive).toHaveBeenCalledWith('user-1', expect.any(String), '/tmp/archive.zip');
     expect(prisma.activityMigrationJob.findFirst).not.toHaveBeenCalled();
     expect(unzipTransferArchive).not.toHaveBeenCalled();
+  });
+
+  it('downloads an S3 archive before processing it and removes the object after completion', async () => {
+    const s3Job = {
+      ...queuedJob,
+      archivePath: 'user-1/migrations/migration-1/archive.zip',
+    };
+    prisma.activityMigrationJob.findFirst.mockResolvedValueOnce(s3Job);
+    parseCsvFileIntoArray.mockResolvedValueOnce([{ 'Activity ID': 'strava-1' }]);
+
+    await expect(service.processNextJob()).resolves.toBe(true);
+
+    expect(storage.downloadObjectToFile).toHaveBeenCalledWith(
+      s3Job.archivePath,
+      expect.stringMatching(/runich-activity-migrations\/.*\.zip$/),
+      'Файл архива миграции не найден',
+    );
+    expect(storage.deleteObjectByKey).toHaveBeenCalledWith(s3Job.archivePath);
   });
 
   it("returns only the authenticated user's job", async () => {

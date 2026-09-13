@@ -32,6 +32,8 @@ describe('activity route storage format', () => {
   });
 
   it('keeps activity routes under the user prefix for account cleanup', () => {
-    expect(getActivityRouteKey('user-1', 'activity-1')).toBe('user-1/activities/activity-1/route-v1.json.gz');
+    expect(getActivityRouteKey('user-1', 'activity-1')).toBe(
+      'user-1/activities/activity-1/locations/locations-v1.json.gz',
+    );
   });
 });

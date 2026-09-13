@@ -15,7 +15,7 @@ import {
 import * as React from 'react';
 
 import { HEADING, NotificationEmailProps, PARAGRAPH } from './types';
-import { RUNICH_LOGO_CID } from '../../common/email/constants';
+import { EMAIL_DELIVERY_NOTICE, RUNICH_LOGO_CID } from '../../common/email/constants';
 
 const colors = {
   accent: '#F15A3E',
@@ -104,6 +104,9 @@ function EmailLayout({ preview, children }: { preview: string; children: React.R
           </Section>
 
           <Section style={{ padding: '22px 12px 0', textAlign: 'center' }}>
+            <Text style={{ color: colors.muted, fontFamily, fontSize: '12px', lineHeight: '18px', margin: '0 0 10px' }}>
+              {EMAIL_DELIVERY_NOTICE}
+            </Text>
             <Text style={{ color: colors.muted, fontFamily, fontSize: '12px', lineHeight: '18px', margin: 0 }}>
               Вы получили это письмо, потому что использовали Runich.
             </Text>
