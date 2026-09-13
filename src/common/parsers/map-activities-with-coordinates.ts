@@ -5,7 +5,8 @@ import { getMapBoxImage } from './get-mapbox-image';
 import { getSpeedInMinsInKm } from './get-speed';
 import { Extensions, RawStravaCsvColumns } from './types';
 import { v4 } from 'uuid';
-import { ActivityDto, LocationObject } from 'src/activity/activity.dto';
+import { LocationObject } from 'src/activity/activity.dto';
+import type { MigratedActivity } from 'src/activity/type';
 import { Logger } from '@nestjs/common';
 import { calculateKilometreSplits } from './calculate-kilometre-splits';
 import { reduceLocations } from './reduce-locations';
@@ -14,13 +15,6 @@ const logger = new Logger('ActivityMapper');
 const MIGRATION_BATCH_SIZE = 8;
 const MAX_MAP_IMAGE_LOCATIONS = 500;
 
-type MigratedActivity = ActivityDto & {
-  id: string;
-  userId: string;
-  profileId: string;
-  source: 'strava';
-  sourceActivityId: string;
-};
 export async function mapActivitiesWithCoordinates({
   parsedActivities,
   userId,
@@ -76,6 +70,13 @@ export async function mapActivitiesWithCoordinates({
             const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
             const kilometresSplit = calculateKilometreSplits(rawLocations, duration, distance);
             const locations = reduceLocations(rawLocations);
+            const parsedSourceElevationGain = Number(activity['Elevation Gain']);
+            const sourceElevationGain =
+              String(activity['Elevation Gain'] ?? '').trim() !== '' &&
+              Number.isFinite(parsedSourceElevationGain) &&
+              parsedSourceElevationGain >= 0
+                ? parsedSourceElevationGain
+                : undefined;
             const mapPhotoUrl =
               rawLocations.length > 1 && process.env.MAPBOX_ACCESS_TOKEN
                 ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS))
@@ -94,6 +95,7 @@ export async function mapActivitiesWithCoordinates({
               speed,
               locations,
               kilometresSplit,
+              ...(sourceElevationGain !== undefined ? { sourceElevationGain } : {}),
               userId,
               mapPhotoUrl,
               profileId,
