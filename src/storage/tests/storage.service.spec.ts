@@ -1,10 +1,11 @@
 import { jest } from '@jest/globals';
-import { access, mkdtemp, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import sharp from 'sharp';
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
@@ -62,8 +63,8 @@ describe('StorageService', () => {
         mimetype: 'image/jpeg',
       }),
     ).resolves.toMatchObject({
-      url: expect.stringMatching(/^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/.+\.webp$/),
-      key: expect.stringMatching(/^user-1\/.+\.webp$/),
+      url: expect.stringMatching(/^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/uploads\/.+\.webp$/),
+      key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/),
       contentType: 'image/webp',
     });
 
@@ -94,8 +95,22 @@ describe('StorageService', () => {
         mimetype: 'video/mp4',
       }),
     ).resolves.toMatchObject({
-      url: expect.stringMatching(/^https:\/\/s3\.stage\.example\/runich-test\/user-1\/.+\.mp4$/),
+      url: expect.stringMatching(/^https:\/\/s3\.stage\.example\/runich-test\/user-1\/uploads\/.+\.mp4$/),
     });
+  });
+
+  it('does not add optional flexible checksum headers for S3-compatible storage', async () => {
+    const service = new StorageService();
+    const client = (service as unknown as { client: S3Client }).client;
+    const requestChecksumCalculation = client.config.requestChecksumCalculation;
+    const responseChecksumValidation = client.config.responseChecksumValidation;
+
+    await expect(
+      typeof requestChecksumCalculation === 'function' ? requestChecksumCalculation() : requestChecksumCalculation,
+    ).resolves.toBe('WHEN_REQUIRED');
+    await expect(
+      typeof responseChecksumValidation === 'function' ? responseChecksumValidation() : responseChecksumValidation,
+    ).resolves.toBe('WHEN_REQUIRED');
   });
 
   it('uses webp for images even when the original file name has no extension', async () => {
@@ -109,7 +124,104 @@ describe('StorageService', () => {
         originalname: 'photo',
         mimetype: 'image/png',
       }),
-    ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/.+\.webp$/), contentType: 'image/webp' });
+    ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/), contentType: 'image/webp' });
+  });
+
+  it('rejects an upload when neither a path nor a buffer is provided', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto('user-1', { originalname: 'photo.jpg', mimetype: 'image/jpeg' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('uses the binary fallback extension when a file has no usable extension', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto('user-1', { buffer: Buffer.from('binary'), originalname: 'file', mimetype: 'video/' }),
+    ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/uploads\/.+\.bin$/) });
+  });
+
+  it('moves a staged upload into the profile folder when it becomes an avatar', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const stagedUrl = 'https://s3.twcstorage.ru/runich-test/user-1/uploads/avatar.webp';
+
+    await expect(service.promoteProfilePhoto('user-1', stagedUrl)).resolves.toEqual(
+      expect.stringMatching(/^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/profile\/.+\.webp$/),
+    );
+
+    const copyCommand = s3Send.mock.calls[0]?.[0] as CopyObjectCommand;
+    expect(copyCommand).toBeInstanceOf(CopyObjectCommand);
+    expect(copyCommand.input).toMatchObject({
+      Bucket: 'runich-test',
+      Key: expect.stringMatching(/^user-1\/profile\/.+\.webp$/),
+      CopySource: 'runich-test/user-1/uploads/avatar.webp',
+    });
+    expect(s3Send.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({ input: { Bucket: 'runich-test', Key: 'user-1/uploads/avatar.webp' } }),
+    );
+  });
+
+  it('keeps an already-promoted or externally hosted profile photo unchanged', async () => {
+    const service = new StorageService();
+    const profileUrl = 'https://s3.twcstorage.ru/runich-test/user-1/profile/avatar.webp';
+    const externalUrl = 'https://images.example/avatar.webp';
+
+    await expect(service.promoteProfilePhoto('user-1', profileUrl)).resolves.toBe(profileUrl);
+    await expect(service.promoteProfilePhoto('user-1', externalUrl)).resolves.toBe(externalUrl);
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('moves staged activity media into the activity photos folder', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const stagedPhotoUrl = 'https://s3.twcstorage.ru/runich-test/user-1/uploads/activity.jpg';
+
+    await expect(
+      service.promoteActivityPhotos('user-1', 'activity-1', [{ url: stagedPhotoUrl, thumbnail: null }]),
+    ).resolves.toMatchObject({
+      photos: [
+        {
+          url: expect.stringMatching(
+            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/photos\/.+\.jpg$/,
+          ),
+          thumbnail: null,
+        },
+      ],
+      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/photos\/.+\.jpg$/)],
+    });
+  });
+
+  it('keeps external activity media and reuses a destination for duplicate staged media', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const stagedUrl = 'https://s3.twcstorage.ru/runich-test/user-1/uploads/activity.jpg';
+    const externalUrl = 'https://images.example/activity.jpg';
+
+    await expect(
+      service.promoteActivityPhotos('user-1', 'activity-1', [
+        { url: stagedUrl, thumbnail: stagedUrl },
+        { url: externalUrl, thumbnail: null },
+      ]),
+    ).resolves.toMatchObject({
+      photos: [
+        {
+          url: expect.stringMatching(
+            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/photos\/.+\.jpg$/,
+          ),
+          thumbnail: expect.stringMatching(
+            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/photos\/.+\.jpg$/,
+          ),
+        },
+        { url: externalUrl, thumbnail: null },
+      ],
+      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/photos\/.+\.jpg$/)],
+    });
+    expect(s3Send).toHaveBeenCalledTimes(2);
   });
 
   it('streams video disk uploads to S3 and removes the temporary file', async () => {
@@ -138,13 +250,92 @@ describe('StorageService', () => {
     await expect(access(directory)).resolves.toBeUndefined();
   });
 
+  it('uploads a migration archive to the user migration folder and removes the local copy', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'runich-storage-archive-test-'));
+    const path = join(directory, 'strava-export.zip');
+    await writeFile(path, 'archive');
+    let streamedContent = '';
+    s3Send.mockImplementation(async (command) => {
+      const body = (command as PutObjectCommand).input.Body;
+      expect(body).toBeInstanceOf(Readable);
+      for await (const chunk of body as AsyncIterable<Uint8Array>) streamedContent += Buffer.from(chunk).toString();
+      return {} as never;
+    });
+    const service = new StorageService();
+
+    await expect(service.uploadMigrationArchive('user-1', 'migration-1', path)).resolves.toEqual({
+      key: 'user-1/migrations/migration-1/archive.zip',
+      url: 'https://s3.twcstorage.ru/runich-test/user-1/migrations/migration-1/archive.zip',
+    });
+
+    expect(streamedContent).toBe('archive');
+    expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input).toMatchObject({
+      Bucket: 'runich-test',
+      Key: 'user-1/migrations/migration-1/archive.zip',
+      ContentLength: 7,
+      ContentType: 'application/zip',
+      CacheControl: 'private, no-store',
+    });
+    await expect(access(path)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('downloads an S3 object to a local file for worker processing', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'runich-storage-download-test-'));
+    const path = join(directory, 'archive.zip');
+    s3Send.mockResolvedValue({ Body: Readable.from(Buffer.from('archive')) } as never);
+    const service = new StorageService();
+
+    await service.downloadObjectToFile('user-1/migrations/migration-1/archive.zip', path);
+
+    expect((s3Send.mock.calls[0]?.[0] as GetObjectCommand).input).toEqual({
+      Bucket: 'runich-test',
+      Key: 'user-1/migrations/migration-1/archive.zip',
+    });
+    await expect(readFile(path, 'utf8')).resolves.toBe('archive');
+  });
+
+  it('reports a missing S3 object when the response has no body', async () => {
+    s3Send.mockResolvedValue({ Body: undefined } as never);
+    const service = new StorageService();
+
+    await expect(
+      service.downloadObjectToFile('user-1/migrations/migration-1/archive.zip', join(tmpdir(), 'missing.zip')),
+    ).rejects.toThrow('S3 не вернул объект user-1/migrations/migration-1/archive.zip');
+  });
+
+  it('maps a missing-object S3 error to the migration archive message', async () => {
+    const missingObjectError = Object.assign(new Error('missing'), { name: 'NoSuchKey' });
+    s3Send.mockImplementation(async () => {
+      throw missingObjectError;
+    });
+    const service = new StorageService();
+
+    await expect(
+      service.downloadObjectToFile(
+        'user-1/migrations/migration-1/archive.zip',
+        join(tmpdir(), 'missing.zip'),
+        'Файл архива миграции не найден',
+      ),
+    ).rejects.toThrow('Файл архива миграции не найден');
+  });
+
+  it('omits CacheControl when a generic object has no cache policy', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(service.uploadObject('user-1/test.txt', Buffer.from('test'), 'text/plain')).resolves.toMatchObject({
+      key: 'user-1/test.txt',
+    });
+    expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input).not.toHaveProperty('CacheControl');
+  });
+
   it('uploads a compressed activity route under the user and activity prefix', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
     const locations = [{ timestamp: 1, coords: { latitude: 55.75, longitude: 37.61 } }];
 
     await expect(service.uploadActivityRoute('user-1', 'activity-1', locations)).resolves.toMatchObject({
-      key: 'user-1/activities/activity-1/route-v1.json.gz',
+      key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
       formatVersion: 1,
       pointCount: 1,
       sizeBytes: expect.any(Number),
@@ -155,7 +346,7 @@ describe('StorageService', () => {
     expect(command).toBeInstanceOf(PutObjectCommand);
     expect(command.input).toMatchObject({
       Bucket: 'runich-test',
-      Key: 'user-1/activities/activity-1/route-v1.json.gz',
+      Key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
       ContentType: 'application/json',
       ContentEncoding: 'gzip',
       CacheControl: 'private, no-store',
@@ -169,22 +360,25 @@ describe('StorageService', () => {
     s3Send.mockResolvedValue({ Body: { transformToByteArray: async () => encoded.body } } as never);
     const service = new StorageService();
 
-    await expect(service.readActivityRoute('user-1/activities/activity-1/route-v1.json.gz')).resolves.toEqual(
-      locations,
-    );
+    await expect(
+      service.readActivityRoute('user-1/activities/activity-1/locations/locations-v1.json.gz'),
+    ).resolves.toEqual(locations);
 
     const command = s3Send.mock.calls[0]?.[0] as GetObjectCommand;
     expect(command).toBeInstanceOf(GetObjectCommand);
-    expect(command.input).toEqual({ Bucket: 'runich-test', Key: 'user-1/activities/activity-1/route-v1.json.gz' });
+    expect(command.input).toEqual({
+      Bucket: 'runich-test',
+      Key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+    });
   });
 
   it('rejects an activity route response without a body', async () => {
     s3Send.mockResolvedValue({ Body: undefined } as never);
     const service = new StorageService();
 
-    await expect(service.readActivityRoute('user-1/activities/activity-1/route-v1.json.gz')).rejects.toThrow(
-      'S3 не вернул файл маршрута активности',
-    );
+    await expect(
+      service.readActivityRoute('user-1/activities/activity-1/locations/locations-v1.json.gz'),
+    ).rejects.toThrow('S3 не вернул файл маршрута активности');
   });
 
   it('deletes only an object belonging to the authenticated user', async () => {

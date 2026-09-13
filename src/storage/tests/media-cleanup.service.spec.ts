@@ -43,12 +43,16 @@ describe('MediaCleanupService', () => {
     transaction.mediaCleanupJob.create.mockResolvedValue({ id: 'job-1' });
 
     await expect(
-      service.enqueueObjectCleanup('user-1', 'user-1/activities/activity-1/route-v1.json.gz', transaction as never),
+      service.enqueueObjectCleanup(
+        'user-1',
+        'user-1/activities/activity-1/locations/locations-v1.json.gz',
+        transaction as never,
+      ),
     ).resolves.toEqual({ id: 'job-1' });
     expect(transaction.mediaCleanupJob.create).toHaveBeenCalledWith({
       data: {
         userId: 'user-1',
-        storageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+        storageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
         status: MEDIA_CLEANUP_STATUS.queued,
       },
     });
@@ -74,12 +78,14 @@ describe('MediaCleanupService', () => {
     database.mediaCleanupJob.findFirst.mockResolvedValue({
       id: 'job-1',
       userId: 'user-1',
-      storageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+      storageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
     });
     storageService.deleteObjectByKey.mockResolvedValue(undefined);
 
     await expect(service.processNextJob()).resolves.toBe(true);
-    expect(storageService.deleteObjectByKey).toHaveBeenCalledWith('user-1/activities/activity-1/route-v1.json.gz');
+    expect(storageService.deleteObjectByKey).toHaveBeenCalledWith(
+      'user-1/activities/activity-1/locations/locations-v1.json.gz',
+    );
     expect(storageService.deleteUserFiles).not.toHaveBeenCalled();
   });
 
@@ -98,7 +104,7 @@ describe('MediaCleanupService', () => {
     database.mediaCleanupJob.findFirst.mockResolvedValue({
       id: 'job-1',
       userId: 'user-1',
-      storageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+      storageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
     });
     storageService.deleteObjectByKey.mockRejectedValue(new Error('S3 unavailable'));
 

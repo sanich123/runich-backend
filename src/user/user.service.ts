@@ -4,12 +4,14 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { UserDto } from './user.dto';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
+import { StorageService } from 'src/storage/storage.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
+    @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
   ) {}
 
   async getProfileByUserId(userId: string) {
@@ -27,11 +29,10 @@ export class UserService {
         currentUserId = id;
       }
       if (id !== currentUserId) throw new ForbiddenException('Недостаточно прав');
-      const profilePhotoBlurhash = accountDto.profilePhoto
-        ? await blurhashFromUrl(accountDto.profilePhoto, this.latencyMetrics)
-        : null;
+      const profilePhoto = await this.promoteProfilePhoto(id, accountDto.profilePhoto);
+      const profilePhotoBlurhash = profilePhoto ? await blurhashFromUrl(profilePhoto, this.latencyMetrics) : null;
       return await this.prisma.profile.create({
-        data: { ...accountDto, profilePhotoBlurhash, userId: id },
+        data: { ...accountDto, profilePhoto, profilePhotoBlurhash, userId: id },
       });
     } catch (error) {
       handleServiceError(error);
@@ -45,8 +46,12 @@ export class UserService {
         accountDto = currentUserId as UserDto;
         currentUserId = profileId;
       }
-      const profilePhotoBlurhash = accountDto.profilePhoto
-        ? await blurhashFromUrl(accountDto.profilePhoto, this.latencyMetrics)
+      const profilePhotoOwnerId = hasImplicitOwner
+        ? (await this.prisma.profile.findUnique({ where: { id: profileId }, select: { userId: true } }))?.userId
+        : (currentUserId as string);
+      const profilePhoto = await this.promoteProfilePhoto(profilePhotoOwnerId, accountDto.profilePhoto);
+      const profilePhotoBlurhash = profilePhoto
+        ? await blurhashFromUrl(profilePhoto, this.latencyMetrics)
         : accountDto.profilePhoto === null
           ? null
           : undefined;
@@ -54,6 +59,7 @@ export class UserService {
         where: hasImplicitOwner ? { id: profileId } : { id: profileId, userId: currentUserId as string },
         data: {
           ...accountDto,
+          ...(profilePhoto !== undefined ? { profilePhoto } : {}),
           ...(hasImplicitOwner ? {} : { profilePhotoBlurhash }),
           updatedAt: new Date(),
         },
@@ -75,13 +81,15 @@ export class UserService {
         targetUserId = currentUserId;
       }
 
-      const profilePhotoBlurhash = accountDto.profilePhoto
-        ? await blurhashFromUrl(accountDto.profilePhoto, this.latencyMetrics)
+      const profilePhoto = await this.promoteProfilePhoto(targetUserId, accountDto.profilePhoto);
+      const profilePhotoBlurhash = profilePhoto
+        ? await blurhashFromUrl(profilePhoto, this.latencyMetrics)
         : accountDto.profilePhoto === null
           ? null
           : undefined;
       const data = {
         ...accountDto,
+        ...(profilePhoto !== undefined ? { profilePhoto } : {}),
         ...(profilePhotoBlurhash !== undefined ? { profilePhotoBlurhash } : {}),
         updatedAt: new Date(),
       };
@@ -94,5 +102,10 @@ export class UserService {
     } catch (error) {
       handleServiceError(error);
     }
+  }
+
+  private async promoteProfilePhoto(userId: string | undefined, profilePhoto: UserDto['profilePhoto']) {
+    if (!userId || !profilePhoto || !this.storageService) return profilePhoto;
+    return await this.storageService.promoteProfilePhoto(userId, profilePhoto);
   }
 }

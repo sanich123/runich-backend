@@ -22,7 +22,6 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-      - migration_archives:/usr/src/app/dist/receivedArchive
 
   background_worker:
     build:
@@ -43,8 +42,3 @@ services:
       TZ: UTC
       RUNICH_PROCESS: worker
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}
-    volumes:
-      - migration_archives:/usr/src/app/dist/receivedArchive
-
-volumes:
-  migration_archives:

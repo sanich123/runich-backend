@@ -91,7 +91,7 @@ describe('ActivityService', () => {
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const storage = {
       uploadActivityRoute: asyncMock().mockResolvedValue({
-        key: 'user-1/activities/activity-1/route-v1.json.gz',
+        key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
         formatVersion: 1,
         pointCount: 1,
         sizeBytes: 123,
@@ -110,7 +110,7 @@ describe('ActivityService', () => {
     expect(storage.uploadActivityRoute).toHaveBeenCalledWith('user-1', expect.any(String), locations);
     expect(prisma.activity.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        routeStorageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+        routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
         routeFormatVersion: 1,
         routePointCount: 1,
         routeSizeBytes: 123,
@@ -126,7 +126,9 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const storage = {
-      uploadActivityRoute: asyncMock().mockResolvedValue({ key: 'user-1/activities/activity-1/route-v1.json.gz' }),
+      uploadActivityRoute: asyncMock().mockResolvedValue({
+        key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      }),
       deleteObjectByKey: asyncMock(),
     };
     const service = new ActivityService(prisma as never, account as never, undefined, storage as never);
@@ -139,7 +141,9 @@ describe('ActivityService', () => {
       ),
     );
 
-    expect(storage.deleteObjectByKey).toHaveBeenCalledWith('user-1/activities/activity-1/route-v1.json.gz');
+    expect(storage.deleteObjectByKey).toHaveBeenCalledWith(
+      'user-1/activities/activity-1/locations/locations-v1.json.gz',
+    );
   });
 
   it('queues every S3 object linked to an activity before deleting its row', async () => {
@@ -150,7 +154,7 @@ describe('ActivityService', () => {
     prisma.$transaction.mockImplementation((async (callback: (client: unknown) => Promise<unknown>) =>
       callback(transaction)) as never);
     transaction.activity.findFirst.mockResolvedValue({
-      routeStorageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
       photoVideoUrls: [
         {
           url: 'https://s3.twcstorage.ru/runich-test/user-1/photo.jpg',
@@ -171,7 +175,7 @@ describe('ActivityService', () => {
 
     expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith(
       'user-1',
-      'user-1/activities/activity-1/route-v1.json.gz',
+      'user-1/activities/activity-1/locations/locations-v1.json.gz',
       transaction,
     );
     expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith('user-1', 'user-1/photo.jpg', transaction);
@@ -184,7 +188,7 @@ describe('ActivityService', () => {
     const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
     const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
     prisma.activity.findUnique.mockResolvedValue({
-      routeStorageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
       kilometresSplit: [],
       userId: 'user-1',
       isPublic: false,
@@ -194,7 +198,9 @@ describe('ActivityService', () => {
       locations: [{ coords: { latitude: 55, longitude: 37 } }],
       kilometresSplit: [],
     });
-    expect(storage.readActivityRoute).toHaveBeenCalledWith('user-1/activities/activity-1/route-v1.json.gz');
+    expect(storage.readActivityRoute).toHaveBeenCalledWith(
+      'user-1/activities/activity-1/locations/locations-v1.json.gz',
+    );
   });
 
   it('generates a title from the activity time and sport when title is missing', async () => {
@@ -301,7 +307,7 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const storage = {
       uploadActivityRoute: asyncMock().mockResolvedValue({
-        key: 'user-1/activities/activity-1/route-v1.json.gz',
+        key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
         formatVersion: 1,
         pointCount: 2,
         sizeBytes: 123,
@@ -337,7 +343,7 @@ describe('ActivityService', () => {
         expect.objectContaining({
           id: 'activity-1',
           description: 'Imported activity description',
-          routeStorageKey: 'user-1/activities/activity-1/route-v1.json.gz',
+          routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
           routeFormatVersion: 1,
           routePointCount: 2,
           routeSizeBytes: 123,

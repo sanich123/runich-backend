@@ -158,11 +158,24 @@ email links. It must point to the frontend belonging to the current
 environment, for example `https://runich.netlify.app/login-from-url` in
 production or `https://stage--runich.netlify.app/login-from-url` in stage.
 
-Stage uses its own S3 bucket (`runich-stage`) and production uses a separate
-bucket. Photo writes are enabled in both environments. Mock data is created
-automatically only in local and stage; production never runs the mock seed.
-Set `RUNICH_PROCESS=worker` for the background worker so it does not run the
-mock seed a second time.
+Stage uses its own S3 bucket (`runich-stage`) and production uses
+`runich-production`. Photo writes are enabled in both environments. Mock data
+is created automatically only in local and stage; production never runs the
+mock seed. Set `RUNICH_PROCESS=worker` for the background worker so it does not
+run the mock seed a second time.
+
+S3 object keys use stable resource prefixes:
+
+- `<userId>/uploads/...` — temporary uploads before they are attached to a resource;
+- `<userId>/profile/...` — profile photos;
+- `<userId>/activities/<activityId>/photos/...` — activity photos and video thumbnails;
+- `<userId>/activities/<activityId>/locations/...` — compressed activity locations;
+- `<userId>/migrations/<migrationId>/archive.zip` — Strava migration archives.
+
+The API removes temporary local migration files after uploading them to S3. The
+worker downloads an archive to its own temporary filesystem, processes it, and
+removes the S3 object after a terminal status. An interrupted job keeps its S3
+archive so the worker can resume it.
 
 ### Stage feed load-test
 
@@ -215,6 +228,14 @@ variables in both services, using the stage-only Timeweb bucket:
 
 Keep the S3 access key and secret in Railway variables. They are not committed
 to `.env.example` or copied from the local `.env` file.
+
+Production on Timeweb uses the same endpoint and region with:
+
+    APP_ENV=production
+    S3_ENDPOINT=https://s3.twcstorage.ru
+    S3_REGION=ru-1
+    S3_BUCKET=runich-production
+    S3_PUBLIC_URL=https://q0tsp3wn9v.cdn.twcstorage.ru
 
 ## Commands
 
@@ -317,11 +338,11 @@ The endpoint inventory is in `doc/api.yaml`; Swagger at `/api` is the authoritat
 Strava archive migration is asynchronous. `POST /activity/migration-strava/:id`
 returns HTTP 202 with a `jobId`; poll
 `GET /activity/migration-strava/jobs/:jobId` for status and progress. The API
-only stores the upload and queues the job. A separate worker extracts the
-archive and commits each activity batch together with its progress, so a worker
-restart resumes from the last committed batch. Docker Compose stores queued
-archives in a shared named volume and limits the worker to half a CPU by
-default.
+uploads the archive to S3 and queues the job. A separate worker downloads and
+extracts the archive, then commits each activity batch together with its
+progress, so a worker restart resumes from the last committed batch. Docker
+Compose is not used to share migration archives between API and worker; S3 is
+the durable handoff. The worker is limited to half a CPU by default.
 
 Photo and video uploads use `POST /photo` with a `file` multipart field. The
 backend keeps S3 credentials private and returns a public object URL. `DELETE

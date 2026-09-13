@@ -104,8 +104,8 @@ jobs:
                 && test "$(docker compose -f docker-compose.timeweb.yml ps --status running --services background_worker)" = \
                   "background_worker"; then
                 echo "Deployment is healthy at commit $DEPLOY_SHA"
-                # Keep the migration-archive volume intact; PostgreSQL is an
-                # external Timeweb DBaaS service and has no Docker volume here.
+                # PostgreSQL is an external Timeweb DBaaS service and has no
+                # Docker volume here. Migration archives live in S3.
                 # --remove-orphans above removes services retired from Compose;
                 # this prune removes their now-unused images and other Docker data.
                 docker system prune --all --force || echo 'Docker cleanup failed; keeping the healthy deployment.' >&2

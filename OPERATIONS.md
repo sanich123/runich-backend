@@ -19,24 +19,24 @@ ssh runich-timeweb 'cd /opt/runich-backend/project && docker compose -f docker-c
 
 Production Compose (`docker-compose.timeweb.yml`) использует следующие сервисы:
 
-| Сервис                      | Назначение                       |
-| --------------------------- | -------------------------------- |
-| `nestjs_app`                | HTTP API                         |
-| `background_worker`         | Миграции Strava, blurhash и очистка S3 |
+| Сервис              | Назначение                             |
+| ------------------- | -------------------------------------- |
+| `nestjs_app`        | HTTP API                               |
+| `background_worker` | Миграции Strava, blurhash и очистка S3 |
 
 ## Быстрый выбор команды
 
 Все следующие команды выполняются после перехода в `/opt/runich-backend/project`.
 
-| Что посмотреть               | Команда                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------- |
-| Состояние контейнеров        | `docker compose -f docker-compose.timeweb.yml ps`                         |
-| Все свежие логи              | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200`         |
-| Логи API                     | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200 nestjs_app` |
-| Логи background worker       | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200 background_worker` |
-| API и worker вместе          | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200 nestjs_app background_worker` |
+| Что посмотреть               | Команда                                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| Состояние контейнеров        | `docker compose -f docker-compose.timeweb.yml ps`                                               |
+| Все свежие логи              | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200`                               |
+| Логи API                     | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200 nestjs_app`                    |
+| Логи background worker       | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200 background_worker`             |
+| API и worker вместе          | `docker compose -f docker-compose.timeweb.yml logs -f --tail=200 nestjs_app background_worker`  |
 | Логи за последние 30 минут   | `docker compose -f docker-compose.timeweb.yml logs -t --since=30m nestjs_app background_worker` |
-| Текущее потребление ресурсов | `docker stats --no-stream`                                                |
+| Текущее потребление ресурсов | `docker stats --no-stream`                                                                      |
 
 `Ctrl+C` прекращает просмотр через `logs -f`, но не останавливает контейнеры.
 
@@ -267,9 +267,21 @@ docker compose -f docker-compose.timeweb.yml images
 docker compose -f docker-compose.timeweb.yml ps
 ```
 
-Параметры миграции зафиксированы в коде: архивы находятся в
-`./dist/receivedArchive`, размер batch — 8, пауза — 25 мс, polling — 10 секунд,
-лимит worker — 0.50 CPU. Они не передаются через `.env`.
+Параметры миграции зафиксированы в коде: входящий upload временно находится в
+`./dist/receivedArchive`, затем архив загружается в S3 под ключом
+`<userId>/migrations/<migrationId>/archive.zip`. Worker скачивает его во
+временный файл, а после terminal status удаляет S3-объект. Размер batch — 8,
+пауза — 25 мс, polling — 10 секунд, лимит worker — 0.50 CPU. Они не
+передаются через `.env`.
+
+Production S3 должен использовать отдельный бакет `runich-production`:
+
+```text
+S3_ENDPOINT=https://s3.twcstorage.ru
+S3_REGION=ru-1
+S3_BUCKET=runich-production
+S3_PUBLIC_URL=https://q0tsp3wn9v.cdn.twcstorage.ru
+```
 
 Не выводите весь `.env` и не публикуйте вывод `docker compose config`: он может содержать production-секреты.
 

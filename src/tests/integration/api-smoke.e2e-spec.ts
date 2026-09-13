@@ -489,7 +489,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       title: 'E2E run',
       description: 'Imported in e2e',
       profileId: ownerProfileId,
-      routeStorageKey: expect.stringContaining(`/activities/${importedActivity!.id}/route-v1.json.gz`),
+      routeStorageKey: expect.stringContaining(`/activities/${importedActivity!.id}/locations/locations-v1.json.gz`),
     });
     await request(app.getHttpServer())
       .get(`/activity/${importedActivity!.id}/locations`)
