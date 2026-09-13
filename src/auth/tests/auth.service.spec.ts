@@ -320,7 +320,7 @@ describe('AuthService', () => {
     dependencies.prisma.user.update.mockResolvedValue({});
 
     await expect(service.getEmailCodeForPassword(' USER@EXAMPLE.COM ')).resolves.toEqual({
-      message: 'Код для смены email был выслан на указанную почту',
+      message: 'Код для смены пароля был выслан на указанную почту',
     });
 
     expect(dependencies.prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'user@example.com' } });
