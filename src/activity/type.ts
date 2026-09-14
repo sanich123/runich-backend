@@ -29,6 +29,8 @@ export type MigratedActivity = ActivityDto & {
   profileId: string;
   source: 'strava';
   sourceActivityId: string;
+  /** Elevation gain calculated by Strava and stored in activities.csv. */
+  sourceElevationGain?: number;
 };
 
 export type MigrationProgress = Pick<MigrationJob, 'processedActivities' | 'importedActivities' | 'skippedActivities'>;

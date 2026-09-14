@@ -29,7 +29,7 @@ import {
   normalizeActivityDetails,
   omitMediaProcessingStatus,
 } from './utils';
-import type { ActivityFeedSqlRow } from './type';
+import type { ActivityFeedSqlRow, MigratedActivity } from './type';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { StorageService } from 'src/storage/storage.service';
 import type { ActivityDatabase } from './activity-persistence.service';
@@ -146,12 +146,7 @@ export class ActivityService {
   }
 
   async createActivitiesFromMigrationArchive(
-    activities: (ActivityDto & {
-      userId: string;
-      profileId: string;
-      source: 'strava';
-      sourceActivityId: string;
-    })[],
+    activities: Omit<MigratedActivity, 'id'>[],
     database: ActivityDatabase = this.prisma,
   ) {
     try {
@@ -482,13 +477,21 @@ export class ActivityService {
     }
   }
 
-  private async prepareActivityRoute<T extends ActivityDto & { userId: string; profileId: string }>(activity: T) {
-    const elevationGain = activity.locations?.length
-      ? getElevationGainFromLocations(activity.locations)
-      : getElevationGainFromKilometreSplits(activity.kilometresSplit);
+  private async prepareActivityRoute<
+    T extends ActivityDto & { userId: string; profileId: string; sourceElevationGain?: number },
+  >(activity: T) {
+    const { sourceElevationGain } = activity;
+    const hasSourceElevationGain =
+      typeof sourceElevationGain === 'number' && Number.isFinite(sourceElevationGain) && sourceElevationGain >= 0;
+    const elevationGain = hasSourceElevationGain
+      ? sourceElevationGain
+      : activity.locations?.length
+        ? getElevationGainFromLocations(activity.locations)
+        : getElevationGainFromKilometreSplits(activity.kilometresSplit);
     if (!activity.locations?.length || !this.storageService) {
       const dataWithoutLocations = { ...activity };
       delete dataWithoutLocations.locations;
+      delete dataWithoutLocations.sourceElevationGain;
       return {
         data: {
           ...dataWithoutLocations,
@@ -506,6 +509,7 @@ export class ActivityService {
     );
     const dataWithoutLocations = { ...activity };
     delete dataWithoutLocations.locations;
+    delete dataWithoutLocations.sourceElevationGain;
     return {
       data: {
         ...dataWithoutLocations,

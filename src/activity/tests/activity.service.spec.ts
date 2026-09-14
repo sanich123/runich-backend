@@ -303,6 +303,36 @@ describe('ActivityService', () => {
     });
   });
 
+  it('uses Strava elevation gain from the migration CSV for imported routes', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.createMany.mockResolvedValue({ count: 1 });
+
+    await service.createActivitiesFromMigrationArchive([
+      {
+        ...activityDto,
+        userId: 'user-1',
+        profileId: 'profile-1',
+        source: 'strava',
+        sourceActivityId: '4690482415',
+        sourceElevationGain: 42.2,
+        locations: [
+          { coords: { latitude: 55.627, longitude: 37.307, altitude: 204 } },
+          { coords: { latitude: 55.628, longitude: 37.306, altitude: 313 } },
+        ],
+      },
+    ]);
+
+    expect(prisma.activity.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ elevationGain: 42.2 })],
+      skipDuplicates: true,
+    });
+    const createManyCalls = prisma.activity.createMany.mock.calls as unknown as Array<
+      [{ data: Record<string, unknown>[] }]
+    >;
+    expect(createManyCalls[0]?.[0]?.data[0]).not.toHaveProperty('sourceElevationGain');
+  });
+
   it('uploads imported activity routes and stores only their metadata', async () => {
     const prisma = createPrismaMock();
     const storage = {

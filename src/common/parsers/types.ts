@@ -8,6 +8,7 @@ export type RawStravaCsvColumns = {
   'Elapsed Time': number;
   'Moving Time'?: number;
   Distance: number;
+  'Elevation Gain'?: number | string;
 };
 
 export enum Extensions {
