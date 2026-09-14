@@ -3416,15 +3416,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/jwt@npm:12.0.1":
-  version: 12.0.1
-  resolution: "@nestjs/jwt@npm:12.0.1"
+"@nestjs/jwt@npm:12.0.2":
+  version: 12.0.2
+  resolution: "@nestjs/jwt@npm:12.0.2"
   dependencies:
     "@types/jsonwebtoken": "npm:9.0.10"
     jsonwebtoken: "npm:9.0.3"
   peerDependencies:
     "@nestjs/common": ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0
-  checksum: 10c0/35f79f8704ffd276ddc0156910108e8350251f599ea6a59fb1368ef45b1b9153f24306c8a121ddd2f3748fab36660b78d36bb785f5c81dd344075c0abdcc3d22
+  checksum: 10c0/72e2dc1ef6b502feacfb487ccdcf4d3bab173bb034a452f171f97ac6ca66a88ba4913d56996abff5ed489a6fb6ae7feba57947086caec13e84f013d474840263
   languageName: node
   linkType: hard
 
@@ -5499,12 +5499,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^26.5.0":
-  version: 26.5.0
-  resolution: "@types/node@npm:26.5.0"
+"@types/node@npm:^26.5.1":
+  version: 26.5.1
+  resolution: "@types/node@npm:26.5.1"
   dependencies:
     undici-types: "npm:~8.9.0"
-  checksum: 10c0/1ab105dfe717f6442092ad8732d25d115fcf44596bb64009b3a6eb2dd988aef9ea76ad8a372e88cdf28800161681e1597c779451bade4428801f1a34129e5e37
+  checksum: 10c0/40aa7aa4c099c8a08bf39b5bcb15eaf2cc073666c2191b1d9ac8243ce6b68b23ace904a044c521f6d310b70e94514b531be5f4fc184f141a7ce7f0679ebc7bb3
   languageName: node
   linkType: hard
 
@@ -10578,7 +10578,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"js-yaml@npm:5.4.1, js-yaml@npm:^5.4.1":
+"js-yaml@npm:5.4.1":
   version: 5.4.1
   resolution: "js-yaml@npm:5.4.1"
   dependencies:
@@ -10598,6 +10598,17 @@ __metadata:
   bin:
     js-yaml: bin/js-yaml.js
   checksum: 10c0/6c693b8c59ffe12021df3b36994b090df19d920826dd810baab81652b40861e1974509dd11fe92225ab4c00cc14de053300c94db015c2c0e211edea39b118737
+  languageName: node
+  linkType: hard
+
+"js-yaml@npm:^5.4.2":
+  version: 5.4.2
+  resolution: "js-yaml@npm:5.4.2"
+  dependencies:
+    argparse: "npm:^2.0.1"
+  bin:
+    js-yaml: bin/js-yaml.mjs
+  checksum: 10c0/ba7e0f72c93c7a84eca2c3de45d2a9188b16a20e83f036df723a3ac29e841496382d0b0849592f63028d1c640bcc5b65f88800da342f47469b5b99bda5c75bfc
   languageName: node
   linkType: hard
 
@@ -11440,15 +11451,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"multer@npm:^2.3.0":
-  version: 2.3.0
-  resolution: "multer@npm:2.3.0"
+"multer@npm:^2.4.0":
+  version: 2.4.0
+  resolution: "multer@npm:2.4.0"
   dependencies:
     append-field: "npm:^1.0.0"
     busboy: "npm:^1.6.0"
-    concat-stream: "npm:^2.0.0"
     type-is: "npm:^1.6.18"
-  checksum: 10c0/e78fe6b1fe2132cdd33eeec4146643b906046edc1bbbcc90a43ea3d3aed6a7271272897a6d2e40e711e595a156d99b6761848a76fecca6ae3b9a7ee4892ee30c
+  checksum: 10c0/4e271959ba4c9184f26dbd98a06eeb2ee8008e8ca2d1d30cb7856f642678648c085ed064627e9db01ae07442adfd275a7124fb409335a8f754ec41df51f1f1d0
   languageName: node
   linkType: hard
 
@@ -13148,7 +13158,7 @@ __metadata:
     "@nestjs/cli": "npm:12.0.0"
     "@nestjs/common": "npm:12.0.1"
     "@nestjs/core": "npm:12.0.1"
-    "@nestjs/jwt": "npm:12.0.1"
+    "@nestjs/jwt": "npm:12.0.2"
     "@nestjs/passport": "npm:12.0.0"
     "@nestjs/platform-express": "npm:12.0.1"
     "@nestjs/schematics": "npm:12.0.1"
@@ -13164,7 +13174,7 @@ __metadata:
     "@types/express": "npm:^5.0.6"
     "@types/jest": "npm:30.0.0"
     "@types/multer": "npm:^2.2.0"
-    "@types/node": "npm:^26.5.0"
+    "@types/node": "npm:^26.5.1"
     "@types/passport-jwt": "npm:^4.0.1"
     "@types/pg": "npm:^8.23.1"
     "@types/react": "npm:^19.3.0"
@@ -13184,9 +13194,9 @@ __metadata:
     globals: "npm:^17.12.0"
     husky: "npm:^9.1.7"
     jest: "npm:^30.5.1"
-    js-yaml: "npm:^5.4.1"
+    js-yaml: "npm:^5.4.2"
     madge: "npm:^8.0.0"
-    multer: "npm:^2.3.0"
+    multer: "npm:^2.4.0"
     nodemailer: "npm:^10.0.9"
     passport: "npm:^0.7.0"
     passport-jwt: "npm:^4.0.1"
