@@ -84,6 +84,27 @@ describeIntegration('PostgreSQL auth and session e2e', () => {
     expect(sessionCount).toBe(1);
   });
 
+  it('revokes the current session through logout', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password: 'Secret123' })
+      .expect(200);
+    const accessPayload = jwtService.decode<{ sessionId?: string }>(loginResponse.body.accessToken);
+
+    await request(app.getHttpServer())
+      .post('/auth/logout')
+      .set('Authorization', `Bearer ${loginResponse.body.accessToken}`)
+      .expect(204);
+
+    const session = await prisma.userSession.findUnique({ where: { id: accessPayload!.sessionId } });
+    expect(session?.revokedAt).toBeInstanceOf(Date);
+
+    await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refreshToken: loginResponse.body.refreshToken })
+      .expect(401);
+  });
+
   it('exchanges a one-time email code for session tokens and rejects reuse', async () => {
     const code = await authTokenService.createEmailLoginCredential(userId);
 

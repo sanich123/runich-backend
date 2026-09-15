@@ -39,7 +39,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../request/auth-request';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
-import { isRussianEmailAddress, RUSSIAN_EMAIL_REGISTRATION_ERROR } from '../utils/russian-email';
+import { isRussianEmailAddress, normalizeEmail, RUSSIAN_EMAIL_REGISTRATION_ERROR } from '../utils/russian-email';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -90,12 +90,13 @@ export class AuthController {
   @ApiOkResponse({ type: MessageResponseDto })
   @ApiCreatedResponse({ type: MessageResponseDto })
   async registerUser(@Body() { email, password }: RegisterUserDto) {
-    if (!isRussianEmailAddress(email)) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!isRussianEmailAddress(normalizedEmail)) {
       throw new BadRequestException(RUSSIAN_EMAIL_REGISTRATION_ERROR);
     }
 
     const user = await this.prismaService.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       select: { emailConfirmedAt: true, authProvider: true },
     });
     if (user?.emailConfirmedAt) {
@@ -105,7 +106,7 @@ export class AuthController {
       }
       throw new ConflictException('Под этим адресом почты уже зарегистрирован пользователь');
     }
-    return this.authService.signUp(email, password);
+    return this.authService.signUp(normalizedEmail, password);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -114,9 +115,10 @@ export class AuthController {
   @ApiBody({ type: RegisterUserDto })
   @ApiOkResponse({ type: LoginResponseDto })
   async login(@Body() { email, password }: RegisterUserDto, @Req() request?: Request) {
+    const normalizedEmail = normalizeEmail(email);
     return request
-      ? this.authService.login(email, password, this.getSessionMetadata(request))
-      : this.authService.login(email, password);
+      ? this.authService.login(normalizedEmail, password, this.getSessionMetadata(request))
+      : this.authService.login(normalizedEmail, password);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -136,6 +138,15 @@ export class AuthController {
     return request
       ? this.authService.refreshAccessToken(refreshToken, this.getSessionMetadata(request))
       : this.authService.refreshAccessToken(refreshToken);
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
+  @ApiResponse({ status: HttpStatus.NO_CONTENT, schema: { type: 'null' }, description: 'No response body' })
+  async logout(@Req() request: AuthenticatedRequest) {
+    await this.authService.logout(request.user.id, request.user.sessionId);
   }
 
   @Patch('session/location')

@@ -113,6 +113,15 @@ export class AuthTokenService {
     return { userId, accessToken: this.createAccessToken(userId, sessionId), refreshToken };
   }
 
+  async revokeSession(userId: string, sessionId: string) {
+    if (!this.prisma) return;
+
+    await this.prisma.userSession.updateMany({
+      where: { id: sessionId, userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   async refreshAccessToken(refreshToken: string, metadata: SessionMetadata = {}) {
     try {
       const tokenInfo = this.jwtService.verify<{ userId?: string; type?: string; sessionId?: string }>(refreshToken);

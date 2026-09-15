@@ -20,6 +20,8 @@ import { YandexAuthService } from './yandex-auth.service';
 import { AuthEmailService } from './auth-email.service';
 import { VkAuthService } from './vk-auth.service';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
+import { normalizeEmail } from '../utils/russian-email';
+import { CONFIRMATION_CODE_TTL_MS } from '../constants/auth.constants';
 
 @Injectable()
 export class AuthService {
@@ -73,14 +75,15 @@ export class AuthService {
 
   async signUp(email: string, password: string) {
     try {
-      const user = await this.prisma.user.findUnique({ where: { email } });
+      const normalizedEmail = normalizeEmail(email);
+      const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
 
       if (user && !user?.emailConfirmedAt) {
         const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
         const confirmationCode = getRandomInt(1, 100000);
-        await this.sendConfirmationEmail(email, confirmationCode, loginCredential);
+        await this.sendConfirmationEmail(normalizedEmail, confirmationCode, loginCredential);
         await this.prisma.user.update({
-          where: { email },
+          where: { email: normalizedEmail },
           data: { confirmationSentAt: new Date(), confirmationToken: `${confirmationCode}` },
         });
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
@@ -90,7 +93,7 @@ export class AuthService {
 
         const user = await this.prisma.user.create({
           data: {
-            email,
+            email: normalizedEmail,
             encryptedPassword: hashedPassword,
             confirmationToken: `${confirmationCode}`,
             confirmationSentAt: new Date(),
@@ -99,7 +102,7 @@ export class AuthService {
           },
         });
         const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
-        await this.sendConfirmationEmail(email, confirmationCode, loginCredential);
+        await this.sendConfirmationEmail(normalizedEmail, confirmationCode, loginCredential);
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       }
     } catch (error) {
@@ -123,9 +126,12 @@ export class AuthService {
 
   async login(email: string, password: string, metadata: SessionMetadata = {}) {
     try {
-      const user = await this.prisma.user.findUnique({ where: { email } });
+      const normalizedEmail = normalizeEmail(email);
+      const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user) {
-        throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
+        throw new NotFoundException(
+          `Такой email адрес не зарегистрирован ни на одного пользователя: ${normalizedEmail}`,
+        );
       } else {
         if (user.authProvider === 'YANDEX' || user.authProvider === 'VK') {
           const providerName = user.authProvider === 'VK' ? 'VK' : 'Яндекс';
@@ -138,7 +144,7 @@ export class AuthService {
           throw new UnauthorizedException('Неправильный пароль');
         }
         if (!user.emailConfirmedAt) {
-          this.logger.warn(`Вход отклонён: учётная запись не подтверждена (${email})`);
+          this.logger.warn(`Вход отклонён: учётная запись не подтверждена (${normalizedEmail})`);
           throw new UnauthorizedException('Данная учетная запись не подтверждена');
         }
         await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
@@ -183,6 +189,14 @@ export class AuthService {
     return this.tokenService.refreshAccessToken(refreshToken, metadata);
   }
 
+  async logout(userId: string, sessionId?: string) {
+    try {
+      if (sessionId) await this.tokenService.revokeSession(userId, sessionId);
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }
+
   async deleteUser(userId: string) {
     try {
       const deletedUser = await this.prisma.$transaction(
@@ -210,17 +224,38 @@ export class AuthService {
 
   async confirmEmailByCode(confirmationCode: string, email: string) {
     try {
-      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedEmail = normalizeEmail(email);
       const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user) {
         throw new NotFoundException(`Такой email адрес не зарегистрирован ни на одного пользователя: ${email}`);
       }
-      if (confirmationCode !== user?.confirmationToken) {
-        throw new BadRequestException('Код подтверждения не соответствует высланному');
-      } else {
-        await this.prisma.user.update({ where: { email: normalizedEmail }, data: { emailConfirmedAt: new Date() } });
-        return this.tokenService.createSessionTokens(user.id);
+      if (user.emailConfirmedAt) {
+        throw new BadRequestException('Email уже подтверждён');
       }
+      if (confirmationCode !== user.confirmationToken) {
+        throw new BadRequestException('Код подтверждения не соответствует высланному');
+      }
+
+      const now = new Date();
+      const confirmationSentAt = user.confirmationSentAt ? new Date(user.confirmationSentAt).getTime() : 0;
+      if (!confirmationSentAt || now.getTime() - confirmationSentAt > CONFIRMATION_CODE_TTL_MS) {
+        throw new BadRequestException('Срок действия кода подтверждения истёк');
+      }
+
+      const consumed = await this.prisma.user.updateMany({
+        where: {
+          email: normalizedEmail,
+          confirmationToken: confirmationCode,
+          emailConfirmedAt: null,
+          confirmationSentAt: { gt: new Date(now.getTime() - CONFIRMATION_CODE_TTL_MS) },
+        },
+        data: { emailConfirmedAt: now, confirmationToken: null },
+      });
+      if (consumed.count !== 1) {
+        throw new BadRequestException('Код подтверждения недействителен или уже использован');
+      }
+
+      return this.tokenService.createSessionTokens(user.id);
     } catch (error) {
       handleServiceError(error);
     }

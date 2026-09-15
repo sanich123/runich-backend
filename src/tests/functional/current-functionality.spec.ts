@@ -100,7 +100,13 @@ describe('authentication', () => {
   });
 
   it('confirms email by code and verifies tokens', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'user-1', confirmationToken: '1234' });
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      confirmationToken: '1234',
+      confirmationSentAt: new Date(),
+      emailConfirmedAt: null,
+    });
+    prisma.user.updateMany.mockResolvedValue({ count: 1 });
     prisma.user.update.mockResolvedValue({});
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
       accessToken: 'jwt',
