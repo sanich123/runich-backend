@@ -1015,6 +1015,272 @@ export type StorageColumnInputTypes = {
     };
   };
 };
+
+export namespace Models {
+  export type public_User = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    instanceId: CodecTypes['pg/uuid@1']['output'] | null;
+    aud: Varchar<255> | null;
+    role: Varchar<255> | null;
+    email: Varchar<255>;
+    encryptedPassword: Varchar<255> | null;
+    emailConfirmedAt: TimestamptzString<6> | null;
+    invitedAt: TimestamptzString<6> | null;
+    confirmationToken: Varchar<255> | null;
+    confirmationSentAt: TimestamptzString<6> | null;
+    recoveryToken: Varchar<255> | null;
+    recoverySentAt: TimestamptzString<6> | null;
+    emailChangeTokenNew: Varchar<255> | null;
+    emailChange: Varchar<255> | null;
+    emailChangeSentAt: TimestamptzString<6> | null;
+    lastSignInAt: TimestamptzString<6> | null;
+    rawAppMetaData: CodecTypes['pg/jsonb@1']['output'] | null;
+    rawUserMetaData: CodecTypes['pg/jsonb@1']['output'] | null;
+    isSuperAdmin: CodecTypes['pg/bool@1']['output'] | null;
+    createdAt: TimestamptzString<6> | null;
+    updatedAt: TimestamptzString<6> | null;
+    phone: CodecTypes['pg/text@1']['output'] | null;
+    phoneConfirmedAt: TimestamptzString<6> | null;
+    phoneChange: CodecTypes['pg/text@1']['output'] | null;
+    phoneChangeToken: Varchar<255> | null;
+    phoneChangeSentAt: TimestamptzString<6> | null;
+    emailChangeTokenCurrent: Varchar<255> | null;
+    emailChangeConfirmStatus: CodecTypes['pg/int2@1']['output'] | null;
+    bannedUntil: TimestamptzString<6> | null;
+    reauthenticationToken: Varchar<255> | null;
+    reauthenticationSentAt: TimestamptzString<6> | null;
+    deletedAt: TimestamptzString<6> | null;
+    authProvider: Varchar<32> | null;
+    activities: public_Activity[];
+    activityMigrationJobs: public_ActivityMigrationJob[];
+    authExchanges: public_AuthExchange[];
+    friends: public_Friend[];
+    profile: public_Profile | null;
+    userSessions: public_UserSession[];
+    readonly [RelationKeys]?:
+      | 'activities'
+      | 'activityMigrationJobs'
+      | 'authExchanges'
+      | 'friends'
+      | 'profile'
+      | 'userSessions';
+  };
+  export type public_Profile = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    createdAt: TimestamptzString<6>;
+    name: CodecTypes['pg/text@1']['output'] | null;
+    userId: CodecTypes['pg/uuid@1']['output'];
+    bio: CodecTypes['pg/text@1']['output'] | null;
+    birthday: CodecTypes['pg/date-string@1']['output'] | null;
+    city: CodecTypes['pg/text@1']['output'] | null;
+    gender: CodecTypes['pg/text@1']['output'] | null;
+    profilePhoto: CodecTypes['pg/text@1']['output'] | null;
+    sport: CodecTypes['pg/text@1']['output'] | null;
+    surname: CodecTypes['pg/text@1']['output'] | null;
+    updatedAt: TimestamptzString<6> | null;
+    weight: CodecTypes['pg/text@1']['output'] | null;
+    email: CodecTypes['pg/text@1']['output'] | null;
+    language: CodecTypes['pg/text@1']['output'] | null;
+    emailNotifications: CodecTypes['pg/bool@1']['output'] | null;
+    profilePhotoBlurhash: CodecTypes['pg/text@1']['output'] | null;
+    activities: public_Activity[];
+    activityMigrationJobs: public_ActivityMigrationJob[];
+    commentLikes: public_CommentLike[];
+    comments: public_Comment[];
+    friends: public_Friend[];
+    likes: public_Like[];
+    user: public_User;
+    readonly [RelationKeys]?:
+      | 'activities'
+      | 'activityMigrationJobs'
+      | 'commentLikes'
+      | 'comments'
+      | 'friends'
+      | 'likes'
+      | 'user';
+  };
+  export type public_Activity = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    date: TimestamptzString<6>;
+    createdAt: TimestamptzString<6>;
+    updatedAt: TimestamptzString<6>;
+    description: CodecTypes['pg/text@1']['output'] | null;
+    distance: CodecTypes['pg/float8@1']['output'];
+    elevationGain: CodecTypes['pg/float8@1']['output'] | null;
+    duration: CodecTypes['pg/int4@1']['output'];
+    emotion: CodecTypes['pg/text@1']['output'] | null;
+    routeStorageKey: Varchar<512> | null;
+    routeFormatVersion: CodecTypes['pg/int4@1']['output'] | null;
+    routePointCount: CodecTypes['pg/int4@1']['output'] | null;
+    routeSizeBytes: CodecTypes['pg/int4@1']['output'] | null;
+    routeChecksum: Varchar<64> | null;
+    userId: CodecTypes['pg/uuid@1']['output'];
+    speed: CodecTypes['pg/float8@1']['output'];
+    sport: CodecTypes['pg/text@1']['output'];
+    title: CodecTypes['pg/text@1']['output'] | null;
+    kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
+    mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
+    photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
+    mediaProcessingStatus: Varchar<16>;
+    isPublic: CodecTypes['pg/bool@1']['output'] | null;
+    mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
+    profileId: CodecTypes['pg/uuid@1']['output'];
+    source: Varchar<32> | null;
+    sourceActivityId: Varchar<128> | null;
+    steps: CodecTypes['pg/int4@1']['output'] | null;
+    comments: public_Comment[];
+    likes: public_Like[];
+    profile: public_Profile;
+    user: public_User;
+    readonly [RelationKeys]?: 'comments' | 'likes' | 'profile' | 'user';
+  };
+  export type public_ActivityMigrationJob = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    userId: CodecTypes['pg/uuid@1']['output'];
+    profileId: CodecTypes['pg/uuid@1']['output'];
+    archivePath: Varchar<2048>;
+    status: Varchar<32>;
+    totalActivities: CodecTypes['pg/int4@1']['output'];
+    processedActivities: CodecTypes['pg/int4@1']['output'];
+    importedActivities: CodecTypes['pg/int4@1']['output'];
+    skippedActivities: CodecTypes['pg/int4@1']['output'];
+    errorMessage: CodecTypes['pg/text@1']['output'] | null;
+    createdAt: TimestamptzString<6>;
+    startedAt: TimestamptzString<6> | null;
+    finishedAt: TimestamptzString<6> | null;
+    profile: public_Profile;
+    user: public_User;
+    readonly [RelationKeys]?: 'profile' | 'user';
+  };
+  export type public_AuthExchange = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    userId: CodecTypes['pg/uuid@1']['output'];
+    codeHash: Varchar<128>;
+    purpose: Varchar<32>;
+    expiresAt: TimestamptzString<6>;
+    consumedAt: TimestamptzString<6> | null;
+    createdAt: TimestamptzString<6>;
+    user: public_User;
+    readonly [RelationKeys]?: 'user';
+  };
+  export type public_Comment = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    date: TimestamptzString<6>;
+    comment: CodecTypes['pg/text@1']['output'];
+    authorId: CodecTypes['pg/text@1']['output'];
+    activityId: CodecTypes['pg/uuid@1']['output'];
+    profileId: CodecTypes['pg/uuid@1']['output'];
+    activity: public_Activity;
+    commentLikes: public_CommentLike[];
+    profile: public_Profile;
+    readonly [RelationKeys]?: 'activity' | 'commentLikes' | 'profile';
+  };
+  export type public_CommentLike = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    date: TimestamptzString<6>;
+    authorId: CodecTypes['pg/text@1']['output'];
+    commentId: CodecTypes['pg/uuid@1']['output'];
+    profileId: CodecTypes['pg/uuid@1']['output'];
+    comment: public_Comment;
+    profile: public_Profile;
+    readonly [RelationKeys]?: 'comment' | 'profile';
+  };
+  export type public_Friend = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    createdAt: TimestamptzString<6>;
+    updatedAt: TimestamptzString<6>;
+    userId: CodecTypes['pg/uuid@1']['output'];
+    friendId: CodecTypes['pg/uuid@1']['output'];
+    profileId: CodecTypes['pg/uuid@1']['output'];
+    profile: public_Profile;
+    user: public_User;
+    readonly [RelationKeys]?: 'profile' | 'user';
+  };
+  export type public_Like = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    date: TimestamptzString<6>;
+    authorId: CodecTypes['pg/text@1']['output'];
+    activityId: CodecTypes['pg/uuid@1']['output'];
+    profileId: CodecTypes['pg/uuid@1']['output'];
+    activity: public_Activity;
+    profile: public_Profile;
+    readonly [RelationKeys]?: 'activity' | 'profile';
+  };
+  export type public_MediaCleanupJob = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    userId: CodecTypes['pg/uuid@1']['output'];
+    storageKey: Varchar<512> | null;
+    status: Varchar<32>;
+    errorMessage: CodecTypes['pg/text@1']['output'] | null;
+    createdAt: TimestamptzString<6>;
+    startedAt: TimestamptzString<6> | null;
+    finishedAt: TimestamptzString<6> | null;
+    readonly [RelationKeys]?: never;
+  };
+  export type public_LoadTestSeedJob = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    runId: Varchar<64>;
+    targetUserId: CodecTypes['pg/uuid@1']['output'];
+    manifestKey: Varchar<512>;
+    config: CodecTypes['pg/jsonb@1']['output'];
+    status: Varchar<32>;
+    totalUsers: CodecTypes['pg/int4@1']['output'];
+    totalActivities: CodecTypes['pg/int4@1']['output'];
+    processedActivities: CodecTypes['pg/int4@1']['output'];
+    createdActivities: CodecTypes['pg/int4@1']['output'];
+    createdLikes: CodecTypes['pg/int4@1']['output'];
+    createdComments: CodecTypes['pg/int4@1']['output'];
+    createdCommentLikes: CodecTypes['pg/int4@1']['output'];
+    errorMessage: CodecTypes['pg/text@1']['output'] | null;
+    createdAt: TimestamptzString<6>;
+    startedAt: TimestamptzString<6> | null;
+    finishedAt: TimestamptzString<6> | null;
+    readonly [RelationKeys]?: never;
+  };
+  export type public_UserSession = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    userId: CodecTypes['pg/uuid@1']['output'];
+    refreshHash: Varchar<128>;
+    deviceId: Varchar<128>;
+    deviceName: Varchar<255> | null;
+    platform: Varchar<64> | null;
+    deviceModel: Varchar<128> | null;
+    manufacturer: Varchar<128> | null;
+    osName: Varchar<64> | null;
+    osVersion: Varchar<64> | null;
+    deviceType: Varchar<64> | null;
+    appVersion: Varchar<32> | null;
+    appBuild: Varchar<32> | null;
+    userAgent: Varchar<512> | null;
+    ipAddress: Varchar<128> | null;
+    lastSeenAt: TimestamptzString<6>;
+    lastLatitude: CodecTypes['pg/float8@1']['output'] | null;
+    lastLongitude: CodecTypes['pg/float8@1']['output'] | null;
+    lastLocationAt: TimestamptzString<6> | null;
+    createdAt: TimestamptzString<6>;
+    revokedAt: TimestamptzString<6> | null;
+    user: public_User;
+    readonly [RelationKeys]?: 'user';
+  };
+}
+
+export declare const models: {
+  public: {
+    User: Models.public_User;
+    Profile: Models.public_Profile;
+    Activity: Models.public_Activity;
+    ActivityMigrationJob: Models.public_ActivityMigrationJob;
+    AuthExchange: Models.public_AuthExchange;
+    Comment: Models.public_Comment;
+    CommentLike: Models.public_CommentLike;
+    Friend: Models.public_Friend;
+    Like: Models.public_Like;
+    MediaCleanupJob: Models.public_MediaCleanupJob;
+    LoadTestSeedJob: Models.public_LoadTestSeedJob;
+    UserSession: Models.public_UserSession;
+  };
+};
+
 export type TypeMaps = TypeMapsType<
   CodecTypes,
   QueryOperationTypes,
@@ -2736,6 +3002,7 @@ type ContractBase = Omit<
                   readonly model: 'Profile';
                 };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['profileId'];
                   readonly targetFields: readonly ['id'];
@@ -2744,6 +3011,7 @@ type ContractBase = Omit<
               readonly user: {
                 readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['userId'];
                   readonly targetFields: readonly ['id'];
@@ -2867,6 +3135,7 @@ type ContractBase = Omit<
                   readonly model: 'Profile';
                 };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['profileId'];
                   readonly targetFields: readonly ['id'];
@@ -2875,6 +3144,7 @@ type ContractBase = Omit<
               readonly user: {
                 readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['userId'];
                   readonly targetFields: readonly ['id'];
@@ -2956,6 +3226,7 @@ type ContractBase = Omit<
               readonly user: {
                 readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['userId'];
                   readonly targetFields: readonly ['id'];
@@ -3014,6 +3285,7 @@ type ContractBase = Omit<
                   readonly model: 'Activity';
                 };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['activityId'];
                   readonly targetFields: readonly ['id'];
@@ -3036,6 +3308,7 @@ type ContractBase = Omit<
                   readonly model: 'Profile';
                 };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['profileId'];
                   readonly targetFields: readonly ['id'];
@@ -3089,6 +3362,7 @@ type ContractBase = Omit<
                   readonly model: 'Comment';
                 };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['commentId'];
                   readonly targetFields: readonly ['id'];
@@ -3100,6 +3374,7 @@ type ContractBase = Omit<
                   readonly model: 'Profile';
                 };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['profileId'];
                   readonly targetFields: readonly ['id'];
@@ -3160,6 +3435,7 @@ type ContractBase = Omit<
                   readonly model: 'Profile';
                 };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['profileId'];
                   readonly targetFields: readonly ['id'];
@@ -3168,6 +3444,7 @@ type ContractBase = Omit<
               readonly user: {
                 readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['userId'];
                   readonly targetFields: readonly ['id'];
@@ -3221,6 +3498,7 @@ type ContractBase = Omit<
                   readonly model: 'Activity';
                 };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['activityId'];
                   readonly targetFields: readonly ['id'];
@@ -3232,6 +3510,7 @@ type ContractBase = Omit<
                   readonly model: 'Profile';
                 };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['profileId'];
                   readonly targetFields: readonly ['id'];
@@ -3587,6 +3866,7 @@ type ContractBase = Omit<
               readonly user: {
                 readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['userId'];
                   readonly targetFields: readonly ['id'];
@@ -3903,6 +4183,7 @@ type ContractBase = Omit<
                   readonly model: 'Profile';
                 };
                 readonly cardinality: '1:1';
+                readonly nullable: true;
                 readonly on: {
                   readonly localFields: readonly ['id'];
                   readonly targetFields: readonly ['userId'];
@@ -4121,6 +4402,7 @@ type ContractBase = Omit<
               readonly user: {
                 readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
                 readonly cardinality: 'N:1';
+                readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['userId'];
                   readonly targetFields: readonly ['id'];

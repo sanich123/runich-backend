@@ -11,6 +11,7 @@ describe('AuthController', () => {
     login: asyncMock(),
     sendLoginLinkByEmail: asyncMock(),
     refreshAccessToken: syncMock(),
+    logout: asyncMock(),
     verifyToken: asyncMock(),
     confirmEmailByCode: asyncMock(),
     getEmailCodeForPassword: asyncMock(),
@@ -80,6 +81,22 @@ describe('AuthController', () => {
     expect(authService.getEmailCodeForPassword).toHaveBeenCalledWith('user@example.com');
     expect(authService.verifyPasswordChangeCode).toHaveBeenCalledWith('123456', 'user@example.com');
     expect(authService.changePassword).toHaveBeenCalledWith('NewPassword1', 'NewPassword1', 'user@example.com');
+  });
+
+  it('normalizes email before registration lookup, registration delegation and login delegation', async () => {
+    prismaService.user.findUnique.mockResolvedValue(null);
+    authService.signUp.mockResolvedValue({ message: 'sent' });
+    authService.login.mockResolvedValue({ userId: 'user-1' });
+
+    await controller.registerUser({ email: ' USER@YANDEX.RU ', password: 'secret123' });
+    await controller.login({ email: ' USER@EXAMPLE.COM ', password: 'secret123' });
+
+    expect(prismaService.user.findUnique).toHaveBeenCalledWith({
+      where: { email: 'user@yandex.ru' },
+      select: { emailConfirmedAt: true, authProvider: true },
+    });
+    expect(authService.signUp).toHaveBeenCalledWith('user@yandex.ru', 'secret123');
+    expect(authService.login).toHaveBeenCalledWith('user@example.com', 'secret123');
   });
 
   it('rejects registration for an already confirmed email', async () => {

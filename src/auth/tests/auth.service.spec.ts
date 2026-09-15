@@ -10,11 +10,18 @@ import { EmailService } from 'src/email/email.service';
 import { asyncMock, expectInternalServerError, syncMock } from 'src/tests/helpers';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { AuthService } from '../services/auth.service';
+import { CONFIRMATION_CODE_TTL_MS } from '../constants/auth.constants';
 
 function createDependencies() {
   return {
     prisma: {
-      user: { findUnique: asyncMock(), create: asyncMock(), update: asyncMock(), delete: asyncMock() },
+      user: {
+        findUnique: asyncMock(),
+        create: asyncMock(),
+        update: asyncMock(),
+        updateMany: asyncMock(),
+        delete: asyncMock(),
+      },
       friend: { deleteMany: asyncMock() },
       $transaction: asyncMock(),
     },
@@ -83,6 +90,29 @@ describe('AuthService', () => {
     );
   });
 
+  it('normalizes email throughout registration', async () => {
+    const dependencies = createDependencies();
+    dependencies.prisma.user.findUnique.mockResolvedValue(null);
+    dependencies.prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+    );
+
+    await service.signUp(' USER@EXAMPLE.COM ', 'secret123');
+
+    expect(dependencies.prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'user@example.com' } });
+    expect(dependencies.prisma.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ email: 'user@example.com' }),
+    });
+    expect(dependencies.email.sendConfirmationCode).toHaveBeenCalledWith(
+      'user@example.com',
+      expect.any(Number),
+      'access-token',
+    );
+  });
+
   it('returns service unavailable when confirmation email sending fails', async () => {
     const dependencies = createDependencies();
     dependencies.prisma.user.findUnique.mockResolvedValue(null);
@@ -137,6 +167,40 @@ describe('AuthService', () => {
       where: { id: 'user-1' },
       data: { lastSignInAt: expect.any(Date) },
     });
+  });
+
+  it('normalizes email before login lookup', async () => {
+    const dependencies = createDependencies();
+    dependencies.prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      encryptedPassword: await (await import('bcrypt')).hash('secret123', 4),
+      emailConfirmedAt: new Date(),
+    });
+    dependencies.prisma.user.update.mockResolvedValue({ id: 'user-1' });
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+    );
+
+    await expect(service.login(' USER@EXAMPLE.COM ', 'secret123')).resolves.toMatchObject({ userId: 'user-1' });
+
+    expect(dependencies.prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'user@example.com' } });
+  });
+
+  it('revokes the current session on logout', async () => {
+    const dependencies = createDependencies();
+    const tokenService = { revokeSession: asyncMock() };
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+      tokenService as never,
+    );
+
+    await expect(service.logout('user-1', 'session-1')).resolves.toBeUndefined();
+
+    expect(tokenService.revokeSession).toHaveBeenCalledWith('user-1', 'session-1');
   });
 
   it('enqueues S3 cleanup before deleting an account', async () => {
@@ -265,17 +329,85 @@ describe('AuthService', () => {
     dependencies.prisma.user.findUnique.mockResolvedValueOnce(null);
     await expect(service.confirmEmailByCode('1234', 'missing@example.com')).rejects.toBeInstanceOf(NotFoundException);
 
-    dependencies.prisma.user.findUnique.mockResolvedValueOnce({ id: 'user-1', confirmationToken: '1234' });
+    dependencies.prisma.user.findUnique.mockResolvedValueOnce({
+      id: 'user-1',
+      confirmationToken: '1234',
+      confirmationSentAt: new Date(),
+      emailConfirmedAt: null,
+    });
     await expect(service.confirmEmailByCode('bad', ' USER@EXAMPLE.COM ')).rejects.toBeInstanceOf(BadRequestException);
 
-    dependencies.prisma.user.findUnique.mockResolvedValueOnce({ id: 'user-1', confirmationToken: '1234' });
-    dependencies.prisma.user.update.mockResolvedValue({});
+    dependencies.prisma.user.findUnique.mockResolvedValueOnce({
+      id: 'user-1',
+      confirmationToken: '1234',
+      confirmationSentAt: new Date(),
+      emailConfirmedAt: null,
+    });
+    dependencies.prisma.user.updateMany.mockResolvedValue({ count: 1 });
     await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
       accessToken: 'access-token',
       userId: 'user-1',
       refreshToken: 'access-token',
     });
     expect(dependencies.prisma.user.findUnique).toHaveBeenLastCalledWith({ where: { email: 'user@example.com' } });
+    expect(dependencies.prisma.user.updateMany).toHaveBeenCalledWith({
+      where: {
+        email: 'user@example.com',
+        confirmationToken: '1234',
+        emailConfirmedAt: null,
+        confirmationSentAt: { gt: expect.any(Date) },
+      },
+      data: { emailConfirmedAt: expect.any(Date), confirmationToken: null },
+    });
+  });
+
+  it('rejects an expired confirmation code', async () => {
+    const dependencies = createDependencies();
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+    );
+    dependencies.prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      confirmationToken: '1234',
+      confirmationSentAt: new Date(Date.now() - CONFIRMATION_CODE_TTL_MS - 1),
+      emailConfirmedAt: null,
+    });
+
+    await expect(service.confirmEmailByCode('1234', 'user@example.com')).rejects.toThrow(
+      'Срок действия кода подтверждения истёк',
+    );
+    expect(dependencies.prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('prevents confirmation code replay after an atomic consume', async () => {
+    const dependencies = createDependencies();
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+    );
+    dependencies.prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      confirmationToken: '1234',
+      confirmationSentAt: new Date(),
+      emailConfirmedAt: null,
+    });
+    dependencies.prisma.user.updateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
+
+    const results = await Promise.allSettled([
+      service.confirmEmailByCode('1234', 'user@example.com'),
+      service.confirmEmailByCode('1234', 'user@example.com'),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    const rejection = results.find((result) => result.status === 'rejected') as PromiseRejectedResult;
+    expect(rejection.reason).toBeInstanceOf(BadRequestException);
+    expect((rejection.reason as BadRequestException).message).toBe(
+      'Код подтверждения недействителен или уже использован',
+    );
   });
 
   it('sets the required expiration claims on login and refreshed access tokens', async () => {

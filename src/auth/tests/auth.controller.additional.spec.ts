@@ -34,6 +34,7 @@ describe('AuthController additional routes', () => {
     handleVkCallback: syncMock(),
     login: asyncMock(),
     refreshAccessToken: asyncMock(),
+    logout: asyncMock(),
     verifyToken: asyncMock(),
     deleteUser: asyncMock(),
   };
@@ -109,6 +110,15 @@ describe('AuthController additional routes', () => {
     expect(authService.login).toHaveBeenCalledWith('user@example.com', 'password');
     expect(authService.refreshAccessToken).toHaveBeenCalledWith('refresh-token');
     expect(authService.verifyToken).toHaveBeenCalledWith('code', undefined);
+  });
+
+  it('logs out the current authenticated session', async () => {
+    const request = createRequest({ id: 'user-1', sessionId: 'session-1' });
+    authService.logout.mockResolvedValue(undefined);
+
+    await expect(controller.logout(request as never)).resolves.toBeUndefined();
+
+    expect(authService.logout).toHaveBeenCalledWith('user-1', 'session-1');
   });
 
   it('updates a session location only when a session and complete coordinates exist', async () => {

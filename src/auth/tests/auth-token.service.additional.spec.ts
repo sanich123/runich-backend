@@ -190,6 +190,21 @@ describe('AuthTokenService persistence branches', () => {
     });
   });
 
+  it('revokes only the current user session', async () => {
+    const jwt = jwtMock();
+    const prisma = {
+      userSession: { updateMany: asyncMock().mockResolvedValue({ count: 1 }) },
+    };
+    const service = new AuthTokenService(jwt as never, prisma as never);
+
+    await expect(service.revokeSession('user-1', 'session-1')).resolves.toBeUndefined();
+
+    expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
+      where: { id: 'session-1', userId: 'user-1', revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+  });
+
   it.each([
     ['missing session', null],
     ['revoked session', { ...session(), revokedAt: new Date() }],
