@@ -1,5 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUrl } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID } from 'class-validator';
+import { MEDIA_UPLOAD_SCOPES, type MediaUploadScope } from './type';
+
+export class PhotoUploadOptionsDto {
+  @ApiProperty({ enum: MEDIA_UPLOAD_SCOPES, required: false, default: 'activity' })
+  @IsOptional()
+  @IsIn(MEDIA_UPLOAD_SCOPES)
+  scope?: MediaUploadScope;
+
+  @ApiProperty({ type: String, format: 'uuid', required: false, description: 'Required for feedback uploads' })
+  @IsOptional()
+  @IsUUID()
+  feedbackId?: string;
+}
 
 export class PhotoUploadResponseDto {
   @ApiProperty({ type: String, format: 'uri' })

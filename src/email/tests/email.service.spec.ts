@@ -153,15 +153,21 @@ describe('EmailService', () => {
     );
   });
 
-  it('looks up the feedback author and sends the optional photo as an attachment', async () => {
-    const service = new EmailService(undefined, prisma as never);
-    const photo = {
-      originalname: 'screen.jpg',
-      buffer: Buffer.from('photo'),
-      mimetype: 'image/jpeg',
-    } as Express.Multer.File;
+  it('looks up the feedback author and sends links to S3 media', async () => {
+    const storage = {
+      getOwnedKey: jest.fn().mockReturnValue('user-1/feedback/2026-09-17/feedback-1/screen.jpg'),
+      deleteObjectByKey: jest.fn(),
+    };
+    const service = new EmailService(undefined, prisma as never, undefined, storage as never);
+    const feedback = {
+      feedbackId: 'feedback-1',
+      kind: 'bug',
+      text: 'Something <wrong>',
+      deviceInfo: 'Android\nPixel',
+      attachments: [{ url: 'https://cdn.example/user-1/feedback/2026-09-17/feedback-1/screen.jpg', thumbnail: null }],
+    };
 
-    await service.sendFeedback('bug', 'user-1', 'Something <wrong>', 'Android\nPixel', photo);
+    await service.sendFeedback(feedback, 'user-1');
 
     expect(findUnique).toHaveBeenCalledWith({
       where: { id: 'user-1' },
@@ -172,32 +178,56 @@ describe('EmailService', () => {
         to: 'aovoronin.piano@gmail.com',
         subject: '[Runich] Поведать о баге от Ann Runner <ann@example.com>',
         html: expect.stringContaining('Пользователь:</b> Ann Runner'),
-        attachments: expect.arrayContaining([
-          expect.objectContaining({ filename: 'screen.jpg', content: photo.buffer, contentType: 'image/jpeg' }),
-        ]),
       }),
     );
     const sentMessage = sendMail.mock.calls.at(-1) as unknown as [{ html: string }];
     expect(sentMessage[0].html).toContain('Something &lt;wrong&gt;');
+    expect(sentMessage[0].html).toContain('Вложение 1');
     expect(sentMessage[0].html).not.toContain('userId');
+  });
+
+  it('removes feedback media when SMTP delivery fails', async () => {
+    const storage = {
+      getOwnedKey: jest.fn().mockReturnValue('user-1/feedback/2026-09-17/feedback-1/screen.jpg'),
+      deleteObjectByKey: jest.fn(),
+    };
+    const service = new EmailService(undefined, prisma as never, undefined, storage as never);
+    sendMail.mockRejectedValueOnce(new Error('SMTP failed'));
+
+    await expect(
+      service.sendFeedback(
+        {
+          feedbackId: 'feedback-1',
+          kind: 'bug',
+          text: 'Broken',
+          deviceInfo: 'Android',
+          attachments: [{ url: 'https://cdn.example/screen.jpg', thumbnail: null }],
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow('SMTP failed');
+    expect(storage.deleteObjectByKey).toHaveBeenCalledWith('user-1/feedback/2026-09-17/feedback-1/screen.jpg');
   });
 
   it('rejects feedback when the authenticated user no longer exists', async () => {
     findUnique.mockResolvedValue(null);
     const service = new EmailService(undefined, prisma as never);
 
-    await expect(service.sendFeedback('thanks', 'missing-user', 'Thanks', 'iOS')).rejects.toThrow(
-      'Пользователь для feedback не найден',
-    );
+    await expect(
+      service.sendFeedback(
+        { feedbackId: 'feedback-1', kind: 'thanks', text: 'Thanks', deviceInfo: 'iOS' },
+        'missing-user',
+      ),
+    ).rejects.toThrow('Пользователь для feedback не найден');
     expect(sendMail).not.toHaveBeenCalled();
   });
 
   it('rejects feedback when Prisma is not configured', async () => {
     const service = new EmailService();
 
-    await expect(service.sendFeedback('bug', 'user-1', 'Broken', 'Android')).rejects.toThrow(
-      'PrismaService не настроен для отправки feedback',
-    );
+    await expect(
+      service.sendFeedback({ feedbackId: 'feedback-1', kind: 'bug', text: 'Broken', deviceInfo: 'Android' }, 'user-1'),
+    ).rejects.toThrow('PrismaService не настроен для отправки feedback');
     expect(sendMail).not.toHaveBeenCalled();
   });
 
@@ -205,7 +235,10 @@ describe('EmailService', () => {
     findUnique.mockResolvedValue({ email: 'ann@example.com', profile: null });
     const service = new EmailService(undefined, prisma as never);
 
-    await service.sendFeedback('unknown', 'user-1', 'Thanks', 'iOS');
+    await service.sendFeedback(
+      { feedbackId: 'feedback-1', kind: 'unknown', text: 'Thanks', deviceInfo: 'iOS' },
+      'user-1',
+    );
 
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -70,7 +70,7 @@ Known environment and integration limitations are tracked in
 Sensitive endpoints have route-specific rate limits. Login and registration
 allow 5 requests per minute. Email-code and password-change endpoints allow
 5 requests per 10 minutes. Strava archive imports allow 2 requests per
-10 minutes, and feedback photo uploads allow 5 requests per 10 minutes.
+10 minutes, and feedback submission allows 5 requests per 10 minutes.
 Exceeding a limit returns HTTP 429 with a `Retry-After` response header.
 Following a user and liking an activity or comment are idempotent: repeating
 the same request returns the existing relation with HTTP 200.
@@ -164,11 +164,13 @@ is created automatically only in local and stage; production never runs the
 mock seed. Set `RUNICH_PROCESS=worker` for the background worker so it does not
 run the mock seed a second time.
 
-S3 object keys use stable resource prefixes:
+S3 object keys use stable resource prefixes. Date folders use the server UTC
+date, while the activity/feedback itself keeps its own absolute timestamps:
 
 - `<userId>/uploads/...` — temporary uploads before they are attached to a resource;
-- `<userId>/profile/...` — profile photos;
-- `<userId>/activities/<activityId>/photos/...` — activity photos and video thumbnails;
+- `<userId>/profile/<YYYY-MM-DD>/...` — profile photos;
+- `<userId>/activities/<activityId>/<YYYY-MM-DD>/...` — activity photos and video thumbnails;
+- `<userId>/feedback/<YYYY-MM-DD>/<feedbackId>/...` — feedback photos and videos;
 - `<userId>/activities/<activityId>/locations/...` — compressed activity locations;
 - `<userId>/migrations/<migrationId>/archive.zip` — Strava migration archives.
 
@@ -345,10 +347,16 @@ Compose is not used to share migration archives between API and worker; S3 is
 the durable handoff. The worker is limited to half a CPU by default.
 
 Photo and video uploads use `POST /photo` with a `file` multipart field. The
-backend keeps S3 credentials private and returns a public object URL. `DELETE
-/photo` accepts that URL and only allows objects under the authenticated user's
-prefix. Account deletion creates a durable cleanup job; the existing background
-worker removes every S3 object under that prefix after the database transaction.
+optional `scope` is `activity`, `profile` or `feedback`; feedback uploads also
+send a UUID `feedbackId`. Activity files are temporary until the activity is
+saved, then the backend moves them into the dated activity folder. Profile and
+feedback files are written directly to their final dated folders. The backend
+keeps S3 credentials private and returns a public object URL. `DELETE /photo`
+accepts that URL and only allows objects under the authenticated user's prefix.
+Feedback is submitted separately as JSON with the S3 URLs, so large media never
+passes through SMTP as an email attachment. Account deletion creates a durable
+cleanup job; the existing background worker removes every S3 object under that
+prefix after the database transaction.
 The same worker calculates missing blurhash values for activity photos, videos
 and map images after the activity has been saved.
 

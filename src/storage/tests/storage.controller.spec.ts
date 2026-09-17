@@ -24,7 +24,7 @@ describe('StorageController', () => {
     storageService.uploadPhoto.mockResolvedValue({ url: 'https://cdn.example/photo.jpg' });
 
     await expect(controller.uploadPhoto(file, request)).resolves.toEqual({ url: 'https://cdn.example/photo.jpg' });
-    expect(storageService.uploadPhoto).toHaveBeenCalledWith('user-1', file);
+    expect(storageService.uploadPhoto).toHaveBeenCalledWith('user-1', file, {});
   });
 
   it('rejects uploads without a file', async () => {

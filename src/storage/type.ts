@@ -8,6 +8,14 @@ export type StorageFile = {
   mimetype: string;
 };
 
+export const MEDIA_UPLOAD_SCOPES = ['activity', 'profile', 'feedback'] as const;
+export type MediaUploadScope = (typeof MEDIA_UPLOAD_SCOPES)[number];
+
+export type PhotoUploadOptions = {
+  scope?: MediaUploadScope;
+  feedbackId?: string;
+};
+
 export type StorageSettings = {
   endpoint: string;
   region: string;

@@ -1,12 +1,10 @@
-import { Body, Controller, Inject, Post, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Body, Controller, Inject, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { EmailService } from './email.service';
-import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
+import { CommentEmailDTO, CommentLikeEmailDTO, FeedbackDto, LikeEmailDTO } from './email.dto';
 import { PATHS } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
-import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 
 @ApiTags(PATHS.email)
@@ -48,12 +46,9 @@ export class EmailController {
   @Post('feedback')
   @RateLimit(RATE_LIMITS.feedbackUpload.limit, RATE_LIMITS.feedbackUpload.ttl)
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('photo', { limits: { fileSize: UPLOAD_LIMITS.feedbackPhotoBytes, files: 1 } }))
-  async sendFeedback(
-    @Body() body: { kind: string; text: string; deviceInfo: string },
-    @Req() request: AuthenticatedRequest,
-    @UploadedFile() photo?: Express.Multer.File,
-  ) {
-    return await this.emailService.sendFeedback(body.kind, request.user.id, body.text, body.deviceInfo, photo);
+  @ApiOperation({ summary: 'Send feedback with optional S3 media links' })
+  @ApiBody({ type: FeedbackDto })
+  async sendFeedback(@Body() body: FeedbackDto, @Req() request: AuthenticatedRequest) {
+    return await this.emailService.sendFeedback(body, request.user.id);
   }
 }

@@ -151,14 +151,16 @@ describe('StorageService', () => {
     const stagedUrl = 'https://s3.twcstorage.ru/runich-test/user-1/uploads/avatar.webp';
 
     await expect(service.promoteProfilePhoto('user-1', stagedUrl)).resolves.toEqual(
-      expect.stringMatching(/^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/profile\/.+\.webp$/),
+      expect.stringMatching(
+        /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/profile\/\d{4}-\d{2}-\d{2}\/.+\.webp$/,
+      ),
     );
 
     const copyCommand = s3Send.mock.calls[0]?.[0] as CopyObjectCommand;
     expect(copyCommand).toBeInstanceOf(CopyObjectCommand);
     expect(copyCommand.input).toMatchObject({
       Bucket: 'runich-test',
-      Key: expect.stringMatching(/^user-1\/profile\/.+\.webp$/),
+      Key: expect.stringMatching(/^user-1\/profile\/\d{4}-\d{2}-\d{2}\/.+\.webp$/),
       CopySource: 'runich-test/user-1/uploads/avatar.webp',
     });
     expect(s3Send.mock.calls[1]?.[0]).toEqual(
@@ -176,6 +178,39 @@ describe('StorageService', () => {
     expect(s3Send).not.toHaveBeenCalled();
   });
 
+  it('uploads a profile photo directly into the dated profile folder', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const image = await createTestImage();
+
+    await expect(
+      service.uploadPhoto(
+        'user-1',
+        { buffer: image, originalname: 'avatar.jpg', mimetype: 'image/jpeg' },
+        { scope: 'profile' },
+      ),
+    ).resolves.toMatchObject({
+      key: expect.stringMatching(/^user-1\/profile\/\d{4}-\d{2}-\d{2}\/.+\.webp$/),
+      contentType: 'image/webp',
+    });
+  });
+
+  it('uploads feedback media into the dated feedback folder', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto(
+        'user-1',
+        { buffer: Buffer.from('video'), originalname: 'screen.mp4', mimetype: 'video/mp4' },
+        { scope: 'feedback', feedbackId: 'feedback-1' },
+      ),
+    ).resolves.toMatchObject({
+      key: expect.stringMatching(/^user-1\/feedback\/\d{4}-\d{2}-\d{2}\/feedback-1\/.+\.mp4$/),
+      contentType: 'video/mp4',
+    });
+  });
+
   it('moves staged activity media into the activity photos folder', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
@@ -187,12 +222,12 @@ describe('StorageService', () => {
       photos: [
         {
           url: expect.stringMatching(
-            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/photos\/.+\.jpg$/,
+            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/,
           ),
           thumbnail: null,
         },
       ],
-      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/photos\/.+\.jpg$/)],
+      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/)],
     });
   });
 
@@ -211,15 +246,15 @@ describe('StorageService', () => {
       photos: [
         {
           url: expect.stringMatching(
-            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/photos\/.+\.jpg$/,
+            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/,
           ),
           thumbnail: expect.stringMatching(
-            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/photos\/.+\.jpg$/,
+            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/,
           ),
         },
         { url: externalUrl, thumbnail: null },
       ],
-      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/photos\/.+\.jpg$/)],
+      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/)],
     });
     expect(s3Send).toHaveBeenCalledTimes(2);
   });

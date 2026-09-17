@@ -31,7 +31,7 @@ import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
-import { DeletePhotoDto, PhotoUploadResponseDto } from './storage.dto';
+import { DeletePhotoDto, PhotoUploadOptionsDto, PhotoUploadResponseDto } from './storage.dto';
 import { StorageService } from './storage.service';
 
 @ApiTags('photo')
@@ -46,7 +46,15 @@ export class StorageController {
   @ApiOperation({ summary: 'Upload a photo or video to the current user storage' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    schema: { type: 'object', required: ['file'], properties: { file: { type: 'string', format: 'binary' } } },
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        scope: { type: 'string', enum: ['activity', 'profile', 'feedback'], default: 'activity' },
+        feedbackId: { type: 'string', format: 'uuid' },
+      },
+    },
   })
   @ApiCreatedResponse({ type: PhotoUploadResponseDto })
   @UseInterceptors(
@@ -73,9 +81,13 @@ export class StorageController {
     }),
   )
   @HttpCode(HttpStatus.CREATED)
-  async uploadPhoto(@UploadedFile() file: Express.Multer.File | undefined, @Req() request: AuthenticatedRequest) {
+  async uploadPhoto(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Req() request: AuthenticatedRequest,
+    @Body() options: PhotoUploadOptionsDto = {},
+  ) {
     if (!file) throw new BadRequestException('Не указан файл: file');
-    return await this.storageService.uploadPhoto(getAuthenticatedUserId(request), file);
+    return await this.storageService.uploadPhoto(getAuthenticatedUserId(request), file, options);
   }
 
   @Delete()

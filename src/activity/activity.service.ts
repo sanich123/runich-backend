@@ -75,6 +75,7 @@ export class ActivityService {
   async createActivity(activityDto: ActivityDto, id: string) {
     let uploadedRouteKey: string | undefined;
     let uploadedActivityMediaKeys: string[] = [];
+    const mediaCreatedAt = new Date();
     try {
       const account = await this.accountService.getAccountByUserId(id);
       const locations = activityDto.locations;
@@ -88,7 +89,12 @@ export class ActivityService {
           routeMetadata = await storageService.uploadActivityRoute(id, activityId, locations);
         }
         if (photoVideoUrls?.length) {
-          const promotedMedia = await storageService.promoteActivityPhotos(id, activityId, photoVideoUrls);
+          const promotedMedia = await storageService.promoteActivityPhotos(
+            id,
+            activityId,
+            photoVideoUrls,
+            mediaCreatedAt,
+          );
           photoVideoUrls = promotedMedia.photos;
           uploadedActivityMediaKeys = promotedMedia.keys;
         }

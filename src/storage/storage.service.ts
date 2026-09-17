@@ -28,11 +28,12 @@ import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from '.
 import {
   getActivityPhotoKey,
   getExtensionFromStorageKey,
+  getFeedbackPhotoKey,
   getMigrationArchiveKey,
   getProfilePhotoKey,
   getUserUploadKey,
 } from './storage-key';
-import type { ActivityRouteStorageMetadata, StorageFile, StorageSettings } from './type';
+import type { ActivityRouteStorageMetadata, PhotoUploadOptions, StorageFile, StorageSettings } from './type';
 
 @Injectable()
 export class StorageService {
@@ -63,7 +64,7 @@ export class StorageService {
     });
   }
 
-  async uploadPhoto(userId: string, file: StorageFile) {
+  async uploadPhoto(userId: string, file: StorageFile, options: PhotoUploadOptions = {}) {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
       this.assertConfigured();
@@ -72,7 +73,7 @@ export class StorageService {
 
       const normalizedImage = file.mimetype.startsWith('image/') ? await this.normalizeImage(input) : undefined;
       const extension = normalizedImage ? 'webp' : this.getExtension(file.originalname, file.mimetype);
-      const key = getUserUploadKey(userId, extension);
+      const key = this.getPhotoKey(userId, extension, options);
       const body = normalizedImage ?? (file.path ? (stream = createReadStream(file.path)) : file.buffer);
       const contentType = normalizedImage ? 'image/webp' : file.mimetype;
       const contentLength = normalizedImage?.length ?? file.size;
@@ -225,7 +226,12 @@ export class StorageService {
     return this.getPublicUrl(destinationKey);
   }
 
-  async promoteActivityPhotos(userId: string, activityId: string, photos: ActivityPhotoVideoObject[]) {
+  async promoteActivityPhotos(
+    userId: string,
+    activityId: string,
+    photos: ActivityPhotoVideoObject[],
+    createdAt = new Date(),
+  ) {
     const movedKeys: string[] = [];
     const movedBySourceKey = new Map<string, string>();
 
@@ -236,7 +242,7 @@ export class StorageService {
       const existingDestinationKey = movedBySourceKey.get(sourceKey);
       if (existingDestinationKey) return this.getPublicUrl(existingDestinationKey);
 
-      const destinationKey = getActivityPhotoKey(userId, activityId, getExtensionFromStorageKey(sourceKey));
+      const destinationKey = getActivityPhotoKey(userId, activityId, getExtensionFromStorageKey(sourceKey), createdAt);
       await this.copyObject(sourceKey, destinationKey);
       movedKeys.push(destinationKey);
       await this.deleteObjectByKey(sourceKey);
@@ -391,6 +397,19 @@ export class StorageService {
     return fallback || 'bin';
   }
 
+  private getPhotoKey(userId: string, extension: string, options: PhotoUploadOptions) {
+    switch (options.scope) {
+      case 'profile':
+        return getProfilePhotoKey(userId, extension);
+      case 'feedback':
+        if (!options.feedbackId) throw new BadRequestException('Для feedback-загрузки нужен feedbackId');
+        return getFeedbackPhotoKey(userId, options.feedbackId, extension);
+      case 'activity':
+      default:
+        return getUserUploadKey(userId, extension);
+    }
+  }
+
   private async normalizeImage(input: string | Buffer) {
     try {
       return await normalizeImage(input);
@@ -426,7 +445,12 @@ export class StorageService {
     const userPrefix = `${userId}/`;
     if (!key.startsWith(userPrefix)) return undefined;
     const relativeKey = key.slice(userPrefix.length);
-    if (relativeKey.startsWith('profile/') || relativeKey.startsWith('activities/')) return undefined;
+    if (
+      relativeKey.startsWith('profile/') ||
+      relativeKey.startsWith('activities/') ||
+      relativeKey.startsWith('feedback/')
+    )
+      return undefined;
     if (!relativeKey.startsWith('uploads/') && relativeKey.includes('/')) return undefined;
     return key;
   }

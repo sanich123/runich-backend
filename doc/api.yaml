@@ -112,6 +112,13 @@ paths:
                 file:
                   type: string
                   format: binary
+                scope:
+                  type: string
+                  enum: [activity, profile, feedback]
+                  default: activity
+                feedbackId:
+                  type: string
+                  format: uuid
     delete:
       summary: Delete an uploaded photo or video
       requestBody:
@@ -297,6 +304,40 @@ paths:
   /email/commentLike:
     post:
       summary: Send comment-like notification
+  /email/feedback:
+    post:
+      summary: Send feedback with optional S3 media links
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [feedbackId, kind, text, deviceInfo]
+              properties:
+                feedbackId:
+                  type: string
+                  format: uuid
+                kind:
+                  type: string
+                text:
+                  type: string
+                deviceInfo:
+                  type: string
+                attachments:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: object
+                    required: [url]
+                    properties:
+                      url:
+                        type: string
+                        format: uri
+                      thumbnail:
+                        type: string
+                        format: uri
+                        nullable: true
 components:
   securitySchemes:
     bearerAuth:
