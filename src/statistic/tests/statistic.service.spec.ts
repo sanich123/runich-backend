@@ -1,5 +1,6 @@
 import { StatisticService } from '../statistic.service';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
+import { DEFAULT_TIME_ZONE } from 'src/common/utils/time-zone';
 
 function createPrismaMock() {
   return { activity: { findMany: asyncMock() }, $queryRaw: asyncMock() };
@@ -14,8 +15,8 @@ function getQueryText(call: unknown[]) {
   return (call[0] as TemplateStringsArray).join('$parameter');
 }
 
-function getQueryParameter(call: unknown[]) {
-  return call[1];
+function getQueryParameters(call: unknown[]) {
+  return call.slice(1);
 }
 
 describe('StatisticService', () => {
@@ -33,7 +34,9 @@ describe('StatisticService', () => {
       { year: 2026, types: ['run'] },
     ]);
     expect(getQueryText(prisma.$queryRaw.mock.calls[0])).toContain('GROUP BY 1, "sport"');
-    expect(getQueryParameter(prisma.$queryRaw.mock.calls[0])).toBe('u1');
+    expect(getQueryParameters(prisma.$queryRaw.mock.calls[0])).toEqual(
+      expect.arrayContaining(['u1', DEFAULT_TIME_ZONE]),
+    );
   });
 
   it('calculates monthly statistics grouped by sport', async () => {
@@ -58,7 +61,7 @@ describe('StatisticService', () => {
       expect.objectContaining({ where: expect.objectContaining({ userId: 'u1' }) }),
     );
     expect(getQueryText(prisma.$queryRaw.mock.calls[0])).toMatch(/SUM\("duration"\).*COUNT\(\*\).*GROUP BY ROLLUP/s);
-    expect(getQueryParameter(prisma.$queryRaw.mock.calls[0])).toBe('u1');
+    expect(getQueryParameters(prisma.$queryRaw.mock.calls[0])).toContain('u1');
   });
 
   it('returns category activities, yearly summaries and empty-state summaries', async () => {
@@ -111,9 +114,11 @@ describe('StatisticService', () => {
       },
     });
     expect(getQueryText(prisma.$queryRaw.mock.calls[0])).toMatch(
-      /EXTRACT\(YEAR.*SUM\("duration"\).*SUM\("distance"\).*COUNT\(\*\).*GROUP BY 1, 2/s,
+      /EXTRACT\(YEAR.*AT TIME ZONE.*SUM\("duration"\).*SUM\("distance"\).*COUNT\(\*\).*GROUP BY 1, 2/s,
     );
-    expect(getQueryParameter(prisma.$queryRaw.mock.calls[0])).toBe('u1');
+    expect(getQueryParameters(prisma.$queryRaw.mock.calls[0])).toEqual(
+      expect.arrayContaining(['u1', DEFAULT_TIME_ZONE]),
+    );
 
     prisma.$queryRaw.mockResolvedValueOnce([]);
     await expect(service.getStatisticByYearAndCategory('u1')).resolves.toEqual({ isUserHasActivities: false });

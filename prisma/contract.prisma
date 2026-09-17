@@ -79,6 +79,7 @@ model Profile {
 model Activity {
   id                  Uuid                 @id(map: "Activity_pkey") @default(dbgenerated("gen_random_uuid()"))
   date                TimestamptzString(6) @default(now())
+  timeZone            VarChar(64)?         @map("time_zone")
   createdAt           TimestamptzString(6) @default(now())
   updatedAt           TimestamptzString(6)
   description         String?

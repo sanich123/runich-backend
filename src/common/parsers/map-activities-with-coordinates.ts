@@ -15,6 +15,33 @@ const logger = new Logger('ActivityMapper');
 const MIGRATION_BATCH_SIZE = 8;
 const MAX_MAP_IMAGE_LOCATIONS = 500;
 
+export function normalizeStravaActivityDate(value: string) {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) throw new Error('Не указана дата активности Strava');
+
+  // A date-only CSV value has no instant. Noon UTC keeps its calendar date
+  // visible in every real-world time zone (UTC-12 through UTC+14).
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedValue)) {
+    const date = new Date(`${trimmedValue}T12:00:00.000Z`);
+    if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== trimmedValue) {
+      throw new Error(`Некорректная дата активности Strava: ${trimmedValue}`);
+    }
+    return date.toISOString();
+  }
+
+  const hasExplicitTimeZone = /(?:Z|UTC|GMT|[+-]\d{2}(?::?\d{2})?)$/i.test(trimmedValue);
+  const isoLocalDateTimeMatch = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)$/.exec(trimmedValue);
+  const date = new Date(
+    hasExplicitTimeZone
+      ? trimmedValue
+      : isoLocalDateTimeMatch
+        ? `${isoLocalDateTimeMatch[1]}T${isoLocalDateTimeMatch[2]}Z`
+        : `${trimmedValue} UTC`,
+  );
+  if (Number.isNaN(date.getTime())) throw new Error(`Некорректная дата активности Strava: ${trimmedValue}`);
+  return date.toISOString();
+}
+
 export async function mapActivitiesWithCoordinates({
   parsedActivities,
   userId,
@@ -66,7 +93,7 @@ export async function mapActivitiesWithCoordinates({
             const title = activity['Activity Name'];
             const sport = String(activity['Activity Type'] ?? '').toLowerCase();
             const description = activity['Activity Description'];
-            const date = new Date(activity['Activity Date']).toISOString();
+            const date = normalizeStravaActivityDate(String(activity['Activity Date'] ?? ''));
             const speed = getSpeedInMinsInKm(distance, duration).paceAsNumber;
             const kilometresSplit = calculateKilometreSplits(rawLocations, duration, distance);
             const locations = reduceLocations(rawLocations);

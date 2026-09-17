@@ -14,7 +14,8 @@ jest.unstable_mockModule('../get-mapbox-image', () => ({ getMapBoxImage }));
 jest.unstable_mockModule('../get-speed', () => ({ getSpeedInMinsInKm }));
 jest.unstable_mockModule('uuid', () => ({ v4: uuid }));
 
-const { mapActivitiesWithCoordinates } = await import('../map-activities-with-coordinates');
+const { mapActivitiesWithCoordinates, normalizeStravaActivityDate } =
+  await import('../map-activities-with-coordinates');
 
 const METERS_PER_EQUATOR_DEGREE = 111_195.080233;
 
@@ -44,6 +45,12 @@ describe('mapActivitiesWithCoordinates', () => {
   afterAll(() => {
     if (originalMapboxToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN;
     else process.env.MAPBOX_ACCESS_TOKEN = originalMapboxToken;
+  });
+
+  it('normalizes Strava dates without depending on the backend process time zone', () => {
+    expect(normalizeStravaActivityDate('2026-08-18')).toBe('2026-08-18T12:00:00.000Z');
+    expect(normalizeStravaActivityDate('2026-08-18T10:00:00')).toBe('2026-08-18T10:00:00.000Z');
+    expect(normalizeStravaActivityDate('2026-08-18T10:00:00+03:00')).toBe('2026-08-18T07:00:00.000Z');
   });
 
   it('returns an empty result when the CSV rows are absent', async () => {

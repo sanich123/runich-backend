@@ -1,5 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
-import { validateOptionalDateQuery, validateOptionalIntegerQuery } from '../query-validation';
+import {
+  validateOptionalDateQuery,
+  validateOptionalIntegerQuery,
+  validateOptionalIanaTimeZoneQuery,
+} from '../query-validation';
 
 describe('query validation', () => {
   it('accepts omitted and valid integer query values', () => {
@@ -29,5 +33,12 @@ describe('query validation', () => {
 
   it.each([null, '', 'not-a-date', 42, ['2026-08-10']])('rejects invalid date query value %#', (value) => {
     expect(() => validateOptionalDateQuery(value, 'firstDay')).toThrow(BadRequestException);
+  });
+
+  it('accepts valid IANA time zones and rejects unknown zones', () => {
+    expect(validateOptionalIanaTimeZoneQuery(undefined, 'timeZone')).toBeUndefined();
+    expect(validateOptionalIanaTimeZoneQuery('Europe/Moscow', 'timeZone')).toBe('Europe/Moscow');
+    expect(validateOptionalIanaTimeZoneQuery('America/New_York', 'timeZone')).toBe('America/New_York');
+    expect(() => validateOptionalIanaTimeZoneQuery('Mars/Olympus', 'timeZone')).toThrow(BadRequestException);
   });
 });

@@ -13,4 +13,9 @@ describe('generateActivityTitle', () => {
   it('uses a generic training name for an unknown sport', () => {
     expect(generateActivityTitle('unknown', '2026-08-12T09:00:00')).toBe('Утренняя тренировка');
   });
+
+  it('uses the supplied IANA time zone instead of the backend process time zone', () => {
+    expect(generateActivityTitle('run', '2026-08-12T03:30:00.000Z', 'Europe/Moscow')).toBe('Утренний бег');
+    expect(generateActivityTitle('run', '2026-08-12T05:30:00.000Z', 'America/New_York')).toBe('Ночной бег');
+  });
 });

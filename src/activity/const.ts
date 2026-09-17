@@ -21,6 +21,7 @@ export const ACTIVITY_FEED_PROFILE_SELECT = {
 export const ACTIVITY_CARD_SELECT = {
   title: true,
   date: true,
+  timeZone: true,
   sport: true,
   id: true,
   userId: true,

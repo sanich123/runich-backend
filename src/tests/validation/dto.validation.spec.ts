@@ -107,6 +107,7 @@ describe('request DTO validation', () => {
       steps: 1240,
       sport: 'run',
       date: '2026-08-12T10:00:00.000Z',
+      timeZone: 'Europe/Moscow',
       description: 'Morning run',
       emotion: 'happy',
       isPublic: true,
@@ -128,6 +129,13 @@ describe('request DTO validation', () => {
     await expectInvalid(ActivityDto, { duration: 1.5, distance: 1, speed: 1, sport: 'run' });
     await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'walk', steps: -1 });
     await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'run', date: 'yesterday' });
+    await expectInvalid(ActivityDto, {
+      duration: 1,
+      distance: 1,
+      speed: 1,
+      sport: 'run',
+      timeZone: 'Mars/Olympus',
+    });
     await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'run', isPublic: 'true' });
     await expectInvalid(ActivityDto, {
       duration: 1,

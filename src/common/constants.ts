@@ -17,6 +17,7 @@ export const PATHS = {
 export const enum QueryParams {
   firstDay = 'firstDay',
   lastDay = 'lastDay',
+  timeZone = 'timeZone',
   year = 'year',
   month = 'month',
   take = 'take',

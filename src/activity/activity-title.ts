@@ -1,3 +1,5 @@
+import { DEFAULT_TIME_ZONE, getLocalDateTimeParts } from 'src/common/utils/time-zone';
+
 type ActivityTitleGender = 'masculine' | 'feminine' | 'neuter';
 
 type ActivityName = {
@@ -70,15 +72,17 @@ function getActivityName(sport: string): ActivityName {
   return { name: 'тренировка', gender: 'feminine' };
 }
 
-function getActivityHour(date?: Date | string) {
-  if (!date) return new Date().getHours();
+function getActivityHour(date?: Date | string, timeZone = DEFAULT_TIME_ZONE) {
+  if (!date) return getLocalDateTimeParts(new Date(), timeZone).hour;
 
   const parsedDate = date instanceof Date ? date : new Date(date);
-  return Number.isNaN(parsedDate.getTime()) ? new Date().getHours() : parsedDate.getHours();
+  return Number.isNaN(parsedDate.getTime())
+    ? getLocalDateTimeParts(new Date(), timeZone).hour
+    : getLocalDateTimeParts(parsedDate, timeZone).hour;
 }
 
-export function generateActivityTitle(sport: string, date?: Date | string) {
-  const hour = getActivityHour(date);
+export function generateActivityTitle(sport: string, date?: Date | string, timeZone = DEFAULT_TIME_ZONE) {
+  const hour = getActivityHour(date, timeZone);
   const period = timeOfDay.find(({ untilHour }) => hour < untilHour) ?? timeOfDay[0];
   const activityName = getActivityName(sport);
 

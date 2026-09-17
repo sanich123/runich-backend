@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'d7c8b3629355cd49849b45bb896516ff5de7d4901ffe3f6c75203a2b0934fdc1'>;
+  StorageHashBase<'baf1a54b6e688ed5ec0901dbfb8ba40625748e4a6fde3f175581bc9c36b79cec'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -244,6 +244,7 @@ export type FieldOutputTypes = {
     readonly Activity: {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly date: TimestamptzString<6>;
+      readonly timeZone: Varchar<64> | null;
       readonly createdAt: TimestamptzString<6>;
       readonly updatedAt: TimestamptzString<6>;
       readonly description: CodecTypes['pg/text@1']['output'] | null;
@@ -438,6 +439,7 @@ export type FieldInputTypes = {
     readonly Activity: {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly date: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly timeZone: CodecTypes['sql/varchar@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly description: CodecTypes['pg/text@1']['input'] | null;
@@ -655,6 +657,7 @@ export type StorageColumnTypes = {
       readonly speed: CodecTypes['pg/float8@1']['output'];
       readonly sport: CodecTypes['pg/text@1']['output'];
       readonly steps: CodecTypes['pg/int4@1']['output'] | null;
+      readonly time_zone: Varchar<64> | null;
       readonly title: CodecTypes['pg/text@1']['output'] | null;
       readonly updatedAt: TimestamptzString<6>;
       readonly user_id: CodecTypes['pg/uuid@1']['output'];
@@ -849,6 +852,7 @@ export type StorageColumnInputTypes = {
       readonly speed: CodecTypes['pg/float8@1']['input'];
       readonly sport: CodecTypes['pg/text@1']['input'];
       readonly steps: CodecTypes['pg/int4@1']['input'] | null;
+      readonly time_zone: CodecTypes['sql/varchar@1']['input'] | null;
       readonly title: CodecTypes['pg/text@1']['input'] | null;
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly user_id: CodecTypes['pg/uuid@1']['input'];
@@ -1102,6 +1106,7 @@ export namespace Models {
   export type public_Activity = {
     id: CodecTypes['pg/uuid@1']['output'];
     date: TimestamptzString<6>;
+    timeZone: Varchar<64> | null;
     createdAt: TimestamptzString<6>;
     updatedAt: TimestamptzString<6>;
     description: CodecTypes['pg/text@1']['output'] | null;
@@ -1316,6 +1321,12 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
                   readonly typeParams: { readonly precision: 6 };
+                };
+                readonly time_zone: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 64 };
                 };
                 readonly createdAt: {
                   readonly nativeType: 'timestamptz';
@@ -2843,6 +2854,14 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly precision: 6 };
                 };
               };
+              readonly timeZone: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 64 };
+                };
+              };
               readonly createdAt: {
                 readonly nullable: false;
                 readonly type: {
@@ -3024,6 +3043,7 @@ type ContractBase = Omit<
               readonly fields: {
                 readonly id: { readonly column: 'id' };
                 readonly date: { readonly column: 'date' };
+                readonly timeZone: { readonly column: 'time_zone' };
                 readonly createdAt: { readonly column: 'createdAt' };
                 readonly updatedAt: { readonly column: 'updatedAt' };
                 readonly description: { readonly column: 'description' };
