@@ -211,6 +211,19 @@ describe('StorageService', () => {
     });
   });
 
+  it('rejects feedback uploads without a feedback id', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto(
+        'user-1',
+        { buffer: Buffer.from('video'), originalname: 'screen.mp4', mimetype: 'video/mp4' },
+        { scope: 'feedback' },
+      ),
+    ).rejects.toThrow('Для feedback-загрузки нужен feedbackId');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
   it('moves staged activity media into the activity photos folder', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();

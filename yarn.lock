@@ -207,9 +207,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/client-s3@npm:3.1131.0":
-  version: 3.1131.0
-  resolution: "@aws-sdk/client-s3@npm:3.1131.0"
+"@aws-sdk/client-s3@npm:3.1134.0":
+  version: 3.1134.0
+  resolution: "@aws-sdk/client-s3@npm:3.1134.0"
   dependencies:
     "@aws-sdk/checksums": "npm:^3.1001.0"
     "@aws-sdk/core": "npm:^3.978.0"
@@ -222,7 +222,7 @@ __metadata:
     "@smithy/node-http-handler": "npm:^4.11.3"
     "@smithy/types": "npm:^4.17.2"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/cc2f330f39d16183f2c4ce3380e19bee73680a1f80bb426c9b63ba945066f2b001fecfa4d5e48d4abc930a3bc2c7bbe1d25cbbe71e9c0ed0aab3262ba7bf2a9c
+  checksum: 10c0/57bd10381f0aee5210740385577f9488a682b9411350acb787de9bbefc038abcc0a95421457c31b5833e998bb6adaaef78c80770f915076244011ef90e3d6927
   languageName: node
   linkType: hard
 
@@ -13313,7 +13313,7 @@ __metadata:
   resolution: "runich-backend@workspace:."
   dependencies:
     "@ardentcode/sports-lib": "npm:^5.4.29"
-    "@aws-sdk/client-s3": "npm:3.1131.0"
+    "@aws-sdk/client-s3": "npm:3.1134.0"
     "@eslint/js": "npm:^10.0.1"
     "@jest/globals": "npm:^30.5.1"
     "@mapbox/polyline": "npm:^1.2.1"

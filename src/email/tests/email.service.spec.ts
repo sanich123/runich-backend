@@ -209,6 +209,46 @@ describe('EmailService', () => {
     expect(storage.deleteObjectByKey).toHaveBeenCalledWith('user-1/feedback/2026-09-17/feedback-1/screen.jpg');
   });
 
+  it('rejects feedback attachments when S3 storage is not configured', async () => {
+    const service = new EmailService(undefined, prisma as never);
+
+    await expect(
+      service.sendFeedback(
+        {
+          feedbackId: 'feedback-1',
+          kind: 'bug',
+          text: 'Broken',
+          deviceInfo: 'Android',
+          attachments: [{ url: 'https://cdn.example/screen.jpg' }],
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow('S3-хранилище не настроено для вложений feedback');
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it('rejects feedback attachments from another feedback folder', async () => {
+    const storage = {
+      getOwnedKey: jest.fn().mockReturnValue('user-1/feedback/2026-09-17/another-feedback/screen.jpg'),
+      deleteObjectByKey: jest.fn(),
+    };
+    const service = new EmailService(undefined, prisma as never, undefined, storage as never);
+
+    await expect(
+      service.sendFeedback(
+        {
+          feedbackId: 'feedback-1',
+          kind: 'bug',
+          text: 'Broken',
+          deviceInfo: 'Android',
+          attachments: [{ url: 'https://cdn.example/screen.jpg' }],
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow('Вложение feedback имеет некорректный S3-путь');
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
   it('rejects feedback when the authenticated user no longer exists', async () => {
     findUnique.mockResolvedValue(null);
     const service = new EmailService(undefined, prisma as never);
