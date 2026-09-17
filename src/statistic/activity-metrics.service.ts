@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { getLocalMonthRange, getLocalYearRange } from 'src/common/utils/time-zone';
 
 @Injectable()
 export class ActivityMetricsService {
-  utcYearRange(year: number) {
-    return { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) };
+  localYearRange(year: number, timeZone: string) {
+    return getLocalYearRange(year, timeZone);
   }
 
-  utcMonthRange(year: number, month: number) {
-    return { gte: new Date(Date.UTC(year, month, 1)), lt: new Date(Date.UTC(year, month + 1, 1)) };
+  localMonthRange(year: number, month: number, timeZone: string) {
+    return getLocalMonthRange(year, month, timeZone);
   }
 
   reduceMetricsFromActivities(activities: { duration: number; distance: number }[]) {

@@ -3533,9 +3533,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/cli@npm:12.0.1":
-  version: 12.0.1
-  resolution: "@nestjs/cli@npm:12.0.1"
+"@nestjs/cli@npm:12.0.3":
+  version: 12.0.3
+  resolution: "@nestjs/cli@npm:12.0.3"
   dependencies:
     "@angular-devkit/core": "npm:22.1.8"
     "@angular-devkit/schematics": "npm:22.1.8"
@@ -3579,7 +3579,7 @@ __metadata:
       optional: true
   bin:
     nest: bin/nest.js
-  checksum: 10c0/8f6ea648277455e0ed15b417629a0a7d6455f4d9876d6d8f45033e8fdbca1d3f87a6415aaa25fd0123d9ab2a2fda02342ca0985e9c32f0a7e49f66b13175254b
+  checksum: 10c0/f2fd1d101886a73ce9c683355c1f1015a5b18e324bc0e964ebd853e73cb6deb8f8e025e81846448ea555c3d37ae8665452c2677e458750678ec92de58f3cae2a
   languageName: node
   linkType: hard
 
@@ -3689,9 +3689,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/schematics@npm:12.0.2":
-  version: 12.0.2
-  resolution: "@nestjs/schematics@npm:12.0.2"
+"@nestjs/schematics@npm:12.0.3":
+  version: 12.0.3
+  resolution: "@nestjs/schematics@npm:12.0.3"
   dependencies:
     "@angular-devkit/core": "npm:22.1.8"
     "@angular-devkit/schematics": "npm:22.1.8"
@@ -3704,7 +3704,7 @@ __metadata:
   peerDependenciesMeta:
     prettier:
       optional: true
-  checksum: 10c0/307be046da3aed488ac1311d9f965dd8e0b2d61e74b743f45cbf7c1163650ee22aba7e4da87b0c58b883f8cc240bce3bba95cbc591653c2d4b833f764cea98a3
+  checksum: 10c0/fce4120c560e0bcf1d312feb511aa6000e7de90f1e224730a7a7844c6abc95acf5ea75cd63980da22c07deb043370899f0287efb83d47fb23c25b673c1de2a55
   languageName: node
   linkType: hard
 
@@ -12610,6 +12610,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"prettier@npm:^3.9.7":
+  version: 3.9.7
+  resolution: "prettier@npm:3.9.7"
+  bin:
+    prettier: bin/prettier.cjs
+  checksum: 10c0/3bb72e3fd0292695fe1b808a7a3b67a0d68842c780f01ebca7ff1cf2fe05055478dccb513a8d022be59b3494497b4a3b6dc059baee116c1debe69bded535567b
+  languageName: node
+  linkType: hard
+
 "pretty-format@npm:30.4.1, pretty-format@npm:^30.0.0":
   version: 30.4.1
   resolution: "pretty-format@npm:30.4.1"
@@ -13308,13 +13317,13 @@ __metadata:
     "@eslint/js": "npm:^10.0.1"
     "@jest/globals": "npm:^30.5.1"
     "@mapbox/polyline": "npm:^1.2.1"
-    "@nestjs/cli": "npm:12.0.1"
+    "@nestjs/cli": "npm:12.0.3"
     "@nestjs/common": "npm:12.0.3"
     "@nestjs/core": "npm:12.0.3"
     "@nestjs/jwt": "npm:12.0.2"
     "@nestjs/passport": "npm:12.0.0"
     "@nestjs/platform-express": "npm:12.0.3"
-    "@nestjs/schematics": "npm:12.0.2"
+    "@nestjs/schematics": "npm:12.0.3"
     "@nestjs/swagger": "npm:12.0.1"
     "@nestjs/testing": "npm:12.0.3"
     "@nestjs/throttler": "patch:@nestjs/throttler@npm%3A6.5.0#~/.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch"
@@ -13354,7 +13363,7 @@ __metadata:
     passport: "npm:^0.7.0"
     passport-jwt: "npm:^4.0.1"
     pg: "npm:^8.23.0"
-    prettier: "npm:^3.9.6"
+    prettier: "npm:^3.9.7"
     prisma: "npm:8.0.0-rc.15"
     react: "npm:^19.3.0"
     react-dom: "npm:^19.3.0"

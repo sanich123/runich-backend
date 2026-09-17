@@ -214,11 +214,17 @@ describe('ActivityService', () => {
     });
 
     await service.createActivity(
-      { ...activityDto, sport: 'ride', date: '2026-08-12T23:15:00', title: undefined },
+      {
+        ...activityDto,
+        sport: 'ride',
+        date: '2026-08-12T20:15:00.000Z',
+        timeZone: 'Europe/Moscow',
+        title: undefined,
+      },
       'user-1',
     );
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
-      data: expect.objectContaining({ title: 'Вечерний велозаезд' }),
+      data: expect.objectContaining({ title: 'Вечерний велозаезд', timeZone: 'Europe/Moscow' }),
     });
 
     await service.createActivity({ ...activityDto, title: 'Моя пробежка' }, 'user-1');

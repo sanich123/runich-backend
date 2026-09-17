@@ -116,7 +116,7 @@ export class ActivityService {
           : getElevationGainFromKilometreSplits(activityDto.kilometresSplit),
         title: activityDto.title?.trim()
           ? activityDto.title
-          : generateActivityTitle(activityDto.sport, activityDto.date),
+          : generateActivityTitle(activityDto.sport, activityDto.date, activityDto.timeZone),
         photoVideoUrls,
         ...(routeMetadata
           ? {
@@ -152,7 +152,9 @@ export class ActivityService {
     try {
       const activitiesWithTitles = activities.map((activity) => ({
         ...activity,
-        title: activity.title?.trim() ? activity.title : generateActivityTitle(activity.sport, activity.date),
+        title: activity.title?.trim()
+          ? activity.title
+          : generateActivityTitle(activity.sport, activity.date, activity.timeZone),
       }));
       const chunkedActivities = chunkArray(activitiesWithTitles, 100);
       const insertedCounts = await Promise.all(

@@ -22,7 +22,7 @@ lerna-debug.log*
 # Tests
 /coverage
 /.nyc_output
-
+migrations/*
 # IDEs and editors
 /.idea
 .project

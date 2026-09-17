@@ -4,6 +4,7 @@ import { handleServiceError } from 'src/common/utils/database-errors';
 import { buildYearCategoryStatistics } from './utils';
 import { ActivityMetricsService } from './activity-metrics.service';
 import type { MetricAggregateRow, MonthlyMetricAggregateRow, YearCategoryMetricAggregateRow } from './type';
+import { DEFAULT_TIME_ZONE, getLocalDateParts, getLocalWeekRange } from 'src/common/utils/time-zone';
 
 @Injectable()
 export class StatisticService {
@@ -28,11 +29,11 @@ export class StatisticService {
     };
   }
 
-  async getYearsAndTypesOfActivities(id: string) {
+  async getYearsAndTypesOfActivities(id: string, timeZone = DEFAULT_TIME_ZONE) {
     try {
       const rows = await this.prisma.$queryRaw<{ year: number; sport: string }[]>`
         SELECT
-          EXTRACT(YEAR FROM ("date" AT TIME ZONE 'UTC'))::int AS "year",
+          EXTRACT(YEAR FROM ("date" AT TIME ZONE ${timeZone}))::int AS "year",
           "sport"
         FROM "Activity"
         WHERE "user_id" = ${id}::uuid
@@ -47,13 +48,12 @@ export class StatisticService {
     }
   }
 
-  async getMonthStatisticsByYearMonth(
-    userId: string,
-    year = `${new Date().getFullYear()}`,
-    month = `${new Date().getMonth()}`,
-  ) {
+  async getMonthStatisticsByYearMonth(userId: string, year?: string, month?: string, timeZone = DEFAULT_TIME_ZONE) {
     try {
-      const { gte, lt } = this.metricsService.utcMonthRange(+year, +month);
+      const currentLocalDate = getLocalDateParts(new Date(), timeZone);
+      const selectedYear = year === undefined ? currentLocalDate.year : +year;
+      const selectedMonth = month === undefined ? currentLocalDate.month - 1 : +month;
+      const { gte, lt } = this.metricsService.localMonthRange(selectedYear, selectedMonth, timeZone);
       const [activities, groupedMetrics] = await Promise.all([
         this.prisma.activity.findMany({
           where: { userId, date: { gte, lt } },
@@ -98,13 +98,19 @@ export class StatisticService {
     }
   }
 
-  async getActivitiesByYearMonthCategory(userId: string, year: string, month: string, category: string) {
+  async getActivitiesByYearMonthCategory(
+    userId: string,
+    year: string,
+    month: string,
+    category: string,
+    timeZone = DEFAULT_TIME_ZONE,
+  ) {
     try {
       return await this.prisma.activity.findMany({
         where: {
           userId,
           date: {
-            ...this.metricsService.utcMonthRange(+year, +month),
+            ...this.metricsService.localMonthRange(+year, +month, timeZone),
           },
           sport: category,
         },
@@ -119,12 +125,12 @@ export class StatisticService {
     }
   }
 
-  async getStatisticByYearAndCategory(userId: string) {
+  async getStatisticByYearAndCategory(userId: string, timeZone = DEFAULT_TIME_ZONE) {
     try {
       const rows = await this.prisma.$queryRaw<YearCategoryMetricAggregateRow[]>`
         SELECT
-          EXTRACT(YEAR FROM ("date" AT TIME ZONE 'UTC'))::int AS "year",
-          (EXTRACT(MONTH FROM ("date" AT TIME ZONE 'UTC')) - 1)::int AS "month",
+          EXTRACT(YEAR FROM ("date" AT TIME ZONE ${timeZone}))::int AS "year",
+          (EXTRACT(MONTH FROM ("date" AT TIME ZONE ${timeZone})) - 1)::int AS "month",
           "sport",
           COALESCE(SUM("duration"), 0)::double precision / 3600000 AS "totalDuration",
           COALESCE(SUM("distance"), 0)::double precision / 1000 AS "totalDistance",
@@ -154,20 +160,9 @@ export class StatisticService {
       handleServiceError(error);
     }
   }
-  async getCurrentWeekStatistics(
-    userId: string,
-    firstDay = new Date().toISOString(),
-    lastDay = new Date().toISOString(),
-  ) {
-    const firstDayDate = new Date(firstDay);
-    const lastDayDate = new Date(lastDay);
+  async getCurrentWeekStatistics(userId: string, firstDay?: string, _lastDay?: string, timeZone = DEFAULT_TIME_ZONE) {
     try {
-      const firstDayUtc = new Date(
-        Date.UTC(firstDayDate.getUTCFullYear(), firstDayDate.getUTCMonth(), firstDayDate.getUTCDate()),
-      );
-      const lastDayUtc = new Date(
-        Date.UTC(lastDayDate.getUTCFullYear(), lastDayDate.getUTCMonth(), lastDayDate.getUTCDate() + 1),
-      );
+      const { gte: firstDayUtc, lt: lastDayUtc } = getLocalWeekRange(firstDay, timeZone);
       const [row] = await this.prisma.$queryRaw<MetricAggregateRow[]>`
         SELECT
           COALESCE(SUM("duration"), 0)::double precision AS "totalDuration",

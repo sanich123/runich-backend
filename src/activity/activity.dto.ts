@@ -14,9 +14,11 @@ import {
   IsString,
   IsUUID,
   Min,
+  Validate,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { IsIanaTimeZoneConstraint } from 'src/common/validation/iana-time-zone.validator';
 
 export class ActivityPhotoVideoDto {
   @ApiProperty({ type: String })
@@ -175,6 +177,12 @@ export class ActivityDto {
   @IsDateString()
   @IsOptional()
   date?: string;
+
+  @ApiPropertyOptional({ type: String, description: 'IANA time zone at activity creation' })
+  @IsString()
+  @Validate(IsIanaTimeZoneConstraint)
+  @IsOptional()
+  timeZone?: string;
 
   @ApiPropertyOptional({ type: String, description: 'Description value' })
   @IsString()
@@ -483,6 +491,9 @@ export class ActivityCardResponseDto {
 
   @ApiProperty({ type: String, format: 'date-time' })
   date: Date | string;
+
+  @ApiPropertyOptional({ type: String, description: 'IANA time zone at activity creation' })
+  timeZone?: string;
 
   @ApiProperty({ type: String })
   sport: string;

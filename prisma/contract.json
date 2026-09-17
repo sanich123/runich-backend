@@ -255,6 +255,16 @@
                   "kind": "scalar"
                 }
               },
+              "timeZone": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 64
+                  }
+                }
+              },
               "title": {
                 "nullable": true,
                 "type": {
@@ -420,6 +430,9 @@
                 },
                 "steps": {
                   "column": "steps"
+                },
+                "timeZone": {
+                  "column": "time_zone"
                 },
                 "title": {
                   "column": "title"
@@ -2736,6 +2749,14 @@
                   "nativeType": "int4",
                   "nullable": true
                 },
+                "time_zone": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 64
+                  }
+                },
                 "title": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -4461,7 +4482,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "d7c8b3629355cd49849b45bb896516ff5de7d4901ffe3f6c75203a2b0934fdc1"
+    "storageHash": "baf1a54b6e688ed5ec0901dbfb8ba40625748e4a6fde3f175581bc9c36b79cec"
   },
   "capabilities": {
     "postgres": {
