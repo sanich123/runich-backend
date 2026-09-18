@@ -141,8 +141,21 @@ describe('StorageService', () => {
     const service = new StorageService();
 
     await expect(
-      service.uploadPhoto('user-1', { buffer: Buffer.from('binary'), originalname: 'file', mimetype: 'video/' }),
+      service.uploadPhoto('user-1', { buffer: Buffer.from('binary'), originalname: 'file', mimetype: '' }),
     ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/uploads\/.+\.bin$/) });
+  });
+
+  it('rejects unsupported video containers before writing to S3', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto('user-1', {
+        buffer: Buffer.from('video'),
+        originalname: 'clip.mkv',
+        mimetype: 'video/x-matroska',
+      }),
+    ).rejects.toThrow('Разрешены видео только в форматах MP4, MOV и WebM');
+    expect(s3Send).not.toHaveBeenCalled();
   });
 
   it('moves a staged upload into the profile folder when it becomes an avatar', async () => {

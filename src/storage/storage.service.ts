@@ -23,7 +23,7 @@ import { pipeline } from 'node:stream/promises';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { normalizeImage } from 'src/common/images/image-processing';
 import type { ActivityPhotoVideoObject, LocationObject } from 'src/activity/activity.dto';
-import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, MAX_DELETE_BATCH_SIZE } from './const';
+import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, isSupportedVideoUpload, MAX_DELETE_BATCH_SIZE } from './const';
 import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from './activity-route';
 import {
   getActivityPhotoKey,
@@ -68,6 +68,11 @@ export class StorageService {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
       this.assertConfigured();
+      const isUnsupportedVideo =
+        file.mimetype.startsWith('video/') && !isSupportedVideoUpload(file.originalname, file.mimetype);
+      if (isUnsupportedVideo) {
+        throw new BadRequestException('Разрешены видео только в форматах MP4, MOV и WebM');
+      }
       const input = file.path ?? file.buffer;
       if (!input) throw new BadRequestException('Не удалось прочитать загруженный файл');
 

@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import { BadRequestException } from '@nestjs/common';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { asyncMock } from 'src/tests/helpers';
+import { isSupportedVideoUpload } from '../const';
 import { StorageController } from '../storage.controller';
 import { StorageService } from '../storage.service';
 
@@ -14,6 +15,17 @@ describe('StorageController', () => {
   const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
 
   beforeEach(() => jest.clearAllMocks());
+
+  it.each([
+    ['video.mp4', 'video/mp4', true],
+    ['video.mov', 'video/quicktime', true],
+    ['video.webm', 'video/webm', true],
+    ['video.mkv', 'video/x-matroska', false],
+    ['video.avi', 'video/x-msvideo', false],
+    ['video.mkv', 'video/mp4', false],
+  ])('allows only MP4, MOV and WebM video uploads', (originalName, mimetype, expected) => {
+    expect(isSupportedVideoUpload(originalName, mimetype)).toBe(expected);
+  });
 
   it('passes the multipart file and authenticated user to the upload service', async () => {
     const file = {

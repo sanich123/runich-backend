@@ -186,7 +186,7 @@ describe('EmailService', () => {
     expect(sentMessage[0].html).not.toContain('userId');
   });
 
-  it('removes feedback media when SMTP delivery fails', async () => {
+  it('keeps validated feedback media when SMTP delivery fails', async () => {
     const storage = {
       getOwnedKey: jest.fn().mockReturnValue('user-1/feedback/2026-09-17/feedback-1/screen.jpg'),
       deleteObjectByKey: jest.fn(),
@@ -206,7 +206,7 @@ describe('EmailService', () => {
         'user-1',
       ),
     ).rejects.toThrow('SMTP failed');
-    expect(storage.deleteObjectByKey).toHaveBeenCalledWith('user-1/feedback/2026-09-17/feedback-1/screen.jpg');
+    expect(storage.deleteObjectByKey).not.toHaveBeenCalled();
   });
 
   it('rejects feedback attachments when S3 storage is not configured', async () => {

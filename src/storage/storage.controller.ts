@@ -31,6 +31,7 @@ import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import { isSupportedVideoUpload } from './const';
 import { DeletePhotoDto, PhotoUploadOptionsDto, PhotoUploadResponseDto } from './storage.dto';
 import { StorageService } from './storage.service';
 
@@ -72,8 +73,11 @@ export class StorageController {
       }),
       limits: { fileSize: UPLOAD_LIMITS.photoBytes, files: 1 },
       fileFilter: (_request, file, callback) => {
-        if (!file.mimetype.startsWith('image/') && !file.mimetype.startsWith('video/')) {
-          callback(new BadRequestException('Разрешены только изображения и видео'), false);
+        const isImage = file.mimetype.startsWith('image/');
+        const isSupportedVideo =
+          file.mimetype.startsWith('video/') && isSupportedVideoUpload(file.originalname, file.mimetype);
+        if (!isImage && !isSupportedVideo) {
+          callback(new BadRequestException('Разрешены изображения и видео в форматах MP4, MOV и WebM'), false);
           return;
         }
         callback(null, true);

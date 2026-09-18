@@ -177,7 +177,7 @@ export class EmailService {
     const email = escapeHtml(user.email);
     const subject = `[Runich] ${label} от ${name} <${user.email}>`;
     const attachments = feedback.attachments ?? [];
-    const attachmentKeys = this.getFeedbackAttachmentKeys(userId, feedback);
+    this.getFeedbackAttachmentKeys(userId, feedback);
     const attachmentsHtml = attachments.length
       ? [
           '<h3>Вложения</h3>',
@@ -194,14 +194,10 @@ export class EmailService {
       `<p>${escapeHtml(feedback.text).replaceAll('\n', '<br>')}</p>`,
       attachmentsHtml,
     ].join('');
-    try {
-      await sendEmail('aovoronin.piano@gmail.com', subject, html, [], this.latencyMetrics);
-    } catch (error) {
-      if (this.storageService) {
-        await Promise.allSettled(attachmentKeys.map((key) => this.storageService!.deleteObjectByKey(key)));
-      }
-      throw error;
-    }
+    // Feedback media is uploaded independently from SMTP delivery. Keep the
+    // validated S3 links when SMTP is unavailable so the client can show the
+    // user that the file was uploaded and provide a usable link.
+    await sendEmail('aovoronin.piano@gmail.com', subject, html, [], this.latencyMetrics);
   }
 
   private getFeedbackAttachmentKeys(userId: string, feedback: FeedbackDto) {
