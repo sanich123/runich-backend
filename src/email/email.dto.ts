@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import {
   ArrayMaxSize,
   IsArray,
@@ -107,10 +108,10 @@ export class FeedbackDto {
   @IsNotEmpty()
   deviceInfo: string;
 
-  @ApiPropertyOptional({ type: [FeedbackAttachmentDto], maxItems: 5 })
+  @ApiPropertyOptional({ type: [FeedbackAttachmentDto], maxItems: UPLOAD_LIMITS.mediaBatchFiles })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(5)
+  @ArrayMaxSize(UPLOAD_LIMITS.mediaBatchFiles)
   @ValidateNested({ each: true })
   @Type(() => FeedbackAttachmentDto)
   attachments?: FeedbackAttachmentDto[];

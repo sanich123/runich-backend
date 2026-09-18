@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { MAX_ACTIVITY_LOCATIONS } from 'src/common/constants';
+import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import {
   ArrayMaxSize,
   IsArray,
@@ -214,6 +215,7 @@ export class ActivityDto {
   })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(UPLOAD_LIMITS.mediaBatchFiles)
   @ValidateNested({ each: true })
   @Type(() => ActivityPhotoVideoDto)
   photoVideoUrls?: ActivityPhotoVideoObject[];

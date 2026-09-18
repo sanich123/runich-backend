@@ -9,6 +9,7 @@ import { StorageService } from '../storage.service';
 describe('StorageController', () => {
   const storageService = {
     uploadPhoto: asyncMock(),
+    uploadPhotos: asyncMock(),
     deletePhoto: asyncMock(),
   };
   const controller = new StorageController(storageService as unknown as StorageService);
@@ -42,6 +43,32 @@ describe('StorageController', () => {
   it('rejects uploads without a file', async () => {
     await expect(controller.uploadPhoto(undefined, request)).rejects.toBeInstanceOf(BadRequestException);
     expect(storageService.uploadPhoto).not.toHaveBeenCalled();
+  });
+
+  it('passes a manifest batch to the upload service', async () => {
+    const files = [
+      { originalname: 'one.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('one') },
+      { originalname: 'two.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('two') },
+    ] as Express.Multer.File[];
+    const body = {
+      scope: 'activity' as const,
+      manifest: JSON.stringify([
+        { mediaId: 'media-1', role: 'media' },
+        { mediaId: 'media-2', role: 'media' },
+      ]),
+    };
+    storageService.uploadPhotos.mockResolvedValue([
+      { mediaId: 'media-1', role: 'media', url: 'https://cdn.example/one.jpg' },
+      { mediaId: 'media-2', role: 'media', url: 'https://cdn.example/two.jpg' },
+    ]);
+
+    await expect(controller.uploadPhotos(files, request, body)).resolves.toHaveLength(2);
+    expect(storageService.uploadPhotos).toHaveBeenCalledWith('user-1', files, { scope: 'activity' }, body.manifest);
+  });
+
+  it('rejects a batch without files', async () => {
+    await expect(controller.uploadPhotos([], request, { manifest: '[]' })).rejects.toBeInstanceOf(BadRequestException);
+    expect(storageService.uploadPhotos).not.toHaveBeenCalled();
   });
 
   it('deletes the requested URL for the authenticated user', async () => {

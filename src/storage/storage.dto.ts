@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID } from 'class-validator';
-import { MEDIA_UPLOAD_SCOPES, type MediaUploadScope } from './type';
+import { MEDIA_UPLOAD_ROLES, MEDIA_UPLOAD_SCOPES, type MediaUploadScope } from './type';
 
 export class PhotoUploadOptionsDto {
   @ApiProperty({ enum: MEDIA_UPLOAD_SCOPES, required: false, default: 'activity' })
@@ -23,6 +23,24 @@ export class PhotoUploadResponseDto {
 
   @ApiProperty({ type: String, description: 'Uploaded file MIME type' })
   contentType: string;
+}
+
+export class PhotoUploadBatchDto extends PhotoUploadOptionsDto {
+  @ApiProperty({
+    type: String,
+    description: 'JSON-массив manifest в том же порядке, что и multipart files',
+  })
+  @IsString()
+  @IsNotEmpty()
+  manifest: string;
+}
+
+export class PhotoUploadBatchResponseDto extends PhotoUploadResponseDto {
+  @ApiProperty({ type: String, description: 'Client media identifier' })
+  mediaId: string;
+
+  @ApiProperty({ enum: MEDIA_UPLOAD_ROLES })
+  role: (typeof MEDIA_UPLOAD_ROLES)[number];
 }
 
 export class DeletePhotoDto {

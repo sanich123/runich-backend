@@ -82,6 +82,135 @@ describe('StorageService', () => {
     expect(metrics.observeExternal).toHaveBeenCalledWith('s3', 'putObject', expect.any(Number));
   });
 
+  it('uploads a manifest batch in input order and returns media metadata', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const image = await createTestImage();
+    const manifest = JSON.stringify([
+      { mediaId: 'media-1', role: 'media' },
+      { mediaId: 'media-2', role: 'media' },
+    ]);
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [
+          { buffer: image, originalname: 'one.jpg', mimetype: 'image/jpeg' },
+          { buffer: image, originalname: 'two.jpg', mimetype: 'image/jpeg' },
+        ],
+        { scope: 'activity' },
+        manifest,
+      ),
+    ).resolves.toEqual([
+      {
+        mediaId: 'media-1',
+        role: 'media',
+        url: expect.stringContaining('/user-1/uploads/'),
+        key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/),
+        contentType: 'image/webp',
+      },
+      {
+        mediaId: 'media-2',
+        role: 'media',
+        url: expect.stringContaining('/user-1/uploads/'),
+        key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/),
+        contentType: 'image/webp',
+      },
+    ]);
+    expect(s3Send).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a batch when manifest length does not match files', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [{ buffer: Buffer.from('photo'), originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
+        {},
+        '[]',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty batch and a batch above the file limit', async () => {
+    const service = new StorageService();
+
+    await expect(service.uploadPhotos('user-1', [])).rejects.toThrow('Не указаны файлы: files');
+
+    const files = Array.from({ length: 11 }, (_, index) => ({
+      buffer: Buffer.from(`photo-${index}`),
+      originalname: `photo-${index}.jpg`,
+      mimetype: 'image/jpeg',
+    }));
+    await expect(service.uploadPhotos('user-1', files)).rejects.toThrow('Можно загрузить не более 10 файлов за раз');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('cleans up successful uploads when one file in a batch fails', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const manifest = JSON.stringify([
+      { mediaId: 'media-1', role: 'media' },
+      { mediaId: 'media-2', role: 'media' },
+    ]);
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [
+          { buffer: Buffer.from('video'), originalname: 'one.mp4', mimetype: 'video/mp4' },
+          { buffer: Buffer.from('video'), originalname: 'two.mkv', mimetype: 'video/x-matroska' },
+        ],
+        {},
+        manifest,
+      ),
+    ).rejects.toThrow('Разрешены видео только в форматах MP4, MOV и WebM');
+
+    expect(s3Send).toHaveBeenCalledTimes(2);
+    expect(s3Send.mock.calls[0]?.[0]).toBeInstanceOf(PutObjectCommand);
+    expect(s3Send.mock.calls[1]?.[0]).toBeInstanceOf(DeleteObjectCommand);
+  });
+
+  it.each([
+    ['null entry', JSON.stringify([null])],
+    ['invalid role', JSON.stringify([{ mediaId: 'media-1', role: 'original' }])],
+  ])('rejects a manifest with an invalid %s', async (_caseName, manifest) => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [{ buffer: Buffer.from('photo'), originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
+        {},
+        manifest,
+      ),
+    ).rejects.toThrow('Некорректная запись manifest медиафайлов');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate media identifiers with the same role', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [
+          { buffer: Buffer.from('one'), originalname: 'one.jpg', mimetype: 'image/jpeg' },
+          { buffer: Buffer.from('two'), originalname: 'two.jpg', mimetype: 'image/jpeg' },
+        ],
+        {},
+        JSON.stringify([
+          { mediaId: 'media-1', role: 'media' },
+          { mediaId: 'media-1', role: 'media' },
+        ]),
+      ),
+    ).rejects.toThrow('Manifest содержит дублирующие mediaId и role');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
   it('uses the configured S3 endpoint for generated file URLs', async () => {
     s3Send.mockResolvedValue({} as never);
     process.env.S3_ENDPOINT = 'https://s3.stage.example';
