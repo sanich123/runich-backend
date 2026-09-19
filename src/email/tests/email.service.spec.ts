@@ -226,9 +226,7 @@ describe('EmailService', () => {
     });
     const service = createNotificationService();
 
-    await expect(
-      service.sendCommentEmailNotification({ ...baseEmail, comment: 'Comment' }),
-    ).resolves.toBeUndefined();
+    await expect(service.sendCommentEmailNotification({ ...baseEmail, comment: 'Comment' })).resolves.toBeUndefined();
     await expect(
       service.sendCommentLikeEmailNotification({ ...baseEmail, comment: 'Comment' }),
     ).resolves.toBeUndefined();

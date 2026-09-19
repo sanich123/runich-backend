@@ -675,9 +675,9 @@ describe('StorageService', () => {
   it('rejects an S3 URL with an invalid encoded path', async () => {
     const service = new StorageService();
 
-    await expect(
-      service.deletePhoto('user-1', 'https://s3.twcstorage.ru/runich-test/user-1/%E0%A4%A'),
-    ).rejects.toThrow('Некорректный путь к фото');
+    await expect(service.deletePhoto('user-1', 'https://s3.twcstorage.ru/runich-test/user-1/%E0%A4%A')).rejects.toThrow(
+      'Некорректный путь к фото',
+    );
     expect(s3Send).not.toHaveBeenCalled();
   });
 
