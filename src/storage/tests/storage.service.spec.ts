@@ -14,8 +14,11 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { StorageService } from '../storage.service';
 import { decodeActivityRoute, encodeActivityRoute } from '../activity-route';
+import { getActivityPhotoKey, getExtensionFromStorageKey } from '../storage-key';
+import { getStorageErrorMessage } from '../utils';
 
 const s3Send = jest.spyOn(S3Client.prototype, 'send');
 
@@ -135,6 +138,21 @@ describe('StorageService', () => {
     expect(s3Send).not.toHaveBeenCalled();
   });
 
+  it('rejects a batch whose total size is 100 MB or more', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [{ size: UPLOAD_LIMITS.mediaBatchBytes, originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
+        {},
+        JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+      ),
+    ).rejects.toThrow('Суммарный размер файлов должен быть меньше 100 МБ');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
   it('rejects an empty batch and a batch above the file limit', async () => {
     const service = new StorageService();
 
@@ -146,6 +164,20 @@ describe('StorageService', () => {
       mimetype: 'image/jpeg',
     }));
     await expect(service.uploadPhotos('user-1', files)).rejects.toThrow('Можно загрузить не более 10 файлов за раз');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('treats a batch file without size or buffer as empty before upload', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [{ originalname: 'photo.mp4', mimetype: 'video/mp4' }],
+        {},
+        JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+      ),
+    ).rejects.toThrow('Не удалось прочитать загруженный файл');
     expect(s3Send).not.toHaveBeenCalled();
   });
 
@@ -272,6 +304,25 @@ describe('StorageService', () => {
     await expect(
       service.uploadPhoto('user-1', { buffer: Buffer.from('binary'), originalname: 'file', mimetype: '' }),
     ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/uploads\/.+\.bin$/) });
+  });
+
+  it('uses default storage settings when environment values are absent', () => {
+    delete process.env.S3_ENDPOINT;
+    delete process.env.S3_REGION;
+    delete process.env.S3_BUCKET;
+    delete process.env.S3_ACCESS_KEY;
+    delete process.env.S3_SECRET_ACCESS_KEY;
+
+    const service = new StorageService();
+
+    expect((service as unknown as { settings: unknown }).settings).toEqual({
+      endpoint: 'https://s3.twcstorage.ru',
+      region: 'ru-1',
+      bucket: '',
+      accessKey: '',
+      secretKey: '',
+      publicUrl: 'https://s3.twcstorage.ru',
+    });
   });
 
   it('rejects unsupported video containers before writing to S3', async () => {
@@ -509,6 +560,24 @@ describe('StorageService', () => {
     ).rejects.toThrow('Файл архива миграции не найден');
   });
 
+  it('rethrows a non-object S3 error unchanged', async () => {
+    s3Send.mockRejectedValueOnce(null as never);
+    const service = new StorageService();
+
+    await expect(
+      service.downloadObjectToFile('user-1/migrations/migration-1/archive.zip', join(tmpdir(), 'failed.zip')),
+    ).rejects.toBeNull();
+  });
+
+  it('reads JSON objects using the default missing-object message', async () => {
+    s3Send.mockResolvedValueOnce({
+      Body: { transformToByteArray: async () => Buffer.from('{"ok":true}') },
+    } as never);
+    const service = new StorageService();
+
+    await expect(service.readJson<{ ok: boolean }>('user-1/data.json')).resolves.toEqual({ ok: true });
+  });
+
   it('omits CacheControl when a generic object has no cache policy', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
@@ -517,6 +586,17 @@ describe('StorageService', () => {
       key: 'user-1/test.txt',
     });
     expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input).not.toHaveProperty('CacheControl');
+  });
+
+  it('passes CacheControl when a generic object has a cache policy', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await service.uploadObject('user-1/test.txt', Buffer.from('test'), 'text/plain', 'private, no-store');
+
+    expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input).toMatchObject({
+      CacheControl: 'private, no-store',
+    });
   });
 
   it('uploads a compressed activity route under the user and activity prefix', async () => {
@@ -592,6 +672,23 @@ describe('StorageService', () => {
     expect(s3Send).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects an S3 URL with an invalid encoded path', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.deletePhoto('user-1', 'https://s3.twcstorage.ru/runich-test/user-1/%E0%A4%A'),
+    ).rejects.toThrow('Некорректный путь к фото');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('keeps nested non-upload storage paths unchanged during promotion', async () => {
+    const service = new StorageService();
+    const migrationUrl = 'https://s3.twcstorage.ru/runich-test/user-1/migrations/migration-1/archive.zip';
+
+    await expect(service.promoteProfilePhoto('user-1', migrationUrl)).resolves.toBe(migrationUrl);
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
   it('deletes legacy direct S3 URLs after switching public URLs to CDN', async () => {
     process.env.S3_PUBLIC_URL = 'https://cdn.example.com';
     s3Send.mockResolvedValue({} as never);
@@ -652,6 +749,25 @@ describe('StorageService', () => {
     const service = new StorageService();
 
     await expect(service.deleteUserFiles('user-1')).rejects.toThrow('S3 не удалил 1 объектов пользователя');
+  });
+
+  it('handles an empty S3 listing page when deleting user files', async () => {
+    s3Send.mockResolvedValueOnce({ IsTruncated: false } as never);
+    const service = new StorageService();
+
+    await expect(service.deleteUserFiles('user-1')).resolves.toEqual({ deleted: 0 });
+    expect(s3Send).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports storage helper fallback and invalid-date errors', () => {
+    expect(getActivityPhotoKey('user-1', 'activity-1', 'jpg')).toMatch(
+      /^user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.*\.jpg$/,
+    );
+    expect(getExtensionFromStorageKey('user-1/no-extension')).toBe('bin');
+    expect(() => getActivityPhotoKey('user-1', 'activity-1', 'jpg', new Date('invalid'))).toThrow(
+      'Некорректная дата создания media-файла',
+    );
+    expect(getStorageErrorMessage({ reason: 'unavailable' })).toBe('[object Object]');
   });
 
   it('fails clearly when S3 credentials are not configured', async () => {

@@ -17,6 +17,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { escapeHtml } from './utils';
 import { StorageService } from 'src/storage/storage.service';
+import { ActivityService } from 'src/activity/activity.service';
 
 function getActivityFrontendUrl(activityId: string) {
   const activityUrl = new URL(getAuthFrontendRedirectUri());
@@ -37,77 +38,73 @@ export class EmailService {
     @Inject(PrismaService) private readonly prisma?: PrismaService,
     @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
     @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
+    @Optional() @Inject(ActivityService) private readonly activityService?: ActivityService,
   ) {
     this.notificationService = notificationService ?? new EmailNotificationService(this.latencyMetrics);
   }
 
-  async sendLikeEmailNotification({
-    profilePhoto,
-    name,
-    surname,
-    recepientEmail,
-    recepientName,
-    recepientSurname,
-    mapPhotoUrl,
-    activityId,
-  }: LikeEmailDTO) {
+  private async getEmailNotificationRecipient(activityId: string) {
+    if (!this.activityService) return null;
+
+    const activity = await this.activityService.getActivityWithEmailData(activityId);
+    if (activity?.profile?.emailNotifications !== true || !activity.email) return null;
+
+    return {
+      email: activity.email,
+      name: activity.profile.name ?? '',
+      surname: activity.profile.surname ?? '',
+      mapPhotoUrl: activity.mapPhotoUrl ?? '',
+    };
+  }
+
+  async sendLikeEmailNotification({ profilePhoto, name, surname, activityId }: LikeEmailDTO) {
+    const recipient = await this.getEmailNotificationRecipient(activityId);
+    if (!recipient) return;
+
     return this.notificationService.sendLike({
       profilePhoto,
       name,
       surname,
       activityId,
-      recepientEmail,
-      recepientName,
-      recepientSurname,
-      mapPhotoUrl,
+      recepientEmail: recipient.email,
+      recepientName: recipient.name,
+      recepientSurname: recipient.surname,
+      mapPhotoUrl: recipient.mapPhotoUrl,
       activityUrl: getActivityFrontendUrl(activityId),
     });
   }
 
-  async sendCommentEmailNotification({
-    profilePhoto,
-    name,
-    surname,
-    comment,
-    recepientEmail,
-    recepientName,
-    recepientSurname,
-    mapPhotoUrl,
-    activityId,
-  }: CommentEmailDTO) {
+  async sendCommentEmailNotification({ profilePhoto, name, surname, comment, activityId }: CommentEmailDTO) {
+    const recipient = await this.getEmailNotificationRecipient(activityId);
+    if (!recipient) return;
+
     return this.notificationService.sendComment({
       profilePhoto,
       name,
       surname,
       activityId,
       comment,
-      recepientEmail,
-      recepientName,
-      recepientSurname,
-      mapPhotoUrl,
+      recepientEmail: recipient.email,
+      recepientName: recipient.name,
+      recepientSurname: recipient.surname,
+      mapPhotoUrl: recipient.mapPhotoUrl,
       activityUrl: getActivityFrontendUrl(activityId),
     });
   }
 
-  async sendCommentLikeEmailNotification({
-    profilePhoto,
-    name,
-    surname,
-    comment,
-    recepientEmail,
-    recepientName,
-    recepientSurname,
-    activityId,
-  }: CommentLikeEmailDTO) {
+  async sendCommentLikeEmailNotification({ profilePhoto, name, surname, comment, activityId }: CommentLikeEmailDTO) {
+    const recipient = await this.getEmailNotificationRecipient(activityId);
+    if (!recipient) return;
+
     return this.notificationService.sendCommentLike({
       profilePhoto,
       name,
       surname,
       activityId,
       comment,
-      recepientEmail,
-      recepientName,
-      recepientSurname,
+      recepientEmail: recipient.email,
+      recepientName: recipient.name,
+      recepientSurname: recipient.surname,
       activityUrl: getActivityFrontendUrl(activityId),
     });
   }

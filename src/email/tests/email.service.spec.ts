@@ -35,8 +35,22 @@ describe('EmailService', () => {
     email: string;
     profile: { name: string | null; surname: string | null } | null;
   };
+  type ActivityEmailData = {
+    email?: string;
+    mapPhotoUrl?: string | null;
+    profile?: {
+      name?: string | null;
+      surname?: string | null;
+      emailNotifications?: boolean | null;
+    } | null;
+  } | null;
   const findUnique = jest.fn<() => Promise<FeedbackUser | null>>();
   const prisma = { user: { findUnique } };
+  const getActivityWithEmailData = jest.fn<() => Promise<ActivityEmailData>>();
+  const activityService = { getActivityWithEmailData };
+
+  const createNotificationService = () =>
+    new EmailService(undefined, prisma as never, undefined, undefined, activityService as never);
 
   beforeEach(() => {
     process.env.YANDEX_SMTP_USER = 'Runich.app@ya.ru';
@@ -46,6 +60,11 @@ describe('EmailService', () => {
     findUnique.mockReset().mockResolvedValue({
       email: 'ann@example.com',
       profile: { name: 'Ann', surname: 'Runner' },
+    });
+    getActivityWithEmailData.mockReset().mockResolvedValue({
+      email: 'database-recipient@example.com',
+      mapPhotoUrl: 'https://example.com/database-map.jpg',
+      profile: { name: 'Database', surname: 'Recipient', emailNotifications: true },
     });
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -57,7 +76,7 @@ describe('EmailService', () => {
   });
 
   it('sends all notification and authentication email types', async () => {
-    const service = new EmailService();
+    const service = createNotificationService();
     mockEmailDelivery();
     await expect(
       service.sendLikeEmailNotification({ ...baseEmail, mapPhotoUrl: 'https://example.com/map.jpg' }),
@@ -83,7 +102,7 @@ describe('EmailService', () => {
   });
 
   it('links notification emails to the activity and puts the login link before the confirmation code', async () => {
-    const service = new EmailService();
+    const service = createNotificationService();
     mockEmailDelivery();
     await service.sendLikeEmailNotification({ ...baseEmail, mapPhotoUrl: 'map', activityId: 'activity-1' });
     const notificationHtml = (sendMail.mock.calls.at(-1) as unknown as [{ html: string }])[0].html;
@@ -116,7 +135,7 @@ describe('EmailService', () => {
   });
 
   it('propagates Yandex SMTP failures from every email type', async () => {
-    const service = new EmailService();
+    const service = createNotificationService();
     const smtpError = new Error('Yandex SMTP rejected message');
     mockEmailDelivery(smtpError);
     await expect(service.sendLikeEmailNotification({ ...baseEmail, mapPhotoUrl: 'map' })).rejects.toThrow(
@@ -142,6 +161,78 @@ describe('EmailService', () => {
     await expect(service.sendLoginLink('bob@example.com', 'access-token')).rejects.toThrow(
       'Yandex SMTP rejected message',
     );
+  });
+
+  it('uses the recipient preference and data from the server', async () => {
+    const service = createNotificationService();
+
+    await service.sendLikeEmailNotification({ ...baseEmail, mapPhotoUrl: 'client-map' });
+
+    expect(getActivityWithEmailData).toHaveBeenCalledWith('a1');
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'database-recipient@example.com',
+        html: expect.stringContaining('Database'),
+      }),
+    );
+    expect((sendMail.mock.calls[0] as unknown as [{ html: string }])[0].html).toContain('Recipient');
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ html: expect.stringContaining('database-map.jpg') }),
+    );
+  });
+
+  it('does not send a notification when the recipient disabled email notifications', async () => {
+    getActivityWithEmailData.mockResolvedValue({
+      email: 'database-recipient@example.com',
+      mapPhotoUrl: 'https://example.com/database-map.jpg',
+      profile: { name: 'Database', surname: 'Recipient', emailNotifications: false },
+    });
+    const service = createNotificationService();
+
+    await expect(service.sendLikeEmailNotification(baseEmail)).resolves.toBeUndefined();
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it('does not send notifications when activity lookup is unavailable', async () => {
+    const service = new EmailService(undefined, prisma as never);
+
+    await expect(service.sendLikeEmailNotification(baseEmail)).resolves.toBeUndefined();
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it('uses empty recipient fields when the activity profile has no optional data', async () => {
+    getActivityWithEmailData.mockResolvedValue({
+      email: 'database-recipient@example.com',
+      mapPhotoUrl: null,
+      profile: { name: null, surname: null, emailNotifications: true },
+    });
+    const service = createNotificationService();
+
+    await service.sendLikeEmailNotification(baseEmail);
+
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'database-recipient@example.com',
+        html: expect.not.stringContaining('Database'),
+      }),
+    );
+  });
+
+  it('does not send comment notifications when the recipient disabled email notifications', async () => {
+    getActivityWithEmailData.mockResolvedValue({
+      email: 'database-recipient@example.com',
+      mapPhotoUrl: null,
+      profile: { name: 'Database', surname: 'Recipient', emailNotifications: false },
+    });
+    const service = createNotificationService();
+
+    await expect(
+      service.sendCommentEmailNotification({ ...baseEmail, comment: 'Comment' }),
+    ).resolves.toBeUndefined();
+    await expect(
+      service.sendCommentLikeEmailNotification({ ...baseEmail, comment: 'Comment' }),
+    ).resolves.toBeUndefined();
+    expect(sendMail).not.toHaveBeenCalled();
   });
 
   it('reports missing email configuration as an error', async () => {
@@ -225,6 +316,19 @@ describe('EmailService', () => {
       ),
     ).rejects.toThrow('S3-хранилище не настроено для вложений feedback');
     expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it('fails closed if feedback attachment validation has no storage service', () => {
+    const service = new EmailService(undefined, prisma as never);
+    const validateFeedbackAttachment = (
+      service as unknown as {
+        validateFeedbackAttachment: (userId: string, feedbackId: string, url: string) => string;
+      }
+    ).validateFeedbackAttachment.bind(service);
+
+    expect(() => validateFeedbackAttachment('user-1', 'feedback-1', 'https://cdn.example/file.jpg')).toThrow(
+      'S3-хранилище не настроено',
+    );
   });
 
   it('rejects feedback attachments from another feedback folder', async () => {
