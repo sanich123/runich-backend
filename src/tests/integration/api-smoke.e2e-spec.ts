@@ -81,7 +81,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         duration: 3600,
         distance: 10,
         speed: 10,
-        isPublic: true,
+        visibility: 'public',
         routeStorageKey: routeMetadata.key,
         routeFormatVersion: routeMetadata.formatVersion,
         routePointCount: routeMetadata.pointCount,
@@ -161,7 +161,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         duration: 120,
         distance: 4,
         speed: 2,
-        isPublic: true,
+        visibility: 'public',
       })
       .expect(201);
     const createdActivityId = createResponse.body.id as string;

@@ -110,7 +110,7 @@ describe('request DTO validation', () => {
       timeZone: 'Europe/Moscow',
       description: 'Morning run',
       emotion: 'happy',
-      isPublic: true,
+      visibility: 'public',
       photoVideoUrls: [{ url: 'https://example.com/photo.jpg', thumbnail: null, blurhash: 'hash' }],
       mapPhotoUrl: 'https://example.com/map.jpg',
       mapPhotoUrlBlurhash: 'hash',
@@ -136,7 +136,7 @@ describe('request DTO validation', () => {
       sport: 'run',
       timeZone: 'Mars/Olympus',
     });
-    await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'run', isPublic: 'true' });
+    await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'run', visibility: 'invalid' });
     await expectInvalid(ActivityDto, {
       duration: 1,
       distance: 1,

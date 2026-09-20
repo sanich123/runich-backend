@@ -46,7 +46,7 @@ describeIntegration('PostgreSQL social idempotency e2e', () => {
         duration: 60,
         distance: 1,
         speed: 1,
-        isPublic: true,
+        visibility: 'public',
       },
     });
     activityId = activity.id;

@@ -49,7 +49,7 @@ describe('ActivityController', () => {
     await expect(controller.getLocationsByActivityId({ id: 'a1' })).resolves.toEqual({ locations: [] });
     await expect(controller.getActivitiesByActivitiesIds('a1,a2')).resolves.toEqual([result]);
     await expect(controller.getActivitiesByActivitiesIds(['a1', 'a2'])).resolves.toEqual([result]);
-    expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(['a1', 'a2']);
+    expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(['a1', 'a2'], undefined);
     await expect(
       controller.createActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'u1' }),
     ).resolves.toEqual(result);

@@ -23,8 +23,10 @@ export const ACTIVITY_CARD_SELECT = {
   date: true,
   timeZone: true,
   sport: true,
+  emotion: true,
   id: true,
   userId: true,
+  visibility: true,
   photoVideoUrls: true,
   mapPhotoUrl: true,
   mapPhotoUrlBlurhash: true,
@@ -45,7 +47,7 @@ export const ACTIVITY_FEED_SELECT = {
 export const ACTIVITY_DETAILS_SELECT = {
   ...ACTIVITY_FEED_SELECT,
   description: true,
-  isPublic: true,
+  visibility: true,
   emotion: true,
   kilometresSplit: true,
 } as const;

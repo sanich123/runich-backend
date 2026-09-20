@@ -226,7 +226,7 @@ export class LoadTestSeedService {
             date: activityDate,
             createdAt: activityDate,
             updatedAt: activityDate,
-            isPublic: true,
+            visibility: 'public',
             source: 'load-test',
             sourceActivityId: `${job.runId}:${ownerIndex}:${activityIndex}`,
             photoVideoUrls: photos,

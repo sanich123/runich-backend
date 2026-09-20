@@ -50,8 +50,8 @@ describeIntegration('PostgreSQL activity privacy e2e', () => {
       speed: 1,
       photoVideoUrls: [{ url: 'https://example.com/photo.jpg', thumbnail: null }],
     };
-    const privateActivity = await prisma.activity.create({ data: { ...activityData, isPublic: false } });
-    const publicActivity = await prisma.activity.create({ data: { ...activityData, isPublic: true } });
+    const privateActivity = await prisma.activity.create({ data: { ...activityData, visibility: 'private' } });
+    const publicActivity = await prisma.activity.create({ data: { ...activityData, visibility: 'public' } });
     privateActivityId = privateActivity.id;
     publicActivityId = publicActivity.id;
 

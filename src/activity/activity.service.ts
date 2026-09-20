@@ -33,6 +33,7 @@ import type { ActivityFeedSqlRow, MigratedActivity } from './type';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { StorageService } from 'src/storage/storage.service';
 import type { ActivityDatabase } from './activity-persistence.service';
+import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from './activity-visibility';
 
 @Injectable()
 export class ActivityService {
@@ -61,15 +62,35 @@ export class ActivityService {
   private readonly storageService?: StorageService;
   private readonly mediaCleanupService?: MediaCleanupService;
 
+  private async isFollower(viewerId: string, ownerId: string) {
+    if (viewerId === ownerId) return false;
+    const relation = await this.prisma.friend.findUnique({
+      where: { userId_friendId: { userId: viewerId, friendId: ownerId } },
+      select: { id: true },
+    });
+    return Boolean(relation);
+  }
+
+  private async getVisibilityFilter(ownerId: string, currentUserId?: string) {
+    if (!currentUserId || currentUserId === ownerId) return {};
+    const followsOwner = await this.isFollower(currentUserId, ownerId);
+    return followsOwner
+      ? { visibility: { in: ACTIVITY_VISIBLE_TO_FOLLOWERS } }
+      : { visibility: ACTIVITY_VISIBILITY.public };
+  }
+
   async canAccessActivity(id: string, currentUserId?: string) {
-    if (!currentUserId) return true;
+    if (!currentUserId) return false;
 
     const activity = await this.prisma.activity.findUnique({
       where: { id },
-      select: { userId: true, isPublic: true },
+      select: { userId: true, visibility: true },
     });
 
-    return Boolean(activity && (activity.userId === currentUserId || activity.isPublic === true));
+    if (!activity) return false;
+    if (activity.userId === currentUserId || activity.visibility === ACTIVITY_VISIBILITY.public) return true;
+    if (activity.visibility !== ACTIVITY_VISIBILITY.followers) return false;
+    return this.isFollower(currentUserId, activity.userId);
   }
 
   async createActivity(activityDto: ActivityDto, id: string) {
@@ -109,6 +130,7 @@ export class ActivityService {
       const mapPhotoUrlBlurhash = null;
       const activityFields = { ...activityDto };
       delete activityFields.locations;
+      activityFields.visibility = activityDto.visibility ?? ACTIVITY_VISIBILITY.public;
       const description = activityDto.description?.trim() || null;
 
       const data = {
@@ -190,11 +212,11 @@ export class ActivityService {
 
   async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
-      const { date, description, emotion, isPublic, sport, title, distance, duration, speed } = activityDto;
+      const { date, description, emotion, visibility, sport, title, distance, duration, speed } = activityDto;
       const data = {
         title,
         sport,
-        isPublic,
+        visibility,
         emotion,
         date,
         description: description?.trim() || null,
@@ -218,11 +240,10 @@ export class ActivityService {
         routeStorageKey: true,
         kilometresSplit: true,
         userId: true,
-        isPublic: true,
+        visibility: true,
       },
     });
-    if (!activity || !currentUserId) return activity;
-    if (activity.userId !== currentUserId && activity.isPublic !== true) return null;
+    if (!activity || !currentUserId || !(await this.canAccessActivity(id, currentUserId))) return null;
     let locations: LocationObject[] | undefined;
     if (activity.routeStorageKey) {
       if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');
@@ -237,9 +258,7 @@ export class ActivityService {
         where: { id },
         select: ACTIVITY_DETAILS_SELECT,
       });
-      if (activity && currentUserId && activity.userId !== currentUserId && activity.isPublic !== true) {
-        return null;
-      }
+      if (!activity || !currentUserId || !(await this.canAccessActivity(id, currentUserId))) return null;
       return activity ? normalizeActivityDetails(activity as Record<string, unknown>) : activity;
     } catch (error) {
       handleServiceError(error);
@@ -254,6 +273,7 @@ export class ActivityService {
       let activityCursor: ActivityCursor | undefined = cursor;
       let includeCursorActivity = Boolean(cursor);
       let skipPhotoIndex = cursor?.photoIndex ?? -1;
+      const visibilityFilter = await this.getVisibilityFilter(id, currentUserId);
 
       while (photos.length <= pageSize) {
         const activities = await this.prisma.activity.findMany({
@@ -261,7 +281,7 @@ export class ActivityService {
           where: {
             userId: id,
             photoVideoUrls: { not: null },
-            ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
+            ...visibilityFilter,
             ...(activityCursor
               ? {
                   OR: [
@@ -322,10 +342,11 @@ export class ActivityService {
     currentUserId?: string,
   ) {
     try {
+      const visibilityFilter = await this.getVisibilityFilter(id, currentUserId);
       const activitiesWithExtraItem = await this.prisma.activity.findMany({
         where: {
           userId: id,
-          ...(currentUserId && currentUserId !== id ? { isPublic: true } : {}),
+          ...visibilityFilter,
           ...(cursor
             ? {
                 OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
@@ -351,7 +372,7 @@ export class ActivityService {
     }
   }
 
-  async getActivitiesByTheirIds(ids?: string | string[]) {
+  async getActivitiesByTheirIds(ids?: string | string[], currentUserId?: string) {
     const normalizedIds = (Array.isArray(ids) ? ids : [ids ?? ''])
       .flatMap((activityId) => activityId.split(','))
       .map((activityId) => activityId.trim())
@@ -360,8 +381,21 @@ export class ActivityService {
 
     const searchByStringOrArray = normalizedIds.length === 1 ? normalizedIds[0] : { in: normalizedIds };
     try {
+      const followedUsers = currentUserId
+        ? await this.prisma.friend.findMany({ where: { userId: currentUserId }, select: { friendId: true } })
+        : [];
+      const followedUserIds = followedUsers.map((friend: { friendId: string }) => friend.friendId);
       const activities = await this.prisma.activity.findMany({
-        where: { id: searchByStringOrArray, isPublic: true },
+        where: {
+          id: searchByStringOrArray,
+          OR: [
+            ...(currentUserId ? [{ userId: currentUserId }] : []),
+            { visibility: ACTIVITY_VISIBILITY.public },
+            ...(followedUserIds.length
+              ? [{ userId: { in: followedUserIds }, visibility: ACTIVITY_VISIBILITY.followers }]
+              : []),
+          ],
+        },
         orderBy: { date: 'desc' },
         select: ACTIVITY_CARD_SELECT,
       });
@@ -371,15 +405,22 @@ export class ActivityService {
     }
   }
 
-  async getAllActivitiesWithFriends(id: string, take = String(DEFAULT_ACTIVITY_PAGE_SIZE), cursor?: ActivityCursor) {
+  async getAllActivitiesWithFriends(
+    id: string,
+    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
+    cursor?: ActivityCursor,
+    currentUserId = id,
+  ) {
     try {
       const activitiesWithExtraItem = await this.prisma.$queryRaw<ActivityFeedSqlRow[]>`
         SELECT
           a."title",
           a."date",
           a."sport",
+          a."emotion",
           a."id",
           a."user_id" AS "userId",
+          a."visibility",
           a."photoVideoUrls",
           a."mapPhotoUrl",
           a."mapPhotoUrlBlurhash",
@@ -411,13 +452,13 @@ export class ActivityService {
         FROM "Activity" AS a
         INNER JOIN "Profile" AS p ON p."id" = a."profileId"
         INNER JOIN "Users" AS u ON u."id" = a."user_id"
-        WHERE a."isPublic" IS TRUE
+        WHERE a."visibility" IN ('public', 'followers')
           AND (
-            a."user_id" = ${id}::uuid
+            a."user_id" = ${currentUserId}::uuid
             OR EXISTS (
               SELECT 1
               FROM "Friend" AS f
-              WHERE f."user_id" = ${id}::uuid
+              WHERE f."user_id" = ${currentUserId}::uuid
                 AND f."friendId" = a."user_id"
             )
           )
@@ -438,7 +479,7 @@ export class ActivityService {
         .map((activity: ActivityFeedSqlRow) => normalizeActivityCard(activity as Record<string, unknown>));
       const currentUserProfile =
         typeof this.accountService.getAccountByUserId === 'function'
-          ? await this.accountService.getAccountByUserId(id)
+          ? await this.accountService.getAccountByUserId(currentUserId)
           : undefined;
       return {
         activities,

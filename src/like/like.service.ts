@@ -50,11 +50,11 @@ export class LikeService {
 
   async getLikesByActivityId(id: string, currentUserId?: string) {
     try {
+      if (currentUserId && !(await this.activityService.canAccessActivity(id, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
+      }
       const activity = await this.prismaService.activity.findUnique({
-        where: {
-          id,
-          ...(currentUserId ? { OR: [{ userId: currentUserId }, { isPublic: true }] } : {}),
-        },
+        where: { id },
         select: {
           likes: {
             orderBy: { date: 'desc' },
@@ -90,11 +90,11 @@ export class LikeService {
 
   async getLikesLengthByActivityId(id: string, currentUserId?: string) {
     try {
+      if (currentUserId && !(await this.activityService.canAccessActivity(id, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
+      }
       const activity = await this.prismaService.activity.findUnique({
-        where: {
-          id,
-          ...(currentUserId ? { OR: [{ userId: currentUserId }, { isPublic: true }] } : {}),
-        },
+        where: { id },
         select: { _count: { select: { likes: true } } },
       });
       if (!activity) {

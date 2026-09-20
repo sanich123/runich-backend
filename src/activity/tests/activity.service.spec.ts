@@ -191,7 +191,7 @@ describe('ActivityService', () => {
       routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
       kilometresSplit: [],
       userId: 'user-1',
-      isPublic: false,
+      visibility: 'private',
     });
 
     await expect(service.getLocationsByActivityId('activity-1', 'user-1')).resolves.toEqual({
@@ -265,7 +265,7 @@ describe('ActivityService', () => {
       data: {
         title: undefined,
         sport: 'walk',
-        isPublic: undefined,
+        visibility: undefined,
         emotion: undefined,
         date: undefined,
         description: null,
@@ -408,8 +408,8 @@ describe('ActivityService', () => {
     await expect(service.updateActivity({ ...activityDto, title: 'Morning run' }, 'activity-1')).resolves.toEqual(
       activity,
     );
-    await expect(service.getLocationsByActivityId('activity-1')).resolves.toEqual(activity);
-    await expect(service.getActivityByActivityId('activity-1')).resolves.toEqual(activity);
+    await expect(service.getLocationsByActivityId('activity-1')).resolves.toBeNull();
+    await expect(service.getActivityByActivityId('activity-1')).resolves.toBeNull();
     await expect(service.getMediaByUserId('user-1', '1')).resolves.toEqual({
       photos: ['photo'],
       hasMore: false,
@@ -534,9 +534,12 @@ describe('ActivityService', () => {
       );
       expect(query.select).not.toHaveProperty('locations');
       expect(query.select).toHaveProperty('kilometresSplit', true);
-      expect(query.select).not.toHaveProperty('emotion');
+      expect(query.select).toHaveProperty('emotion', true);
       expect(query.select).not.toHaveProperty('description');
     }
+
+    const [feedTemplate] = prisma.$queryRaw.mock.calls.at(-1) as unknown as [TemplateStringsArray];
+    expect(Array.from(feedTemplate).join('')).toContain('a."emotion"');
 
     await service.getActivityByActivityId('activity-1');
     const detailQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {

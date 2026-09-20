@@ -34,7 +34,7 @@ describe('CommentService', () => {
     prisma.comment.findUnique.mockResolvedValue({
       comment: 'Hello',
       profile: { user: { email: 'user@example.com' } },
-      activity: { userId: 'user-1', isPublic: true },
+      activity: { id: 'activity-1' },
       commentLikes: [like],
     });
     prisma.commentLike.upsert.mockResolvedValue(like);
@@ -62,7 +62,11 @@ describe('CommentService', () => {
 
   it('requests one extra comment and returns a cursor when another page exists', async () => {
     const prisma = createPrismaMock();
-    const service = new CommentService(prisma as never, {} as never, {} as never);
+    const service = new CommentService(
+      prisma as never,
+      {} as never,
+      { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
+    );
     const firstComment = { id: 'comment-1', date: new Date('2026-08-20T10:00:00.000Z') };
     const secondComment = { id: 'comment-2', date: new Date('2026-08-20T09:00:00.000Z') };
     prisma.activity.findUnique.mockResolvedValue({ comments: [firstComment, secondComment] });
@@ -101,7 +105,11 @@ describe('CommentService', () => {
 
   it('selects comment fields and profile data without loading comment likes', async () => {
     const prisma = createPrismaMock();
-    const service = new CommentService(prisma as never, {} as never, {} as never);
+    const service = new CommentService(
+      prisma as never,
+      {} as never,
+      { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
+    );
     prisma.activity.findUnique.mockResolvedValue({ comments: [] });
 
     await service.getCommentsbyActivityId('activity-1');
@@ -130,11 +138,15 @@ describe('CommentService', () => {
 
   it('combines comment access and comment lookup into one query', async () => {
     const prisma = createPrismaMock();
-    const service = new CommentService(prisma as never, {} as never, {} as never);
+    const service = new CommentService(
+      prisma as never,
+      {} as never,
+      { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
+    );
     prisma.comment.findUnique.mockResolvedValue({
       comment: 'Hello',
       profile: { user: { email: 'user@example.com' } },
-      activity: { userId: 'owner-1', isPublic: false },
+      activity: { id: 'activity-1' },
     });
 
     await expect(service.getCommentByCommentId('comment-1', 'owner-1')).resolves.toEqual({
@@ -147,9 +159,13 @@ describe('CommentService', () => {
 
   it('combines comment access and comment likes lookup into one query', async () => {
     const prisma = createPrismaMock();
-    const service = new CommentService(prisma as never, {} as never, {} as never);
+    const service = new CommentService(
+      prisma as never,
+      {} as never,
+      { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
+    );
     prisma.comment.findUnique.mockResolvedValue({
-      activity: { userId: 'owner-1', isPublic: false },
+      activity: { id: 'activity-1' },
       commentLikes: [{ id: 'like-1', authorId: 'author-1' }],
     });
 

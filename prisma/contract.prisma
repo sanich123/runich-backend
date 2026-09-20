@@ -76,6 +76,12 @@ model Profile {
   @@map("Profile")
 }
 
+enum ActivityVisibility {
+  public
+  followers
+  private
+}
+
 model Activity {
   id                  Uuid                 @id(map: "Activity_pkey") @default(dbgenerated("gen_random_uuid()"))
   date                TimestamptzString(6) @default(now())
@@ -100,7 +106,7 @@ model Activity {
   mapPhotoUrl         String?
   photoVideoUrls      Jsonb?
   mediaProcessingStatus VarChar(16)       @default("queued") @map("media_processing_status")
-  isPublic            Boolean?             @default(true)
+  visibility          ActivityVisibility   @default(public)
   mapPhotoUrlBlurhash String?
   profileId           Uuid
   source              VarChar(32)?
@@ -113,8 +119,8 @@ model Activity {
 
   @@unique([userId, source, sourceActivityId], map: "Activity_user_id_source_sourceActivityId_key")
   @@index([userId, date, id], map: "Activity_user_id_date_id_idx")
-  @@index([userId, isPublic, date, id], map: "Activity_user_id_isPublic_date_id_idx")
-  @@index([isPublic, date, id], map: "Activity_isPublic_date_id_idx")
+  @@index([userId, visibility, date, id], map: "Activity_user_id_visibility_date_id_idx")
+  @@index([visibility, date, id], map: "Activity_visibility_date_id_idx")
   @@map("Activity")
 }
 

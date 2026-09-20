@@ -35,7 +35,7 @@ async function seedPhotosForUser(user: { id: string; email: string }) {
         duration: 1800,
         speed: 10,
         date: new Date(Date.now() - photoIndex * DAY_IN_MS),
-        isPublic: true,
+        visibility: 'public',
         source: 'seed',
         sourceActivityId: `photo-${photoIndex + 1}`,
         photoVideoUrls: [{ url: photo, thumbnail: photo }],

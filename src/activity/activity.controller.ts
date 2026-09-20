@@ -116,7 +116,10 @@ export class ActivityController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivitiesByActivitiesIds(@Query(QueryParams.ids) ids?: string | string[]) {
+  async getActivitiesByActivitiesIds(
+    @Query(QueryParams.ids) ids?: string | string[],
+    @Req() request?: RequestWithUser,
+  ) {
     const isValidIds =
       typeof ids === 'string'
         ? Boolean(ids.trim())
@@ -126,7 +129,7 @@ export class ActivityController {
     if (!isValidIds) {
       throw new BadRequestException('Не указаны идентификаторы активностей: ids');
     }
-    return this.activityService.getActivitiesByTheirIds(ids);
+    return this.activityService.getActivitiesByTheirIds(ids, request?.user.userId ?? request?.user.id);
   }
 
   @Post('migration-strava/:id')
@@ -266,9 +269,15 @@ export class ActivityController {
     @Param() { id }: ParamsId,
     @Query(QueryParams.cursor) cursor?: string,
     @Query(QueryParams.take) take?: string,
+    @Req() request?: RequestWithUser,
   ) {
     const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
-    return await this.activityService.getAllActivitiesWithFriends(id, validatedTake, parseActivityCursor(cursor));
+    return await this.activityService.getAllActivitiesWithFriends(
+      id,
+      validatedTake,
+      parseActivityCursor(cursor),
+      request?.user.userId ?? request?.user.id,
+    );
   }
 
   @Get(`/activityId/${id}`)

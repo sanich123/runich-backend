@@ -8,6 +8,7 @@ import {
   IsBoolean,
   IsDateString,
   IsDefined,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -20,6 +21,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { IsIanaTimeZoneConstraint } from 'src/common/validation/iana-time-zone.validator';
+import { ACTIVITY_VISIBILITY, type ActivityVisibility } from './activity-visibility';
 
 export class ActivityPhotoVideoDto {
   @ApiProperty({ type: String })
@@ -195,10 +197,10 @@ export class ActivityDto {
   @IsOptional()
   emotion?: string;
 
-  @ApiPropertyOptional({ type: Boolean, description: 'Is activity public or private' })
-  @IsBoolean()
+  @ApiPropertyOptional({ enum: ACTIVITY_VISIBILITY, description: 'Activity visibility' })
+  @IsEnum(ACTIVITY_VISIBILITY)
   @IsOptional()
-  isPublic?: boolean;
+  visibility?: ActivityVisibility;
 
   @ApiPropertyOptional({
     type: 'array',
@@ -506,6 +508,9 @@ export class ActivityCardResponseDto {
   @ApiProperty({ type: String, format: 'uuid' })
   userId: string;
 
+  @ApiProperty({ enum: ACTIVITY_VISIBILITY })
+  visibility: ActivityVisibility;
+
   @ApiPropertyOptional({ type: [ActivityPhotoResponseDto], nullable: true })
   photoVideoUrls?: ActivityPhotoResponseDto[] | null;
 
@@ -537,9 +542,6 @@ export class ActivityCardResponseDto {
 export class ActivityDetailsResponseDto extends ActivityCardResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   description?: string | null;
-
-  @ApiPropertyOptional({ type: Boolean, nullable: true })
-  isPublic?: boolean | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   emotion?: string | null;

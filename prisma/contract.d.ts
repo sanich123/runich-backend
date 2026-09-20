@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'baf1a54b6e688ed5ec0901dbfb8ba40625748e4a6fde3f175581bc9c36b79cec'>;
+  StorageHashBase<'8cba32ba6966ea34daf7cf4234278f48edf8e4a9650c19d66f63c9e2dedbb2d4'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -265,7 +265,7 @@ export type FieldOutputTypes = {
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly mediaProcessingStatus: Varchar<16>;
-      readonly isPublic: CodecTypes['pg/bool@1']['output'] | null;
+      readonly visibility: 'public' | 'followers' | 'private';
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
       readonly source: Varchar<32> | null;
@@ -460,7 +460,7 @@ export type FieldInputTypes = {
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly mediaProcessingStatus: CodecTypes['sql/varchar@1']['input'];
-      readonly isPublic: CodecTypes['pg/bool@1']['input'] | null;
+      readonly visibility: 'public' | 'followers' | 'private';
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
       readonly source: CodecTypes['sql/varchar@1']['input'] | null;
@@ -640,7 +640,6 @@ export type StorageColumnTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/uuid@1']['output'];
-      readonly isPublic: CodecTypes['pg/bool@1']['output'] | null;
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
@@ -661,6 +660,7 @@ export type StorageColumnTypes = {
       readonly title: CodecTypes['pg/text@1']['output'] | null;
       readonly updatedAt: TimestamptzString<6>;
       readonly user_id: CodecTypes['pg/uuid@1']['output'];
+      readonly visibility: 'public' | 'followers' | 'private';
     };
     readonly ActivityMigrationJob: {
       readonly archivePath: Varchar<2048>;
@@ -835,7 +835,6 @@ export type StorageColumnInputTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/uuid@1']['input'];
-      readonly isPublic: CodecTypes['pg/bool@1']['input'] | null;
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
@@ -856,6 +855,7 @@ export type StorageColumnInputTypes = {
       readonly title: CodecTypes['pg/text@1']['input'] | null;
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly user_id: CodecTypes['pg/uuid@1']['input'];
+      readonly visibility: 'public' | 'followers' | 'private';
     };
     readonly ActivityMigrationJob: {
       readonly archivePath: CodecTypes['sql/varchar@1']['input'];
@@ -1127,7 +1127,7 @@ export namespace Models {
     mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
     photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
     mediaProcessingStatus: Varchar<16>;
-    isPublic: CodecTypes['pg/bool@1']['output'] | null;
+    visibility: 'public' | 'followers' | 'private';
     mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
     profileId: CodecTypes['pg/uuid@1']['output'];
     source: Varchar<32> | null;
@@ -1438,13 +1438,13 @@ type ContractBase = Omit<
                   };
                   readonly typeParams: { readonly length: 16 };
                 };
-                readonly isPublic: {
-                  readonly nativeType: 'bool';
-                  readonly codecId: 'pg/bool@1';
-                  readonly nullable: true;
+                readonly visibility: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
                   readonly default: {
                     readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'public'>;
                   };
                 };
                 readonly mapPhotoUrlBlurhash: {
@@ -1489,13 +1489,13 @@ type ContractBase = Omit<
                   readonly unique: false;
                 },
                 {
-                  readonly name: 'Activity_user_id_isPublic_date_id_idx';
-                  readonly columns: readonly ['user_id', 'isPublic', 'date', 'id'];
+                  readonly name: 'Activity_user_id_visibility_date_id_idx';
+                  readonly columns: readonly ['user_id', 'visibility', 'date', 'id'];
                   readonly unique: false;
                 },
                 {
-                  readonly name: 'Activity_isPublic_date_id_idx';
-                  readonly columns: readonly ['isPublic', 'date', 'id'];
+                  readonly name: 'Activity_visibility_date_id_idx';
+                  readonly columns: readonly ['visibility', 'date', 'id'];
                   readonly unique: false;
                 },
               ];
@@ -2795,6 +2795,12 @@ type ContractBase = Omit<
               ];
             };
           };
+          readonly valueSet: {
+            readonly ActivityVisibility: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['public', 'followers', 'private'];
+            };
+          };
         };
       };
     };
@@ -2962,9 +2968,9 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly length: 16 };
                 };
               };
-              readonly isPublic: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              readonly visibility: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly mapPhotoUrlBlurhash: {
                 readonly nullable: true;
@@ -3064,7 +3070,7 @@ type ContractBase = Omit<
                 readonly mapPhotoUrl: { readonly column: 'mapPhotoUrl' };
                 readonly photoVideoUrls: { readonly column: 'photoVideoUrls' };
                 readonly mediaProcessingStatus: { readonly column: 'media_processing_status' };
-                readonly isPublic: { readonly column: 'isPublic' };
+                readonly visibility: { readonly column: 'visibility' };
                 readonly mapPhotoUrlBlurhash: { readonly column: 'mapPhotoUrlBlurhash' };
                 readonly profileId: { readonly column: 'profileId' };
                 readonly source: { readonly column: 'source' };
@@ -4456,6 +4462,16 @@ type ContractBase = Omit<
                 readonly revokedAt: { readonly column: 'revoked_at' };
               };
             };
+          };
+        };
+        readonly enum: {
+          readonly ActivityVisibility: {
+            readonly codecId: 'pg/text@1';
+            readonly members: readonly [
+              { readonly name: 'public'; readonly value: 'public' },
+              { readonly name: 'followers'; readonly value: 'followers' },
+              { readonly name: 'private'; readonly value: 'private' },
+            ];
           };
         };
       };

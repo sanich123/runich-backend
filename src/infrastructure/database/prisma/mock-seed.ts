@@ -352,7 +352,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
           Date.now() - (userIndex * MAX_MOCK_RELATION_COUNT + activityIndex + MAX_MOCK_RELATION_COUNT) * DAY_IN_MS,
         ),
         emotion: ['ENERGETIC', 'HAPPY', 'CALM'][activityIndex % 3],
-        isPublic: true,
+        visibility: 'public',
         photoVideoUrls: [{ url: photo, thumbnail: photo }],
         kilometresSplit: sourceActivity?.kilometresSplit
           ? sourceActivity.kilometresSplit

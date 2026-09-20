@@ -56,6 +56,25 @@
   "domain": {
     "namespaces": {
       "public": {
+        "enum": {
+          "ActivityVisibility": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "public",
+                "value": "public"
+              },
+              {
+                "name": "followers",
+                "value": "followers"
+              },
+              {
+                "name": "private",
+                "value": "private"
+              }
+            ]
+          }
+        },
         "models": {
           "Activity": {
             "fields": {
@@ -118,13 +137,6 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/uuid@1",
-                  "kind": "scalar"
-                }
-              },
-              "isPublic": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/bool@1",
                   "kind": "scalar"
                 }
               },
@@ -288,6 +300,19 @@
                   "codecId": "pg/uuid@1",
                   "kind": "scalar"
                 }
+              },
+              "visibility": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ActivityVisibility",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
               }
             },
             "relations": {
@@ -380,9 +405,6 @@
                 "id": {
                   "column": "id"
                 },
-                "isPublic": {
-                  "column": "isPublic"
-                },
                 "kilometresSplit": {
                   "column": "kilometresSplit"
                 },
@@ -442,6 +464,9 @@
                 },
                 "userId": {
                   "column": "user_id"
+                },
+                "visibility": {
+                  "column": "visibility"
                 }
               },
               "namespaceId": "public",
@@ -2582,6 +2607,13 @@
         "entries": {
           "table": {
             "Activity": {
+              "checks": [
+                {
+                  "expression": "\"visibility\" IN ('public', 'followers', 'private')",
+                  "name": "Activity_visibility_check_3bfc61f5",
+                  "prefix": "Activity_visibility_check"
+                }
+              ],
               "columns": {
                 "createdAt": {
                   "codecId": "pg/timestamptz-string@1",
@@ -2640,15 +2672,6 @@
                   },
                   "nativeType": "uuid",
                   "nullable": false
-                },
-                "isPublic": {
-                  "codecId": "pg/bool@1",
-                  "default": {
-                    "kind": "literal",
-                    "value": true
-                  },
-                  "nativeType": "bool",
-                  "nullable": true
                 },
                 "kilometresSplit": {
                   "codecId": "pg/jsonb@1",
@@ -2774,6 +2797,21 @@
                   "codecId": "pg/uuid@1",
                   "nativeType": "uuid",
                   "nullable": false
+                },
+                "visibility": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "public"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ActivityVisibility",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
                 }
               },
               "foreignKeys": [
@@ -2817,15 +2855,6 @@
               "indexes": [
                 {
                   "columns": [
-                    "isPublic",
-                    "date",
-                    "id"
-                  ],
-                  "name": "Activity_isPublic_date_id_idx",
-                  "unique": false
-                },
-                {
-                  "columns": [
                     "user_id",
                     "date",
                     "id"
@@ -2836,11 +2865,20 @@
                 {
                   "columns": [
                     "user_id",
-                    "isPublic",
+                    "visibility",
                     "date",
                     "id"
                   ],
-                  "name": "Activity_user_id_isPublic_date_id_idx",
+                  "name": "Activity_user_id_visibility_date_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "visibility",
+                    "date",
+                    "id"
+                  ],
+                  "name": "Activity_visibility_date_id_idx",
                   "unique": false
                 }
               ],
@@ -4476,13 +4514,23 @@
                 }
               ]
             }
+          },
+          "valueSet": {
+            "ActivityVisibility": {
+              "kind": "valueSet",
+              "values": [
+                "public",
+                "followers",
+                "private"
+              ]
+            }
           }
         },
         "id": "public",
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "baf1a54b6e688ed5ec0901dbfb8ba40625748e4a6fde3f175581bc9c36b79cec"
+    "storageHash": "8cba32ba6966ea34daf7cf4234278f48edf8e4a9650c19d66f63c9e2dedbb2d4"
   },
   "capabilities": {
     "postgres": {

@@ -15,7 +15,7 @@ describe('CommentService privacy', () => {
     await expect(service.getCommentsbyActivityId('activity-1', '10', undefined, 'viewer-1')).rejects.toBeInstanceOf(
       NotFoundException,
     );
-    expect(prisma.activity.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.activity.findUnique).not.toHaveBeenCalled();
     expect(prisma.comment.count).not.toHaveBeenCalled();
   });
 
@@ -24,7 +24,7 @@ describe('CommentService privacy', () => {
       comment: { findUnique: asyncMock() },
       commentLike: { upsert: asyncMock() },
     };
-    prisma.comment.findUnique.mockResolvedValue({ activity: { userId: 'owner-1', isPublic: false } });
+    prisma.comment.findUnique.mockResolvedValue({ activity: { id: 'activity-1' } });
     const activityService = { canAccessActivity: asyncMock().mockResolvedValue(false) };
     const accountService = { getAccountByUserId: asyncMock() };
     const service = new CommentService(

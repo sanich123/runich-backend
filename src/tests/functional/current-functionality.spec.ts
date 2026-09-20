@@ -220,15 +220,28 @@ describe('activity, comments and statistics', () => {
     Object.assign(prisma, { $queryRaw: queryRaw });
     prisma.activity.create.mockResolvedValue({ id: 'a1' });
     prisma.activity.update.mockResolvedValue({ id: 'a1' });
-    prisma.activity.findUnique.mockResolvedValue({ id: 'a1', routeStorageKey: null });
+    const activity = {
+      id: 'a1',
+      userId: 'u1',
+      visibility: 'public',
+      routeStorageKey: null,
+      kilometresSplit: [],
+    };
+    prisma.activity.findUnique.mockResolvedValue(activity);
     prisma.activity.findMany.mockResolvedValue([]);
     queryRaw.mockResolvedValue([]);
     prisma.activity.delete.mockResolvedValue({ id: 'a1' });
     const dto = { duration: 100, distance: 1000, speed: 10, sport: 'run' };
     await expect(service.createActivity(dto, 'u1')).resolves.toEqual({ id: 'a1' });
     await expect(service.updateActivity(dto, 'a1')).resolves.toEqual({ id: 'a1' });
-    await expect(service.getLocationsByActivityId('a1')).resolves.toEqual({ id: 'a1', routeStorageKey: null });
-    await expect(service.getActivityByActivityId('a1')).resolves.toEqual({ id: 'a1', routeStorageKey: null });
+    await expect(service.getLocationsByActivityId('a1', 'u1')).resolves.toEqual({
+      locations: undefined,
+      kilometresSplit: [],
+    });
+    await expect(service.getActivityByActivityId('a1', 'u1')).resolves.toEqual({
+      ...activity,
+      elevationGain: 0,
+    });
     await expect(service.getActivitesByUserId('u1')).resolves.toEqual({
       activities: [],
       hasMore: false,
