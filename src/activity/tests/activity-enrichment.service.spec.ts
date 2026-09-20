@@ -32,12 +32,8 @@ function jsonResponse(payload: unknown, ok = true) {
 }
 
 describe('ActivityEnrichmentService', () => {
-  const originalMapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
-
   afterEach(() => {
     jest.restoreAllMocks();
-    if (originalMapboxToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN;
-    else process.env.MAPBOX_ACCESS_TOKEN = originalMapboxToken;
   });
 
   it('returns false when there are no queued activities', async () => {
@@ -50,38 +46,32 @@ describe('ActivityEnrichmentService', () => {
     expect(prisma.activity.updateMany).not.toHaveBeenCalled();
   });
 
-  it('stores the city, historical temperature, wind speed and weather code', async () => {
-    process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
+  it('stores historical weather without reverse geocoding', async () => {
     const prisma = createPrismaMock();
     const storage = createStorageMock();
     const service = new ActivityEnrichmentService(prisma as never, storage as never);
     prisma.activity.findMany.mockResolvedValue([createActivity()]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
     storage.readActivityRoute.mockResolvedValue([{ coords: { latitude: 55.75, longitude: 37.61 } }]);
-    jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValueOnce(
-        jsonResponse({ features: [{ properties: { feature_type: 'place', name_preferred: 'Москва' } }] }),
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({
-          hourly: {
-            time: ['2026-09-19T11:00'],
-            temperature_2m: [18],
-            wind_speed_10m: [6],
-            weather_code: [0],
-          },
-        }),
-      );
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce(
+      jsonResponse({
+        hourly: {
+          time: ['2026-09-19T11:00'],
+          temperature_2m: [18],
+          wind_speed_10m: [6],
+          weather_code: [0],
+        },
+      }),
+    );
 
     await expect(service.processNextBatch()).resolves.toBe(true);
 
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('language=ru'), expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('weather_code'), expect.any(Object));
+    expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('api.mapbox.com'), expect.any(Object));
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
       data: {
-        locationName: 'Москва',
         weatherTemperature: 18,
         weatherWindSpeed: 6,
         weatherCode: 0,
@@ -90,41 +80,7 @@ describe('ActivityEnrichmentService', () => {
     });
   });
 
-  it('uses a district when reverse geocoding has no city or settlement', async () => {
-    process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
-    const prisma = createPrismaMock();
-    const storage = createStorageMock();
-    const service = new ActivityEnrichmentService(prisma as never, storage as never);
-    prisma.activity.findMany.mockResolvedValue([createActivity()]);
-    prisma.activity.updateMany.mockResolvedValue({ count: 1 });
-    storage.readActivityRoute.mockResolvedValue([{ coords: { latitude: 55.1, longitude: 37.1 } }]);
-    jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValueOnce(
-        jsonResponse({
-          features: [
-            {
-              properties: {
-                feature_type: 'region',
-                name: 'Московская область',
-                context: { district: { name: 'Серпуховский район' } },
-              },
-            },
-          ],
-        }),
-      )
-      .mockResolvedValueOnce(jsonResponse({}, false));
-
-    await service.processNextBatch();
-
-    expect(prisma.activity.update).toHaveBeenCalledWith({
-      where: { id: 'activity-1' },
-      data: expect.objectContaining({ locationName: 'Серпуховский район', weatherTemperature: null }),
-    });
-  });
-
-  it('does not show a region as a city and tolerates malformed route points', async () => {
-    process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
+  it('completes without a valid route coordinate', async () => {
     const prisma = createPrismaMock();
     const storage = createStorageMock();
     const service = new ActivityEnrichmentService(prisma as never, storage as never);
@@ -143,7 +99,6 @@ describe('ActivityEnrichmentService', () => {
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
       data: {
-        locationName: null,
         weatherTemperature: null,
         weatherWindSpeed: null,
         weatherCode: null,
@@ -180,7 +135,31 @@ describe('ActivityEnrichmentService', () => {
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
       data: {
-        locationName: null,
+        weatherTemperature: null,
+        weatherWindSpeed: null,
+        weatherCode: null,
+        locationEnrichmentStatus: 'completed',
+      },
+    });
+  });
+
+  it('completes without weather when kilometre splits are missing', async () => {
+    const prisma = createPrismaMock();
+    const storage = createStorageMock();
+    const service = new ActivityEnrichmentService(prisma as never, storage as never);
+    prisma.activity.findMany.mockResolvedValue([
+      createActivity({ routeStorageKey: null, kilometresSplit: null }),
+    ]);
+    prisma.activity.updateMany.mockResolvedValue({ count: 1 });
+    jest.spyOn(global, 'fetch');
+
+    await expect(service.processNextBatch()).resolves.toBe(true);
+
+    expect(storage.readActivityRoute).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1' },
+      data: {
         weatherTemperature: null,
         weatherWindSpeed: null,
         weatherCode: null,
@@ -202,25 +181,42 @@ describe('ActivityEnrichmentService', () => {
     expect(prisma.activity.update).not.toHaveBeenCalled();
   });
 
-  it('completes with null remote values when both enrichment APIs fail', async () => {
-    process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
+  it('completes with null weather values when the weather API fails', async () => {
     const prisma = createPrismaMock();
     const storage = createStorageMock();
     const service = new ActivityEnrichmentService(prisma as never, storage as never);
     prisma.activity.findMany.mockResolvedValue([createActivity()]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
     storage.readActivityRoute.mockResolvedValue([{ coords: { latitude: 55.75, longitude: 37.61 } }]);
-    jest
-      .spyOn(global, 'fetch')
-      .mockRejectedValueOnce(new Error('Mapbox unavailable'))
-      .mockRejectedValueOnce('Open-Meteo unavailable');
+    jest.spyOn(global, 'fetch').mockRejectedValueOnce('Open-Meteo unavailable');
 
     await expect(service.processNextBatch()).resolves.toBe(true);
 
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
       data: {
-        locationName: null,
+        weatherTemperature: null,
+        weatherWindSpeed: null,
+        weatherCode: null,
+        locationEnrichmentStatus: 'completed',
+      },
+    });
+  });
+
+  it('completes with null weather values when the weather API responds with an error', async () => {
+    const prisma = createPrismaMock();
+    const storage = createStorageMock();
+    const service = new ActivityEnrichmentService(prisma as never, storage as never);
+    prisma.activity.findMany.mockResolvedValue([createActivity()]);
+    prisma.activity.updateMany.mockResolvedValue({ count: 1 });
+    storage.readActivityRoute.mockResolvedValue([{ coords: { latitude: 55.75, longitude: 37.61 } }]);
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce(jsonResponse({}, false));
+
+    await expect(service.processNextBatch()).resolves.toBe(true);
+
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1' },
+      data: {
         weatherTemperature: null,
         weatherWindSpeed: null,
         weatherCode: null,
@@ -242,7 +238,6 @@ describe('ActivityEnrichmentService', () => {
     expect(prisma.activity.updateMany).toHaveBeenNthCalledWith(2, {
       where: { id: 'activity-1', locationEnrichmentStatus: 'processing' },
       data: {
-        locationName: null,
         weatherTemperature: null,
         weatherWindSpeed: null,
         weatherCode: null,
@@ -251,47 +246,29 @@ describe('ActivityEnrichmentService', () => {
     });
   });
 
-  it('uses a context district and keeps only finite weather values', async () => {
-    process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
+  it('keeps only finite weather values', async () => {
     const prisma = createPrismaMock();
     const storage = createStorageMock();
     const service = new ActivityEnrichmentService(prisma as never, storage as never);
     prisma.activity.findMany.mockResolvedValue([createActivity()]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
     storage.readActivityRoute.mockResolvedValue([{ coords: { latitude: 55.75, longitude: 37.61 } }]);
-    jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValueOnce(
-        jsonResponse({
-          features: [
-            {
-              properties: {
-                feature_type: 'locality',
-                name_preferred: 123,
-                name: '  ',
-                context: { district: { name: ' Серпуховский район ' } },
-              },
-            },
-          ],
-        }),
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({
-          hourly: {
-            time: ['2026-09-19T11:00'],
-            temperature_2m: ['18'],
-            wind_speed_10m: [Number.POSITIVE_INFINITY],
-            weather_code: [0],
-          },
-        }),
-      );
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce(
+      jsonResponse({
+        hourly: {
+          time: ['2026-09-19T11:00'],
+          temperature_2m: ['18'],
+          wind_speed_10m: [Number.POSITIVE_INFINITY],
+          weather_code: [0],
+        },
+      }),
+    );
 
     await service.processNextBatch();
 
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
       data: expect.objectContaining({
-        locationName: 'Серпуховский район',
         weatherTemperature: null,
         weatherWindSpeed: null,
         weatherCode: 0,

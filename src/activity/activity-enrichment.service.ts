@@ -14,19 +14,6 @@ type ActivityEnrichmentRecord = {
   timeZone: string | null;
 };
 
-type MapboxContextEntry = { name?: unknown };
-
-type MapboxFeature = {
-  properties?: {
-    feature_type?: unknown;
-    name?: unknown;
-    name_preferred?: unknown;
-    context?: Record<string, MapboxContextEntry>;
-  };
-};
-
-type MapboxResponse = { features?: MapboxFeature[] };
-
 type WeatherResponse = {
   hourly?: {
     time?: unknown[];
@@ -106,31 +93,20 @@ export class ActivityEnrichmentService {
     try {
       const coordinate = await this.getActivityCoordinate(activity);
       if (!coordinate) {
-        await this.completeActivity(activity.id, null, null, null, null);
+        await this.completeActivity(activity.id, null, null, null);
         return;
       }
 
-      const [locationResult, weatherResult] = await Promise.allSettled([
-        this.getLocationName(coordinate),
-        this.getWeather(coordinate, activity.date, activity.timeZone),
-      ]);
-
-      if (locationResult.status === 'rejected') {
-        this.logger.warn(
-          `Не удалось определить место активности ${activity.id}: ${this.getErrorMessage(locationResult.reason)}`,
-        );
-      }
+      const [weatherResult] = await Promise.allSettled([this.getWeather(coordinate, activity.date, activity.timeZone)]);
       if (weatherResult.status === 'rejected') {
         this.logger.warn(
           `Не удалось определить погоду активности ${activity.id}: ${this.getErrorMessage(weatherResult.reason)}`,
         );
       }
 
-      const locationName = locationResult.status === 'fulfilled' ? locationResult.value : null;
       const weather = weatherResult.status === 'fulfilled' ? weatherResult.value : null;
       await this.completeActivity(
         activity.id,
-        locationName,
         weather?.temperature ?? null,
         weather?.windSpeed ?? null,
         weather?.code ?? null,
@@ -143,7 +119,6 @@ export class ActivityEnrichmentService {
           locationEnrichmentStatus: ACTIVITY_ENRICHMENT_STATUS.processing,
         },
         data: {
-          locationName: null,
           weatherTemperature: null,
           weatherWindSpeed: null,
           weatherCode: null,
@@ -155,7 +130,6 @@ export class ActivityEnrichmentService {
 
   private async completeActivity(
     id: string,
-    locationName: string | null,
     temperature: number | null,
     windSpeed: number | null,
     code: number | null,
@@ -163,7 +137,6 @@ export class ActivityEnrichmentService {
     await this.prisma.activity.update({
       where: { id },
       data: {
-        locationName,
         weatherTemperature: temperature,
         weatherWindSpeed: windSpeed,
         weatherCode: code,
@@ -210,45 +183,6 @@ export class ActivityEnrichmentService {
     });
   }
 
-  private async getLocationName(coordinate: Coordinate) {
-    const accessToken = process.env.MAPBOX_ACCESS_TOKEN?.trim();
-    if (!accessToken) return null;
-
-    const query = new URLSearchParams({
-      longitude: String(coordinate.longitude),
-      latitude: String(coordinate.latitude),
-      language: 'ru',
-      worldview: 'ru',
-      types: 'place,locality,district',
-      permanent: 'true',
-      access_token: accessToken,
-    });
-    const response = await fetch(`https://api.mapbox.com/search/geocode/v6/reverse?${query}`, {
-      signal: AbortSignal.timeout(ACTIVITY_ENRICHMENT_CONFIG.requestTimeoutMs),
-    });
-    if (!response.ok) throw new Error(`Mapbox reverse geocoding returned ${response.status}`);
-
-    const payload = (await response.json()) as MapboxResponse;
-    return this.pickLocationName(payload.features ?? []);
-  }
-
-  private pickLocationName(features: MapboxFeature[]) {
-    const priority = ['place', 'locality', 'district'];
-    for (const type of priority) {
-      for (const feature of features) {
-        const properties = feature.properties;
-        if (properties?.feature_type === type) {
-          const name = this.getString(properties.name_preferred) ?? this.getString(properties.name);
-          if (name) return name;
-        }
-        const contextEntry = properties?.context?.[type];
-        const contextName = this.getString(contextEntry?.name);
-        if (contextName) return contextName;
-      }
-    }
-    return null;
-  }
-
   private async getWeather(coordinate: Coordinate, date: Date, activityTimeZone: string | null) {
     const timeZone = activityTimeZone && isValidIanaTimeZone(activityTimeZone) ? activityTimeZone : 'UTC';
     const localDateTime = getLocalDateTimeParts(date, timeZone);
@@ -286,12 +220,6 @@ export class ActivityEnrichmentService {
       where: { locationEnrichmentStatus: ACTIVITY_ENRICHMENT_STATUS.processing },
       data: { locationEnrichmentStatus: ACTIVITY_ENRICHMENT_STATUS.queued },
     });
-  }
-
-  private getString(value: unknown) {
-    if (typeof value !== 'string') return null;
-    const result = value.trim();
-    return result || null;
   }
 
   private getFiniteNumber(value: unknown) {
