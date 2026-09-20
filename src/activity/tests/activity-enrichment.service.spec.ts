@@ -147,9 +147,7 @@ describe('ActivityEnrichmentService', () => {
     const prisma = createPrismaMock();
     const storage = createStorageMock();
     const service = new ActivityEnrichmentService(prisma as never, storage as never);
-    prisma.activity.findMany.mockResolvedValue([
-      createActivity({ routeStorageKey: null, kilometresSplit: null }),
-    ]);
+    prisma.activity.findMany.mockResolvedValue([createActivity({ routeStorageKey: null, kilometresSplit: null })]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
     jest.spyOn(global, 'fetch');
 
