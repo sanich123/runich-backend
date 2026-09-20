@@ -7,6 +7,7 @@ function createPrismaMock() {
       findUnique: asyncMock(),
       findMany: asyncMock(),
     },
+    activityMedia: { findMany: asyncMock() },
     friend: { findUnique: asyncMock() },
   };
 }
@@ -16,6 +17,7 @@ describe('ActivityService privacy', () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);
+    prisma.activityMedia.findMany.mockResolvedValue([]);
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       visibility: 'private',
@@ -28,9 +30,9 @@ describe('ActivityService privacy', () => {
     );
 
     await service.getMediaByUserId('owner-1', '10', undefined, 'viewer-1');
-    expect(prisma.activity.findMany).toHaveBeenCalledWith(
+    expect(prisma.activityMedia.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId: 'owner-1', photoVideoUrls: { not: null }, visibility: 'public' },
+        where: { userId: 'owner-1', activity: { visibility: 'public' } },
       }),
     );
 

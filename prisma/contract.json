@@ -8,6 +8,10 @@
       "model": "Activity",
       "namespace": "public"
     },
+    "ActivityMedia": {
+      "model": "ActivityMedia",
+      "namespace": "public"
+    },
     "ActivityMigrationJob": {
       "model": "ActivityMigrationJob",
       "namespace": "public"
@@ -193,13 +197,6 @@
                   "typeParams": {
                     "length": 16
                   }
-                }
-              },
-              "photoVideoUrls": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/jsonb@1",
-                  "kind": "scalar"
                 }
               },
               "profileId": {
@@ -391,6 +388,21 @@
                   "namespace": "public"
                 }
               },
+              "media": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "activityId"
+                  ]
+                },
+                "to": {
+                  "model": "ActivityMedia",
+                  "namespace": "public"
+                }
+              },
               "profile": {
                 "cardinality": "N:1",
                 "nullable": false,
@@ -471,9 +483,6 @@
                 "mediaProcessingStatus": {
                   "column": "media_processing_status"
                 },
-                "photoVideoUrls": {
-                  "column": "photoVideoUrls"
-                },
                 "profileId": {
                   "column": "profileId"
                 },
@@ -534,6 +543,130 @@
               },
               "namespaceId": "public",
               "table": "Activity"
+            }
+          },
+          "ActivityMedia": {
+            "fields": {
+              "activityDate": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "activityId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "blurhash": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "position": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "thumbnail": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "url": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "activity": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "activityId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Activity",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "activityDate": {
+                  "column": "activity_date"
+                },
+                "activityId": {
+                  "column": "activity_id"
+                },
+                "blurhash": {
+                  "column": "blurhash"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "position": {
+                  "column": "position"
+                },
+                "thumbnail": {
+                  "column": "thumbnail"
+                },
+                "url": {
+                  "column": "url"
+                },
+                "userId": {
+                  "column": "user_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "ActivityMedia"
             }
           },
           "ActivityMigrationJob": {
@@ -2805,11 +2938,6 @@
                     "length": 16
                   }
                 },
-                "photoVideoUrls": {
-                  "codecId": "pg/jsonb@1",
-                  "nativeType": "jsonb",
-                  "nullable": true
-                },
                 "profileId": {
                   "codecId": "pg/uuid@1",
                   "nativeType": "uuid",
@@ -3016,6 +3144,123 @@
                     "sourceActivityId"
                   ],
                   "name": "Activity_user_id_source_sourceActivityId_key"
+                }
+              ]
+            },
+            "ActivityMedia": {
+              "columns": {
+                "activity_date": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "activity_id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "blurhash": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "position": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "thumbnail": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "url": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "user_id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "name": "ActivityMedia_activity_id_fkey",
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "activity_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ActivityMedia"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Activity"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "activity_id"
+                  ],
+                  "name": "ActivityMedia_activity_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "user_id",
+                    "activity_date",
+                    "activity_id",
+                    "position"
+                  ],
+                  "name": "ActivityMedia_user_id_activity_date_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ],
+                "name": "ActivityMedia_pkey"
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "activity_id",
+                    "position"
+                  ],
+                  "name": "ActivityMedia_activity_id_position_key"
                 }
               ]
             },
@@ -4660,7 +4905,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "f17b671ab18041870998ac2cfa111b5e8dd65f25ddf969a9059444c4fd736b49"
+    "storageHash": "dd223e2a89efc0b4d433fa14a8a3d36dc6ef7318b4d1d3b4e17a67016f7fa569"
   },
   "capabilities": {
     "postgres": {

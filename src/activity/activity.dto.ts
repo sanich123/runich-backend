@@ -23,7 +23,7 @@ import {
 import { IsIanaTimeZoneConstraint } from 'src/common/validation/iana-time-zone.validator';
 import { ACTIVITY_VISIBILITY, type ActivityVisibility } from './activity-visibility';
 
-export class ActivityPhotoVideoDto {
+export class ActivityMediaDto {
   @ApiProperty({ type: String })
   @IsString()
   @IsNotEmpty()
@@ -136,7 +136,7 @@ export class ActivityKilometreSplitDto {
   kilometerPoint: ActivityLocationDto;
 }
 
-export type ActivityPhotoVideoObject = {
+export type ActivityMediaObject = {
   url: string;
   thumbnail: string | null;
   blurhash?: string | null;
@@ -219,8 +219,8 @@ export class ActivityDto {
   @IsArray()
   @ArrayMaxSize(UPLOAD_LIMITS.mediaBatchFiles)
   @ValidateNested({ each: true })
-  @Type(() => ActivityPhotoVideoDto)
-  photoVideoUrls?: ActivityPhotoVideoObject[];
+  @Type(() => ActivityMediaDto)
+  media?: ActivityMediaObject[];
 
   @ApiPropertyOptional({ type: String, description: 'Image of map with points of activity' })
   @IsOptional()
@@ -349,7 +349,7 @@ export class ActivityMigrationJobResponseDto {
   finishedAt: Date | null;
 }
 
-export class ActivityPhotoResponseDto {
+export class ActivityMediaItemDto {
   @ApiProperty({ type: String })
   url: string;
 
@@ -409,8 +409,8 @@ export class ActivityKilometreSplitResponseDto {
 }
 
 export class ActivityMediaResponseDto {
-  @ApiProperty({ type: [ActivityPhotoResponseDto] })
-  photos: ActivityPhotoResponseDto[];
+  @ApiProperty({ type: [ActivityMediaItemDto] })
+  media: ActivityMediaItemDto[];
 
   @ApiProperty({ type: Boolean })
   hasMore: boolean;
@@ -514,8 +514,8 @@ export class ActivityCardResponseDto {
   @ApiProperty({ enum: ACTIVITY_VISIBILITY })
   visibility: ActivityVisibility;
 
-  @ApiPropertyOptional({ type: [ActivityPhotoResponseDto], nullable: true })
-  photoVideoUrls?: ActivityPhotoResponseDto[] | null;
+  @ApiPropertyOptional({ type: [ActivityMediaItemDto], nullable: true })
+  media?: ActivityMediaItemDto[] | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   mapPhotoUrl?: string | null;

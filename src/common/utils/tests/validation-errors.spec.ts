@@ -25,14 +25,14 @@ describe('formatValidationErrors', () => {
         distance: 1,
         speed: 1,
         sport: 'run',
-        photoVideoUrls: [{ url: 'photo' }],
+        media: [{ url: 'photo' }],
         locations: [{ coords: { latitude: '55.75', longitude: 37.61 } }],
       }),
     );
 
     expect(formatValidationErrors(errors)).toEqual(
       expect.arrayContaining([
-        'Не указано обязательное свойство: photoVideoUrls[0].thumbnail',
+        'Не указано обязательное свойство: media[0].thumbnail',
         'Свойство должно быть числом: locations[0].coords.latitude',
       ]),
     );

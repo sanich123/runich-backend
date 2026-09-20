@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'f17b671ab18041870998ac2cfa111b5e8dd65f25ddf969a9059444c4fd736b49'>;
+  StorageHashBase<'dd223e2a89efc0b4d433fa14a8a3d36dc6ef7318b4d1d3b4e17a67016f7fa569'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -263,7 +263,6 @@ export type FieldOutputTypes = {
       readonly title: CodecTypes['pg/text@1']['output'] | null;
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
-      readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly mediaProcessingStatus: Varchar<16>;
       readonly locationName: CodecTypes['pg/text@1']['output'] | null;
       readonly weatherTemperature: CodecTypes['pg/float8@1']['output'] | null;
@@ -277,6 +276,17 @@ export type FieldOutputTypes = {
       readonly source: Varchar<32> | null;
       readonly sourceActivityId: Varchar<128> | null;
       readonly steps: CodecTypes['pg/int4@1']['output'] | null;
+    };
+    readonly ActivityMedia: {
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly activityId: CodecTypes['pg/uuid@1']['output'];
+      readonly userId: CodecTypes['pg/uuid@1']['output'];
+      readonly activityDate: TimestamptzString<6>;
+      readonly position: CodecTypes['pg/int4@1']['output'];
+      readonly url: CodecTypes['pg/text@1']['output'];
+      readonly thumbnail: CodecTypes['pg/text@1']['output'] | null;
+      readonly blurhash: CodecTypes['pg/text@1']['output'] | null;
+      readonly createdAt: TimestamptzString<6>;
     };
     readonly ActivityMigrationJob: {
       readonly id: CodecTypes['pg/uuid@1']['output'];
@@ -466,7 +476,6 @@ export type FieldInputTypes = {
       readonly title: CodecTypes['pg/text@1']['input'] | null;
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
-      readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly mediaProcessingStatus: CodecTypes['sql/varchar@1']['input'];
       readonly locationName: CodecTypes['pg/text@1']['input'] | null;
       readonly weatherTemperature: CodecTypes['pg/float8@1']['input'] | null;
@@ -480,6 +489,17 @@ export type FieldInputTypes = {
       readonly source: CodecTypes['sql/varchar@1']['input'] | null;
       readonly sourceActivityId: CodecTypes['sql/varchar@1']['input'] | null;
       readonly steps: CodecTypes['pg/int4@1']['input'] | null;
+    };
+    readonly ActivityMedia: {
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly activityId: CodecTypes['pg/uuid@1']['input'];
+      readonly userId: CodecTypes['pg/uuid@1']['input'];
+      readonly activityDate: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly position: CodecTypes['pg/int4@1']['input'];
+      readonly url: CodecTypes['pg/text@1']['input'];
+      readonly thumbnail: CodecTypes['pg/text@1']['input'] | null;
+      readonly blurhash: CodecTypes['pg/text@1']['input'] | null;
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
     };
     readonly ActivityMigrationJob: {
       readonly id: CodecTypes['pg/uuid@1']['input'];
@@ -663,7 +683,6 @@ export type StorageColumnTypes = {
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
       readonly media_processing_status: Varchar<16>;
-      readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
       readonly route_checksum: Varchar<64> | null;
       readonly route_format_version: CodecTypes['pg/int4@1']['output'] | null;
@@ -683,6 +702,17 @@ export type StorageColumnTypes = {
       readonly weather_code: CodecTypes['pg/int4@1']['output'] | null;
       readonly weather_temperature: CodecTypes['pg/float8@1']['output'] | null;
       readonly weather_wind_speed: CodecTypes['pg/float8@1']['output'] | null;
+    };
+    readonly ActivityMedia: {
+      readonly activity_date: TimestamptzString<6>;
+      readonly activity_id: CodecTypes['pg/uuid@1']['output'];
+      readonly blurhash: CodecTypes['pg/text@1']['output'] | null;
+      readonly created_at: TimestamptzString<6>;
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly position: CodecTypes['pg/int4@1']['output'];
+      readonly thumbnail: CodecTypes['pg/text@1']['output'] | null;
+      readonly url: CodecTypes['pg/text@1']['output'];
+      readonly user_id: CodecTypes['pg/uuid@1']['output'];
     };
     readonly ActivityMigrationJob: {
       readonly archivePath: Varchar<2048>;
@@ -866,7 +896,6 @@ export type StorageColumnInputTypes = {
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
       readonly media_processing_status: CodecTypes['sql/varchar@1']['input'];
-      readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
       readonly route_checksum: CodecTypes['sql/varchar@1']['input'] | null;
       readonly route_format_version: CodecTypes['pg/int4@1']['input'] | null;
@@ -886,6 +915,17 @@ export type StorageColumnInputTypes = {
       readonly weather_code: CodecTypes['pg/int4@1']['input'] | null;
       readonly weather_temperature: CodecTypes['pg/float8@1']['input'] | null;
       readonly weather_wind_speed: CodecTypes['pg/float8@1']['input'] | null;
+    };
+    readonly ActivityMedia: {
+      readonly activity_date: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly activity_id: CodecTypes['pg/uuid@1']['input'];
+      readonly blurhash: CodecTypes['pg/text@1']['input'] | null;
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly position: CodecTypes['pg/int4@1']['input'];
+      readonly thumbnail: CodecTypes['pg/text@1']['input'] | null;
+      readonly url: CodecTypes['pg/text@1']['input'];
+      readonly user_id: CodecTypes['pg/uuid@1']['input'];
     };
     readonly ActivityMigrationJob: {
       readonly archivePath: CodecTypes['sql/varchar@1']['input'];
@@ -1159,7 +1199,6 @@ export namespace Models {
     title: CodecTypes['pg/text@1']['output'] | null;
     kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
     mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
-    photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
     mediaProcessingStatus: Varchar<16>;
     locationName: CodecTypes['pg/text@1']['output'] | null;
     weatherTemperature: CodecTypes['pg/float8@1']['output'] | null;
@@ -1175,9 +1214,23 @@ export namespace Models {
     steps: CodecTypes['pg/int4@1']['output'] | null;
     comments: public_Comment[];
     likes: public_Like[];
+    media: public_ActivityMedia[];
     profile: public_Profile;
     user: public_User;
-    readonly [RelationKeys]?: 'comments' | 'likes' | 'profile' | 'user';
+    readonly [RelationKeys]?: 'comments' | 'likes' | 'media' | 'profile' | 'user';
+  };
+  export type public_ActivityMedia = {
+    id: CodecTypes['pg/uuid@1']['output'];
+    activityId: CodecTypes['pg/uuid@1']['output'];
+    userId: CodecTypes['pg/uuid@1']['output'];
+    activityDate: TimestamptzString<6>;
+    position: CodecTypes['pg/int4@1']['output'];
+    url: CodecTypes['pg/text@1']['output'];
+    thumbnail: CodecTypes['pg/text@1']['output'] | null;
+    blurhash: CodecTypes['pg/text@1']['output'] | null;
+    createdAt: TimestamptzString<6>;
+    activity: public_Activity;
+    readonly [RelationKeys]?: 'activity';
   };
   export type public_ActivityMigrationJob = {
     id: CodecTypes['pg/uuid@1']['output'];
@@ -1314,6 +1367,7 @@ export declare const models: {
     User: Models.public_User;
     Profile: Models.public_Profile;
     Activity: Models.public_Activity;
+    ActivityMedia: Models.public_ActivityMedia;
     ActivityMigrationJob: Models.public_ActivityMigrationJob;
     AuthExchange: Models.public_AuthExchange;
     Comment: Models.public_Comment;
@@ -1463,11 +1517,6 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/text@1';
                   readonly nullable: true;
                 };
-                readonly photoVideoUrls: {
-                  readonly nativeType: 'jsonb';
-                  readonly codecId: 'pg/jsonb@1';
-                  readonly nullable: true;
-                };
                 readonly media_processing_status: {
                   readonly nativeType: 'character varying';
                   readonly codecId: 'sql/varchar@1';
@@ -1600,6 +1649,104 @@ type ContractBase = Omit<
                     readonly columns: readonly ['id'];
                   };
                   readonly name: 'Activity_user_id_fkey';
+                },
+              ];
+            };
+            readonly ActivityMedia: {
+              columns: {
+                readonly id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'gen_random_uuid()';
+                  };
+                };
+                readonly activity_id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                };
+                readonly user_id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                };
+                readonly activity_date: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly position: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                };
+                readonly url: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly thumbnail: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly blurhash: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly created_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              primaryKey: {
+                readonly columns: readonly ['id'];
+                readonly name: 'ActivityMedia_pkey';
+              };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['activity_id', 'position'];
+                  readonly name: 'ActivityMedia_activity_id_position_key';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'ActivityMedia_user_id_activity_date_idx';
+                  readonly columns: readonly [
+                    'user_id',
+                    'activity_date',
+                    'activity_id',
+                    'position',
+                  ];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'ActivityMedia_activity_id_idx';
+                  readonly columns: readonly ['activity_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'ActivityMedia';
+                    readonly columns: readonly ['activity_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Activity';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'ActivityMedia_activity_id_fkey';
                 },
               ];
             };
@@ -2899,6 +3046,10 @@ type ContractBase = Omit<
     readonly Users: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
     readonly Profile: { readonly namespace: 'public' & NamespaceId; readonly model: 'Profile' };
     readonly Activity: { readonly namespace: 'public' & NamespaceId; readonly model: 'Activity' };
+    readonly ActivityMedia: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'ActivityMedia';
+    };
     readonly ActivityMigrationJob: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'ActivityMigrationJob';
@@ -3041,10 +3192,6 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly photoVideoUrls: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
-              };
               readonly mediaProcessingStatus: {
                 readonly nullable: false;
                 readonly type: {
@@ -3134,6 +3281,17 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['activityId'];
                 };
               };
+              readonly media: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'ActivityMedia';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['activityId'];
+                };
+              };
               readonly profile: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -3181,7 +3339,6 @@ type ContractBase = Omit<
                 readonly title: { readonly column: 'title' };
                 readonly kilometresSplit: { readonly column: 'kilometresSplit' };
                 readonly mapPhotoUrl: { readonly column: 'mapPhotoUrl' };
-                readonly photoVideoUrls: { readonly column: 'photoVideoUrls' };
                 readonly mediaProcessingStatus: { readonly column: 'media_processing_status' };
                 readonly locationName: { readonly column: 'location_name' };
                 readonly weatherTemperature: { readonly column: 'weather_temperature' };
@@ -3197,6 +3354,83 @@ type ContractBase = Omit<
                 readonly source: { readonly column: 'source' };
                 readonly sourceActivityId: { readonly column: 'sourceActivityId' };
                 readonly steps: { readonly column: 'steps' };
+              };
+            };
+          };
+          readonly ActivityMedia: {
+            readonly fields: {
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly activityId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly activityDate: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly position: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly url: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly thumbnail: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly blurhash: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+            };
+            readonly relations: {
+              readonly activity: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Activity';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['activityId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'ActivityMedia';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly id: { readonly column: 'id' };
+                readonly activityId: { readonly column: 'activity_id' };
+                readonly userId: { readonly column: 'user_id' };
+                readonly activityDate: { readonly column: 'activity_date' };
+                readonly position: { readonly column: 'position' };
+                readonly url: { readonly column: 'url' };
+                readonly thumbnail: { readonly column: 'thumbnail' };
+                readonly blurhash: { readonly column: 'blurhash' };
+                readonly createdAt: { readonly column: 'created_at' };
               };
             };
           };

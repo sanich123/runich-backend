@@ -9,6 +9,7 @@ function createPrismaMock() {
       updateMany: asyncMock(),
       update: asyncMock(),
     },
+    activityMedia: { updateMany: asyncMock() },
   };
 }
 
@@ -30,7 +31,7 @@ describe('ActivityMediaProcessingService', () => {
     prisma.activity.findMany.mockResolvedValue([
       {
         id: 'activity-1',
-        photoVideoUrls: [{ url: 'photo', thumbnail: null }],
+        media: [{ position: 0, url: 'photo', thumbnail: null, blurhash: null }],
         mapPhotoUrl: 'map',
         mapPhotoUrlBlurhash: null,
       },
@@ -49,10 +50,13 @@ describe('ActivityMediaProcessingService', () => {
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
       data: {
-        photoVideoUrls: [{ url: 'photo', thumbnail: null, blurhash: null }],
         mapPhotoUrlBlurhash: null,
         mediaProcessingStatus: 'completed',
       },
+    });
+    expect(prisma.activityMedia.updateMany).toHaveBeenCalledWith({
+      where: { activityId: 'activity-1', position: 0 },
+      data: { blurhash: null },
     });
   });
 
@@ -63,7 +67,7 @@ describe('ActivityMediaProcessingService', () => {
     prisma.activity.findMany.mockResolvedValue([
       {
         id: 'activity-1',
-        photoVideoUrls: [{ url: 'photo', thumbnail: null, blurhash: 'existing' }],
+        media: [{ position: 0, url: 'photo', thumbnail: null, blurhash: 'existing' }],
         mapPhotoUrl: null,
         mapPhotoUrlBlurhash: null,
       },
@@ -87,7 +91,10 @@ describe('ActivityMediaProcessingService', () => {
     prisma.activity.findMany.mockResolvedValue([
       {
         id: 'activity-1',
-        photoVideoUrls: [null, { url: 'existing', blurhash: 'blurhash' }, { url: 'new', thumbnail: 'thumb' }],
+        media: [
+          { position: 0, url: 'existing', thumbnail: null, blurhash: 'blurhash' },
+          { position: 1, url: 'new', thumbnail: 'thumb', blurhash: null },
+        ],
         mapPhotoUrl: 'map',
         mapPhotoUrlBlurhash: 'map-blurhash',
       },
@@ -101,13 +108,12 @@ describe('ActivityMediaProcessingService', () => {
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
       data: {
-        photoVideoUrls: [
-          null,
-          { url: 'existing', blurhash: 'blurhash' },
-          { url: 'new', thumbnail: 'thumb', blurhash: null },
-        ],
         mediaProcessingStatus: 'completed',
       },
+    });
+    expect(prisma.activityMedia.updateMany).toHaveBeenCalledWith({
+      where: { activityId: 'activity-1', position: 1 },
+      data: { blurhash: null },
     });
   });
 
@@ -116,7 +122,7 @@ describe('ActivityMediaProcessingService', () => {
     const service = new ActivityMediaProcessingService(prisma as never);
     jest.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('image unavailable'));
     prisma.activity.findMany.mockResolvedValue([
-      { id: 'activity-1', photoVideoUrls: [{ url: 'photo' }], mapPhotoUrl: null, mapPhotoUrlBlurhash: null },
+      { id: 'activity-1', media: [], mapPhotoUrl: null, mapPhotoUrlBlurhash: null },
     ]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
     prisma.activity.update.mockRejectedValueOnce(new Error('database unavailable'));
@@ -138,7 +144,7 @@ describe('ActivityMediaProcessingService', () => {
     const service = new ActivityMediaProcessingService(prisma as never);
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
     prisma.activity.findMany.mockResolvedValue([
-      { id: 'activity-1', photoVideoUrls: null, mapPhotoUrl: null, mapPhotoUrlBlurhash: null },
+      { id: 'activity-1', media: [], mapPhotoUrl: null, mapPhotoUrlBlurhash: null },
     ]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
     prisma.activity.update.mockRejectedValueOnce('database unavailable');
@@ -157,7 +163,7 @@ describe('ActivityMediaProcessingService', () => {
     prisma.activity.findMany.mockResolvedValue([
       {
         id: 'activity-1',
-        photoVideoUrls: [{ url: 'photo', thumbnail: null }],
+        media: [{ position: 0, url: 'photo', thumbnail: null, blurhash: null }],
         mapPhotoUrl: null,
         mapPhotoUrlBlurhash: null,
       },

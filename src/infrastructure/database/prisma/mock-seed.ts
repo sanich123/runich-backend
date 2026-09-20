@@ -273,11 +273,11 @@ export async function seedMockData(prisma: DatabaseRepositories) {
 
   const sourceActivities = await prisma.activity.findMany({
     where: { userId: target.id },
-    select: { photoVideoUrls: true, mapPhotoUrl: true, kilometresSplit: true },
+    select: { media: { select: { url: true } }, mapPhotoUrl: true, kilometresSplit: true },
     orderBy: { date: 'desc' },
   });
   const sourcePhotoUrls = sourceActivities.flatMap((activity: any) => [
-    ...extractPhotoUrls(activity.photoVideoUrls),
+    ...extractPhotoUrls(activity.media),
     ...(activity.mapPhotoUrl ? [activity.mapPhotoUrl] : []),
   ]);
 
@@ -329,6 +329,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
     const profile = user.profile!;
     const activityCount = mockActivityCount(userIndex);
     const activityRows: AnyRecord[] = [];
+    const mediaRows: AnyRecord[] = [];
 
     for (let activityIndex = 0; activityIndex < activityCount; activityIndex += 1) {
       const sourceActivity = sourceActivities.length
@@ -353,7 +354,6 @@ export async function seedMockData(prisma: DatabaseRepositories) {
         ),
         emotion: ['ENERGETIC', 'HAPPY', 'CALM'][activityIndex % 3],
         visibility: 'public',
-        photoVideoUrls: [{ url: photo, thumbnail: photo }],
         kilometresSplit: sourceActivity?.kilometresSplit
           ? sourceActivity.kilometresSplit
           : [
@@ -361,9 +361,19 @@ export async function seedMockData(prisma: DatabaseRepositories) {
               { kilometre: 2, pace: 285 + random(userIndex + activityIndex + 20, 45) },
             ],
       });
+      const activity = activityRows.at(-1)!;
+      mediaRows.push({
+        activityId: activity.id,
+        userId: activity.userId,
+        activityDate: activity.date,
+        position: 0,
+        url: photo,
+        thumbnail: photo,
+      });
     }
 
     await createManyInBatches(activityRows, (data) => prisma.activity.createMany({ data }));
+    await createManyInBatches(mediaRows, (data) => prisma.activityMedia.createMany({ data }));
     activityTotal += activityRows.length;
 
     for (const [activityIndex, activity] of activityRows.entries()) {

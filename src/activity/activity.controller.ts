@@ -71,10 +71,10 @@ export class ActivityController {
     private readonly activityMigrationService: ActivityMigrationService,
   ) {}
 
-  @Get(`${id}/photos`)
+  @Get(`${id}/media`)
   @ApiOkResponse({ type: ActivityMediaResponseDto })
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Gets all photos saved by user in activities' })
+  @ApiOperation({ summary: 'Gets all media saved by user in activities' })
   @ApiParam({ name: 'id', description: 'User identifier' })
   @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
   @ApiQuery({ name: 'take', required: false, description: 'Maximum number of photos' })

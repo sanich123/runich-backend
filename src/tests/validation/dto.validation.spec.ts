@@ -116,7 +116,7 @@ describe('request DTO validation', () => {
       description: 'Morning run',
       emotion: 'happy',
       visibility: 'public',
-      photoVideoUrls: [{ url: 'https://example.com/photo.jpg', thumbnail: null, blurhash: 'hash' }],
+      media: [{ url: 'https://example.com/photo.jpg', thumbnail: null, blurhash: 'hash' }],
       mapPhotoUrl: 'https://example.com/map.jpg',
       mapPhotoUrlBlurhash: 'hash',
       title: 'Morning',
@@ -147,14 +147,14 @@ describe('request DTO validation', () => {
       distance: 1,
       speed: 1,
       sport: 'run',
-      photoVideoUrls: [{ url: 42 }],
+      media: [{ url: 42 }],
     });
     await expectInvalid(ActivityDto, {
       duration: 1,
       distance: 1,
       speed: 1,
       sport: 'run',
-      photoVideoUrls: [{ url: 'photo' }],
+      media: [{ url: 'photo' }],
     });
     await expectInvalid(ActivityDto, {
       duration: 1,

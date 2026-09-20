@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ActivityDto, type LocationObject } from './activity.dto';
+import { ActivityDto, type ActivityMediaObject, type LocationObject } from './activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
@@ -10,12 +9,7 @@ import { chunkArray } from 'src/common/parsers/chunk-array';
 import { generateActivityTitle } from './activity-title';
 import { ActivityPersistenceService } from './activity-persistence.service';
 import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.constants';
-import {
-  ACTIVITY_CARD_SELECT,
-  ACTIVITY_DETAILS_SELECT,
-  DEFAULT_ACTIVITY_PAGE_SIZE,
-  MEDIA_ACTIVITY_BATCH_SIZE,
-} from './const';
+import { ACTIVITY_CARD_SELECT, ACTIVITY_DETAILS_SELECT, DEFAULT_ACTIVITY_PAGE_SIZE } from './const';
 import {
   encodeActivityCursor,
   encodeActivityMediaCursor,
@@ -102,35 +96,32 @@ export class ActivityService {
       const account = await this.accountService.getAccountByUserId(id);
       const locations = activityDto.locations;
       const storageService = this.storageService;
-      let activityId: string | undefined;
+      let media = activityDto.media;
+      let activityId: string | undefined = media?.length ? randomUUID() : undefined;
       let routeMetadata;
-      let photoVideoUrls = activityDto.photoVideoUrls;
-      if (storageService && (locations?.length || photoVideoUrls?.length)) {
-        activityId = randomUUID();
+      if (!activityId && storageService && locations?.length) activityId = randomUUID();
+      if (storageService && (locations?.length || media?.length)) {
+        activityId ??= randomUUID();
         if (locations?.length) {
           routeMetadata = await storageService.uploadActivityRoute(id, activityId, locations);
         }
-        if (photoVideoUrls?.length) {
-          const promotedMedia = await storageService.promoteActivityPhotos(
-            id,
-            activityId,
-            photoVideoUrls,
-            mediaCreatedAt,
-          );
-          photoVideoUrls = promotedMedia.photos;
+        if (media?.length) {
+          const promotedMedia = await storageService.promoteActivityPhotos(id, activityId, media, mediaCreatedAt);
+          media = promotedMedia.photos;
           uploadedActivityMediaKeys = promotedMedia.keys;
         }
       }
       uploadedRouteKey = routeMetadata?.key;
 
       const mapPhotoUrl =
-        activityDto?.photoVideoUrls?.length && locations?.length && locations.length > 1
+        activityDto?.media?.length && locations?.length && locations.length > 1
           ? getMapBoxImage(locations)
           : activityDto.mapPhotoUrl;
 
       const mapPhotoUrlBlurhash = null;
       const activityFields = { ...activityDto };
       delete activityFields.locations;
+      delete activityFields.media;
       activityFields.visibility = activityDto.visibility ?? ACTIVITY_VISIBILITY.public;
       const description = activityDto.description?.trim() || null;
 
@@ -146,7 +137,6 @@ export class ActivityService {
         title: activityDto.title?.trim()
           ? activityDto.title
           : generateActivityTitle(activityDto.sport, activityDto.date, activityDto.timeZone),
-        photoVideoUrls,
         ...(routeMetadata
           ? {
               routeStorageKey: routeMetadata.key,
@@ -169,13 +159,14 @@ export class ActivityService {
           duration: activityDto.duration,
         }),
       };
-      const photoCount = Array.isArray(photoVideoUrls) ? photoVideoUrls.length : 0;
+      const mediaCount = Array.isArray(media) ? media.length : 0;
       const locationCount = Array.isArray(activityDto.locations) ? activityDto.locations.length : 0;
       this.logger.log(
-        `Сохранение активности: userId=${id}, sport=${activityDto.sport}, date=${activityDto.date}, photos=${photoCount}, locations=${locationCount}`,
+        `Сохранение активности: userId=${id}, sport=${activityDto.sport}, date=${activityDto.date}, media=${mediaCount}, locations=${locationCount}`,
       );
 
-      return omitMediaProcessingStatus(await this.persistenceService.create(data));
+      const mediaRows = this.getActivityMediaRows(activityId, id, data.date ?? new Date(), media);
+      return omitMediaProcessingStatus(await this.persistenceService.create(data, mediaRows));
     } catch (error) {
       await this.deleteUploadedRoute(uploadedRouteKey);
       await Promise.all(uploadedActivityMediaKeys.map((key) => this.deleteUploadedRoute(key)));
@@ -201,10 +192,20 @@ export class ActivityService {
           try {
             for (const activity of activityBatch) preparedActivities.push(await this.prepareActivityRoute(activity));
             this.logger.debug(`Writing activity batch (${activityBatch.length} records)`);
-            return await this.persistenceService.createMany(
-              preparedActivities.map(({ data }) => data as unknown as Record<string, unknown>),
-              database,
+            const preparedData = preparedActivities.map(({ data }) => {
+              const activityData = { ...(data as unknown as Record<string, unknown>) };
+              delete activityData.media;
+              return activityData;
+            });
+            const media = preparedActivities.flatMap(({ data }) =>
+              this.getActivityMediaRows(
+                (data as unknown as Record<string, unknown>).id as string,
+                (data as unknown as Record<string, unknown>).userId as string,
+                (data as unknown as Record<string, unknown>).date ?? new Date(),
+                (data as unknown as Record<string, unknown>).media,
+              ),
             );
+            return await this.persistenceService.createMany(preparedData, database, media);
           } catch (error) {
             await Promise.all(preparedActivities.map(({ routeKey }) => this.deleteUploadedRoute(routeKey)));
             throw error;
@@ -245,6 +246,9 @@ export class ActivityService {
         }),
       };
       const activity = await this.persistenceService.update(id, userId, data);
+      if (date) {
+        await this.prisma.activityMedia.updateMany({ where: { activityId: id }, data: { activityDate: date } });
+      }
       return omitMediaProcessingStatus(
         activity ? normalizeActivityDetails(activity as Record<string, unknown>) : activity,
       );
@@ -288,66 +292,53 @@ export class ActivityService {
   async getMediaByUserId(id: string, take = '10', cursor?: ActivityMediaCursor, currentUserId?: string) {
     try {
       const pageSize = Number(take);
-      const photos: unknown[] = [];
-      const photoCursors: ActivityMediaCursor[] = [];
-      let activityCursor: ActivityCursor | undefined = cursor;
-      let includeCursorActivity = Boolean(cursor);
-      let skipPhotoIndex = cursor?.photoIndex ?? -1;
       const visibilityFilter = await this.getVisibilityFilter(id, currentUserId);
-
-      while (photos.length <= pageSize) {
-        const activities = await this.prisma.activity.findMany({
-          // @ts-ignore Prisma's generated JSON filter type does not accept SQL NULL here.
-          where: {
-            userId: id,
-            photoVideoUrls: { not: null },
-            ...visibilityFilter,
-            ...(activityCursor
-              ? {
-                  OR: [
-                    { date: { lt: activityCursor.date } },
-                    { date: activityCursor.date, id: { lt: activityCursor.id } },
-                    ...(includeCursorActivity ? [{ date: activityCursor.date, id: activityCursor.id }] : []),
-                  ],
-                }
-              : {}),
-          },
-          orderBy: [{ date: 'desc' }, { id: 'desc' }],
-          take: MEDIA_ACTIVITY_BATCH_SIZE,
-          select: { id: true, date: true, photoVideoUrls: true },
-        });
-
-        if (!activities.length) break;
-
-        for (const activity of activities) {
-          const activityPhotos = Array.isArray(activity.photoVideoUrls) ? activity.photoVideoUrls : [];
-          const firstPhotoIndex =
-            includeCursorActivity && activity.id === cursor?.id && activity.date.getTime() === cursor?.date.getTime()
-              ? skipPhotoIndex + 1
-              : 0;
-
-          for (let photoIndex = firstPhotoIndex; photoIndex < activityPhotos.length; photoIndex += 1) {
-            photos.push(activityPhotos[photoIndex]);
-            photoCursors.push({ date: activity.date, id: activity.id, photoIndex });
-            if (photos.length > pageSize) break;
-          }
-          if (photos.length > pageSize) break;
-        }
-
-        const lastActivity = activities.at(-1)!;
-        activityCursor = { date: lastActivity.date, id: lastActivity.id };
-        includeCursorActivity = false;
-        skipPhotoIndex = -1;
-        if (activities.length < MEDIA_ACTIVITY_BATCH_SIZE) break;
-      }
-
-      const hasMore = photos.length > pageSize;
-      const slicedPhotos = photos.slice(0, pageSize);
-      const slicedCursors = photoCursors.slice(0, pageSize);
+      const media = await this.prisma.activityMedia.findMany({
+        where: {
+          userId: id,
+          ...(Object.keys(visibilityFilter).length ? { activity: visibilityFilter } : {}),
+          ...(cursor
+            ? {
+                OR: [
+                  { activityDate: { lt: cursor.date } },
+                  { activityDate: cursor.date, activityId: { lt: cursor.id } },
+                  { activityDate: cursor.date, activityId: cursor.id, position: { gt: cursor.photoIndex } },
+                ],
+              }
+            : {}),
+        },
+        orderBy: [{ activityDate: 'desc' }, { activityId: 'desc' }, { position: 'asc' }],
+        take: pageSize + 1,
+        select: {
+          activityDate: true,
+          activityId: true,
+          position: true,
+          url: true,
+          thumbnail: true,
+          blurhash: true,
+        },
+      });
+      const hasMore = media.length > pageSize;
+      const slicedMedia = media.slice(0, pageSize) as Array<{
+        activityDate: Date;
+        activityId: string;
+        position: number;
+        url: string;
+        thumbnail: string | null;
+        blurhash: string | null;
+      }>;
+      const lastMedia = slicedMedia.at(-1);
       return {
-        photos: slicedPhotos,
+        media: slicedMedia.map(({ url, thumbnail, blurhash }) => ({ url, thumbnail, blurhash })),
         hasMore,
-        nextCursor: hasMore && slicedCursors.length ? encodeActivityMediaCursor(slicedCursors.at(-1)!) : null,
+        nextCursor:
+          hasMore && lastMedia
+            ? encodeActivityMediaCursor({
+                date: lastMedia.activityDate,
+                id: lastMedia.activityId,
+                photoIndex: lastMedia.position,
+              })
+            : null,
         isLastPage: !hasMore,
       };
     } catch (error) {
@@ -441,7 +432,17 @@ export class ActivityService {
           a."id",
           a."user_id" AS "userId",
           a."visibility",
-          a."photoVideoUrls",
+          COALESCE(
+            (
+              SELECT json_agg(
+                json_build_object('url', am."url", 'thumbnail', am."thumbnail", 'blurhash', am."blurhash")
+                ORDER BY am."position" ASC
+              )
+              FROM "ActivityMedia" AS am
+              WHERE am."activity_id" = a."id"
+            ),
+            '[]'::json
+              ) AS "media",
           a."mapPhotoUrl",
           a."mapPhotoUrlBlurhash",
           a."location_name" AS "locationName",
@@ -536,7 +537,7 @@ export class ActivityService {
       return await this.prisma.$transaction(async (transaction) => {
         const activity = await transaction.activity.findFirst({
           where: { id, userId },
-          select: { routeStorageKey: true, photoVideoUrls: true },
+          select: { routeStorageKey: true, media: { select: { url: true, thumbnail: true } } },
         });
         const storageKeys = this.getActivityStorageKeys(userId, activity);
         await Promise.all(
@@ -608,15 +609,12 @@ export class ActivityService {
     }
   }
 
-  private getActivityStorageKeys(
-    userId: string,
-    activity: { routeStorageKey: string | null; photoVideoUrls: unknown } | null,
-  ) {
+  private getActivityStorageKeys(userId: string, activity: { routeStorageKey: string | null; media: unknown } | null) {
     const keys = new Set<string>();
     if (activity?.routeStorageKey?.startsWith(`${userId}/`)) keys.add(activity.routeStorageKey);
 
-    if (!this.storageService || !Array.isArray(activity?.photoVideoUrls)) return [...keys];
-    for (const media of activity.photoVideoUrls) {
+    if (!this.storageService || !Array.isArray(activity?.media)) return [...keys];
+    for (const media of activity.media) {
       for (const url of this.getMediaUrls(media)) {
         try {
           keys.add(this.storageService.getOwnedKey(userId, url));
@@ -635,6 +633,37 @@ export class ActivityService {
     return ['url' in media ? media.url : undefined, 'thumbnail' in media ? media.thumbnail : undefined].filter(
       (url): url is string => typeof url === 'string',
     );
+  }
+
+  private getActivityMediaRows(
+    activityId: unknown,
+    userId: unknown,
+    activityDate: unknown,
+    media: unknown,
+  ): Record<string, unknown>[] {
+    if (typeof activityId !== 'string' || typeof userId !== 'string') return [];
+    if (!(activityDate instanceof Date) && typeof activityDate !== 'string') return [];
+    if (!Array.isArray(media)) return [];
+
+    return media.flatMap((item, position) => {
+      if (typeof item === 'string') {
+        return [{ activityId, userId, activityDate, position, url: item, thumbnail: null, blurhash: null }];
+      }
+      if (!item || typeof item !== 'object' || !('url' in item) || typeof item.url !== 'string') return [];
+
+      const photo = item as ActivityMediaObject;
+      return [
+        {
+          activityId,
+          userId,
+          activityDate,
+          position,
+          url: photo.url,
+          thumbnail: photo.thumbnail ?? null,
+          blurhash: photo.blurhash ?? null,
+        },
+      ];
+    });
   }
 
   async getActivityWithEmailData(activityId: string) {

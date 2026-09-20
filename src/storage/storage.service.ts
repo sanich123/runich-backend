@@ -23,7 +23,7 @@ import { pipeline } from 'node:stream/promises';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { normalizeImage } from 'src/common/images/image-processing';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
-import type { ActivityPhotoVideoObject, LocationObject } from 'src/activity/activity.dto';
+import type { ActivityMediaObject, LocationObject } from 'src/activity/activity.dto';
 import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, isSupportedVideoUpload, MAX_DELETE_BATCH_SIZE } from './const';
 import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from './activity-route';
 import {
@@ -325,7 +325,7 @@ export class StorageService {
   async promoteActivityPhotos(
     userId: string,
     activityId: string,
-    photos: ActivityPhotoVideoObject[],
+    photos: ActivityMediaObject[],
     createdAt = new Date(),
   ) {
     const movedKeys: string[] = [];
@@ -347,7 +347,7 @@ export class StorageService {
     };
 
     try {
-      const promotedPhotos: ActivityPhotoVideoObject[] = [];
+      const promotedPhotos: ActivityMediaObject[] = [];
       for (const photo of photos) {
         promotedPhotos.push({
           ...photo,

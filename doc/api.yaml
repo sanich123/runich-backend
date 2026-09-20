@@ -135,9 +135,9 @@ paths:
   /profile/filter:
     get:
       summary: Search profiles
-  /activity/{id}/photos:
+  /activity/{id}/media:
     get:
-      summary: Get activity photos for a user
+      summary: Get activity media for a user
       parameters:
         - $ref: '#/components/parameters/Id'
         - $ref: '#/components/parameters/Take'

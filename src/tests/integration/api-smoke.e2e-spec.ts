@@ -87,7 +87,18 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         routePointCount: routeMetadata.pointCount,
         routeSizeBytes: routeMetadata.sizeBytes,
         routeChecksum: routeMetadata.checksum,
-        photoVideoUrls: [{ url: 'https://example.com/photo.jpg', thumbnail: null, blurhash: 'test-blurhash' }],
+        media: {
+          create: [
+            {
+              userId: owner.id,
+              activityDate,
+              position: 0,
+              url: 'https://example.com/photo.jpg',
+              thumbnail: null,
+              blurhash: 'test-blurhash',
+            },
+          ],
+        },
       },
     });
     activityId = activity.id;
@@ -207,11 +218,11 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .expect((response) => expect(response.body.locations).toHaveLength(1));
 
     await request(app.getHttpServer())
-      .get(`/activity/${ownerId}/photos`)
+      .get(`/activity/${ownerId}/media`)
       .query({ take: '10' })
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200)
-      .expect((response) => expect(response.body.photos).toHaveLength(1));
+      .expect((response) => expect(response.body.media).toHaveLength(1));
 
     const idsResponse = await request(app.getHttpServer())
       .get('/activity/activityIds')

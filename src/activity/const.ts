@@ -3,7 +3,6 @@ import { PATHS } from 'src/common/constants';
 export const { activity, id } = PATHS;
 
 export const DEFAULT_ACTIVITY_PAGE_SIZE = 20;
-export const MEDIA_ACTIVITY_BATCH_SIZE = 50;
 
 export const ACTIVITY_CARD_PROFILE_SELECT = {
   surname: true,
@@ -27,7 +26,10 @@ export const ACTIVITY_CARD_SELECT = {
   id: true,
   userId: true,
   visibility: true,
-  photoVideoUrls: true,
+  media: {
+    select: { url: true, thumbnail: true, blurhash: true },
+    orderBy: { position: 'asc' },
+  },
   mapPhotoUrl: true,
   mapPhotoUrlBlurhash: true,
   locationName: true,

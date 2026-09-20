@@ -39,16 +39,27 @@ describeIntegration('PostgreSQL activity privacy e2e', () => {
     ownerId = owner.id;
     visitorId = visitor.id;
 
+    const activityDate = new Date();
     const activityData = {
       userId: owner.id,
       profileId: owner.profile!.id,
-      date: new Date(),
+      date: activityDate,
       title: 'E2E activity',
       sport: 'run',
       duration: 60,
       distance: 1,
       speed: 1,
-      photoVideoUrls: [{ url: 'https://example.com/photo.jpg', thumbnail: null }],
+      media: {
+        create: [
+          {
+            userId: owner.id,
+            activityDate,
+            position: 0,
+            url: 'https://example.com/photo.jpg',
+            thumbnail: null,
+          },
+        ],
+      },
     };
     const privateActivity = await prisma.activity.create({ data: { ...activityData, visibility: 'private' } });
     const publicActivity = await prisma.activity.create({ data: { ...activityData, visibility: 'public' } });
