@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'8cba32ba6966ea34daf7cf4234278f48edf8e4a9650c19d66f63c9e2dedbb2d4'>;
+  StorageHashBase<'d3e4ee5c4fbb7b2d522178aee2f66153b6a473ea1beed7dd7aa0c1ebc7d0c4a8'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -265,6 +265,11 @@ export type FieldOutputTypes = {
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly mediaProcessingStatus: Varchar<16>;
+      readonly locationName: CodecTypes['pg/text@1']['output'] | null;
+      readonly weatherTemperature: CodecTypes['pg/float8@1']['output'] | null;
+      readonly weatherWindSpeed: CodecTypes['pg/float8@1']['output'] | null;
+      readonly weatherCode: CodecTypes['pg/int4@1']['output'] | null;
+      readonly locationEnrichmentStatus: Varchar<16>;
       readonly visibility: 'public' | 'followers' | 'private';
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
@@ -460,6 +465,11 @@ export type FieldInputTypes = {
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly photoVideoUrls: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly mediaProcessingStatus: CodecTypes['sql/varchar@1']['input'];
+      readonly locationName: CodecTypes['pg/text@1']['input'] | null;
+      readonly weatherTemperature: CodecTypes['pg/float8@1']['input'] | null;
+      readonly weatherWindSpeed: CodecTypes['pg/float8@1']['input'] | null;
+      readonly weatherCode: CodecTypes['pg/int4@1']['input'] | null;
+      readonly locationEnrichmentStatus: CodecTypes['sql/varchar@1']['input'];
       readonly visibility: 'public' | 'followers' | 'private';
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
@@ -641,6 +651,8 @@ export type StorageColumnTypes = {
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly location_enrichment_status: Varchar<16>;
+      readonly location_name: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
       readonly media_processing_status: Varchar<16>;
@@ -661,6 +673,9 @@ export type StorageColumnTypes = {
       readonly updatedAt: TimestamptzString<6>;
       readonly user_id: CodecTypes['pg/uuid@1']['output'];
       readonly visibility: 'public' | 'followers' | 'private';
+      readonly weather_code: CodecTypes['pg/int4@1']['output'] | null;
+      readonly weather_temperature: CodecTypes['pg/float8@1']['output'] | null;
+      readonly weather_wind_speed: CodecTypes['pg/float8@1']['output'] | null;
     };
     readonly ActivityMigrationJob: {
       readonly archivePath: Varchar<2048>;
@@ -836,6 +851,8 @@ export type StorageColumnInputTypes = {
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly location_enrichment_status: CodecTypes['sql/varchar@1']['input'];
+      readonly location_name: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
       readonly media_processing_status: CodecTypes['sql/varchar@1']['input'];
@@ -856,6 +873,9 @@ export type StorageColumnInputTypes = {
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly user_id: CodecTypes['pg/uuid@1']['input'];
       readonly visibility: 'public' | 'followers' | 'private';
+      readonly weather_code: CodecTypes['pg/int4@1']['input'] | null;
+      readonly weather_temperature: CodecTypes['pg/float8@1']['input'] | null;
+      readonly weather_wind_speed: CodecTypes['pg/float8@1']['input'] | null;
     };
     readonly ActivityMigrationJob: {
       readonly archivePath: CodecTypes['sql/varchar@1']['input'];
@@ -1127,6 +1147,11 @@ export namespace Models {
     mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
     photoVideoUrls: CodecTypes['pg/jsonb@1']['output'] | null;
     mediaProcessingStatus: Varchar<16>;
+    locationName: CodecTypes['pg/text@1']['output'] | null;
+    weatherTemperature: CodecTypes['pg/float8@1']['output'] | null;
+    weatherWindSpeed: CodecTypes['pg/float8@1']['output'] | null;
+    weatherCode: CodecTypes['pg/int4@1']['output'] | null;
+    locationEnrichmentStatus: Varchar<16>;
     visibility: 'public' | 'followers' | 'private';
     mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
     profileId: CodecTypes['pg/uuid@1']['output'];
@@ -1429,6 +1454,36 @@ type ContractBase = Omit<
                   readonly nullable: true;
                 };
                 readonly media_processing_status: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'sql/varchar@1', 'queued'>;
+                  };
+                  readonly typeParams: { readonly length: 16 };
+                };
+                readonly location_name: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly weather_temperature: {
+                  readonly nativeType: 'float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: true;
+                };
+                readonly weather_wind_speed: {
+                  readonly nativeType: 'float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: true;
+                };
+                readonly weather_code: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                };
+                readonly location_enrichment_status: {
                   readonly nativeType: 'character varying';
                   readonly codecId: 'sql/varchar@1';
                   readonly nullable: false;
@@ -2968,6 +3023,30 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly length: 16 };
                 };
               };
+              readonly locationName: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly weatherTemperature: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly weatherWindSpeed: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly weatherCode: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly locationEnrichmentStatus: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 16 };
+                };
+              };
               readonly visibility: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -3070,6 +3149,13 @@ type ContractBase = Omit<
                 readonly mapPhotoUrl: { readonly column: 'mapPhotoUrl' };
                 readonly photoVideoUrls: { readonly column: 'photoVideoUrls' };
                 readonly mediaProcessingStatus: { readonly column: 'media_processing_status' };
+                readonly locationName: { readonly column: 'location_name' };
+                readonly weatherTemperature: { readonly column: 'weather_temperature' };
+                readonly weatherWindSpeed: { readonly column: 'weather_wind_speed' };
+                readonly weatherCode: { readonly column: 'weather_code' };
+                readonly locationEnrichmentStatus: {
+                  readonly column: 'location_enrichment_status';
+                };
                 readonly visibility: { readonly column: 'visibility' };
                 readonly mapPhotoUrlBlurhash: { readonly column: 'mapPhotoUrlBlurhash' };
                 readonly profileId: { readonly column: 'profileId' };

@@ -13,4 +13,15 @@ describe('getMapBoxImage', () => {
 
     expect(() => getMapBoxImage([])).toThrow('MAPBOX_ACCESS_TOKEN');
   });
+
+  it('disables Mapbox attribution and logo for static images', () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
+
+    const imageUrl = getMapBoxImage([
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+      { coords: { latitude: 55.76, longitude: 37.62 } },
+    ]);
+
+    expect(imageUrl).toContain('?access_token=test-token&attribution=false&logo=false');
+  });
 });

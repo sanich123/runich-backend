@@ -26,7 +26,7 @@ export function getMapBoxImage(locations: LocationObject[]) {
       initialCoordinate[1]
     }),pin-s-b+000(${lastCoordinate[0]},${lastCoordinate[1]}),path-${lineWidth}+${lineColor}-${lineOpacity}(${encodeURIComponent(
       encodedPolyline,
-    )})/auto/${width}x${height}${doublePixels}?access_token=${accessToken}`;
+    )})/auto/${width}x${height}${doublePixels}?access_token=${accessToken}&attribution=false&logo=false`;
   }
 
   return '';

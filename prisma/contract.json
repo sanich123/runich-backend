@@ -147,6 +147,23 @@
                   "kind": "scalar"
                 }
               },
+              "locationEnrichmentStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              },
+              "locationName": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "mapPhotoUrl": {
                 "nullable": true,
                 "type": {
@@ -313,6 +330,27 @@
                   "namespaceId": "public",
                   "plane": "domain"
                 }
+              },
+              "weatherCode": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "weatherTemperature": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "weatherWindSpeed": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
               }
             },
             "relations": {
@@ -408,6 +446,12 @@
                 "kilometresSplit": {
                   "column": "kilometresSplit"
                 },
+                "locationEnrichmentStatus": {
+                  "column": "location_enrichment_status"
+                },
+                "locationName": {
+                  "column": "location_name"
+                },
                 "mapPhotoUrl": {
                   "column": "mapPhotoUrl"
                 },
@@ -467,6 +511,15 @@
                 },
                 "visibility": {
                   "column": "visibility"
+                },
+                "weatherCode": {
+                  "column": "weather_code"
+                },
+                "weatherTemperature": {
+                  "column": "weather_temperature"
+                },
+                "weatherWindSpeed": {
+                  "column": "weather_wind_speed"
                 }
               },
               "namespaceId": "public",
@@ -2678,6 +2731,23 @@
                   "nativeType": "jsonb",
                   "nullable": true
                 },
+                "location_enrichment_status": {
+                  "codecId": "sql/varchar@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "queued"
+                  },
+                  "nativeType": "character varying",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 16
+                  }
+                },
+                "location_name": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "mapPhotoUrl": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -2812,6 +2882,21 @@
                     "namespaceId": "public",
                     "plane": "storage"
                   }
+                },
+                "weather_code": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
+                "weather_temperature": {
+                  "codecId": "pg/float8@1",
+                  "nativeType": "float8",
+                  "nullable": true
+                },
+                "weather_wind_speed": {
+                  "codecId": "pg/float8@1",
+                  "nativeType": "float8",
+                  "nullable": true
                 }
               },
               "foreignKeys": [
@@ -4530,7 +4615,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "8cba32ba6966ea34daf7cf4234278f48edf8e4a9650c19d66f63c9e2dedbb2d4"
+    "storageHash": "d3e4ee5c4fbb7b2d522178aee2f66153b6a473ea1beed7dd7aa0c1ebc7d0c4a8"
   },
   "capabilities": {
     "postgres": {

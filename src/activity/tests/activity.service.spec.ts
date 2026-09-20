@@ -66,7 +66,9 @@ describe('ActivityService', () => {
       'user-1',
     );
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
-      data: expect.objectContaining({ mapPhotoUrl: expect.stringContaining('mapbox-token') }),
+      data: expect.objectContaining({
+        mapPhotoUrl: expect.stringContaining('mapbox-token&attribution=false&logo=false'),
+      }),
     });
   });
 
