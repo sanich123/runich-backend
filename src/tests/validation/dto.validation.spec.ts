@@ -81,6 +81,8 @@ describe('request DTO validation', () => {
       profilePhotoBlurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
       sport: 'run',
       weight: '65',
+      height: '180',
+      age: '30',
       emailNotifications: false,
       email,
       language: 'en',
@@ -90,6 +92,9 @@ describe('request DTO validation', () => {
     await expectInvalid(UserDto, { email: 'bad' });
     await expectInvalid(UserDto, { emailNotifications: 'false' });
     await expectInvalid(UserDto, { weight: 65 });
+    await expectInvalid(UserDto, { weight: '201' });
+    await expectInvalid(UserDto, { height: '231' });
+    await expectInvalid(UserDto, { age: '101' });
   });
 
   it('validates activity scalar fields and every nested activity collection', async () => {

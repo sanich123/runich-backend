@@ -55,6 +55,8 @@ model Profile {
   birthday              DateString?
   city                  String?
   gender                String?
+  height                String?
+  age                   String?
   profilePhoto          String?
   sport                 String?
   surname               String?
@@ -110,6 +112,7 @@ model Activity {
   weatherTemperature  Float?              @map("weather_temperature")
   weatherWindSpeed    Float?              @map("weather_wind_speed")
   weatherCode         Int?                @map("weather_code")
+  caloriesActive      Int?                @map("calories_active")
   locationEnrichmentStatus VarChar(16)    @default("queued") @map("location_enrichment_status")
   visibility          ActivityVisibility   @default(public)
   mapPhotoUrlBlurhash String?

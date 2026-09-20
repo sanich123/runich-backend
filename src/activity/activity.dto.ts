@@ -482,6 +482,9 @@ export class ActivityResponseDto extends ActivityDto {
   @ApiProperty({ type: Number, minimum: 0 })
   elevationGain: number;
 
+  @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true, description: 'Estimated active calories' })
+  caloriesActive?: number | null;
+
   @ApiPropertyOptional({ type: String, nullable: true })
   source?: string | null;
 
@@ -528,6 +531,9 @@ export class ActivityCardResponseDto {
 
   @ApiProperty({ type: Number, minimum: 0 })
   elevationGain: number;
+
+  @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true, description: 'Estimated active calories' })
+  caloriesActive?: number | null;
 
   @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true })
   steps?: number | null;

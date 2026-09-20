@@ -72,6 +72,27 @@ describe('ActivityService', () => {
     });
   });
 
+  it('stores estimated active calories when the profile has all required metrics', async () => {
+    const prisma = createPrismaMock();
+    const account = {
+      getAccountByUserId: asyncMock().mockResolvedValue({
+        id: 'profile-1',
+        weight: '80',
+        height: '180',
+        age: '30',
+        gender: 'male',
+      }),
+    };
+    const service = new ActivityService(prisma as never, account as never);
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+
+    await service.createActivity({ ...activityDto, distance: 10_000, duration: 3_600_000 }, 'user-1');
+
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ caloriesActive: 742 }),
+    });
+  });
+
   it('persists elevation gain calculated from activity locations', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
@@ -274,6 +295,7 @@ describe('ActivityService', () => {
         distance: 1000,
         duration: 100,
         speed: 10,
+        caloriesActive: null,
       },
     });
   });

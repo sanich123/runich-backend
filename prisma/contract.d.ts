@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'d3e4ee5c4fbb7b2d522178aee2f66153b6a473ea1beed7dd7aa0c1ebc7d0c4a8'>;
+  StorageHashBase<'f17b671ab18041870998ac2cfa111b5e8dd65f25ddf969a9059444c4fd736b49'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -269,6 +269,7 @@ export type FieldOutputTypes = {
       readonly weatherTemperature: CodecTypes['pg/float8@1']['output'] | null;
       readonly weatherWindSpeed: CodecTypes['pg/float8@1']['output'] | null;
       readonly weatherCode: CodecTypes['pg/int4@1']['output'] | null;
+      readonly caloriesActive: CodecTypes['pg/int4@1']['output'] | null;
       readonly locationEnrichmentStatus: Varchar<16>;
       readonly visibility: 'public' | 'followers' | 'private';
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
@@ -369,6 +370,8 @@ export type FieldOutputTypes = {
       readonly birthday: CodecTypes['pg/date-string@1']['output'] | null;
       readonly city: CodecTypes['pg/text@1']['output'] | null;
       readonly gender: CodecTypes['pg/text@1']['output'] | null;
+      readonly height: CodecTypes['pg/text@1']['output'] | null;
+      readonly age: CodecTypes['pg/text@1']['output'] | null;
       readonly profilePhoto: CodecTypes['pg/text@1']['output'] | null;
       readonly sport: CodecTypes['pg/text@1']['output'] | null;
       readonly surname: CodecTypes['pg/text@1']['output'] | null;
@@ -469,6 +472,7 @@ export type FieldInputTypes = {
       readonly weatherTemperature: CodecTypes['pg/float8@1']['input'] | null;
       readonly weatherWindSpeed: CodecTypes['pg/float8@1']['input'] | null;
       readonly weatherCode: CodecTypes['pg/int4@1']['input'] | null;
+      readonly caloriesActive: CodecTypes['pg/int4@1']['input'] | null;
       readonly locationEnrichmentStatus: CodecTypes['sql/varchar@1']['input'];
       readonly visibility: 'public' | 'followers' | 'private';
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
@@ -569,6 +573,8 @@ export type FieldInputTypes = {
       readonly birthday: CodecTypes['pg/date-string@1']['input'] | null;
       readonly city: CodecTypes['pg/text@1']['input'] | null;
       readonly gender: CodecTypes['pg/text@1']['input'] | null;
+      readonly height: CodecTypes['pg/text@1']['input'] | null;
+      readonly age: CodecTypes['pg/text@1']['input'] | null;
       readonly profilePhoto: CodecTypes['pg/text@1']['input'] | null;
       readonly sport: CodecTypes['pg/text@1']['input'] | null;
       readonly surname: CodecTypes['pg/text@1']['input'] | null;
@@ -642,6 +648,7 @@ export type FieldInputTypes = {
 export type StorageColumnTypes = {
   readonly public: {
     readonly Activity: {
+      readonly calories_active: CodecTypes['pg/int4@1']['output'] | null;
       readonly createdAt: TimestamptzString<6>;
       readonly date: TimestamptzString<6>;
       readonly description: CodecTypes['pg/text@1']['output'] | null;
@@ -761,6 +768,7 @@ export type StorageColumnTypes = {
       readonly user_id: CodecTypes['pg/uuid@1']['output'];
     };
     readonly Profile: {
+      readonly age: CodecTypes['pg/text@1']['output'] | null;
       readonly bio: CodecTypes['pg/text@1']['output'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['output'] | null;
       readonly city: CodecTypes['pg/text@1']['output'] | null;
@@ -768,6 +776,7 @@ export type StorageColumnTypes = {
       readonly email: CodecTypes['pg/text@1']['output'] | null;
       readonly emailNotifications: CodecTypes['pg/bool@1']['output'] | null;
       readonly gender: CodecTypes['pg/text@1']['output'] | null;
+      readonly height: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly language: CodecTypes['pg/text@1']['output'] | null;
       readonly name: CodecTypes['pg/text@1']['output'] | null;
@@ -842,6 +851,7 @@ export type StorageColumnTypes = {
 export type StorageColumnInputTypes = {
   readonly public: {
     readonly Activity: {
+      readonly calories_active: CodecTypes['pg/int4@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly date: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly description: CodecTypes['pg/text@1']['input'] | null;
@@ -961,6 +971,7 @@ export type StorageColumnInputTypes = {
       readonly user_id: CodecTypes['pg/uuid@1']['input'];
     };
     readonly Profile: {
+      readonly age: CodecTypes['pg/text@1']['input'] | null;
       readonly bio: CodecTypes['pg/text@1']['input'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['input'] | null;
       readonly city: CodecTypes['pg/text@1']['input'] | null;
@@ -968,6 +979,7 @@ export type StorageColumnInputTypes = {
       readonly email: CodecTypes['pg/text@1']['input'] | null;
       readonly emailNotifications: CodecTypes['pg/bool@1']['input'] | null;
       readonly gender: CodecTypes['pg/text@1']['input'] | null;
+      readonly height: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly language: CodecTypes['pg/text@1']['input'] | null;
       readonly name: CodecTypes['pg/text@1']['input'] | null;
@@ -1098,6 +1110,8 @@ export namespace Models {
     birthday: CodecTypes['pg/date-string@1']['output'] | null;
     city: CodecTypes['pg/text@1']['output'] | null;
     gender: CodecTypes['pg/text@1']['output'] | null;
+    height: CodecTypes['pg/text@1']['output'] | null;
+    age: CodecTypes['pg/text@1']['output'] | null;
     profilePhoto: CodecTypes['pg/text@1']['output'] | null;
     sport: CodecTypes['pg/text@1']['output'] | null;
     surname: CodecTypes['pg/text@1']['output'] | null;
@@ -1151,6 +1165,7 @@ export namespace Models {
     weatherTemperature: CodecTypes['pg/float8@1']['output'] | null;
     weatherWindSpeed: CodecTypes['pg/float8@1']['output'] | null;
     weatherCode: CodecTypes['pg/int4@1']['output'] | null;
+    caloriesActive: CodecTypes['pg/int4@1']['output'] | null;
     locationEnrichmentStatus: Varchar<16>;
     visibility: 'public' | 'followers' | 'private';
     mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
@@ -1479,6 +1494,11 @@ type ContractBase = Omit<
                   readonly nullable: true;
                 };
                 readonly weather_code: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                };
+                readonly calories_active: {
                   readonly nativeType: 'int4';
                   readonly codecId: 'pg/int4@1';
                   readonly nullable: true;
@@ -2386,6 +2406,16 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/text@1';
                   readonly nullable: true;
                 };
+                readonly height: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly age: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
                 readonly profilePhoto: {
                   readonly nativeType: 'text';
                   readonly codecId: 'pg/text@1';
@@ -3039,6 +3069,10 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
+              readonly caloriesActive: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
               readonly locationEnrichmentStatus: {
                 readonly nullable: false;
                 readonly type: {
@@ -3153,6 +3187,7 @@ type ContractBase = Omit<
                 readonly weatherTemperature: { readonly column: 'weather_temperature' };
                 readonly weatherWindSpeed: { readonly column: 'weather_wind_speed' };
                 readonly weatherCode: { readonly column: 'weather_code' };
+                readonly caloriesActive: { readonly column: 'calories_active' };
                 readonly locationEnrichmentStatus: {
                   readonly column: 'location_enrichment_status';
                 };
@@ -3870,6 +3905,14 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly height: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly age: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly profilePhoto: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -3997,6 +4040,8 @@ type ContractBase = Omit<
                 readonly birthday: { readonly column: 'birthday' };
                 readonly city: { readonly column: 'city' };
                 readonly gender: { readonly column: 'gender' };
+                readonly height: { readonly column: 'height' };
+                readonly age: { readonly column: 'age' };
                 readonly profilePhoto: { readonly column: 'profilePhoto' };
                 readonly sport: { readonly column: 'sport' };
                 readonly surname: { readonly column: 'surname' };

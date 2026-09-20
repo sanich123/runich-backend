@@ -34,6 +34,7 @@ import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { StorageService } from 'src/storage/storage.service';
 import type { ActivityDatabase } from './activity-persistence.service';
 import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from './activity-visibility';
+import { calculateActiveCalories } from './activity-calories';
 
 @Injectable()
 export class ActivityService {
@@ -158,6 +159,15 @@ export class ActivityService {
         mapPhotoUrl,
         mapPhotoUrlBlurhash,
         mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued,
+        caloriesActive: calculateActiveCalories({
+          weight: account?.weight,
+          height: account?.height,
+          age: account?.age,
+          gender: account?.gender,
+          sport: activityDto.sport,
+          distance: activityDto.distance,
+          duration: activityDto.duration,
+        }),
       };
       const photoCount = Array.isArray(photoVideoUrls) ? photoVideoUrls.length : 0;
       const locationCount = Array.isArray(activityDto.locations) ? activityDto.locations.length : 0;
@@ -213,6 +223,7 @@ export class ActivityService {
   async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
       const { date, description, emotion, visibility, sport, title, distance, duration, speed } = activityDto;
+      const account = await this.accountService.getAccountByUserId(userId);
       const data = {
         title,
         sport,
@@ -223,6 +234,15 @@ export class ActivityService {
         distance,
         duration,
         speed,
+        caloriesActive: calculateActiveCalories({
+          weight: account?.weight,
+          height: account?.height,
+          age: account?.age,
+          gender: account?.gender,
+          sport,
+          distance,
+          duration,
+        }),
       };
       const activity = await this.persistenceService.update(id, userId, data);
       return omitMediaProcessingStatus(
@@ -428,6 +448,7 @@ export class ActivityService {
           a."weather_temperature" AS "weatherTemperature",
           a."weather_wind_speed" AS "weatherWindSpeed",
           a."weather_code" AS "weatherCode",
+          a."calories_active" AS "caloriesActive",
           a."duration",
           a."distance",
           a."steps",

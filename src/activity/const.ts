@@ -34,6 +34,7 @@ export const ACTIVITY_CARD_SELECT = {
   weatherTemperature: true,
   weatherWindSpeed: true,
   weatherCode: true,
+  caloriesActive: true,
   duration: true,
   distance: true,
   elevationGain: true,

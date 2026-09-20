@@ -78,6 +78,13 @@
         "models": {
           "Activity": {
             "fields": {
+              "caloriesActive": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "createdAt": {
                 "nullable": false,
                 "type": {
@@ -419,6 +426,9 @@
             },
             "storage": {
               "fields": {
+                "caloriesActive": {
+                  "column": "calories_active"
+                },
                 "createdAt": {
                   "column": "createdAt"
                 },
@@ -1561,6 +1571,13 @@
           },
           "Profile": {
             "fields": {
+              "age": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "bio": {
                 "nullable": true,
                 "type": {
@@ -1607,6 +1624,13 @@
                 }
               },
               "gender": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "height": {
                 "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
@@ -1797,6 +1821,9 @@
             },
             "storage": {
               "fields": {
+                "age": {
+                  "column": "age"
+                },
                 "bio": {
                   "column": "bio"
                 },
@@ -1817,6 +1844,9 @@
                 },
                 "gender": {
                   "column": "gender"
+                },
+                "height": {
+                  "column": "height"
                 },
                 "id": {
                   "column": "id"
@@ -2668,6 +2698,11 @@
                 }
               ],
               "columns": {
+                "calories_active": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
                 "createdAt": {
                   "codecId": "pg/timestamptz-string@1",
                   "default": {
@@ -3946,6 +3981,11 @@
             },
             "Profile": {
               "columns": {
+                "age": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "bio": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -3988,6 +4028,11 @@
                   "nullable": true
                 },
                 "gender": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "height": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": true
@@ -4615,7 +4660,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "d3e4ee5c4fbb7b2d522178aee2f66153b6a473ea1beed7dd7aa0c1ebc7d0c4a8"
+    "storageHash": "f17b671ab18041870998ac2cfa111b5e8dd65f25ddf969a9059444c4fd736b49"
   },
   "capabilities": {
     "postgres": {
