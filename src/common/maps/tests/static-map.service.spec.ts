@@ -4,7 +4,8 @@ import sharp from 'sharp';
 const StaticMaps = jest.fn<() => unknown>();
 jest.unstable_mockModule('staticmaps', () => ({ default: StaticMaps }));
 
-const { StaticMapService, calculateStaticMapFit, normalizeStaticMapLocations } = await import('../static-map.service');
+const { StaticMapService } = await import('../static-map.service');
+const { calculateStaticMapBbox, normalizeStaticMapLocations } = await import('../static-map.utils');
 
 const locations = [
   { coords: { latitude: 55.75, longitude: 37.61 } },
@@ -20,20 +21,19 @@ describe('StaticMapService', () => {
     jest.clearAllMocks();
   });
 
-  it('fits a route by height when the latitude span is the limiting bound', () => {
-    const fit = calculateStaticMapFit([
-      [0, -80],
-      [0, 80],
-    ]);
-
-    expect(fit.zoom).toBeGreaterThan(1);
-    expect(fit.zoom).toBeLessThan(3);
-    expect(fit.center[0]).toBeCloseTo(0);
+  it('calculates a static map bounding box from the full route', () => {
+    expect(
+      calculateStaticMapBbox([
+        [37.62, 55.76],
+        [37.61, 55.75],
+        [37.63, 55.74],
+      ]),
+    ).toEqual([37.61, 55.74, 37.63, 55.76]);
   });
 
   it('renders an OSM map, adds A/B markers, and uploads the normalized WebP', async () => {
     const renderedPng = await sharp({
-      create: { width: 1792, height: 1008, channels: 4, background: '#E5E5E5' },
+      create: { width: 896, height: 504, channels: 4, background: '#E5E5E5' },
     })
       .png()
       .toBuffer();
@@ -41,7 +41,7 @@ describe('StaticMapService', () => {
       addLine: jest.fn(),
       addMarker: jest.fn(),
       render: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
-      image: { buffer: jest.fn<() => Promise<Buffer>>().mockResolvedValue(renderedPng) },
+      image: { image: renderedPng },
     };
     StaticMaps.mockImplementation(() => map);
     jest
@@ -69,11 +69,11 @@ describe('StaticMapService', () => {
 
     expect(result).toEqual({ key: 'user-1/activities/activity-1/map.webp', url: 'https://s3/map.webp' });
     const route = locations.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
-    const fit = calculateStaticMapFit(route);
+    const bbox = calculateStaticMapBbox(route);
     expect(StaticMaps).toHaveBeenCalledWith(
       expect.objectContaining({
-        width: expect.any(Number),
-        height: expect.any(Number),
+        width: 896,
+        height: 504,
         paddingX: 0,
         paddingY: 0,
         tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -86,29 +86,33 @@ describe('StaticMapService', () => {
         [37.62, 55.76],
       ],
       color: '#F66767',
-      width: expect.any(Number),
+      width: 2,
     });
     expect(map.addMarker).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
         coord: [37.61, 55.75],
-        width: expect.any(Number),
-        height: expect.any(Number),
-        drawWidth: expect.any(Number),
-        drawHeight: expect.any(Number),
+        img: expect.stringMatching(/start-marker\.png$/),
+        width: 28,
+        height: 32,
+        drawWidth: 27,
+        drawHeight: 31,
+        resizeMode: 'fill',
       }),
     );
     expect(map.addMarker).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         coord: [37.62, 55.76],
-        width: expect.any(Number),
-        height: expect.any(Number),
-        drawWidth: expect.any(Number),
-        drawHeight: expect.any(Number),
+        img: expect.stringMatching(/finish-marker\.png$/),
+        width: 28,
+        height: 32,
+        drawWidth: 27,
+        drawHeight: 31,
+        resizeMode: 'fill',
       }),
     );
-    expect(map.render).toHaveBeenCalledWith(fit.center, Math.ceil(fit.zoom));
+    expect(map.render).toHaveBeenCalledWith(bbox);
     expect(storage.uploadObject).toHaveBeenCalledWith(
       'user-1/activities/activity-1/map.webp',
       expect.any(Buffer),
@@ -130,7 +134,7 @@ describe('StaticMapService', () => {
 
   it('downloads map tiles through fetch instead of staticmaps got requests', async () => {
     const renderedPng = await sharp({
-      create: { width: 1792, height: 1008, channels: 4, background: '#E5E5E5' },
+      create: { width: 896, height: 504, channels: 4, background: '#E5E5E5' },
     })
       .png()
       .toBuffer();
@@ -142,7 +146,7 @@ describe('StaticMapService', () => {
         if (!getTile) throw new Error('Static map tile fetcher was not installed');
         await getTile({ url: 'https://tile.openstreetmap.org/1/0/0.png', box: [0, 0, 256, 256] });
       }),
-      image: { buffer: jest.fn<() => Promise<Buffer>>().mockResolvedValue(renderedPng) },
+      image: { image: renderedPng },
     };
     StaticMaps.mockImplementation(() => map);
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => {
