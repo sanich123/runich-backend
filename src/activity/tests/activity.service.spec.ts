@@ -75,6 +75,13 @@ describe('ActivityService', () => {
         mapPhotoUrl: expect.stringContaining('mapbox-token&attribution=false&logo=false'),
       }),
     });
+
+    await service.createActivity({ ...activityDto, locations }, 'user-1');
+    expect(prisma.activity.create).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({
+        mapPhotoUrl: expect.stringContaining('mapbox-token&attribution=false&logo=false'),
+      }),
+    });
   });
 
   it('stores estimated active calories when the profile has all required metrics', async () => {
@@ -99,6 +106,7 @@ describe('ActivityService', () => {
   });
 
   it('persists elevation gain calculated from activity locations', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
@@ -115,6 +123,7 @@ describe('ActivityService', () => {
   });
 
   it('stores a route in S3 and keeps only route metadata in the activity row', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const storage = {
@@ -146,7 +155,9 @@ describe('ActivityService', () => {
       }),
     });
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
-      data: expect.not.objectContaining({ locations: expect.anything() }),
+      data: expect.objectContaining({
+        mapPhotoUrl: expect.stringContaining('test-token&attribution=false&logo=false'),
+      }),
     });
   });
 

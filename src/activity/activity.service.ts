@@ -114,7 +114,7 @@ export class ActivityService {
       uploadedRouteKey = routeMetadata?.key;
 
       const mapPhotoUrl =
-        activityDto?.media?.length && locations?.length && locations.length > 1
+        locations?.length
           ? getMapBoxImage(locations)
           : activityDto.mapPhotoUrl;
 
