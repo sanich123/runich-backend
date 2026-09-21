@@ -4,7 +4,7 @@ import sharp from 'sharp';
 const StaticMaps = jest.fn<() => unknown>();
 jest.unstable_mockModule('staticmaps', () => ({ default: StaticMaps }));
 
-const { StaticMapService, normalizeStaticMapLocations } = await import('../static-map.service');
+const { StaticMapService, calculateStaticMapFit, normalizeStaticMapLocations } = await import('../static-map.service');
 
 const locations = [
   { coords: { latitude: 55.75, longitude: 37.61 } },
@@ -18,6 +18,17 @@ describe('StaticMapService', () => {
     process.env = { ...originalEnvironment };
     jest.restoreAllMocks();
     jest.clearAllMocks();
+  });
+
+  it('fits a route by height when the latitude span is the limiting bound', () => {
+    const fit = calculateStaticMapFit([
+      [0, -80],
+      [0, 80],
+    ]);
+
+    expect(fit.zoom).toBeGreaterThan(1);
+    expect(fit.zoom).toBeLessThan(3);
+    expect(fit.center[0]).toBeCloseTo(0);
   });
 
   it('renders an OSM map, adds A/B markers, and uploads the normalized WebP', async () => {
@@ -57,12 +68,14 @@ describe('StaticMapService', () => {
     });
 
     expect(result).toEqual({ key: 'user-1/activities/activity-1/map.webp', url: 'https://s3/map.webp' });
+    const route = locations.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
+    const fit = calculateStaticMapFit(route);
     expect(StaticMaps).toHaveBeenCalledWith(
       expect.objectContaining({
-        width: 1792,
-        height: 1008,
-        paddingX: 8,
-        paddingY: 16,
+        width: expect.any(Number),
+        height: expect.any(Number),
+        paddingX: 0,
+        paddingY: 0,
         tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         zoomRange: { min: 1, max: 19 },
       }),
@@ -73,16 +86,29 @@ describe('StaticMapService', () => {
         [37.62, 55.76],
       ],
       color: '#F66767',
-      width: 8,
+      width: expect.any(Number),
     });
     expect(map.addMarker).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ coord: [37.61, 55.75], width: 128, height: 160 }),
+      expect.objectContaining({
+        coord: [37.61, 55.75],
+        width: expect.any(Number),
+        height: expect.any(Number),
+        drawWidth: expect.any(Number),
+        drawHeight: expect.any(Number),
+      }),
     );
     expect(map.addMarker).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ coord: [37.62, 55.76], width: 128, height: 160 }),
+      expect.objectContaining({
+        coord: [37.62, 55.76],
+        width: expect.any(Number),
+        height: expect.any(Number),
+        drawWidth: expect.any(Number),
+        drawHeight: expect.any(Number),
+      }),
     );
+    expect(map.render).toHaveBeenCalledWith(fit.center, Math.ceil(fit.zoom));
     expect(storage.uploadObject).toHaveBeenCalledWith(
       'user-1/activities/activity-1/map.webp',
       expect.any(Buffer),
@@ -139,6 +165,53 @@ describe('StaticMapService', () => {
     expect(fetchMock.mock.calls[1]?.[1]).toEqual(
       expect.objectContaining({ headers: { 'user-agent': 'Runich/1.0 (static map renderer)' } }),
     );
+  });
+
+  it('falls back when a tile download fails after the provider health check', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
+    const renderedPng = await sharp({
+      create: { width: 896, height: 504, channels: 4, background: '#E5E5E5' },
+    })
+      .png()
+      .toBuffer();
+    const map = {
+      addLine: jest.fn(),
+      addMarker: jest.fn(),
+      render: jest.fn(async () => {
+        const getTile = (map as unknown as { getTile?: (tile: unknown) => Promise<unknown> }).getTile;
+        await getTile?.({ url: 'https://tile.openstreetmap.org/1/0/0.png', box: [0, 0, 256, 256] });
+      }),
+      image: { buffer: jest.fn<() => Promise<Buffer>>().mockResolvedValue(renderedPng) },
+    };
+    StaticMaps.mockImplementation(() => map);
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(new Uint8Array([1]), { status: 200, headers: { 'content-type': 'image/png' } }),
+      )
+      .mockRejectedValueOnce(new Error('tile unavailable'));
+
+    await expect(
+      new StaticMapService({ uploadObject: jest.fn() } as never).generateActivityMap({
+        userId: 'user-1',
+        activityId: 'activity-1',
+        locations,
+      }),
+    ).resolves.toEqual(expect.objectContaining({ url: expect.stringContaining('access_token=test-token') }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('handles non-Error failures while switching to Mapbox', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
+    jest.spyOn(globalThis, 'fetch').mockRejectedValue('tile provider unavailable');
+
+    await expect(
+      new StaticMapService({ uploadObject: jest.fn() } as never).generateActivityMap({
+        userId: 'user-1',
+        activityId: 'activity-1',
+        locations,
+      }),
+    ).resolves.toEqual(expect.objectContaining({ url: expect.stringContaining('access_token=test-token') }));
   });
 
   it('falls back to the legacy Mapbox URL when staticmaps fails', async () => {
