@@ -23,5 +23,6 @@ describe('getMapBoxImage', () => {
     ]);
 
     expect(imageUrl).toContain('?access_token=test-token&attribution=false&logo=false');
+    expect(imageUrl).toContain('/896x504@2x');
   });
 });
