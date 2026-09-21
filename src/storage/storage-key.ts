@@ -13,6 +13,10 @@ export function getActivityPhotoKey(userId: string, activityId: string, extensio
   return `${userId}/activities/${activityId}/${getDateFolder(createdAt)}/${randomUUID()}.${extension}`;
 }
 
+export function getActivityMapKey(userId: string, activityId: string) {
+  return `${userId}/activities/${activityId}/map.webp`;
+}
+
 export function getFeedbackPhotoKey(userId: string, feedbackId: string, extension: string, createdAt = new Date()) {
   return `${userId}/feedback/${getDateFolder(createdAt)}/${feedbackId}/${randomUUID()}.${extension}`;
 }

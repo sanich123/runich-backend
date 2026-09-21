@@ -89,7 +89,7 @@ export class FeedbackAttachmentDto {
 }
 
 export class FeedbackDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({ type: String, format: 'uuid' })
   @IsUUID()
   feedbackId: string;
 

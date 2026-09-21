@@ -29,6 +29,7 @@ import { StorageService } from 'src/storage/storage.service';
 import type { ActivityDatabase } from './activity-persistence.service';
 import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from './activity-visibility';
 import { calculateActiveCalories } from './activity-calories';
+import { StaticMapService } from 'src/common/maps/static-map.service';
 
 @Injectable()
 export class ActivityService {
@@ -47,15 +48,20 @@ export class ActivityService {
     @Optional()
     @Inject(MediaCleanupService)
     mediaCleanupService?: MediaCleanupService,
+    @Optional()
+    @Inject(StaticMapService)
+    staticMapService?: StaticMapService,
   ) {
     this.persistenceService = persistenceService ?? new ActivityPersistenceService(this.prisma);
     this.storageService = storageService;
     this.mediaCleanupService = mediaCleanupService;
+    this.staticMapService = staticMapService;
   }
 
   private readonly persistenceService: ActivityPersistenceService;
   private readonly storageService?: StorageService;
   private readonly mediaCleanupService?: MediaCleanupService;
+  private readonly staticMapService?: StaticMapService;
 
   private async isFollower(viewerId: string, ownerId: string) {
     if (viewerId === ownerId) return false;
@@ -90,6 +96,7 @@ export class ActivityService {
 
   async createActivity(activityDto: ActivityDto, id: string) {
     let uploadedRouteKey: string | undefined;
+    let uploadedMapKey: string | undefined;
     let uploadedActivityMediaKeys: string[] = [];
     const mediaCreatedAt = new Date();
     try {
@@ -113,7 +120,15 @@ export class ActivityService {
       }
       uploadedRouteKey = routeMetadata?.key;
 
-      const mapPhotoUrl = locations?.length ? getMapBoxImage(locations) : activityDto.mapPhotoUrl;
+      const generatedMap = locations?.length
+        ? this.staticMapService
+          ? await this.staticMapService.generateActivityMap({ userId: id, activityId, locations })
+          : undefined
+        : undefined;
+      uploadedMapKey = generatedMap?.key;
+      const mapPhotoUrl = locations?.length
+        ? (generatedMap?.url ?? (this.staticMapService ? null : getMapBoxImage(locations)))
+        : activityDto.mapPhotoUrl;
 
       const mapPhotoUrlBlurhash = null;
       const activityFields = { ...activityDto };
@@ -166,6 +181,7 @@ export class ActivityService {
       return omitMediaProcessingStatus(await this.persistenceService.create(data, mediaRows));
     } catch (error) {
       await this.deleteUploadedRoute(uploadedRouteKey);
+      await this.deleteUploadedRoute(uploadedMapKey);
       await Promise.all(uploadedActivityMediaKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);
     }
@@ -204,7 +220,11 @@ export class ActivityService {
             );
             return await this.persistenceService.createMany(preparedData, database, media);
           } catch (error) {
-            await Promise.all(preparedActivities.map(({ routeKey }) => this.deleteUploadedRoute(routeKey)));
+            await Promise.all(
+              preparedActivities
+                .flatMap(({ routeKey, mapKey }) => [routeKey, mapKey])
+                .map((key) => this.deleteUploadedRoute(key)),
+            );
             throw error;
           }
         }),
@@ -534,7 +554,11 @@ export class ActivityService {
       return await this.prisma.$transaction(async (transaction) => {
         const activity = await transaction.activity.findFirst({
           where: { id, userId },
-          select: { routeStorageKey: true, media: { select: { url: true, thumbnail: true } } },
+          select: {
+            routeStorageKey: true,
+            mapPhotoUrl: true,
+            media: { select: { url: true, thumbnail: true } },
+          },
         });
         const storageKeys = this.getActivityStorageKeys(userId, activity);
         await Promise.all(
@@ -570,6 +594,7 @@ export class ActivityService {
           elevationGain,
         },
         routeKey: undefined,
+        mapKey: undefined,
       };
     }
 
@@ -579,6 +604,13 @@ export class ActivityService {
       activityId,
       activity.locations,
     );
+    const generatedMap = this.staticMapService
+      ? await this.staticMapService.generateActivityMap({
+          userId: activity.userId,
+          activityId,
+          locations: activity.locations,
+        })
+      : undefined;
     const dataWithoutLocations = { ...activity };
     delete dataWithoutLocations.locations;
     delete dataWithoutLocations.sourceElevationGain;
@@ -592,8 +624,12 @@ export class ActivityService {
         routePointCount: routeMetadata.pointCount,
         routeSizeBytes: routeMetadata.sizeBytes,
         routeChecksum: routeMetadata.checksum,
+        ...(this.staticMapService
+          ? { mapPhotoUrl: generatedMap?.url ?? dataWithoutLocations.mapPhotoUrl ?? null }
+          : {}),
       },
       routeKey: routeMetadata.key,
+      mapKey: generatedMap?.key,
     };
   }
 
@@ -606,9 +642,20 @@ export class ActivityService {
     }
   }
 
-  private getActivityStorageKeys(userId: string, activity: { routeStorageKey: string | null; media: unknown } | null) {
+  private getActivityStorageKeys(
+    userId: string,
+    activity: { routeStorageKey: string | null; mapPhotoUrl?: string | null; media: unknown } | null,
+  ) {
     const keys = new Set<string>();
     if (activity?.routeStorageKey?.startsWith(`${userId}/`)) keys.add(activity.routeStorageKey);
+
+    if (this.storageService && activity?.mapPhotoUrl) {
+      try {
+        keys.add(this.storageService.getOwnedKey(userId, activity.mapPhotoUrl));
+      } catch {
+        // Mapbox and other external URLs are intentionally not deleted here.
+      }
+    }
 
     if (!this.storageService || !Array.isArray(activity?.media)) return [...keys];
     for (const media of activity.media) {

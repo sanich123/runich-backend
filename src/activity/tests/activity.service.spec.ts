@@ -84,6 +84,68 @@ describe('ActivityService', () => {
     });
   });
 
+  it('persists the URL returned by the server-side static map renderer', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const staticMap = {
+      generateActivityMap: asyncMock().mockResolvedValue({
+        url: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
+        key: 'user-1/activities/activity-1/map.webp',
+      }),
+    };
+    const locations = [
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+      { coords: { latitude: 55.76, longitude: 37.62 } },
+    ];
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      staticMap as never,
+    );
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+
+    await service.createActivity({ ...activityDto, locations }, 'user-1');
+
+    expect(staticMap.generateActivityMap).toHaveBeenCalledWith({
+      userId: 'user-1',
+      activityId: undefined,
+      locations,
+    });
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        mapPhotoUrl: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
+      }),
+    });
+  });
+
+  it('keeps the activity when both map providers return no image', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const staticMap = { generateActivityMap: asyncMock().mockResolvedValue(null) };
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      staticMap as never,
+    );
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    const locations = [
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+      { coords: { latitude: 55.76, longitude: 37.62 } },
+    ];
+
+    await service.createActivity({ ...activityDto, locations }, 'user-1');
+
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ mapPhotoUrl: null }),
+    });
+  });
+
   it('stores estimated active calories when the profile has all required metrics', async () => {
     const prisma = createPrismaMock();
     const account = {
@@ -391,7 +453,20 @@ describe('ActivityService', () => {
       }),
       deleteObjectByKey: asyncMock(),
     };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const staticMap = {
+      generateActivityMap: asyncMock().mockResolvedValue({
+        key: 'user-1/activities/activity-1/map.webp',
+        url: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
+      }),
+    };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      undefined,
+      staticMap as never,
+    );
     const locations = [
       { coords: { latitude: 55.75, longitude: 37.61 } },
       { coords: { latitude: 55.76, longitude: 37.62 } },
@@ -414,6 +489,11 @@ describe('ActivityService', () => {
     });
 
     expect(storage.uploadActivityRoute).toHaveBeenCalledWith('user-1', 'activity-1', locations);
+    expect(staticMap.generateActivityMap).toHaveBeenCalledWith({
+      userId: 'user-1',
+      activityId: 'activity-1',
+      locations,
+    });
     expect(prisma.activity.createMany).toHaveBeenCalledWith({
       data: [
         expect.objectContaining({
@@ -424,6 +504,7 @@ describe('ActivityService', () => {
           routePointCount: 2,
           routeSizeBytes: 123,
           routeChecksum: 'a'.repeat(64),
+          mapPhotoUrl: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
         }),
       ],
       skipDuplicates: true,

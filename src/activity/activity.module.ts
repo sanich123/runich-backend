@@ -9,6 +9,7 @@ import { ActivityPersistenceService } from './activity-persistence.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ActivityMigrationService } from './activity-migration.service';
 import { StorageModule } from 'src/storage/storage.module';
+import { StaticMapService } from 'src/common/maps/static-map.service';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { StorageModule } from 'src/storage/storage.module';
     PassportModule.register({ defaultStrategy: 'jwt' }),
   ],
   controllers: [ActivityController],
-  providers: [ActivityService, ActivityPersistenceService, ActivityMigrationService, ThrottlerGuard],
+  providers: [ActivityService, ActivityPersistenceService, ActivityMigrationService, StaticMapService, ThrottlerGuard],
   exports: [ActivityService, ActivityPersistenceService, ActivityMigrationService],
 })
 export class ActivityModule {}

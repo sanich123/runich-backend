@@ -28,17 +28,20 @@ export function getMapBoxImage(locations: LocationObject[]) {
     ];
     const lineOpacity = 0.8;
     const lineWidth = 2;
-    const startMarkerColor = '2ACB37';
-    const finishMarkerColor = 'EC653C';
+    // Keep the marker style used by the original activity cards. Mapbox's
+    // `pin-s-a`/`pin-s-b` assets render as the large black A/B pins shown in
+    // the legacy client screenshots.
+    const startMarkerColor = '000';
+    const finishMarkerColor = '000';
     const routeOverlay =
       routeLocations.length > 1
-        ? `path-${lineWidth}+${finishMarkerColor}-${lineOpacity}(${encodeURIComponent(encodedPolyline)})`
+        ? `path-${lineWidth}+F66767-${lineOpacity}(${encodeURIComponent(encodedPolyline)})`
         : '';
-    const startMarker = `pin-s+${startMarkerColor}(${initialCoordinate.join(',')})`;
-    const finishMarker = `pin-s+${finishMarkerColor}(${lastCoordinate.join(',')})`;
-    const overlays = [routeOverlay, startMarker, finishMarker].filter(Boolean).join(',');
+    const startMarker = `pin-s-a+${startMarkerColor}(${initialCoordinate.join(',')})`;
+    const finishMarker = `pin-s-b+${finishMarkerColor}(${lastCoordinate.join(',')})`;
+    const overlays = [startMarker, finishMarker, routeOverlay].filter(Boolean).join(',');
 
-    return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${overlays}/auto/${STATIC_MAP_IMAGE_WIDTH}x${STATIC_MAP_IMAGE_HEIGHT}@2x?access_token=${accessToken}&attribution=false&logo=false`;
+    return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${overlays}/auto/${STATIC_MAP_IMAGE_WIDTH}x${STATIC_MAP_IMAGE_HEIGHT}?access_token=${accessToken}&attribution=false&logo=false`;
   };
 
   let reducedLocations = reduceLocations(validLocations, MAX_STATIC_MAP_LOCATIONS);
@@ -47,7 +50,6 @@ export function getMapBoxImage(locations: LocationObject[]) {
   while (imageUrl.length > MAX_STATIC_MAP_URL_LENGTH && reducedLocations.length > 2) {
     const nextLimit = Math.max(2, Math.floor(reducedLocations.length * 0.75));
     const nextLocations = reduceLocations(reducedLocations, nextLimit);
-    if (nextLocations.length >= reducedLocations.length) break;
 
     reducedLocations = nextLocations;
     imageUrl = buildUrl(reducedLocations);
