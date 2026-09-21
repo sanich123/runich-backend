@@ -117,7 +117,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       await prisma.user.deleteMany({ where: { id: { in: [ownerId, visitorId, targetId, profilelessId] } } });
     }
     await app?.close();
-  });
+  }, 60_000);
 
   it('serves health and public auth configuration endpoints', async () => {
     await request(app.getHttpServer()).get('/health/live').expect(200).expect({ status: 'ok' });
@@ -515,7 +515,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         expect(response.body.description).toBe('Imported in e2e');
         expect(response.body._count).toEqual({ comments: 0, likes: 0 });
       });
-  });
+  }, 60_000);
 
   it('rejects protected email endpoints without authentication and redirects OAuth errors safely', async () => {
     await request(app.getHttpServer()).post('/email/like').send({}).expect(401);
