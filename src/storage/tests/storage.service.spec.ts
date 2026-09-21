@@ -14,8 +14,11 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { StorageService } from '../storage.service';
 import { decodeActivityRoute, encodeActivityRoute } from '../activity-route';
+import { getActivityPhotoKey, getExtensionFromStorageKey } from '../storage-key';
+import { getStorageErrorMessage } from '../utils';
 
 const s3Send = jest.spyOn(S3Client.prototype, 'send');
 
@@ -82,6 +85,164 @@ describe('StorageService', () => {
     expect(metrics.observeExternal).toHaveBeenCalledWith('s3', 'putObject', expect.any(Number));
   });
 
+  it('uploads a manifest batch in input order and returns media metadata', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const image = await createTestImage();
+    const manifest = JSON.stringify([
+      { mediaId: 'media-1', role: 'media' },
+      { mediaId: 'media-2', role: 'media' },
+    ]);
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [
+          { buffer: image, originalname: 'one.jpg', mimetype: 'image/jpeg' },
+          { buffer: image, originalname: 'two.jpg', mimetype: 'image/jpeg' },
+        ],
+        { scope: 'activity' },
+        manifest,
+      ),
+    ).resolves.toEqual([
+      {
+        mediaId: 'media-1',
+        role: 'media',
+        url: expect.stringContaining('/user-1/uploads/'),
+        key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/),
+        contentType: 'image/webp',
+      },
+      {
+        mediaId: 'media-2',
+        role: 'media',
+        url: expect.stringContaining('/user-1/uploads/'),
+        key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/),
+        contentType: 'image/webp',
+      },
+    ]);
+    expect(s3Send).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a batch when manifest length does not match files', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [{ buffer: Buffer.from('photo'), originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
+        {},
+        '[]',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('rejects a batch whose total size is 100 MB or more', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [{ size: UPLOAD_LIMITS.mediaBatchBytes, originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
+        {},
+        JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+      ),
+    ).rejects.toThrow('Суммарный размер файлов должен быть меньше 100 МБ');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty batch and a batch above the file limit', async () => {
+    const service = new StorageService();
+
+    await expect(service.uploadPhotos('user-1', [])).rejects.toThrow('Не указаны файлы: files');
+
+    const files = Array.from({ length: 11 }, (_, index) => ({
+      buffer: Buffer.from(`photo-${index}`),
+      originalname: `photo-${index}.jpg`,
+      mimetype: 'image/jpeg',
+    }));
+    await expect(service.uploadPhotos('user-1', files)).rejects.toThrow('Можно загрузить не более 10 файлов за раз');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('treats a batch file without size or buffer as empty before upload', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [{ originalname: 'photo.mp4', mimetype: 'video/mp4' }],
+        {},
+        JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+      ),
+    ).rejects.toThrow('Не удалось прочитать загруженный файл');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('cleans up successful uploads when one file in a batch fails', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const manifest = JSON.stringify([
+      { mediaId: 'media-1', role: 'media' },
+      { mediaId: 'media-2', role: 'media' },
+    ]);
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [
+          { buffer: Buffer.from('video'), originalname: 'one.mp4', mimetype: 'video/mp4' },
+          { buffer: Buffer.from('video'), originalname: 'two.mkv', mimetype: 'video/x-matroska' },
+        ],
+        {},
+        manifest,
+      ),
+    ).rejects.toThrow('Разрешены видео только в форматах MP4, MOV и WebM');
+
+    expect(s3Send).toHaveBeenCalledTimes(2);
+    expect(s3Send.mock.calls[0]?.[0]).toBeInstanceOf(PutObjectCommand);
+    expect(s3Send.mock.calls[1]?.[0]).toBeInstanceOf(DeleteObjectCommand);
+  });
+
+  it.each([
+    ['null entry', JSON.stringify([null])],
+    ['invalid role', JSON.stringify([{ mediaId: 'media-1', role: 'original' }])],
+  ])('rejects a manifest with an invalid %s', async (_caseName, manifest) => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [{ buffer: Buffer.from('photo'), originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
+        {},
+        manifest,
+      ),
+    ).rejects.toThrow('Некорректная запись manifest медиафайлов');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate media identifiers with the same role', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        'user-1',
+        [
+          { buffer: Buffer.from('one'), originalname: 'one.jpg', mimetype: 'image/jpeg' },
+          { buffer: Buffer.from('two'), originalname: 'two.jpg', mimetype: 'image/jpeg' },
+        ],
+        {},
+        JSON.stringify([
+          { mediaId: 'media-1', role: 'media' },
+          { mediaId: 'media-1', role: 'media' },
+        ]),
+      ),
+    ).rejects.toThrow('Manifest содержит дублирующие mediaId и role');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
   it('uses the configured S3 endpoint for generated file URLs', async () => {
     s3Send.mockResolvedValue({} as never);
     process.env.S3_ENDPOINT = 'https://s3.stage.example';
@@ -141,8 +302,40 @@ describe('StorageService', () => {
     const service = new StorageService();
 
     await expect(
-      service.uploadPhoto('user-1', { buffer: Buffer.from('binary'), originalname: 'file', mimetype: 'video/' }),
+      service.uploadPhoto('user-1', { buffer: Buffer.from('binary'), originalname: 'file', mimetype: '' }),
     ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/uploads\/.+\.bin$/) });
+  });
+
+  it('uses default storage settings when environment values are absent', () => {
+    delete process.env.S3_ENDPOINT;
+    delete process.env.S3_REGION;
+    delete process.env.S3_BUCKET;
+    delete process.env.S3_ACCESS_KEY;
+    delete process.env.S3_SECRET_ACCESS_KEY;
+
+    const service = new StorageService();
+
+    expect((service as unknown as { settings: unknown }).settings).toEqual({
+      endpoint: 'https://s3.twcstorage.ru',
+      region: 'ru-1',
+      bucket: '',
+      accessKey: '',
+      secretKey: '',
+      publicUrl: 'https://s3.twcstorage.ru',
+    });
+  });
+
+  it('rejects unsupported video containers before writing to S3', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto('user-1', {
+        buffer: Buffer.from('video'),
+        originalname: 'clip.mkv',
+        mimetype: 'video/x-matroska',
+      }),
+    ).rejects.toThrow('Разрешены видео только в форматах MP4, MOV и WebM');
+    expect(s3Send).not.toHaveBeenCalled();
   });
 
   it('moves a staged upload into the profile folder when it becomes an avatar', async () => {
@@ -151,14 +344,16 @@ describe('StorageService', () => {
     const stagedUrl = 'https://s3.twcstorage.ru/runich-test/user-1/uploads/avatar.webp';
 
     await expect(service.promoteProfilePhoto('user-1', stagedUrl)).resolves.toEqual(
-      expect.stringMatching(/^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/profile\/.+\.webp$/),
+      expect.stringMatching(
+        /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/profile\/\d{4}-\d{2}-\d{2}\/.+\.webp$/,
+      ),
     );
 
     const copyCommand = s3Send.mock.calls[0]?.[0] as CopyObjectCommand;
     expect(copyCommand).toBeInstanceOf(CopyObjectCommand);
     expect(copyCommand.input).toMatchObject({
       Bucket: 'runich-test',
-      Key: expect.stringMatching(/^user-1\/profile\/.+\.webp$/),
+      Key: expect.stringMatching(/^user-1\/profile\/\d{4}-\d{2}-\d{2}\/.+\.webp$/),
       CopySource: 'runich-test/user-1/uploads/avatar.webp',
     });
     expect(s3Send.mock.calls[1]?.[0]).toEqual(
@@ -176,6 +371,52 @@ describe('StorageService', () => {
     expect(s3Send).not.toHaveBeenCalled();
   });
 
+  it('uploads a profile photo directly into the dated profile folder', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const image = await createTestImage();
+
+    await expect(
+      service.uploadPhoto(
+        'user-1',
+        { buffer: image, originalname: 'avatar.jpg', mimetype: 'image/jpeg' },
+        { scope: 'profile' },
+      ),
+    ).resolves.toMatchObject({
+      key: expect.stringMatching(/^user-1\/profile\/\d{4}-\d{2}-\d{2}\/.+\.webp$/),
+      contentType: 'image/webp',
+    });
+  });
+
+  it('uploads feedback media into the dated feedback folder', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto(
+        'user-1',
+        { buffer: Buffer.from('video'), originalname: 'screen.mp4', mimetype: 'video/mp4' },
+        { scope: 'feedback', feedbackId: 'feedback-1' },
+      ),
+    ).resolves.toMatchObject({
+      key: expect.stringMatching(/^user-1\/feedback\/\d{4}-\d{2}-\d{2}\/feedback-1\/.+\.mp4$/),
+      contentType: 'video/mp4',
+    });
+  });
+
+  it('rejects feedback uploads without a feedback id', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhoto(
+        'user-1',
+        { buffer: Buffer.from('video'), originalname: 'screen.mp4', mimetype: 'video/mp4' },
+        { scope: 'feedback' },
+      ),
+    ).rejects.toThrow('Для feedback-загрузки нужен feedbackId');
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
   it('moves staged activity media into the activity photos folder', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
@@ -187,12 +428,12 @@ describe('StorageService', () => {
       photos: [
         {
           url: expect.stringMatching(
-            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/photos\/.+\.jpg$/,
+            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/,
           ),
           thumbnail: null,
         },
       ],
-      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/photos\/.+\.jpg$/)],
+      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/)],
     });
   });
 
@@ -211,15 +452,15 @@ describe('StorageService', () => {
       photos: [
         {
           url: expect.stringMatching(
-            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/photos\/.+\.jpg$/,
+            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/,
           ),
           thumbnail: expect.stringMatching(
-            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/photos\/.+\.jpg$/,
+            /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/,
           ),
         },
         { url: externalUrl, thumbnail: null },
       ],
-      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/photos\/.+\.jpg$/)],
+      keys: [expect.stringMatching(/^user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.+\.jpg$/)],
     });
     expect(s3Send).toHaveBeenCalledTimes(2);
   });
@@ -319,6 +560,24 @@ describe('StorageService', () => {
     ).rejects.toThrow('Файл архива миграции не найден');
   });
 
+  it('rethrows a non-object S3 error unchanged', async () => {
+    s3Send.mockRejectedValueOnce(null as never);
+    const service = new StorageService();
+
+    await expect(
+      service.downloadObjectToFile('user-1/migrations/migration-1/archive.zip', join(tmpdir(), 'failed.zip')),
+    ).rejects.toBeNull();
+  });
+
+  it('reads JSON objects using the default missing-object message', async () => {
+    s3Send.mockResolvedValueOnce({
+      Body: { transformToByteArray: async () => Buffer.from('{"ok":true}') },
+    } as never);
+    const service = new StorageService();
+
+    await expect(service.readJson<{ ok: boolean }>('user-1/data.json')).resolves.toEqual({ ok: true });
+  });
+
   it('omits CacheControl when a generic object has no cache policy', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
@@ -327,6 +586,17 @@ describe('StorageService', () => {
       key: 'user-1/test.txt',
     });
     expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input).not.toHaveProperty('CacheControl');
+  });
+
+  it('passes CacheControl when a generic object has a cache policy', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+
+    await service.uploadObject('user-1/test.txt', Buffer.from('test'), 'text/plain', 'private, no-store');
+
+    expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input).toMatchObject({
+      CacheControl: 'private, no-store',
+    });
   });
 
   it('uploads a compressed activity route under the user and activity prefix', async () => {
@@ -402,6 +672,23 @@ describe('StorageService', () => {
     expect(s3Send).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects an S3 URL with an invalid encoded path', async () => {
+    const service = new StorageService();
+
+    await expect(service.deletePhoto('user-1', 'https://s3.twcstorage.ru/runich-test/user-1/%E0%A4%A')).rejects.toThrow(
+      'Некорректный путь к фото',
+    );
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('keeps nested non-upload storage paths unchanged during promotion', async () => {
+    const service = new StorageService();
+    const migrationUrl = 'https://s3.twcstorage.ru/runich-test/user-1/migrations/migration-1/archive.zip';
+
+    await expect(service.promoteProfilePhoto('user-1', migrationUrl)).resolves.toBe(migrationUrl);
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
   it('deletes legacy direct S3 URLs after switching public URLs to CDN', async () => {
     process.env.S3_PUBLIC_URL = 'https://cdn.example.com';
     s3Send.mockResolvedValue({} as never);
@@ -462,6 +749,25 @@ describe('StorageService', () => {
     const service = new StorageService();
 
     await expect(service.deleteUserFiles('user-1')).rejects.toThrow('S3 не удалил 1 объектов пользователя');
+  });
+
+  it('handles an empty S3 listing page when deleting user files', async () => {
+    s3Send.mockResolvedValueOnce({ IsTruncated: false } as never);
+    const service = new StorageService();
+
+    await expect(service.deleteUserFiles('user-1')).resolves.toEqual({ deleted: 0 });
+    expect(s3Send).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports storage helper fallback and invalid-date errors', () => {
+    expect(getActivityPhotoKey('user-1', 'activity-1', 'jpg')).toMatch(
+      /^user-1\/activities\/activity-1\/\d{4}-\d{2}-\d{2}\/.*\.jpg$/,
+    );
+    expect(getExtensionFromStorageKey('user-1/no-extension')).toBe('bin');
+    expect(() => getActivityPhotoKey('user-1', 'activity-1', 'jpg', new Date('invalid'))).toThrow(
+      'Некорректная дата создания media-файла',
+    );
+    expect(getStorageErrorMessage({ reason: 'unavailable' })).toBe('[object Object]');
   });
 
   it('fails clearly when S3 credentials are not configured', async () => {

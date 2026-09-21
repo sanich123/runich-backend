@@ -58,12 +58,16 @@ describe('LikeService', () => {
 
   it('returns only the likes count for an accessible activity', async () => {
     const prisma = createPrismaMock();
-    const service = new LikeService(prisma as never, {} as never, {} as never);
+    const service = new LikeService(
+      prisma as never,
+      {} as never,
+      { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
+    );
     prisma.activity.findUnique.mockResolvedValue({ _count: { likes: 7 } });
 
     await expect(service.getLikesLengthByActivityId('activity-1', 'viewer-1')).resolves.toBe(7);
     expect(prisma.activity.findUnique).toHaveBeenCalledWith({
-      where: { id: 'activity-1', OR: [{ userId: 'viewer-1' }, { isPublic: true }] },
+      where: { id: 'activity-1' },
       select: { _count: { select: { likes: true } } },
     });
   });
@@ -82,7 +86,11 @@ describe('LikeService', () => {
 
   it('rejects a count request for an inaccessible activity', async () => {
     const prisma = createPrismaMock();
-    const service = new LikeService(prisma as never, {} as never, {} as never);
+    const service = new LikeService(
+      prisma as never,
+      {} as never,
+      { canAccessActivity: asyncMock().mockResolvedValue(false) } as never,
+    );
     prisma.activity.findUnique.mockResolvedValue(null);
 
     await expect(service.getLikesLengthByActivityId('activity-1', 'viewer-1')).rejects.toBeInstanceOf(
@@ -110,7 +118,7 @@ describe('LikeService', () => {
     const service = new LikeService(
       prisma as never,
       { getAccountByUserId: asyncMock().mockRejectedValue(error) } as never,
-      {} as never,
+      { canAccessActivity: asyncMock().mockRejectedValue(error) } as never,
     );
 
     await expectInternalServerError(service.addLike({ activityId: 'a1' }));

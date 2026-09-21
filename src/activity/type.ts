@@ -39,7 +39,12 @@ export type ActivityFeedSqlRow = ActivityCursor & Record<string, unknown>;
 
 export type ActivityMediaProcessingRecord = {
   id: string;
-  photoVideoUrls: unknown;
+  media: Array<{
+    position: number;
+    url: string;
+    thumbnail: string | null;
+    blurhash: string | null;
+  }>;
   mapPhotoUrl: string | null;
   mapPhotoUrlBlurhash: string | null;
 };

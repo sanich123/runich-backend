@@ -9,10 +9,11 @@ import {
   Post,
   Req,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import {
   ApiBearerAuth,
@@ -31,7 +32,14 @@ import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
-import { DeletePhotoDto, PhotoUploadResponseDto } from './storage.dto';
+import { isSupportedVideoUpload } from './const';
+import {
+  DeletePhotoDto,
+  PhotoUploadBatchDto,
+  PhotoUploadBatchResponseDto,
+  PhotoUploadOptionsDto,
+  PhotoUploadResponseDto,
+} from './storage.dto';
 import { StorageService } from './storage.service';
 
 @ApiTags('photo')
@@ -41,12 +49,80 @@ import { StorageService } from './storage.service';
 export class StorageController {
   constructor(@Inject(StorageService) private readonly storageService: StorageService) {}
 
+  @Post('batch')
+  @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)
+  @ApiOperation({ summary: 'Upload up to 10 photos or videos with a media manifest' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['files', 'manifest'],
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          maxItems: UPLOAD_LIMITS.mediaBatchFiles,
+        },
+        manifest: { type: 'string', description: 'JSON array aligned with files' },
+        scope: { type: 'string', enum: ['activity', 'profile', 'feedback'], default: 'activity' },
+        feedbackId: { type: 'string', format: 'uuid' },
+      },
+    },
+  })
+  @ApiCreatedResponse({ type: [PhotoUploadBatchResponseDto] })
+  @UseInterceptors(
+    FilesInterceptor('files', UPLOAD_LIMITS.mediaBatchFiles, {
+      storage: diskStorage({
+        destination: join(tmpdir(), 'runich-photo-uploads'),
+        filename: (_request, file, callback) => {
+          const extension = extname(file.originalname)
+            .toLowerCase()
+            .replace(/[^a-z0-9.]/g, '');
+          callback(null, `${randomUUID()}${extension}`);
+        },
+      }),
+      limits: {
+        fileSize: UPLOAD_LIMITS.photoBytes,
+        files: UPLOAD_LIMITS.mediaBatchFiles,
+        parts: UPLOAD_LIMITS.mediaBatchFiles + 3,
+      },
+      fileFilter: (_request, file, callback) => {
+        const isImage = file.mimetype.startsWith('image/');
+        const isSupportedVideo =
+          file.mimetype.startsWith('video/') && isSupportedVideoUpload(file.originalname, file.mimetype);
+        if (!isImage && !isSupportedVideo) {
+          callback(new BadRequestException('Разрешены изображения и видео в форматах MP4, MOV и WebM'), false);
+          return;
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  @HttpCode(HttpStatus.CREATED)
+  async uploadPhotos(
+    @UploadedFiles() files: Express.Multer.File[] | undefined,
+    @Req() request: AuthenticatedRequest,
+    @Body() body: PhotoUploadBatchDto,
+  ) {
+    if (!files?.length) throw new BadRequestException('Не указаны файлы: files');
+    const { manifest, ...options } = body;
+    return await this.storageService.uploadPhotos(getAuthenticatedUserId(request), files, options, manifest);
+  }
+
   @Post()
   @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)
   @ApiOperation({ summary: 'Upload a photo or video to the current user storage' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    schema: { type: 'object', required: ['file'], properties: { file: { type: 'string', format: 'binary' } } },
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        scope: { type: 'string', enum: ['activity', 'profile', 'feedback'], default: 'activity' },
+        feedbackId: { type: 'string', format: 'uuid' },
+      },
+    },
   })
   @ApiCreatedResponse({ type: PhotoUploadResponseDto })
   @UseInterceptors(
@@ -64,8 +140,11 @@ export class StorageController {
       }),
       limits: { fileSize: UPLOAD_LIMITS.photoBytes, files: 1 },
       fileFilter: (_request, file, callback) => {
-        if (!file.mimetype.startsWith('image/') && !file.mimetype.startsWith('video/')) {
-          callback(new BadRequestException('Разрешены только изображения и видео'), false);
+        const isImage = file.mimetype.startsWith('image/');
+        const isSupportedVideo =
+          file.mimetype.startsWith('video/') && isSupportedVideoUpload(file.originalname, file.mimetype);
+        if (!isImage && !isSupportedVideo) {
+          callback(new BadRequestException('Разрешены изображения и видео в форматах MP4, MOV и WebM'), false);
           return;
         }
         callback(null, true);
@@ -73,9 +152,13 @@ export class StorageController {
     }),
   )
   @HttpCode(HttpStatus.CREATED)
-  async uploadPhoto(@UploadedFile() file: Express.Multer.File | undefined, @Req() request: AuthenticatedRequest) {
+  async uploadPhoto(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Req() request: AuthenticatedRequest,
+    @Body() options: PhotoUploadOptionsDto = {},
+  ) {
     if (!file) throw new BadRequestException('Не указан файл: file');
-    return await this.storageService.uploadPhoto(getAuthenticatedUserId(request), file);
+    return await this.storageService.uploadPhoto(getAuthenticatedUserId(request), file, options);
   }
 
   @Delete()

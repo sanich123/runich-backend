@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ActivityMediaProcessingService } from 'src/activity/activity-media-processing.service';
+import { ActivityEnrichmentService } from 'src/activity/activity-enrichment.service';
 import { ActivityMigrationService } from 'src/activity/activity-migration.service';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { getAppEnvironment } from 'src/common/config/environment';
@@ -15,11 +16,13 @@ async function bootstrap() {
   });
   const migrationService = app.get(ActivityMigrationService);
   const mediaProcessingService = app.get(ActivityMediaProcessingService);
+  const enrichmentService = app.get(ActivityEnrichmentService);
   const cleanupService = app.get(MediaCleanupService);
   const loadTestSeedService = app.get(LoadTestSeedService);
   const stopWorker = () => {
     migrationService.requestStop();
     mediaProcessingService.requestStop();
+    enrichmentService.requestStop();
     cleanupService.requestStop();
     loadTestSeedService.requestStop();
   };
@@ -31,6 +34,7 @@ async function bootstrap() {
     await Promise.all([
       migrationService.runWorker(),
       mediaProcessingService.runWorker(),
+      enrichmentService.runWorker(),
       cleanupService.runWorker(),
       ...(getAppEnvironment() === 'production' ? [] : [loadTestSeedService.runWorker()]),
     ]);

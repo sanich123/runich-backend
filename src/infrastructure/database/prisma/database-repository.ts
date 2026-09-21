@@ -39,6 +39,7 @@ type ModelName =
   | 'AuthExchange'
   | 'Profile'
   | 'Activity'
+  | 'ActivityMedia'
   | 'ActivityMigrationJob'
   | 'MediaCleanupJob'
   | 'LoadTestSeedJob'
@@ -65,7 +66,8 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
     likes: 'Like',
     user: 'User',
   },
-  Activity: { comments: 'Comment', likes: 'Like', profile: 'Profile', user: 'User' },
+  Activity: { comments: 'Comment', likes: 'Like', media: 'ActivityMedia', profile: 'Profile', user: 'User' },
+  ActivityMedia: { activity: 'Activity' },
   ActivityMigrationJob: { profile: 'Profile', user: 'User' },
   AuthExchange: { user: 'User' },
   Comment: { activity: 'Activity', commentLikes: 'CommentLike', profile: 'Profile' },
@@ -95,6 +97,7 @@ const dateFields: Record<ModelName, ReadonlySet<string>> = {
   ]),
   Profile: new Set(['createdAt', 'birthday', 'updatedAt']),
   Activity: new Set(['date', 'createdAt', 'updatedAt']),
+  ActivityMedia: new Set(['activityDate', 'createdAt']),
   ActivityMigrationJob: new Set(['createdAt', 'startedAt', 'finishedAt']),
   AuthExchange: new Set(['expiresAt', 'consumedAt', 'createdAt']),
   Comment: new Set(['date']),
@@ -498,6 +501,7 @@ export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics
     authExchange: new ModelRepository(client, 'AuthExchange', latencyMetrics),
     profile: new ModelRepository(client, 'Profile', latencyMetrics),
     activity: new ModelRepository(client, 'Activity', latencyMetrics),
+    activityMedia: new ModelRepository(client, 'ActivityMedia', latencyMetrics),
     activityMigrationJob: new ModelRepository(client, 'ActivityMigrationJob', latencyMetrics),
     mediaCleanupJob: new ModelRepository(client, 'MediaCleanupJob', latencyMetrics),
     loadTestSeedJob: new ModelRepository(client, 'LoadTestSeedJob', latencyMetrics),

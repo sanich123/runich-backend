@@ -7,7 +7,7 @@ import {
   ACTIVITY_MEDIA_PROCESSING_CONFIG,
   ACTIVITY_MEDIA_PROCESSING_STATUS,
 } from './activity-media-processing.constants';
-import { getMediaProcessingErrorMessage, hasBlurhash, isPhotoVideoObject } from './activity-media-processing.utils';
+import { getMediaProcessingErrorMessage } from './activity-media-processing.utils';
 import type { ActivityMediaProcessingRecord } from './type';
 
 @Injectable()
@@ -33,7 +33,7 @@ export class ActivityMediaProcessingService {
       take: this.batchSize,
       select: {
         id: true,
-        photoVideoUrls: true,
+        media: { select: { position: true, url: true, thumbnail: true, blurhash: true } },
         mapPhotoUrl: true,
         mapPhotoUrlBlurhash: true,
       },
@@ -78,17 +78,16 @@ export class ActivityMediaProcessingService {
       const data: Record<string, unknown> = {
         mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.completed,
       };
-      const photos = Array.isArray(activity.photoVideoUrls) ? activity.photoVideoUrls : null;
-
-      if (photos?.some((photo) => isPhotoVideoObject(photo) && !hasBlurhash(photo))) {
-        data.photoVideoUrls = await Promise.all(
-          photos.map(async (photo) => {
-            if (!isPhotoVideoObject(photo) || hasBlurhash(photo)) return photo;
-
-            return {
-              ...photo,
-              blurhash: await blurhashFromUrl(photo.thumbnail || photo.url, this.latencyMetrics),
-            };
+      const media = Array.isArray(activity.media) ? activity.media : [];
+      const mediaWithoutBlurhash = media.filter((item) => !item.blurhash);
+      if (mediaWithoutBlurhash.length) {
+        await Promise.all(
+          mediaWithoutBlurhash.map(async (item) => {
+            const blurhash = await blurhashFromUrl(item.thumbnail || item.url, this.latencyMetrics);
+            await this.prisma.activityMedia.updateMany({
+              where: { activityId: activity.id, position: item.position },
+              data: { blurhash },
+            });
           }),
         );
       }

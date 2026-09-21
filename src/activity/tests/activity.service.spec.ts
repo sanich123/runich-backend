@@ -11,7 +11,7 @@ const activityDto = {
 };
 
 function createPrismaMock() {
-  return {
+  const prisma = {
     activity: {
       create: asyncMock(),
       createMany: asyncMock(),
@@ -20,10 +20,18 @@ function createPrismaMock() {
       findMany: asyncMock(),
       delete: asyncMock(),
     },
+    activityMedia: {
+      createMany: asyncMock(),
+      findMany: asyncMock(),
+      updateMany: asyncMock(),
+    },
     $transaction: jest.fn(),
     friend: { findMany: asyncMock() },
     $queryRaw: asyncMock(),
   };
+  prisma.$transaction.mockImplementation((async (callback: (client: unknown) => Promise<unknown>) =>
+    callback(prisma)) as never);
+  return prisma;
 }
 
 describe('ActivityService', () => {
@@ -61,16 +69,106 @@ describe('ActivityService', () => {
       { coords: { latitude: 55.75, longitude: 37.61 } },
       { coords: { latitude: 55.76, longitude: 37.62 } },
     ];
-    await service.createActivity(
-      { ...activityDto, locations, photoVideoUrls: [{ url: 'photo', thumbnail: null }] },
-      'user-1',
-    );
+    await service.createActivity({ ...activityDto, locations, media: [{ url: 'photo', thumbnail: null }] }, 'user-1');
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
-      data: expect.objectContaining({ mapPhotoUrl: expect.stringContaining('mapbox-token') }),
+      data: expect.objectContaining({
+        mapPhotoUrl: expect.stringContaining('mapbox-token&attribution=false&logo=false'),
+      }),
+    });
+
+    await service.createActivity({ ...activityDto, locations }, 'user-1');
+    expect(prisma.activity.create).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({
+        mapPhotoUrl: expect.stringContaining('mapbox-token&attribution=false&logo=false'),
+      }),
+    });
+  });
+
+  it('persists the URL returned by the server-side static map renderer', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const staticMap = {
+      generateActivityMap: asyncMock().mockResolvedValue({
+        url: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
+        key: 'user-1/activities/activity-1/map.webp',
+      }),
+    };
+    const locations = [
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+      { coords: { latitude: 55.76, longitude: 37.62 } },
+    ];
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      staticMap as never,
+    );
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+
+    await service.createActivity({ ...activityDto, locations }, 'user-1');
+
+    expect(staticMap.generateActivityMap).toHaveBeenCalledWith({
+      userId: 'user-1',
+      activityId: undefined,
+      locations,
+    });
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        mapPhotoUrl: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
+      }),
+    });
+  });
+
+  it('keeps the activity when both map providers return no image', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const staticMap = { generateActivityMap: asyncMock().mockResolvedValue(null) };
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      staticMap as never,
+    );
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    const locations = [
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+      { coords: { latitude: 55.76, longitude: 37.62 } },
+    ];
+
+    await service.createActivity({ ...activityDto, locations }, 'user-1');
+
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ mapPhotoUrl: null }),
+    });
+  });
+
+  it('stores estimated active calories when the profile has all required metrics', async () => {
+    const prisma = createPrismaMock();
+    const account = {
+      getAccountByUserId: asyncMock().mockResolvedValue({
+        id: 'profile-1',
+        weight: '80',
+        height: '180',
+        age: '30',
+        gender: 'male',
+      }),
+    };
+    const service = new ActivityService(prisma as never, account as never);
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+
+    await service.createActivity({ ...activityDto, distance: 10_000, duration: 3_600_000 }, 'user-1');
+
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ caloriesActive: 742 }),
     });
   });
 
   it('persists elevation gain calculated from activity locations', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
@@ -87,6 +185,7 @@ describe('ActivityService', () => {
   });
 
   it('stores a route in S3 and keeps only route metadata in the activity row', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const storage = {
@@ -118,7 +217,9 @@ describe('ActivityService', () => {
       }),
     });
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
-      data: expect.not.objectContaining({ locations: expect.anything() }),
+      data: expect.objectContaining({
+        mapPhotoUrl: expect.stringContaining('test-token&attribution=false&logo=false'),
+      }),
     });
   });
 
@@ -155,7 +256,7 @@ describe('ActivityService', () => {
       callback(transaction)) as never);
     transaction.activity.findFirst.mockResolvedValue({
       routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
-      photoVideoUrls: [
+      media: [
         {
           url: 'https://s3.twcstorage.ru/runich-test/user-1/photo.jpg',
           thumbnail: 'https://s3.twcstorage.ru/runich-test/user-1/photo-thumb.jpg',
@@ -191,7 +292,7 @@ describe('ActivityService', () => {
       routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
       kilometresSplit: [],
       userId: 'user-1',
-      isPublic: false,
+      visibility: 'private',
     });
 
     await expect(service.getLocationsByActivityId('activity-1', 'user-1')).resolves.toEqual({
@@ -265,13 +366,14 @@ describe('ActivityService', () => {
       data: {
         title: undefined,
         sport: 'walk',
-        isPublic: undefined,
+        visibility: undefined,
         emotion: undefined,
         date: undefined,
         description: null,
         distance: 1000,
         duration: 100,
         speed: 10,
+        caloriesActive: null,
       },
     });
   });
@@ -351,7 +453,20 @@ describe('ActivityService', () => {
       }),
       deleteObjectByKey: asyncMock(),
     };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const staticMap = {
+      generateActivityMap: asyncMock().mockResolvedValue({
+        key: 'user-1/activities/activity-1/map.webp',
+        url: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
+      }),
+    };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      undefined,
+      staticMap as never,
+    );
     const locations = [
       { coords: { latitude: 55.75, longitude: 37.61 } },
       { coords: { latitude: 55.76, longitude: 37.62 } },
@@ -374,6 +489,11 @@ describe('ActivityService', () => {
     });
 
     expect(storage.uploadActivityRoute).toHaveBeenCalledWith('user-1', 'activity-1', locations);
+    expect(staticMap.generateActivityMap).toHaveBeenCalledWith({
+      userId: 'user-1',
+      activityId: 'activity-1',
+      locations,
+    });
     expect(prisma.activity.createMany).toHaveBeenCalledWith({
       data: [
         expect.objectContaining({
@@ -384,6 +504,7 @@ describe('ActivityService', () => {
           routePointCount: 2,
           routeSizeBytes: 123,
           routeChecksum: 'a'.repeat(64),
+          mapPhotoUrl: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
         }),
       ],
       skipDuplicates: true,
@@ -401,29 +522,39 @@ describe('ActivityService', () => {
     const activity = { id: 'activity-1' };
     prisma.activity.update.mockResolvedValue(activity);
     prisma.activity.findUnique.mockResolvedValue(activity);
-    prisma.activity.findMany.mockResolvedValue([{ id: 'activity-1', photoVideoUrls: ['photo'] }]);
-    prisma.$queryRaw.mockResolvedValue([{ id: 'activity-1', photoVideoUrls: ['photo'] }]);
+    prisma.activity.findMany.mockResolvedValue([{ id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] }]);
+    prisma.$queryRaw.mockResolvedValue([{ id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] }]);
+    prisma.activityMedia.findMany.mockResolvedValue([
+      {
+        activityDate: new Date('2026-08-12T23:15:00.000Z'),
+        activityId: 'activity-1',
+        position: 0,
+        url: 'photo',
+        thumbnail: null,
+        blurhash: null,
+      },
+    ]);
     prisma.activity.delete.mockResolvedValue(activity);
 
     await expect(service.updateActivity({ ...activityDto, title: 'Morning run' }, 'activity-1')).resolves.toEqual(
       activity,
     );
-    await expect(service.getLocationsByActivityId('activity-1')).resolves.toEqual(activity);
-    await expect(service.getActivityByActivityId('activity-1')).resolves.toEqual(activity);
+    await expect(service.getLocationsByActivityId('activity-1')).resolves.toBeNull();
+    await expect(service.getActivityByActivityId('activity-1')).resolves.toBeNull();
     await expect(service.getMediaByUserId('user-1', '1')).resolves.toEqual({
-      photos: ['photo'],
+      media: [{ url: 'photo', thumbnail: null, blurhash: null }],
       hasMore: false,
       nextCursor: null,
       isLastPage: true,
     });
     await expect(service.getActivitesByUserId('user-1', '5')).resolves.toEqual({
-      activities: [{ id: 'activity-1', photoVideoUrls: ['photo'] }],
+      activities: [{ id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] }],
       hasMore: false,
       nextCursor: null,
       isLastPage: true,
     });
     await expect(service.getActivitiesByTheirIds(['activity-1', 'activity-2'])).resolves.toEqual([
-      { id: 'activity-1', photoVideoUrls: ['photo'] },
+      { id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] },
     ]);
     expect(prisma.activity.findMany).toHaveBeenLastCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: { in: ['activity-1', 'activity-2'] } }) }),
@@ -434,7 +565,7 @@ describe('ActivityService', () => {
     );
     await expect(service.getActivitiesByTheirIds(' , ')).resolves.toEqual([]);
     await expect(service.getAllActivitiesWithFriends('user-1', '5')).resolves.toEqual({
-      activities: [{ id: 'activity-1', photoVideoUrls: ['photo'] }],
+      activities: [{ id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] }],
       hasMore: false,
       nextCursor: null,
       isLastPage: true,
@@ -485,21 +616,49 @@ describe('ActivityService', () => {
       expect.objectContaining({ orderBy: [{ date: 'desc' }, { id: 'desc' }], take: 2 }),
     );
 
-    prisma.activity.findMany.mockResolvedValueOnce([
-      { id: 'activity-2', date: newestDate, photoVideoUrls: ['photo-1', 'photo-2'] },
-      { id: 'activity-1', date: olderDate, photoVideoUrls: ['photo-3'] },
+    prisma.activityMedia.findMany.mockResolvedValueOnce([
+      {
+        activityDate: newestDate,
+        activityId: 'activity-2',
+        position: 0,
+        url: 'photo-1',
+        thumbnail: null,
+        blurhash: null,
+      },
+      {
+        activityDate: newestDate,
+        activityId: 'activity-2',
+        position: 1,
+        url: 'photo-2',
+        thumbnail: null,
+        blurhash: null,
+      },
     ]);
     const mediaPage = await service.getMediaByUserId('user-1', '1');
-    expect(mediaPage).toMatchObject({ photos: ['photo-1'], hasMore: true });
+    expect(mediaPage).toMatchObject({ media: [{ url: 'photo-1' }], hasMore: true });
     const mediaCursor = parseActivityMediaCursor(mediaPage?.nextCursor ?? undefined);
     expect(mediaCursor).toEqual({ date: newestDate, id: 'activity-2', photoIndex: 0 });
 
-    prisma.activity.findMany.mockResolvedValueOnce([
-      { id: 'activity-2', date: newestDate, photoVideoUrls: ['photo-1', 'photo-2'] },
-      { id: 'activity-1', date: olderDate, photoVideoUrls: ['photo-3'] },
+    prisma.activityMedia.findMany.mockResolvedValueOnce([
+      {
+        activityDate: newestDate,
+        activityId: 'activity-2',
+        position: 1,
+        url: 'photo-2',
+        thumbnail: null,
+        blurhash: null,
+      },
+      {
+        activityDate: olderDate,
+        activityId: 'activity-1',
+        position: 0,
+        url: 'photo-3',
+        thumbnail: null,
+        blurhash: null,
+      },
     ]);
     await expect(service.getMediaByUserId('user-1', '1', mediaCursor)).resolves.toMatchObject({
-      photos: ['photo-2'],
+      media: [{ url: 'photo-2' }],
       hasMore: true,
     });
   });
@@ -524,7 +683,7 @@ describe('ActivityService', () => {
           id: true,
           userId: true,
           title: true,
-          photoVideoUrls: true,
+          media: expect.any(Object),
           mapPhotoUrl: true,
           duration: true,
           distance: true,
@@ -534,9 +693,12 @@ describe('ActivityService', () => {
       );
       expect(query.select).not.toHaveProperty('locations');
       expect(query.select).toHaveProperty('kilometresSplit', true);
-      expect(query.select).not.toHaveProperty('emotion');
+      expect(query.select).toHaveProperty('emotion', true);
       expect(query.select).not.toHaveProperty('description');
     }
+
+    const [feedTemplate] = prisma.$queryRaw.mock.calls.at(-1) as unknown as [TemplateStringsArray];
+    expect(Array.from(feedTemplate).join('')).toContain('a."emotion"');
 
     await service.getActivityByActivityId('activity-1');
     const detailQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {

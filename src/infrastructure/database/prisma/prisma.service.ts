@@ -18,6 +18,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   readonly authExchange!: DatabaseRepositories['authExchange'];
   readonly profile!: DatabaseRepositories['profile'];
   readonly activity!: DatabaseRepositories['activity'];
+  readonly activityMedia!: DatabaseRepositories['activityMedia'];
   readonly activityMigrationJob!: DatabaseRepositories['activityMigrationJob'];
   readonly mediaCleanupJob!: DatabaseRepositories['mediaCleanupJob'];
   readonly loadTestSeedJob!: DatabaseRepositories['loadTestSeedJob'];

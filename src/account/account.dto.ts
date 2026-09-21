@@ -17,6 +17,10 @@ export class ProfileDto {
   city?: string | null;
   @ApiPropertyOptional({ type: String, description: 'gender value (optional)' })
   gender?: string | null;
+  @ApiPropertyOptional({ type: String, description: 'height in centimeters (optional)' })
+  height?: string | null;
+  @ApiPropertyOptional({ type: String, description: 'age in years (optional)' })
+  age?: string | null;
   @ApiPropertyOptional({ type: String, description: 'profilePhoto value (optional)' })
   profilePhoto?: string | null;
   @ApiPropertyOptional({ type: String, description: 'sport value (optional)' })

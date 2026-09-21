@@ -1,12 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { MAX_ACTIVITY_LOCATIONS } from 'src/common/constants';
+import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDateString,
   IsDefined,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -19,8 +21,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { IsIanaTimeZoneConstraint } from 'src/common/validation/iana-time-zone.validator';
+import { ACTIVITY_VISIBILITY, type ActivityVisibility } from './activity-visibility';
 
-export class ActivityPhotoVideoDto {
+export class ActivityMediaDto {
   @ApiProperty({ type: String })
   @IsString()
   @IsNotEmpty()
@@ -133,7 +136,7 @@ export class ActivityKilometreSplitDto {
   kilometerPoint: ActivityLocationDto;
 }
 
-export type ActivityPhotoVideoObject = {
+export type ActivityMediaObject = {
   url: string;
   thumbnail: string | null;
   blurhash?: string | null;
@@ -194,10 +197,10 @@ export class ActivityDto {
   @IsOptional()
   emotion?: string;
 
-  @ApiPropertyOptional({ type: Boolean, description: 'Is activity public or private' })
-  @IsBoolean()
+  @ApiPropertyOptional({ enum: ACTIVITY_VISIBILITY, description: 'Activity visibility' })
+  @IsEnum(ACTIVITY_VISIBILITY)
   @IsOptional()
-  isPublic?: boolean;
+  visibility?: ActivityVisibility;
 
   @ApiPropertyOptional({
     type: 'array',
@@ -214,9 +217,10 @@ export class ActivityDto {
   })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(UPLOAD_LIMITS.mediaBatchFiles)
   @ValidateNested({ each: true })
-  @Type(() => ActivityPhotoVideoDto)
-  photoVideoUrls?: ActivityPhotoVideoObject[];
+  @Type(() => ActivityMediaDto)
+  media?: ActivityMediaObject[];
 
   @ApiPropertyOptional({ type: String, description: 'Image of map with points of activity' })
   @IsOptional()
@@ -345,7 +349,7 @@ export class ActivityMigrationJobResponseDto {
   finishedAt: Date | null;
 }
 
-export class ActivityPhotoResponseDto {
+export class ActivityMediaItemDto {
   @ApiProperty({ type: String })
   url: string;
 
@@ -405,8 +409,8 @@ export class ActivityKilometreSplitResponseDto {
 }
 
 export class ActivityMediaResponseDto {
-  @ApiProperty({ type: [ActivityPhotoResponseDto] })
-  photos: ActivityPhotoResponseDto[];
+  @ApiProperty({ type: [ActivityMediaItemDto] })
+  media: ActivityMediaItemDto[];
 
   @ApiProperty({ type: Boolean })
   hasMore: boolean;
@@ -478,6 +482,9 @@ export class ActivityResponseDto extends ActivityDto {
   @ApiProperty({ type: Number, minimum: 0 })
   elevationGain: number;
 
+  @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true, description: 'Estimated active calories' })
+  caloriesActive?: number | null;
+
   @ApiPropertyOptional({ type: String, nullable: true })
   source?: string | null;
 
@@ -504,8 +511,11 @@ export class ActivityCardResponseDto {
   @ApiProperty({ type: String, format: 'uuid' })
   userId: string;
 
-  @ApiPropertyOptional({ type: [ActivityPhotoResponseDto], nullable: true })
-  photoVideoUrls?: ActivityPhotoResponseDto[] | null;
+  @ApiProperty({ enum: ACTIVITY_VISIBILITY })
+  visibility: ActivityVisibility;
+
+  @ApiPropertyOptional({ type: [ActivityMediaItemDto], nullable: true })
+  media?: ActivityMediaItemDto[] | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   mapPhotoUrl?: string | null;
@@ -522,6 +532,9 @@ export class ActivityCardResponseDto {
   @ApiProperty({ type: Number, minimum: 0 })
   elevationGain: number;
 
+  @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true, description: 'Estimated active calories' })
+  caloriesActive?: number | null;
+
   @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true })
   steps?: number | null;
 
@@ -535,9 +548,6 @@ export class ActivityCardResponseDto {
 export class ActivityDetailsResponseDto extends ActivityCardResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   description?: string | null;
-
-  @ApiPropertyOptional({ type: Boolean, nullable: true })
-  isPublic?: boolean | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   emotion?: string | null;

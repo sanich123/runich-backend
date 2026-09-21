@@ -81,6 +81,8 @@ describe('request DTO validation', () => {
       profilePhotoBlurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
       sport: 'run',
       weight: '65',
+      height: '180',
+      age: '30',
       emailNotifications: false,
       email,
       language: 'en',
@@ -90,6 +92,9 @@ describe('request DTO validation', () => {
     await expectInvalid(UserDto, { email: 'bad' });
     await expectInvalid(UserDto, { emailNotifications: 'false' });
     await expectInvalid(UserDto, { weight: 65 });
+    await expectInvalid(UserDto, { weight: '201' });
+    await expectInvalid(UserDto, { height: '231' });
+    await expectInvalid(UserDto, { age: '101' });
   });
 
   it('validates activity scalar fields and every nested activity collection', async () => {
@@ -110,8 +115,8 @@ describe('request DTO validation', () => {
       timeZone: 'Europe/Moscow',
       description: 'Morning run',
       emotion: 'happy',
-      isPublic: true,
-      photoVideoUrls: [{ url: 'https://example.com/photo.jpg', thumbnail: null, blurhash: 'hash' }],
+      visibility: 'public',
+      media: [{ url: 'https://example.com/photo.jpg', thumbnail: null, blurhash: 'hash' }],
       mapPhotoUrl: 'https://example.com/map.jpg',
       mapPhotoUrlBlurhash: 'hash',
       title: 'Morning',
@@ -136,20 +141,20 @@ describe('request DTO validation', () => {
       sport: 'run',
       timeZone: 'Mars/Olympus',
     });
-    await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'run', isPublic: 'true' });
+    await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'run', visibility: 'invalid' });
     await expectInvalid(ActivityDto, {
       duration: 1,
       distance: 1,
       speed: 1,
       sport: 'run',
-      photoVideoUrls: [{ url: 42 }],
+      media: [{ url: 42 }],
     });
     await expectInvalid(ActivityDto, {
       duration: 1,
       distance: 1,
       speed: 1,
       sport: 'run',
-      photoVideoUrls: [{ url: 'photo' }],
+      media: [{ url: 'photo' }],
     });
     await expectInvalid(ActivityDto, {
       duration: 1,

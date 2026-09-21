@@ -37,21 +37,19 @@ export class CommentService {
 
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
-      select: { activity: { select: { userId: true, isPublic: true } } },
+      select: { activity: { select: { id: true } } },
     });
-    if (!comment || (comment.activity.userId !== currentUserId && comment.activity.isPublic !== true)) {
+    if (!comment || !(await this.activityService.canAccessActivity(comment.activity.id, currentUserId))) {
       throw new NotFoundException('Комментарий не найден');
     }
   }
 
   async getCommentsbyActivityId(id: string, limit = '10', cursor?: CommentCursor, currentUserId?: string) {
     try {
+      await this.ensureActivityAccess(id, currentUserId);
       const pageSize = Number(limit);
       const activity = await this.prisma.activity.findUnique({
-        where: {
-          id,
-          ...(currentUserId ? { OR: [{ userId: currentUserId }, { isPublic: true }] } : {}),
-        },
+        where: { id },
         select: {
           comments: {
             ...(cursor
@@ -98,11 +96,9 @@ export class CommentService {
 
   async getCommentsLengthbyActivityId(id: string, currentUserId?: string) {
     try {
+      await this.ensureActivityAccess(id, currentUserId);
       const activity = await this.prisma.activity.findUnique({
-        where: {
-          id,
-          ...(currentUserId ? { OR: [{ userId: currentUserId }, { isPublic: true }] } : {}),
-        },
+        where: { id },
         select: { _count: { select: { comments: true } } },
       });
       if (!activity) {
@@ -159,12 +155,12 @@ export class CommentService {
         select: {
           comment: true,
           profile: { select: COMMENT_PROFILE_SELECT },
-          activity: { select: { userId: true, isPublic: true } },
+          activity: { select: { id: true } },
         },
       });
       if (
         currentUserId &&
-        (!comment || (comment.activity.userId !== currentUserId && comment.activity.isPublic !== true))
+        (!comment || !(await this.activityService.canAccessActivity(comment.activity.id, currentUserId)))
       ) {
         throw new NotFoundException('Комментарий не найден');
       }
@@ -202,13 +198,13 @@ export class CommentService {
       const comment = await this.prisma.comment.findUnique({
         where: { id },
         select: {
-          activity: { select: { userId: true, isPublic: true } },
+          activity: { select: { id: true } },
           commentLikes: { select: { authorId: true, id: true } },
         },
       });
       if (
         currentUserId &&
-        (!comment || (comment.activity.userId !== currentUserId && comment.activity.isPublic !== true))
+        (!comment || !(await this.activityService.canAccessActivity(comment.activity.id, currentUserId)))
       ) {
         throw new NotFoundException('Комментарий не найден');
       }

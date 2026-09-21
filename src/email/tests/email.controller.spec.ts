@@ -49,15 +49,13 @@ describe('EmailController', () => {
     await expect(controller.sendCommentLikeEmailNotification({ ...baseEmail, comment: 'Comment' })).rejects.toBe(error);
   });
 
-  it('takes the feedback author from the authenticated request and forwards the optional photo', async () => {
+  it('takes the feedback author from the authenticated request and forwards S3 feedback media', async () => {
     const request = { user: { id: 'user-1' } } as never;
-    const photo = { originalname: 'screen.jpg' } as Express.Multer.File;
+    const feedback = { feedbackId: 'feedback-1', kind: 'bug', text: 'Broken', deviceInfo: 'Android' };
     service.sendFeedback.mockResolvedValue(undefined);
 
-    await expect(
-      controller.sendFeedback({ kind: 'bug', text: 'Broken', deviceInfo: 'Android' }, request, photo),
-    ).resolves.toBeUndefined();
+    await expect(controller.sendFeedback(feedback, request)).resolves.toBeUndefined();
 
-    expect(service.sendFeedback).toHaveBeenCalledWith('bug', 'user-1', 'Broken', 'Android', photo);
+    expect(service.sendFeedback).toHaveBeenCalledWith(feedback, 'user-1');
   });
 });

@@ -55,6 +55,8 @@ model Profile {
   birthday              DateString?
   city                  String?
   gender                String?
+  height                String?
+  age                   String?
   profilePhoto          String?
   sport                 String?
   surname               String?
@@ -74,6 +76,12 @@ model Profile {
 
   @@unique([userId], map: "Profile_user_id_key")
   @@map("Profile")
+}
+
+enum ActivityVisibility {
+  public
+  followers
+  private
 }
 
 model Activity {
@@ -98,9 +106,14 @@ model Activity {
   title               String?
   kilometresSplit     Jsonb?
   mapPhotoUrl         String?
-  photoVideoUrls      Jsonb?
   mediaProcessingStatus VarChar(16)       @default("queued") @map("media_processing_status")
-  isPublic            Boolean?             @default(true)
+  locationName        String?             @map("location_name")
+  weatherTemperature  Float?              @map("weather_temperature")
+  weatherWindSpeed    Float?              @map("weather_wind_speed")
+  weatherCode         Int?                @map("weather_code")
+  caloriesActive      Int?                @map("calories_active")
+  locationEnrichmentStatus VarChar(16)    @default("queued") @map("location_enrichment_status")
+  visibility          ActivityVisibility   @default(public)
   mapPhotoUrlBlurhash String?
   profileId           Uuid
   source              VarChar(32)?
@@ -108,14 +121,33 @@ model Activity {
   steps               Int?
   comments            Comment[]
   likes               Like[]
+  media               ActivityMedia[]
   profile             Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Activity_profileId_fkey", index: false)
   user                User                 @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Activity_user_id_fkey", index: false)
 
   @@unique([userId, source, sourceActivityId], map: "Activity_user_id_source_sourceActivityId_key")
   @@index([userId, date, id], map: "Activity_user_id_date_id_idx")
-  @@index([userId, isPublic, date, id], map: "Activity_user_id_isPublic_date_id_idx")
-  @@index([isPublic, date, id], map: "Activity_isPublic_date_id_idx")
+  @@index([userId, visibility, date, id], map: "Activity_user_id_visibility_date_id_idx")
+  @@index([visibility, date, id], map: "Activity_visibility_date_id_idx")
   @@map("Activity")
+}
+
+model ActivityMedia {
+  id           Uuid                  @id(map: "ActivityMedia_pkey") @default(dbgenerated("gen_random_uuid()"))
+  activityId   Uuid                  @map("activity_id")
+  userId       Uuid                  @map("user_id")
+  activityDate TimestamptzString(6)  @map("activity_date")
+  position     Int
+  url          String
+  thumbnail    String?
+  blurhash     String?
+  createdAt    TimestamptzString(6)  @default(now()) @map("created_at")
+  activity     Activity              @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "ActivityMedia_activity_id_fkey", index: false)
+
+  @@unique([activityId, position], map: "ActivityMedia_activity_id_position_key")
+  @@index([userId, activityDate, activityId, position], map: "ActivityMedia_user_id_activity_date_idx")
+  @@index([activityId], map: "ActivityMedia_activity_id_idx")
+  @@map("ActivityMedia")
 }
 
 model ActivityMigrationJob {

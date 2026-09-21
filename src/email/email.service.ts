@@ -1,13 +1,23 @@
-import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
+import { CommentEmailDTO, CommentLikeEmailDTO, FeedbackDto, LikeEmailDTO } from './email.dto';
 import { sendEmail } from 'src/common/email/nodemailer';
 import { render } from '@react-email/components';
 import { ConfirmEmailAddressWithLinkAndCode, LoginByEmailLink, PasswordChangeCode } from './templates';
-import { Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { EmailNotificationService } from './email-notification.service';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { escapeHtml } from './utils';
+import { StorageService } from 'src/storage/storage.service';
+import { ActivityService } from 'src/activity/activity.service';
 
 function getActivityFrontendUrl(activityId: string) {
   const activityUrl = new URL(getAuthFrontendRedirectUri());
@@ -27,77 +37,74 @@ export class EmailService {
     @Inject(EmailNotificationService) notificationService?: EmailNotificationService,
     @Inject(PrismaService) private readonly prisma?: PrismaService,
     @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
+    @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
+    @Optional() @Inject(ActivityService) private readonly activityService?: ActivityService,
   ) {
     this.notificationService = notificationService ?? new EmailNotificationService(this.latencyMetrics);
   }
 
-  async sendLikeEmailNotification({
-    profilePhoto,
-    name,
-    surname,
-    recepientEmail,
-    recepientName,
-    recepientSurname,
-    mapPhotoUrl,
-    activityId,
-  }: LikeEmailDTO) {
+  private async getEmailNotificationRecipient(activityId: string) {
+    if (!this.activityService) return null;
+
+    const activity = await this.activityService.getActivityWithEmailData(activityId);
+    if (activity?.profile?.emailNotifications !== true || !activity.email) return null;
+
+    return {
+      email: activity.email,
+      name: activity.profile.name ?? '',
+      surname: activity.profile.surname ?? '',
+      mapPhotoUrl: activity.mapPhotoUrl ?? '',
+    };
+  }
+
+  async sendLikeEmailNotification({ profilePhoto, name, surname, activityId }: LikeEmailDTO) {
+    const recipient = await this.getEmailNotificationRecipient(activityId);
+    if (!recipient) return;
+
     return this.notificationService.sendLike({
       profilePhoto,
       name,
       surname,
       activityId,
-      recepientEmail,
-      recepientName,
-      recepientSurname,
-      mapPhotoUrl,
+      recepientEmail: recipient.email,
+      recepientName: recipient.name,
+      recepientSurname: recipient.surname,
+      mapPhotoUrl: recipient.mapPhotoUrl,
       activityUrl: getActivityFrontendUrl(activityId),
     });
   }
 
-  async sendCommentEmailNotification({
-    profilePhoto,
-    name,
-    surname,
-    comment,
-    recepientEmail,
-    recepientName,
-    recepientSurname,
-    mapPhotoUrl,
-    activityId,
-  }: CommentEmailDTO) {
+  async sendCommentEmailNotification({ profilePhoto, name, surname, comment, activityId }: CommentEmailDTO) {
+    const recipient = await this.getEmailNotificationRecipient(activityId);
+    if (!recipient) return;
+
     return this.notificationService.sendComment({
       profilePhoto,
       name,
       surname,
       activityId,
       comment,
-      recepientEmail,
-      recepientName,
-      recepientSurname,
-      mapPhotoUrl,
+      recepientEmail: recipient.email,
+      recepientName: recipient.name,
+      recepientSurname: recipient.surname,
+      mapPhotoUrl: recipient.mapPhotoUrl,
       activityUrl: getActivityFrontendUrl(activityId),
     });
   }
 
-  async sendCommentLikeEmailNotification({
-    profilePhoto,
-    name,
-    surname,
-    comment,
-    recepientEmail,
-    recepientName,
-    recepientSurname,
-    activityId,
-  }: CommentLikeEmailDTO) {
+  async sendCommentLikeEmailNotification({ profilePhoto, name, surname, comment, activityId }: CommentLikeEmailDTO) {
+    const recipient = await this.getEmailNotificationRecipient(activityId);
+    if (!recipient) return;
+
     return this.notificationService.sendCommentLike({
       profilePhoto,
       name,
       surname,
       activityId,
       comment,
-      recepientEmail,
-      recepientName,
-      recepientSurname,
+      recepientEmail: recipient.email,
+      recepientName: recipient.name,
+      recepientSurname: recipient.surname,
       activityUrl: getActivityFrontendUrl(activityId),
     });
   }
@@ -141,7 +148,7 @@ export class EmailService {
     }
   }
 
-  async sendFeedback(kind: string, userId: string, text: string, deviceInfo: string, photo?: Express.Multer.File) {
+  async sendFeedback(feedback: FeedbackDto, userId: string) {
     if (!this.prisma) throw new Error('PrismaService не настроен для отправки feedback');
 
     const user = await this.prisma.user.findUnique({
@@ -158,7 +165,7 @@ export class EmailService {
       thanks: 'Поблагодарить разработчика',
       feature: 'Хочу фичу',
     };
-    const label = labels[kind] ?? 'Обратная связь';
+    const label = labels[feedback.kind] ?? 'Обратная связь';
     const name =
       [user.profile?.name, user.profile?.surname]
         .map((value) => value?.trim())
@@ -166,19 +173,55 @@ export class EmailService {
         .join(' ') || 'Имя не указано';
     const email = escapeHtml(user.email);
     const subject = `[Runich] ${label} от ${name} <${user.email}>`;
+    const attachments = feedback.attachments ?? [];
+    this.getFeedbackAttachmentKeys(userId, feedback);
+    const attachmentsHtml = attachments.length
+      ? [
+          '<h3>Вложения</h3>',
+          '<ul>',
+          ...attachments.map(({ url }, index) => `<li><a href="${escapeHtml(url)}">Вложение ${index + 1}</a></li>`),
+          '</ul>',
+        ].join('')
+      : '';
     const html = [
       `<h2>${escapeHtml(label)}</h2>`,
       `<p><b>Пользователь:</b> ${escapeHtml(name)}</p>`,
       `<p><b>Email:</b> <a href="mailto:${email}">${email}</a></p>`,
-      `<p><b>Устройство:</b><br>${escapeHtml(deviceInfo).replaceAll('\n', '<br>')}</p>`,
-      `<p>${escapeHtml(text).replaceAll('\n', '<br>')}</p>`,
+      `<p><b>Устройство:</b><br>${escapeHtml(feedback.deviceInfo).replaceAll('\n', '<br>')}</p>`,
+      `<p>${escapeHtml(feedback.text).replaceAll('\n', '<br>')}</p>`,
+      attachmentsHtml,
     ].join('');
-    await sendEmail(
-      'aovoronin.piano@gmail.com',
-      subject,
-      html,
-      photo ? [{ filename: photo.originalname, content: photo.buffer, contentType: photo.mimetype }] : [],
-      this.latencyMetrics,
+    // Feedback media is uploaded independently from SMTP delivery. Keep the
+    // validated S3 links when SMTP is unavailable so the client can show the
+    // user that the file was uploaded and provide a usable link.
+    await sendEmail('aovoronin.piano@gmail.com', subject, html, [], this.latencyMetrics);
+  }
+
+  private getFeedbackAttachmentKeys(userId: string, feedback: FeedbackDto) {
+    if (!feedback.attachments?.length) return [];
+    if (!this.storageService) {
+      throw new ServiceUnavailableException('S3-хранилище не настроено для вложений feedback');
+    }
+
+    const urls = feedback.attachments.flatMap(({ url, thumbnail }) =>
+      [url, thumbnail].filter((value): value is string => Boolean(value)),
     );
+    return [...new Set(urls.map((url) => this.validateFeedbackAttachment(userId, feedback.feedbackId, url)))];
+  }
+
+  private validateFeedbackAttachment(userId: string, feedbackId: string, url: string) {
+    if (!this.storageService) throw new ServiceUnavailableException('S3-хранилище не настроено');
+    const key = this.storageService.getOwnedKey(userId, url);
+    const relativeKey = key.slice(`${userId}/`.length);
+    const [, dateFolder, attachmentFeedbackId, fileName] = relativeKey.split('/');
+    if (
+      !relativeKey.startsWith('feedback/') ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(dateFolder ?? '') ||
+      attachmentFeedbackId !== feedbackId ||
+      !fileName
+    ) {
+      throw new BadRequestException('Вложение feedback имеет некорректный S3-путь');
+    }
+    return key;
   }
 }

@@ -31,7 +31,7 @@ describe('ActivityController', () => {
 
   it('returns service results for all non-migration activity endpoints', async () => {
     const result = { id: 'activity-1' };
-    activityService.getMediaByUserId.mockResolvedValue({ photos: [] });
+    activityService.getMediaByUserId.mockResolvedValue({ media: [] });
     activityService.getLocationsByActivityId.mockResolvedValue({ locations: [] });
     activityService.getActivitiesByTheirIds.mockResolvedValue([result]);
     activityService.createActivity.mockResolvedValue(result);
@@ -45,11 +45,11 @@ describe('ActivityController', () => {
     activityService.getActivityByActivityId.mockResolvedValue(result);
     activityService.deleteActivityById.mockResolvedValue(result);
 
-    await expect(controller.getMediaByUserId({ id: 'u1' }, undefined, '10')).resolves.toEqual({ photos: [] });
+    await expect(controller.getMediaByUserId({ id: 'u1' }, undefined, '10')).resolves.toEqual({ media: [] });
     await expect(controller.getLocationsByActivityId({ id: 'a1' })).resolves.toEqual({ locations: [] });
     await expect(controller.getActivitiesByActivitiesIds('a1,a2')).resolves.toEqual([result]);
     await expect(controller.getActivitiesByActivitiesIds(['a1', 'a2'])).resolves.toEqual([result]);
-    expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(['a1', 'a2']);
+    expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(['a1', 'a2'], undefined);
     await expect(
       controller.createActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'u1' }),
     ).resolves.toEqual(result);

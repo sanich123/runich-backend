@@ -81,13 +81,24 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         duration: 3600,
         distance: 10,
         speed: 10,
-        isPublic: true,
+        visibility: 'public',
         routeStorageKey: routeMetadata.key,
         routeFormatVersion: routeMetadata.formatVersion,
         routePointCount: routeMetadata.pointCount,
         routeSizeBytes: routeMetadata.sizeBytes,
         routeChecksum: routeMetadata.checksum,
-        photoVideoUrls: [{ url: 'https://example.com/photo.jpg', thumbnail: null, blurhash: 'test-blurhash' }],
+        media: {
+          create: [
+            {
+              userId: owner.id,
+              activityDate,
+              position: 0,
+              url: 'https://example.com/photo.jpg',
+              thumbnail: null,
+              blurhash: 'test-blurhash',
+            },
+          ],
+        },
       },
     });
     activityId = activity.id;
@@ -106,7 +117,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       await prisma.user.deleteMany({ where: { id: { in: [ownerId, visitorId, targetId, profilelessId] } } });
     }
     await app?.close();
-  });
+  }, 60_000);
 
   it('serves health and public auth configuration endpoints', async () => {
     await request(app.getHttpServer()).get('/health/live').expect(200).expect({ status: 'ok' });
@@ -161,7 +172,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         duration: 120,
         distance: 4,
         speed: 2,
-        isPublic: true,
+        visibility: 'public',
       })
       .expect(201);
     const createdActivityId = createResponse.body.id as string;
@@ -207,11 +218,11 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .expect((response) => expect(response.body.locations).toHaveLength(1));
 
     await request(app.getHttpServer())
-      .get(`/activity/${ownerId}/photos`)
+      .get(`/activity/${ownerId}/media`)
       .query({ take: '10' })
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200)
-      .expect((response) => expect(response.body.photos).toHaveLength(1));
+      .expect((response) => expect(response.body.media).toHaveLength(1));
 
     const idsResponse = await request(app.getHttpServer())
       .get('/activity/activityIds')
@@ -504,7 +515,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         expect(response.body.description).toBe('Imported in e2e');
         expect(response.body._count).toEqual({ comments: 0, likes: 0 });
       });
-  });
+  }, 60_000);
 
   it('rejects protected email endpoints without authentication and redirects OAuth errors safely', async () => {
     await request(app.getHttpServer()).post('/email/like').send({}).expect(401);

@@ -196,6 +196,7 @@ export class LoadTestSeedService {
         }
 
         const activityRows: AnyRecord[] = [];
+        const mediaRows: AnyRecord[] = [];
         const activityRefs: Array<{ id: string; ownerIndex: number; date: Date }> = [];
         const end = Math.min(offset + CREATE_BATCH_SIZE, totalActivities);
 
@@ -226,10 +227,9 @@ export class LoadTestSeedService {
             date: activityDate,
             createdAt: activityDate,
             updatedAt: activityDate,
-            isPublic: true,
+            visibility: 'public',
             source: 'load-test',
             sourceActivityId: `${job.runId}:${ownerIndex}:${activityIndex}`,
-            photoVideoUrls: photos,
             mapPhotoUrl: photos[0]?.url ?? null,
             mapPhotoUrlBlurhash: null,
             kilometresSplit: template.kilometresSplit ?? null,
@@ -244,10 +244,20 @@ export class LoadTestSeedService {
                 }
               : {}),
           });
+          mediaRows.push(
+            ...photos.map((photo, position) => ({
+              activityId,
+              userId: owner.id,
+              activityDate,
+              position,
+              ...photo,
+            })),
+          );
           activityRefs.push({ id: activityId, ownerIndex, date: activityDate });
         }
 
         const activitiesResult = await this.prisma.activity.createMany({ data: activityRows, skipDuplicates: true });
+        await this.prisma.activityMedia.createMany({ data: mediaRows, skipDuplicates: true });
         const relationRows = this.buildRelationRows(job.runId, activityRefs, users, config);
         const likesResult = await this.prisma.like.createMany({ data: relationRows.likes, skipDuplicates: true });
         const commentsResult = await this.prisma.comment.createMany({

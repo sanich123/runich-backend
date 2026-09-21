@@ -22,17 +22,29 @@ import { dirname, extname } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { normalizeImage } from 'src/common/images/image-processing';
-import type { ActivityPhotoVideoObject, LocationObject } from 'src/activity/activity.dto';
-import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, MAX_DELETE_BATCH_SIZE } from './const';
+import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import type { ActivityMediaObject, LocationObject } from 'src/activity/activity.dto';
+import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, isSupportedVideoUpload, MAX_DELETE_BATCH_SIZE } from './const';
 import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from './activity-route';
 import {
   getActivityPhotoKey,
   getExtensionFromStorageKey,
+  getFeedbackPhotoKey,
   getMigrationArchiveKey,
   getProfilePhotoKey,
   getUserUploadKey,
 } from './storage-key';
-import type { ActivityRouteStorageMetadata, StorageFile, StorageSettings } from './type';
+import { MEDIA_UPLOAD_ROLES } from './type';
+import type {
+  ActivityRouteStorageMetadata,
+  MediaUploadManifestEntry,
+  PhotoUploadOptions,
+  StorageFile,
+  StorageSettings,
+  UploadedPhotoBatch,
+} from './type';
+
+const MEDIA_BATCH_CONCURRENCY = 3;
 
 @Injectable()
 export class StorageService {
@@ -63,16 +75,21 @@ export class StorageService {
     });
   }
 
-  async uploadPhoto(userId: string, file: StorageFile) {
+  async uploadPhoto(userId: string, file: StorageFile, options: PhotoUploadOptions = {}) {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
       this.assertConfigured();
+      const isUnsupportedVideo =
+        file.mimetype.startsWith('video/') && !isSupportedVideoUpload(file.originalname, file.mimetype);
+      if (isUnsupportedVideo) {
+        throw new BadRequestException('Разрешены видео только в форматах MP4, MOV и WebM');
+      }
       const input = file.path ?? file.buffer;
       if (!input) throw new BadRequestException('Не удалось прочитать загруженный файл');
 
       const normalizedImage = file.mimetype.startsWith('image/') ? await this.normalizeImage(input) : undefined;
       const extension = normalizedImage ? 'webp' : this.getExtension(file.originalname, file.mimetype);
-      const key = getUserUploadKey(userId, extension);
+      const key = this.getPhotoKey(userId, extension, options);
       const body = normalizedImage ?? (file.path ? (stream = createReadStream(file.path)) : file.buffer);
       const contentType = normalizedImage ? 'image/webp' : file.mimetype;
       const contentLength = normalizedImage?.length ?? file.size;
@@ -105,6 +122,54 @@ export class StorageService {
     }
   }
 
+  async uploadPhotos(
+    userId: string,
+    files: StorageFile[],
+    options: PhotoUploadOptions = {},
+    rawManifest = '',
+  ): Promise<UploadedPhotoBatch[]> {
+    if (!files.length) throw new BadRequestException('Не указаны файлы: files');
+    if (files.length > UPLOAD_LIMITS.mediaBatchFiles) {
+      throw new BadRequestException(`Можно загрузить не более ${UPLOAD_LIMITS.mediaBatchFiles} файлов за раз`);
+    }
+    const totalBytes = files.reduce((total, file) => total + (file.size ?? file.buffer?.byteLength ?? 0), 0);
+    if (totalBytes >= UPLOAD_LIMITS.mediaBatchBytes) {
+      throw new BadRequestException('Суммарный размер файлов должен быть меньше 100 МБ');
+    }
+
+    const manifest = this.parseUploadManifest(rawManifest, files.length);
+    const results: Array<UploadedPhotoBatch | undefined> = Array.from({ length: files.length });
+    const errors: unknown[] = [];
+    let nextIndex = 0;
+
+    const worker = async () => {
+      while (nextIndex < files.length) {
+        const index = nextIndex++;
+        try {
+          results[index] = {
+            ...(await this.uploadPhoto(userId, files[index], options)),
+            ...manifest[index],
+          };
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(MEDIA_BATCH_CONCURRENCY, files.length) }, () => worker()));
+
+    if (errors.length) {
+      await Promise.allSettled(
+        results
+          .filter((result): result is UploadedPhotoBatch => Boolean(result))
+          .map(({ key }) => this.deleteObjectByKey(key)),
+      );
+      throw errors[0];
+    }
+
+    return results as UploadedPhotoBatch[];
+  }
+
   async uploadMigrationArchive(userId: string, migrationId: string, filePath: string) {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
@@ -131,6 +196,38 @@ export class StorageService {
       stream?.destroy();
       await rm(filePath, { force: true });
     }
+  }
+
+  private parseUploadManifest(rawManifest: string, fileCount: number): MediaUploadManifestEntry[] {
+    let manifest: unknown;
+    try {
+      manifest = JSON.parse(rawManifest);
+    } catch {
+      throw new BadRequestException('Некорректный manifest медиафайлов');
+    }
+
+    if (!Array.isArray(manifest) || manifest.length !== fileCount) {
+      throw new BadRequestException('Manifest медиафайлов не совпадает с количеством файлов');
+    }
+
+    const seen = new Set<string>();
+    return manifest.map((entry) => {
+      if (
+        !entry ||
+        typeof entry !== 'object' ||
+        typeof (entry as { mediaId?: unknown }).mediaId !== 'string' ||
+        !(MEDIA_UPLOAD_ROLES as readonly unknown[]).includes((entry as { role?: unknown }).role)
+      ) {
+        throw new BadRequestException('Некорректная запись manifest медиафайлов');
+      }
+
+      const mediaId = (entry as { mediaId: string }).mediaId.trim();
+      const role = (entry as { role: MediaUploadManifestEntry['role'] }).role;
+      const key = `${mediaId}:${role}`;
+      if (!mediaId || seen.has(key)) throw new BadRequestException('Manifest содержит дублирующие mediaId и role');
+      seen.add(key);
+      return { mediaId, role };
+    });
   }
 
   async uploadActivityRoute(userId: string, activityId: string, locations: LocationObject[]) {
@@ -225,7 +322,12 @@ export class StorageService {
     return this.getPublicUrl(destinationKey);
   }
 
-  async promoteActivityPhotos(userId: string, activityId: string, photos: ActivityPhotoVideoObject[]) {
+  async promoteActivityPhotos(
+    userId: string,
+    activityId: string,
+    photos: ActivityMediaObject[],
+    createdAt = new Date(),
+  ) {
     const movedKeys: string[] = [];
     const movedBySourceKey = new Map<string, string>();
 
@@ -236,7 +338,7 @@ export class StorageService {
       const existingDestinationKey = movedBySourceKey.get(sourceKey);
       if (existingDestinationKey) return this.getPublicUrl(existingDestinationKey);
 
-      const destinationKey = getActivityPhotoKey(userId, activityId, getExtensionFromStorageKey(sourceKey));
+      const destinationKey = getActivityPhotoKey(userId, activityId, getExtensionFromStorageKey(sourceKey), createdAt);
       await this.copyObject(sourceKey, destinationKey);
       movedKeys.push(destinationKey);
       await this.deleteObjectByKey(sourceKey);
@@ -245,7 +347,7 @@ export class StorageService {
     };
 
     try {
-      const promotedPhotos: ActivityPhotoVideoObject[] = [];
+      const promotedPhotos: ActivityMediaObject[] = [];
       for (const photo of photos) {
         promotedPhotos.push({
           ...photo,
@@ -391,6 +493,19 @@ export class StorageService {
     return fallback || 'bin';
   }
 
+  private getPhotoKey(userId: string, extension: string, options: PhotoUploadOptions) {
+    switch (options.scope) {
+      case 'profile':
+        return getProfilePhotoKey(userId, extension);
+      case 'feedback':
+        if (!options.feedbackId) throw new BadRequestException('Для feedback-загрузки нужен feedbackId');
+        return getFeedbackPhotoKey(userId, options.feedbackId, extension);
+      case 'activity':
+      default:
+        return getUserUploadKey(userId, extension);
+    }
+  }
+
   private async normalizeImage(input: string | Buffer) {
     try {
       return await normalizeImage(input);
@@ -426,7 +541,12 @@ export class StorageService {
     const userPrefix = `${userId}/`;
     if (!key.startsWith(userPrefix)) return undefined;
     const relativeKey = key.slice(userPrefix.length);
-    if (relativeKey.startsWith('profile/') || relativeKey.startsWith('activities/')) return undefined;
+    if (
+      relativeKey.startsWith('profile/') ||
+      relativeKey.startsWith('activities/') ||
+      relativeKey.startsWith('feedback/')
+    )
+      return undefined;
     if (!relativeKey.startsWith('uploads/') && relativeKey.includes('/')) return undefined;
     return key;
   }

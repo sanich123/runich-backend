@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'node:crypto';
 import { createDatabaseRepositories } from '../src/infrastructure/database/prisma/database-repository';
 import { databaseClient } from '../src/infrastructure/database/prisma/client';
 
@@ -22,11 +23,11 @@ async function seedPhotosForUser(user: { id: string; email: string }) {
     },
   });
 
-  await prisma.activity.createMany({
-    data: Array.from({ length: PHOTOS_PER_USER }, (_, photoIndex) => {
+  const activities = Array.from({ length: PHOTOS_PER_USER }, (_, photoIndex) => {
       const photo = seedPhotoUrl(user.id, photoIndex);
 
       return {
+        id: randomUUID(),
         userId: user.id,
         profileId: profile.id,
         title: `Seed photo #${photoIndex + 1}`,
@@ -35,12 +36,21 @@ async function seedPhotosForUser(user: { id: string; email: string }) {
         duration: 1800,
         speed: 10,
         date: new Date(Date.now() - photoIndex * DAY_IN_MS),
-        isPublic: true,
+        visibility: 'public',
         source: 'seed',
         sourceActivityId: `photo-${photoIndex + 1}`,
-        photoVideoUrls: [{ url: photo, thumbnail: photo }],
+        media: [{ url: photo, thumbnail: photo }],
       };
-    }),
+    });
+
+  await prisma.activity.createMany({
+    data: activities.map(({ media: _media, ...activity }) => activity),
+    skipDuplicates: true,
+  });
+  await prisma.activityMedia.createMany({
+    data: activities.flatMap(({ id, userId, date, media }) =>
+      media.map((item, position) => ({ ...item, activityId: id, userId, activityDate: date, position })),
+    ),
     skipDuplicates: true,
   });
 }
