@@ -5,10 +5,14 @@ export const STATIC_MAP_ROUTE_WIDTH = 8;
 export const STATIC_MAP_SIMPLIFICATION_TOLERANCE_METERS = 2;
 export const STATIC_MAP_TILE_SIZE = 256;
 export const STATIC_MAP_TILE_ZOOM_OFFSET = 1;
-export const STATIC_MAP_ZOOM_FIT_MARGIN_PX = 24;
+export const STATIC_MAP_ZOOM_FIT_PADDING_PX = 48;
 export const STATIC_MAP_WEBP_QUALITY = 84;
 export const STATIC_MAP_WEBP_EFFORT = 4;
 export const STATIC_MAP_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+export const STATIC_MAP_VECTOR_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
+export const STATIC_MAP_VECTOR_STYLE_TIMEOUT_MS = 7_000;
+export const STATIC_MAP_VECTOR_REQUEST_TIMEOUT_MS = 7_000;
+export const STATIC_MAP_VECTOR_RENDER_RATIO = 2;
 export const STATIC_MAP_TILE_USER_AGENT = 'Runich/1.0 (static map renderer)';
 export const STATIC_MAP_TILE_TIMEOUT_MS = 7_000;
 export const STATIC_MAP_RENDER_TIMEOUT_MS = 15_000;
@@ -20,7 +24,7 @@ export const STATIC_MAP_FAILURE_THRESHOLD = 5;
 export const STATIC_MAP_FAILURE_COOLDOWN_MS = 60_000;
 export const STATIC_MAP_TILE_HEALTH_CACHE_MS = 60_000;
 export const STATIC_MAP_CACHE_CONTROL = 'public, max-age=31536000, immutable';
-export const STATIC_MAP_ATTRIBUTION = '© OpenStreetMap contributors';
+export const STATIC_MAP_ATTRIBUTION = 'OpenFreeMap © OpenMapTiles · © OpenStreetMap contributors';
 export const STATIC_MAP_TILE_HEADERS = {
   'user-agent': STATIC_MAP_TILE_USER_AGENT,
 };

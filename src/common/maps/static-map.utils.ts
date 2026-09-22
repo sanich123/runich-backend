@@ -11,7 +11,7 @@ import {
   STATIC_MAP_WEBP_EFFORT,
   STATIC_MAP_WEBP_QUALITY,
   STATIC_MAP_WIDTH,
-  STATIC_MAP_ZOOM_FIT_MARGIN_PX,
+  STATIC_MAP_ZOOM_FIT_PADDING_PX,
 } from './static-map.constants';
 import type { LocationObject } from 'src/activity/activity.dto';
 import type { StaticMapTile, StaticMapTileResult } from './static-map.types';
@@ -165,8 +165,8 @@ export type StaticMapViewport = {
 export function calculateStaticMapViewport(route: [number, number][]): StaticMapViewport {
   if (!route.length) throw new Error('Для расчёта viewport static map нужен маршрут');
 
-  const availableWidth = STATIC_MAP_WIDTH - STATIC_MAP_ZOOM_FIT_MARGIN_PX * 2;
-  const availableHeight = STATIC_MAP_HEIGHT - STATIC_MAP_ZOOM_FIT_MARGIN_PX * 2;
+  const availableWidth = STATIC_MAP_WIDTH - STATIC_MAP_ZOOM_FIT_PADDING_PX * 2;
+  const availableHeight = STATIC_MAP_HEIGHT - STATIC_MAP_ZOOM_FIT_PADDING_PX * 2;
   const fits = (zoom: number) => {
     const extent = getProjectedStaticMapExtent(route, zoom);
     return (

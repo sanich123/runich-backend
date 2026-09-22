@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import StaticMaps from 'staticmaps';
+import { getAppEnvironment } from 'src/common/config/environment';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { getActivityMapKey } from 'src/storage/storage-key';
 import { StorageService } from 'src/storage/storage.service';
@@ -20,6 +21,7 @@ import {
   STATIC_MAP_TILE_URL,
   STATIC_MAP_WIDTH,
 } from './static-map.constants';
+import { renderRunichVectorMap } from './static-map.vector';
 import type { GenerateActivityMapInput, GeneratedActivityMap, StaticMapsWithTileFetcher } from './static-map.types';
 import {
   addAttribution,
@@ -32,6 +34,10 @@ import {
   withTimeout,
 } from './static-map.utils';
 
+type TemporaryMapProvider = 'vector' | 'staticmaps' | 'mapbox';
+
+const TEMPORARY_MAP_PROVIDER_ROTATION: TemporaryMapProvider[] = ['vector', 'staticmaps', 'mapbox'];
+
 @Injectable()
 export class StaticMapService {
   private readonly logger = new Logger(StaticMapService.name);
@@ -41,6 +47,7 @@ export class StaticMapService {
   private staticMapsBlockedUntil = 0;
   private tileProviderHealthyUntil = 0;
   private healthyTileProviderUrl = '';
+  private temporaryMapProviderIndex = 0;
 
   constructor(@Inject(StorageService) private readonly storageService: StorageService) {}
 
@@ -48,8 +55,21 @@ export class StaticMapService {
     const locations = normalizeStaticMapLocations(input.locations);
     if (!locations.length) return null;
 
+    const temporaryProvider = this.getTemporaryMapProvider();
+    if (temporaryProvider) {
+      return this.generateTemporaryProviderMap(temporaryProvider, input, locations);
+    }
+
     try {
-      const staticMap = await this.renderAndUploadStaticMap(input.userId, input.activityId, locations);
+      const staticMap = await this.renderAndUploadVectorMap(input.userId, input.activityId, locations);
+      this.resetStaticMapsFailures();
+      return staticMap;
+    } catch (error) {
+      this.logger.warn(`Vector static map недоступен, использую raster fallback: ${getErrorMessage(error)}`);
+    }
+
+    try {
+      const staticMap = await this.renderAndUploadRasterStaticMap(input.userId, input.activityId, locations);
       this.resetStaticMapsFailures();
       return staticMap;
     } catch (error) {
@@ -66,7 +86,65 @@ export class StaticMapService {
     }
   }
 
-  private async renderAndUploadStaticMap(
+  private getTemporaryMapProvider(): TemporaryMapProvider | undefined {
+    // Temporary comparison mode: remove this block after the map provider comparison.
+    const isTestRuntime = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+    if ((isTestRuntime && process.env.STATIC_MAP_TEST_PROVIDER_ROTATION !== 'true') || getAppEnvironment() === 'production') {
+      return undefined;
+    }
+
+    const provider = TEMPORARY_MAP_PROVIDER_ROTATION[this.temporaryMapProviderIndex % TEMPORARY_MAP_PROVIDER_ROTATION.length];
+    this.temporaryMapProviderIndex += 1;
+    return provider;
+  }
+
+  private async generateTemporaryProviderMap(
+    provider: TemporaryMapProvider,
+    input: GenerateActivityMapInput,
+    locations: GenerateActivityMapInput['locations'],
+  ): Promise<GeneratedActivityMap | null> {
+    try {
+      this.logger.log(`Временное сравнение static map: provider=${provider}`);
+
+      if (provider === 'vector') {
+        return await this.renderAndUploadVectorMap(input.userId, input.activityId, locations);
+      }
+
+      if (provider === 'staticmaps') {
+        return await this.renderAndUploadRasterStaticMap(input.userId, input.activityId, locations);
+      }
+
+      return { url: getMapBoxImage(locations) };
+    } catch (error) {
+      this.logger.warn(`Временный provider ${provider} не смог сформировать карту: ${getErrorMessage(error)}`);
+      return null;
+    }
+  }
+
+  private async renderAndUploadVectorMap(
+    userId: string,
+    activityId: string | undefined,
+    locations: GenerateActivityMapInput['locations'],
+  ): Promise<GeneratedActivityMap> {
+    if (!activityId) throw new Error('Для сохранения vector static map нужен activityId');
+
+    const release = await this.acquireRenderSlot();
+    try {
+      const route = locations.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
+      const viewport = calculateStaticMapViewport(route);
+      const renderedImage = await renderRunichVectorMap(route, viewport.center, viewport.zoom);
+      const image = await addAttribution(renderedImage);
+      await validateStaticMap(image);
+
+      const key = getActivityMapKey(userId, activityId);
+      const uploaded = await this.storageService.uploadObject(key, image, 'image/webp', STATIC_MAP_CACHE_CONTROL);
+      return { url: uploaded.url, key: uploaded.key };
+    } finally {
+      release();
+    }
+  }
+
+  private async renderAndUploadRasterStaticMap(
     userId: string,
     activityId: string | undefined,
     locations: GenerateActivityMapInput['locations'],

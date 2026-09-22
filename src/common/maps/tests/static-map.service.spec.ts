@@ -3,13 +3,12 @@ import sharp from 'sharp';
 
 const StaticMaps = jest.fn<() => unknown>();
 jest.unstable_mockModule('staticmaps', () => ({ default: StaticMaps }));
+const renderRunichVectorMap = jest.fn<() => Promise<Buffer>>().mockRejectedValue(new Error('vector renderer unavailable'));
+jest.unstable_mockModule('../static-map.vector', () => ({ renderRunichVectorMap }));
 
 const { StaticMapService } = await import('../static-map.service');
-const {
-  calculateStaticMapBbox,
-  calculateStaticMapViewport,
-  normalizeStaticMapLocations,
-} = await import('../static-map.utils');
+const { calculateStaticMapBbox, calculateStaticMapViewport, normalizeStaticMapLocations } =
+  await import('../static-map.utils');
 
 const locations = [
   { coords: { latitude: 55.75, longitude: 37.61 } },
@@ -23,6 +22,8 @@ describe('StaticMapService', () => {
     process.env = { ...originalEnvironment };
     jest.restoreAllMocks();
     jest.clearAllMocks();
+    StaticMaps.mockReset();
+    renderRunichVectorMap.mockReset().mockRejectedValue(new Error('vector renderer unavailable'));
   });
 
   it('calculates a static map bounding box from the full route', () => {
@@ -124,6 +125,84 @@ describe('StaticMapService', () => {
       locations,
     });
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the customized vector style before using raster fallbacks', async () => {
+    const renderedPng = await sharp({
+      create: { width: 896, height: 538, channels: 4, background: '#F4F4F4' },
+    })
+      .png()
+      .toBuffer();
+    renderRunichVectorMap.mockResolvedValueOnce(renderedPng);
+    const storage = {
+      uploadObject: jest
+        .fn<() => Promise<{ key: string; url: string }>>()
+        .mockResolvedValue({ key: 'map.webp', url: 'https://s3/map.webp' }),
+    };
+    const route = locations.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
+    const viewport = calculateStaticMapViewport(route);
+
+    await expect(
+      new StaticMapService(storage as never).generateActivityMap({
+        userId: 'user-1',
+        activityId: 'activity-1',
+        locations,
+      }),
+    ).resolves.toEqual({ key: 'map.webp', url: 'https://s3/map.webp' });
+
+    expect(renderRunichVectorMap).toHaveBeenCalledWith(route, viewport.center, viewport.zoom);
+    expect(StaticMaps).not.toHaveBeenCalled();
+    expect(storage.uploadObject).toHaveBeenCalledWith(
+      'user-1/activities/activity-1/map.webp',
+      expect.any(Buffer),
+      'image/webp',
+      'public, max-age=31536000, immutable',
+    );
+  });
+
+  it('temporarily rotates vector, staticmaps and Mapbox providers outside production', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.APP_ENV = 'local';
+    process.env.STATIC_MAP_TEST_PROVIDER_ROTATION = 'true';
+    process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
+
+    const renderedPng = await sharp({
+      create: { width: 896, height: 538, channels: 4, background: '#F4F4F4' },
+    })
+      .png()
+      .toBuffer();
+    renderRunichVectorMap.mockResolvedValue(renderedPng);
+    StaticMaps.mockImplementation(() => ({
+      addLine: jest.fn(),
+      addMarker: jest.fn(),
+      render: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+      image: { image: renderedPng },
+    }));
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(new Uint8Array([1]), { status: 200, headers: { 'content-type': 'image/png' } }));
+
+    const storage = {
+      uploadObject: jest
+        .fn<() => Promise<{ key: string; url: string }>>()
+        .mockResolvedValue({ key: 'map.webp', url: 'https://s3/map.webp' }),
+    };
+    const service = new StaticMapService(storage as never);
+
+    const vectorResult = await service.generateActivityMap({ userId: 'user-1', activityId: 'activity-1', locations });
+    const staticMapsResult = await service.generateActivityMap({
+      userId: 'user-1',
+      activityId: 'activity-2',
+      locations,
+    });
+    const mapboxResult = await service.generateActivityMap({ userId: 'user-1', activityId: 'activity-3', locations });
+
+    expect(vectorResult).toEqual({ key: 'map.webp', url: 'https://s3/map.webp' });
+    expect(staticMapsResult).toEqual({ key: 'map.webp', url: 'https://s3/map.webp' });
+    expect(mapboxResult?.url).toContain('access_token=test-token');
+    expect(renderRunichVectorMap).toHaveBeenCalledTimes(1);
+    expect(StaticMaps).toHaveBeenCalledTimes(1);
+    expect(storage.uploadObject).toHaveBeenCalledTimes(2);
   });
 
   it('downloads map tiles through fetch instead of staticmaps got requests', async () => {
