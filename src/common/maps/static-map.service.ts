@@ -89,11 +89,15 @@ export class StaticMapService {
   private getTemporaryMapProvider(): TemporaryMapProvider | undefined {
     // Temporary comparison mode: remove this block after the map provider comparison.
     const isTestRuntime = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
-    if ((isTestRuntime && process.env.STATIC_MAP_TEST_PROVIDER_ROTATION !== 'true') || getAppEnvironment() === 'production') {
+    if (
+      (isTestRuntime && process.env.STATIC_MAP_TEST_PROVIDER_ROTATION !== 'true') ||
+      getAppEnvironment() === 'production'
+    ) {
       return undefined;
     }
 
-    const provider = TEMPORARY_MAP_PROVIDER_ROTATION[this.temporaryMapProviderIndex % TEMPORARY_MAP_PROVIDER_ROTATION.length];
+    const provider =
+      TEMPORARY_MAP_PROVIDER_ROTATION[this.temporaryMapProviderIndex % TEMPORARY_MAP_PROVIDER_ROTATION.length];
     this.temporaryMapProviderIndex += 1;
     return provider;
   }

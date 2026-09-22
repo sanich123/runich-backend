@@ -3,7 +3,9 @@ import sharp from 'sharp';
 
 const StaticMaps = jest.fn<() => unknown>();
 jest.unstable_mockModule('staticmaps', () => ({ default: StaticMaps }));
-const renderRunichVectorMap = jest.fn<() => Promise<Buffer>>().mockRejectedValue(new Error('vector renderer unavailable'));
+const renderRunichVectorMap = jest
+  .fn<() => Promise<Buffer>>()
+  .mockRejectedValue(new Error('vector renderer unavailable'));
 jest.unstable_mockModule('../static-map.vector', () => ({ renderRunichVectorMap }));
 
 const { StaticMapService } = await import('../static-map.service');

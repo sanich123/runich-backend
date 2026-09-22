@@ -89,9 +89,13 @@ function shouldHideLayer(layer: MapStyleLayer) {
   if (sourceLayer === 'landuse' && containsString(layer.filter, 'parking')) return true;
   if (sourceLayer === 'transportation_name') return id === 'highway-name-major' ? false : true;
 
-  return new Set(['airport', 'label_other', 'highway-shield-non-us', 'highway-shield-us-interstate', 'road_shield_us']).has(
-    id,
-  );
+  return new Set([
+    'airport',
+    'label_other',
+    'highway-shield-non-us',
+    'highway-shield-us-interstate',
+    'road_shield_us',
+  ]).has(id);
 }
 
 function hideLayer(layer: MapStyleLayer): MapStyleLayer {

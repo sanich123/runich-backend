@@ -34,10 +34,7 @@ type NativeMap = {
 
 type NativeMapConstructor = new (options: {
   ratio: number;
-  request: (
-    request: { url: string },
-    callback: (error?: Error, response?: MapResourceResponse) => void,
-  ) => void;
+  request: (request: { url: string }, callback: (error?: Error, response?: MapResourceResponse) => void) => void;
 }) => NativeMap;
 
 type MapLibreNativeModule = { Map: NativeMapConstructor };
@@ -98,10 +95,7 @@ export function calculateVectorRenderZoom(zoom: number) {
   return zoom - Math.log2(STATIC_MAP_VECTOR_RENDER_RATIO);
 }
 
-async function requestMapResource(
-  url: string,
-  callback: (error?: Error, response?: MapResourceResponse) => void,
-) {
+async function requestMapResource(url: string, callback: (error?: Error, response?: MapResourceResponse) => void) {
   try {
     const response = await fetch(url, {
       headers: { 'user-agent': STATIC_MAP_TILE_USER_AGENT },
