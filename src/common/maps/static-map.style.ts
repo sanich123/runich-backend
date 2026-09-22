@@ -27,7 +27,11 @@ let baseStylePromise: Promise<RunichMapStyle> | undefined;
 export async function createRunichMapStyle(route: [number, number][]) {
   const baseStyle = await getBaseStyle();
   const style = structuredClone(baseStyle);
-  const hiddenLayers = style.layers.map((layer) => (shouldHideLayer(layer) ? hideLayer(layer) : layer));
+  const requiredLayers = style.layers.filter(isRequiredLayer);
+  const usedSourceIds = new Set(requiredLayers.map((layer) => layer.source).filter(Boolean));
+  style.sources = Object.fromEntries(
+    Object.entries(style.sources).filter(([sourceId]) => usedSourceIds.has(sourceId)),
+  );
 
   style.sources['runich-route'] = {
     type: 'geojson',
@@ -38,7 +42,7 @@ export async function createRunichMapStyle(route: [number, number][]) {
     },
   };
   style.layers = [
-    ...hiddenLayers,
+    ...requiredLayers,
     {
       id: 'runich-route',
       type: 'line',
@@ -81,29 +85,30 @@ async function fetchBaseStyle(): Promise<RunichMapStyle> {
   return style;
 }
 
-function shouldHideLayer(layer: MapStyleLayer) {
+function isRequiredLayer(layer: MapStyleLayer) {
   const id = layer.id.toLowerCase();
   const sourceLayer = layer['source-layer']?.toLowerCase();
 
-  if (sourceLayer === 'poi' || id.includes('poi') || id.includes('parking')) return true;
-  if (sourceLayer === 'landuse' && containsString(layer.filter, 'parking')) return true;
-  if (sourceLayer === 'transportation_name') return id === 'highway-name-major' ? false : true;
+  if (id === 'background') return true;
+  if (sourceLayer === 'park' || sourceLayer === 'water' || sourceLayer === 'waterway') return true;
+  if (sourceLayer === 'landuse') return id === 'landuse_residential';
+  if (sourceLayer === 'boundary') return id === 'boundary_2' || id === 'boundary_3';
+  if (sourceLayer === 'transportation') {
+    return [
+      'highway_path',
+      'highway_minor',
+      'highway_major_casing',
+      'highway_major_inner',
+      'highway_major_subtle',
+      'highway_motorway_casing',
+      'highway_motorway_inner',
+      'highway_motorway_subtle',
+    ].includes(id);
+  }
+  if (sourceLayer === 'transportation_name') return id === 'highway-name-major';
+  if (sourceLayer === 'place') {
+    return ['label_city', 'label_city_capital', 'label_town', 'label_village'].includes(id);
+  }
 
-  return new Set([
-    'airport',
-    'label_other',
-    'highway-shield-non-us',
-    'highway-shield-us-interstate',
-    'road_shield_us',
-  ]).has(id);
-}
-
-function hideLayer(layer: MapStyleLayer): MapStyleLayer {
-  return { ...layer, layout: { ...layer.layout, visibility: 'none' } };
-}
-
-function containsString(value: unknown, expected: string): boolean {
-  if (typeof value === 'string') return value === expected;
-  if (Array.isArray(value)) return value.some((item) => containsString(item, expected));
   return false;
 }

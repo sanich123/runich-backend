@@ -7,7 +7,7 @@ describe('Runich static map style', () => {
     jest.restoreAllMocks();
   });
 
-  it('hides POI, parking and minor street labels while adding the route layer', async () => {
+  it('keeps only map context needed for routes and labels', async () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -46,10 +46,14 @@ describe('Runich static map style', () => {
     ]);
     const layers = Object.fromEntries(style.layers.map((layer) => [layer.id, layer]));
 
-    expect(layers.poi.layout).toEqual({ visibility: 'none' });
-    expect(layers['parking-area'].layout).toEqual({ visibility: 'none' });
-    expect(layers['highway-name-minor'].layout).toEqual({ visibility: 'none' });
-    expect(layers['highway-name-major'].layout).toBeUndefined();
+    expect(layers.poi).toBeUndefined();
+    expect(layers['parking-area']).toBeUndefined();
+    expect(layers['highway-name-minor']).toBeUndefined();
+    expect(layers['highway-name-major']).toBeDefined();
+    expect(style.sources).toEqual({
+      openmaptiles: { type: 'vector', url: 'https://tiles.example/planet' },
+      'runich-route': expect.objectContaining({ type: 'geojson' }),
+    });
     expect(layers['runich-route']).toEqual(
       expect.objectContaining({
         type: 'line',

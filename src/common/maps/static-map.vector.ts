@@ -7,9 +7,11 @@ import {
   STATIC_MAP_VECTOR_RENDER_RATIO,
   STATIC_MAP_VECTOR_REQUEST_TIMEOUT_MS,
   STATIC_MAP_WIDTH,
+  STATIC_MAP_WEBP_EFFORT,
+  STATIC_MAP_WEBP_QUALITY,
 } from './static-map.constants';
 import { createRunichMapStyle } from './static-map.style';
-import { getErrorMessage, withTimeout } from './static-map.utils';
+import { createAttributionOverlay, getErrorMessage, withTimeout } from './static-map.utils';
 
 type MapResourceResponse = {
   data: Uint8Array;
@@ -84,7 +86,8 @@ export async function renderRunichVectorMap(route: [number, number][], center: [
 
     return await sharp(rawImage, { raw: { width: rawWidth, height: rawHeight, channels: 4 } })
       .resize({ width: STATIC_MAP_WIDTH, height: STATIC_MAP_HEIGHT, fit: 'fill' })
-      .png()
+      .composite([{ input: createAttributionOverlay(), left: 0, top: 0 }])
+      .webp({ quality: STATIC_MAP_WEBP_QUALITY, effort: STATIC_MAP_WEBP_EFFORT, smartSubsample: true })
       .toBuffer();
   } finally {
     map.release();
