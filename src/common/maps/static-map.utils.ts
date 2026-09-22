@@ -3,10 +3,15 @@ import {
   MAX_STATIC_MAP_LOCATIONS,
   STATIC_MAP_ATTRIBUTION,
   STATIC_MAP_HEIGHT,
+  STATIC_MAP_MAX_ZOOM,
+  STATIC_MAP_MIN_ZOOM,
   STATIC_MAP_SIMPLIFICATION_TOLERANCE_METERS,
+  STATIC_MAP_TILE_SIZE,
+  STATIC_MAP_TILE_ZOOM_OFFSET,
   STATIC_MAP_WEBP_EFFORT,
   STATIC_MAP_WEBP_QUALITY,
   STATIC_MAP_WIDTH,
+  STATIC_MAP_ZOOM_FIT_MARGIN_PX,
 } from './static-map.constants';
 import type { LocationObject } from 'src/activity/activity.dto';
 import type { StaticMapTile, StaticMapTileResult } from './static-map.types';
@@ -149,8 +154,94 @@ export function calculateStaticMapBbox(route: [number, number][]): [number, numb
   return [Math.min(...longitudes), Math.min(...latitudes), Math.max(...longitudes), Math.max(...latitudes)];
 }
 
-export function getMarkerDrawSize(size: number) {
-  return Math.max(1, Math.round(size) - 1);
+export type StaticMapViewport = {
+  zoom: number;
+  tileZoom: number;
+  scale: number;
+  center: [number, number];
+  crop: { left: number; top: number; width: number; height: number };
+};
+
+export function calculateStaticMapViewport(route: [number, number][]): StaticMapViewport {
+  if (!route.length) throw new Error('Для расчёта viewport static map нужен маршрут');
+
+  const availableWidth = STATIC_MAP_WIDTH - STATIC_MAP_ZOOM_FIT_MARGIN_PX * 2;
+  const availableHeight = STATIC_MAP_HEIGHT - STATIC_MAP_ZOOM_FIT_MARGIN_PX * 2;
+  const fits = (zoom: number) => {
+    const extent = getProjectedStaticMapExtent(route, zoom);
+    return (
+      (extent.maxX - extent.minX) * STATIC_MAP_TILE_SIZE <= availableWidth &&
+      (extent.maxY - extent.minY) * STATIC_MAP_TILE_SIZE <= availableHeight
+    );
+  };
+
+  let zoom: number;
+  if (!fits(STATIC_MAP_MIN_ZOOM)) {
+    zoom = STATIC_MAP_MIN_ZOOM;
+  } else if (fits(STATIC_MAP_MAX_ZOOM)) {
+    zoom = STATIC_MAP_MAX_ZOOM;
+  } else {
+    let low = STATIC_MAP_MIN_ZOOM;
+    let high = STATIC_MAP_MAX_ZOOM;
+    for (let iteration = 0; iteration < 48; iteration += 1) {
+      const middle = (low + high) / 2;
+      if (fits(middle)) low = middle;
+      else high = middle;
+    }
+    zoom = low;
+  }
+
+  const normalizedZoom = normalizeZoomPrecision(zoom);
+  const extent = getProjectedStaticMapExtent(route, normalizedZoom);
+  const center: [number, number] = [
+    xToLongitude((extent.minX + extent.maxX) / 2, normalizedZoom),
+    yToLatitude((extent.minY + extent.maxY) / 2, normalizedZoom),
+  ];
+  const tileZoom = Math.max(STATIC_MAP_MIN_ZOOM, Math.floor(normalizedZoom) - STATIC_MAP_TILE_ZOOM_OFFSET);
+  const scale = 2 ** (normalizedZoom - tileZoom);
+  const crop = {
+    left: Math.round((STATIC_MAP_WIDTH - STATIC_MAP_WIDTH / scale) / 2),
+    top: Math.round((STATIC_MAP_HEIGHT - STATIC_MAP_HEIGHT / scale) / 2),
+    width: Math.max(1, Math.round(STATIC_MAP_WIDTH / scale)),
+    height: Math.max(1, Math.round(STATIC_MAP_HEIGHT / scale)),
+  };
+
+  return { zoom: normalizedZoom, tileZoom, scale, center, crop };
+}
+
+function getProjectedStaticMapExtent(route: [number, number][], zoom: number) {
+  const projectedRoute = route.map(
+    ([longitude, latitude]) => [longitudeToX(longitude, zoom), latitudeToY(latitude, zoom)] as [number, number],
+  );
+  const minX = Math.min(...projectedRoute.map(([x]) => x));
+  const maxX = Math.max(...projectedRoute.map(([x]) => x));
+  const minY = Math.min(...projectedRoute.map(([, y]) => y));
+  const maxY = Math.max(...projectedRoute.map(([, y]) => y));
+
+  return { minX, minY, maxX, maxY };
+}
+
+function longitudeToX(longitude: number, zoom: number) {
+  return ((longitude + 180) / 360) * 2 ** zoom;
+}
+
+function latitudeToY(latitude: number, zoom: number) {
+  const clampedLatitude = Math.max(-85.05112878, Math.min(85.05112878, latitude));
+  const latitudeRadians = (clampedLatitude * Math.PI) / 180;
+  return ((1 - Math.log(Math.tan(latitudeRadians) + 1 / Math.cos(latitudeRadians)) / Math.PI) / 2) * 2 ** zoom;
+}
+
+function xToLongitude(x: number, zoom: number) {
+  return (x / 2 ** zoom) * 360 - 180;
+}
+
+function yToLatitude(y: number, zoom: number) {
+  return (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / 2 ** zoom))) / Math.PI) * 180;
+}
+
+function normalizeZoomPrecision(zoom: number) {
+  const roundedZoom = Math.round(zoom);
+  return Math.abs(zoom - roundedZoom) < 1e-7 ? roundedZoom : zoom;
 }
 
 export async function addAttribution(input: Buffer) {
@@ -167,6 +258,16 @@ export async function addAttribution(input: Buffer) {
   return await sharp(input)
     .composite([{ input: overlay, left: 0, top: 0 }])
     .webp({ quality: STATIC_MAP_WEBP_QUALITY, effort: STATIC_MAP_WEBP_EFFORT, smartSubsample: true })
+    .toBuffer();
+}
+
+export async function cropStaticMapToViewport(input: Buffer, viewport: StaticMapViewport) {
+  if (viewport.scale === 1) return input;
+
+  return await sharp(input)
+    .extract(viewport.crop)
+    .resize({ width: STATIC_MAP_WIDTH, height: STATIC_MAP_HEIGHT, fit: 'fill' })
+    .png()
     .toBuffer();
 }
 

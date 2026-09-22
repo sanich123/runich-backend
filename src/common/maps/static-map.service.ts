@@ -7,16 +7,12 @@ import {
   STATIC_MAP_CACHE_CONTROL,
   STATIC_MAP_FAILURE_COOLDOWN_MS,
   STATIC_MAP_FAILURE_THRESHOLD,
-  STATIC_MAP_FINISH_MARKER,
   STATIC_MAP_HEIGHT,
   STATIC_MAP_MAX_CONCURRENCY,
   STATIC_MAP_MAX_ZOOM,
-  STATIC_MAP_MARKER_HEIGHT,
-  STATIC_MAP_MARKER_WIDTH,
   STATIC_MAP_MIN_ZOOM,
   STATIC_MAP_RENDER_TIMEOUT_MS,
   STATIC_MAP_ROUTE_WIDTH,
-  STATIC_MAP_START_MARKER,
   STATIC_MAP_TILE_HEALTH_CACHE_MS,
   STATIC_MAP_TILE_HEADERS,
   STATIC_MAP_TILE_REQUEST_LIMIT,
@@ -27,10 +23,10 @@ import {
 import type { GenerateActivityMapInput, GeneratedActivityMap, StaticMapsWithTileFetcher } from './static-map.types';
 import {
   addAttribution,
-  calculateStaticMapBbox,
+  calculateStaticMapViewport,
+  cropStaticMapToViewport,
   fetchStaticMapTile,
   getErrorMessage,
-  getMarkerDrawSize,
   normalizeStaticMapLocations,
   validateStaticMap,
   withTimeout,
@@ -88,7 +84,7 @@ export class StaticMapService {
       let tileFetchAttempted = false;
       let successfulTileCount = 0;
       const route = locations.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
-      const bbox = calculateStaticMapBbox(route);
+      const viewport = calculateStaticMapViewport(route);
       const map = new StaticMaps({
         width: STATIC_MAP_WIDTH,
         height: STATIC_MAP_HEIGHT,
@@ -107,32 +103,19 @@ export class StaticMapService {
         return result;
       };
 
-      map.addLine({ coords: route, color: '#F66767', width: STATIC_MAP_ROUTE_WIDTH });
-      map.addMarker({
-        coord: route[0],
-        img: STATIC_MAP_START_MARKER,
-        width: STATIC_MAP_MARKER_WIDTH,
-        height: STATIC_MAP_MARKER_HEIGHT,
-        drawWidth: getMarkerDrawSize(STATIC_MAP_MARKER_WIDTH),
-        drawHeight: getMarkerDrawSize(STATIC_MAP_MARKER_HEIGHT),
-        resizeMode: 'fill',
-      });
-      map.addMarker({
-        coord: route.at(-1) ?? route[0],
-        img: STATIC_MAP_FINISH_MARKER,
-        width: STATIC_MAP_MARKER_WIDTH,
-        height: STATIC_MAP_MARKER_HEIGHT,
-        drawWidth: getMarkerDrawSize(STATIC_MAP_MARKER_WIDTH),
-        drawHeight: getMarkerDrawSize(STATIC_MAP_MARKER_HEIGHT),
-        resizeMode: 'fill',
-      });
+      map.addLine({ coords: route, color: '#F66767', width: STATIC_MAP_ROUTE_WIDTH / viewport.scale });
 
-      await withTimeout(map.render(bbox), STATIC_MAP_RENDER_TIMEOUT_MS, 'Превышено время генерации static map');
+      await withTimeout(
+        map.render(viewport.center, viewport.tileZoom),
+        STATIC_MAP_RENDER_TIMEOUT_MS,
+        'Превышено время генерации static map',
+      );
       if (tileFetchAttempted && !successfulTileCount) throw new Error('Не удалось загрузить тайлы static map');
 
       const renderedImage = (map.image as unknown as { image?: Buffer }).image;
       if (!renderedImage) throw new Error('Static map не вернул внутренний буфер изображения');
-      const image = await addAttribution(renderedImage);
+      const viewportImage = await cropStaticMapToViewport(renderedImage, viewport);
+      const image = await addAttribution(viewportImage);
       await validateStaticMap(image);
 
       const key = getActivityMapKey(userId, activityId);

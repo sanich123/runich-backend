@@ -5,7 +5,11 @@ const StaticMaps = jest.fn<() => unknown>();
 jest.unstable_mockModule('staticmaps', () => ({ default: StaticMaps }));
 
 const { StaticMapService } = await import('../static-map.service');
-const { calculateStaticMapBbox, normalizeStaticMapLocations } = await import('../static-map.utils');
+const {
+  calculateStaticMapBbox,
+  calculateStaticMapViewport,
+  normalizeStaticMapLocations,
+} = await import('../static-map.utils');
 
 const locations = [
   { coords: { latitude: 55.75, longitude: 37.61 } },
@@ -31,7 +35,20 @@ describe('StaticMapService', () => {
     ).toEqual([37.61, 55.74, 37.63, 55.76]);
   });
 
-  it('renders an OSM map, adds A/B markers, and uploads the normalized WebP', async () => {
+  it('calculates a fractional viewport while keeping tile zoom integer', () => {
+    const viewport = calculateStaticMapViewport([
+      [37.61, 55.75],
+      [37.62, 55.76],
+    ]);
+
+    expect(viewport.zoom).toBeGreaterThan(viewport.tileZoom);
+    expect(viewport.tileZoom).toBe(Math.floor(viewport.zoom) - 1);
+    expect(viewport.scale).toBeGreaterThan(2);
+    expect(viewport.crop.width).toBeLessThan(896);
+    expect(viewport.crop.height).toBeLessThan(538);
+  });
+
+  it('renders an OSM map without endpoint markers and uploads the normalized WebP', async () => {
     const renderedPng = await sharp({
       create: { width: 896, height: 538, channels: 4, background: '#E5E5E5' },
     })
@@ -69,6 +86,7 @@ describe('StaticMapService', () => {
 
     expect(result).toEqual({ key: 'user-1/activities/activity-1/map.webp', url: 'https://s3/map.webp' });
     const route = locations.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
+    const viewport = calculateStaticMapViewport(route);
     expect(StaticMaps).toHaveBeenCalledWith(
       expect.objectContaining({
         width: 896,
@@ -85,33 +103,10 @@ describe('StaticMapService', () => {
         [37.62, 55.76],
       ],
       color: '#F66767',
-      width: 4,
+      width: 8 / viewport.scale,
     });
-    expect(map.addMarker).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        coord: [37.61, 55.75],
-        img: expect.stringMatching(/start-marker\.png$/),
-        width: 40,
-        height: 50,
-        drawWidth: 39,
-        drawHeight: 49,
-        resizeMode: 'fill',
-      }),
-    );
-    expect(map.addMarker).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        coord: [37.62, 55.76],
-        img: expect.stringMatching(/finish-marker\.png$/),
-        width: 40,
-        height: 50,
-        drawWidth: 39,
-        drawHeight: 49,
-        resizeMode: 'fill',
-      }),
-    );
-    expect(map.render).toHaveBeenCalledWith(calculateStaticMapBbox(route));
+    expect(map.addMarker).not.toHaveBeenCalled();
+    expect(map.render).toHaveBeenCalledWith(viewport.center, viewport.tileZoom);
     expect(storage.uploadObject).toHaveBeenCalledWith(
       'user-1/activities/activity-1/map.webp',
       expect.any(Buffer),
@@ -231,8 +226,8 @@ describe('StaticMapService', () => {
       locations,
     });
 
-    expect(result?.url).toContain('pin-l-a+000(37.61,55.75)');
-    expect(result?.url).toContain('pin-l-b+000(37.62,55.76)');
+    expect(result?.url).toContain('path-8+F66767-0.8');
+    expect(result?.url).not.toContain('pin-');
     expect(storage.uploadObject).not.toHaveBeenCalled();
   });
 
