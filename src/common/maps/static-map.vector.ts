@@ -11,14 +11,8 @@ import {
   STATIC_MAP_WEBP_QUALITY,
 } from './static-map.constants';
 import { createRunichMapStyle } from './static-map.style';
+import { getCachedMapResource, type MapResourceResponse } from './static-map.resource-cache';
 import { createAttributionOverlay, getErrorMessage, withTimeout } from './static-map.utils';
-
-type MapResourceResponse = {
-  data: Uint8Array;
-  modified?: Date;
-  expires?: Date;
-  etag?: string;
-};
 
 type NativeMap = {
   load: (style: unknown) => void;
@@ -99,22 +93,40 @@ export function calculateVectorRenderZoom(zoom: number) {
 }
 
 async function requestMapResource(url: string, callback: (error?: Error, response?: MapResourceResponse) => void) {
-  try {
-    const response = await fetch(url, {
-      headers: { 'user-agent': STATIC_MAP_TILE_USER_AGENT },
-      signal: AbortSignal.timeout(STATIC_MAP_VECTOR_REQUEST_TIMEOUT_MS),
-    });
-    if (!response.ok) throw new Error(`MapLibre resource вернул HTTP ${response.status}: ${url}`);
+  void getCachedMapResource(url, () => fetchMapResource(url))
+    .then((response) => callback(undefined, response))
+    .catch((error) => callback(new Error(getErrorMessage(error))));
+}
 
-    callback(undefined, {
+async function fetchMapResource(url: string) {
+  const response = await fetch(url, {
+    headers: { 'user-agent': STATIC_MAP_TILE_USER_AGENT },
+    signal: AbortSignal.timeout(STATIC_MAP_VECTOR_REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new Error(`MapLibre resource вернул HTTP ${response.status}: ${url}`);
+
+  return {
+    response: {
       data: Buffer.from(await response.arrayBuffer()),
       etag: response.headers.get('etag') ?? undefined,
       modified: parseHeaderDate(response.headers.get('last-modified')),
       expires: parseHeaderDate(response.headers.get('expires')),
-    });
-  } catch (error) {
-    callback(new Error(getErrorMessage(error)));
-  }
+    },
+    ttlMs: getCacheTtlMs(response.headers),
+  };
+}
+
+function getCacheTtlMs(headers: Headers) {
+  const cacheControl = headers.get('cache-control') ?? '';
+  if (/\b(?:no-store|no-cache)\b/i.test(cacheControl)) return 0;
+
+  const maxAge = cacheControl.match(/(?:^|,)\s*max-age=(\d+)/i)?.[1];
+  if (maxAge) return Number(maxAge) * 1_000;
+
+  const expires = parseHeaderDate(headers.get('expires'));
+  if (expires) return Math.max(0, expires.valueOf() - Date.now());
+
+  return undefined;
 }
 
 function parseHeaderDate(value: string | null) {
