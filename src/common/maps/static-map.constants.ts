@@ -1,11 +1,12 @@
 import { join } from 'node:path';
 
 export const STATIC_MAP_WIDTH = 896;
-export const STATIC_MAP_HEIGHT = 504;
+export const STATIC_MAP_HEIGHT = 538;
 export const MAX_STATIC_MAP_LOCATIONS = 500;
-export const STATIC_MAP_ROUTE_WIDTH = 2;
-export const STATIC_MAP_MARKER_WIDTH = 28;
-export const STATIC_MAP_MARKER_HEIGHT = 32;
+export const STATIC_MAP_ROUTE_WIDTH = 4;
+export const STATIC_MAP_SIMPLIFICATION_TOLERANCE_METERS = 2;
+export const STATIC_MAP_MARKER_WIDTH = 40;
+export const STATIC_MAP_MARKER_HEIGHT = 50;
 export const STATIC_MAP_WEBP_QUALITY = 84;
 export const STATIC_MAP_WEBP_EFFORT = 4;
 export const STATIC_MAP_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';

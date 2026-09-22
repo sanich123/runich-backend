@@ -33,7 +33,7 @@ describe('StaticMapService', () => {
 
   it('renders an OSM map, adds A/B markers, and uploads the normalized WebP', async () => {
     const renderedPng = await sharp({
-      create: { width: 896, height: 504, channels: 4, background: '#E5E5E5' },
+      create: { width: 896, height: 538, channels: 4, background: '#E5E5E5' },
     })
       .png()
       .toBuffer();
@@ -69,11 +69,10 @@ describe('StaticMapService', () => {
 
     expect(result).toEqual({ key: 'user-1/activities/activity-1/map.webp', url: 'https://s3/map.webp' });
     const route = locations.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
-    const bbox = calculateStaticMapBbox(route);
     expect(StaticMaps).toHaveBeenCalledWith(
       expect.objectContaining({
         width: 896,
-        height: 504,
+        height: 538,
         paddingX: 0,
         paddingY: 0,
         tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -86,17 +85,17 @@ describe('StaticMapService', () => {
         [37.62, 55.76],
       ],
       color: '#F66767',
-      width: 2,
+      width: 4,
     });
     expect(map.addMarker).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
         coord: [37.61, 55.75],
         img: expect.stringMatching(/start-marker\.png$/),
-        width: 28,
-        height: 32,
-        drawWidth: 27,
-        drawHeight: 31,
+        width: 40,
+        height: 50,
+        drawWidth: 39,
+        drawHeight: 49,
         resizeMode: 'fill',
       }),
     );
@@ -105,14 +104,14 @@ describe('StaticMapService', () => {
       expect.objectContaining({
         coord: [37.62, 55.76],
         img: expect.stringMatching(/finish-marker\.png$/),
-        width: 28,
-        height: 32,
-        drawWidth: 27,
-        drawHeight: 31,
+        width: 40,
+        height: 50,
+        drawWidth: 39,
+        drawHeight: 49,
         resizeMode: 'fill',
       }),
     );
-    expect(map.render).toHaveBeenCalledWith(bbox);
+    expect(map.render).toHaveBeenCalledWith(calculateStaticMapBbox(route));
     expect(storage.uploadObject).toHaveBeenCalledWith(
       'user-1/activities/activity-1/map.webp',
       expect.any(Buffer),
@@ -121,7 +120,7 @@ describe('StaticMapService', () => {
     );
     const uploadedImage = storage.uploadObject.mock.calls[0][1] as Buffer;
     await expect(sharp(uploadedImage).metadata()).resolves.toEqual(
-      expect.objectContaining({ format: 'webp', width: 896, height: 504 }),
+      expect.objectContaining({ format: 'webp', width: 896, height: 538 }),
     );
 
     await service.generateActivityMap({
@@ -134,7 +133,7 @@ describe('StaticMapService', () => {
 
   it('downloads map tiles through fetch instead of staticmaps got requests', async () => {
     const renderedPng = await sharp({
-      create: { width: 896, height: 504, channels: 4, background: '#E5E5E5' },
+      create: { width: 896, height: 538, channels: 4, background: '#E5E5E5' },
     })
       .png()
       .toBuffer();
@@ -174,7 +173,7 @@ describe('StaticMapService', () => {
   it('falls back when a tile download fails after the provider health check', async () => {
     process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     const renderedPng = await sharp({
-      create: { width: 896, height: 504, channels: 4, background: '#E5E5E5' },
+      create: { width: 896, height: 538, channels: 4, background: '#E5E5E5' },
     })
       .png()
       .toBuffer();
@@ -232,8 +231,8 @@ describe('StaticMapService', () => {
       locations,
     });
 
-    expect(result?.url).toContain('pin-s-a+000(37.61,55.75)');
-    expect(result?.url).toContain('pin-s-b+000(37.62,55.76)');
+    expect(result?.url).toContain('pin-l-a+000(37.61,55.75)');
+    expect(result?.url).toContain('pin-l-b+000(37.62,55.76)');
     expect(storage.uploadObject).not.toHaveBeenCalled();
   });
 
@@ -340,16 +339,24 @@ describe('StaticMapService', () => {
     }
   });
 
-  it('filters invalid coordinates and keeps both route endpoints when reducing a route', () => {
+  it('filters invalid coordinates and simplifies a route with Ramer-Douglas-Peucker', () => {
     const route = Array.from({ length: 700 }, (_, index) => ({
       coords: { latitude: 55 + index / 100_000, longitude: 37 + index / 100_000 },
     }));
     route.splice(20, 0, { coords: { latitude: Number.NaN, longitude: 37 } });
 
     const normalized = normalizeStaticMapLocations(route);
+    const validRoute = route.filter(
+      ({ coords }) => Number.isFinite(coords.latitude) && Number.isFinite(coords.longitude),
+    );
+    const normalizedRoute = normalized.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
 
-    expect(normalized).toHaveLength(500);
+    expect(normalized.length).toBeLessThanOrEqual(500);
+    expect(normalized.length).toBeGreaterThanOrEqual(2);
     expect(normalized[0]).toEqual(route[0]);
     expect(normalized.at(-1)).toEqual(route.at(-1));
+    expect(calculateStaticMapBbox(normalizedRoute)).toEqual(
+      calculateStaticMapBbox(validRoute.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number])),
+    );
   });
 });

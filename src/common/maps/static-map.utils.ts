@@ -3,6 +3,7 @@ import {
   MAX_STATIC_MAP_LOCATIONS,
   STATIC_MAP_ATTRIBUTION,
   STATIC_MAP_HEIGHT,
+  STATIC_MAP_SIMPLIFICATION_TOLERANCE_METERS,
   STATIC_MAP_WEBP_EFFORT,
   STATIC_MAP_WEBP_QUALITY,
   STATIC_MAP_WIDTH,
@@ -46,12 +47,99 @@ export function normalizeStaticMapLocations(locations: LocationObject[]) {
       coords.latitude <= 90,
   );
 
-  if (validLocations.length <= MAX_STATIC_MAP_LOCATIONS) return validLocations;
+  return simplifyStaticMapLocations(validLocations);
+}
 
-  return Array.from({ length: MAX_STATIC_MAP_LOCATIONS }, (_, index) => {
-    const sourceIndex = Math.round((index * (validLocations.length - 1)) / (MAX_STATIC_MAP_LOCATIONS - 1));
-    return validLocations[sourceIndex];
-  });
+export function simplifyStaticMapLocations(locations: LocationObject[], maxPoints = MAX_STATIC_MAP_LOCATIONS) {
+  if (locations.length <= maxPoints) return locations;
+
+  const projectedLocations = locations.map((location, index) => ({
+    index,
+    ...projectLocation(location),
+  }));
+  const extremeIndexes = getRouteExtremeIndexes(projectedLocations);
+  let toleranceMeters = STATIC_MAP_SIMPLIFICATION_TOLERANCE_METERS;
+  let selectedIndexes = getRamerDouglasPeuckerIndexes(projectedLocations, toleranceMeters, extremeIndexes);
+
+  for (let iteration = 0; selectedIndexes.length > maxPoints && iteration < 24; iteration += 1) {
+    toleranceMeters *= 2;
+    selectedIndexes = getRamerDouglasPeuckerIndexes(projectedLocations, toleranceMeters, extremeIndexes);
+  }
+
+  return selectedIndexes.map((index) => locations[index]);
+}
+
+type ProjectedLocation = { index: number; x: number; y: number };
+
+const WEB_MERCATOR_RADIUS_METERS = 6_378_137;
+
+function projectLocation(location: LocationObject) {
+  const longitudeRadians = (location.coords.longitude * Math.PI) / 180;
+  const latitudeRadians = (Math.max(-85.05112878, Math.min(85.05112878, location.coords.latitude)) * Math.PI) / 180;
+
+  return {
+    x: WEB_MERCATOR_RADIUS_METERS * longitudeRadians,
+    y: WEB_MERCATOR_RADIUS_METERS * Math.log(Math.tan(Math.PI / 4 + latitudeRadians / 2)),
+  };
+}
+
+function getRouteExtremeIndexes(points: ProjectedLocation[]) {
+  const indexes = new Set<number>([points[0].index, points.at(-1)?.index ?? points[0].index]);
+  const extremePoints = [
+    points.reduce((current, point) => (point.x < current.x ? point : current)),
+    points.reduce((current, point) => (point.x > current.x ? point : current)),
+    points.reduce((current, point) => (point.y < current.y ? point : current)),
+    points.reduce((current, point) => (point.y > current.y ? point : current)),
+  ];
+
+  extremePoints.forEach((point) => indexes.add(point.index));
+  return indexes;
+}
+
+function getRamerDouglasPeuckerIndexes(
+  points: ProjectedLocation[],
+  toleranceMeters: number,
+  requiredIndexes: Set<number>,
+) {
+  const selectedIndexes = new Set<number>(requiredIndexes);
+  const segments: Array<[number, number]> = [[0, points.length - 1]];
+
+  while (segments.length) {
+    const [startIndex, endIndex] = segments.pop()!;
+    let farthestIndex = -1;
+    let farthestDistance = toleranceMeters;
+
+    for (let index = startIndex + 1; index < endIndex; index += 1) {
+      const distance = getPointToSegmentDistance(points[index], points[startIndex], points[endIndex]);
+      if (distance > farthestDistance) {
+        farthestDistance = distance;
+        farthestIndex = index;
+      }
+    }
+
+    if (farthestIndex >= 0) {
+      selectedIndexes.add(farthestIndex);
+      segments.push([startIndex, farthestIndex], [farthestIndex, endIndex]);
+    }
+  }
+
+  return [...selectedIndexes].sort((left, right) => left - right);
+}
+
+function getPointToSegmentDistance(point: ProjectedLocation, start: ProjectedLocation, end: ProjectedLocation) {
+  const deltaX = end.x - start.x;
+  const deltaY = end.y - start.y;
+  const segmentLengthSquared = deltaX ** 2 + deltaY ** 2;
+
+  if (segmentLengthSquared === 0) return Math.hypot(point.x - start.x, point.y - start.y);
+
+  const projection = Math.max(
+    0,
+    Math.min(1, ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY) / segmentLengthSquared),
+  );
+  const projectedX = start.x + projection * deltaX;
+  const projectedY = start.y + projection * deltaY;
+  return Math.hypot(point.x - projectedX, point.y - projectedY);
 }
 
 export function calculateStaticMapBbox(route: [number, number][]): [number, number, number, number] {
