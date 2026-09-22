@@ -29,9 +29,7 @@ export async function createRunichMapStyle(route: [number, number][]) {
   const style = structuredClone(baseStyle);
   const requiredLayers = style.layers.filter(isRequiredLayer);
   const usedSourceIds = new Set(requiredLayers.map((layer) => layer.source).filter(Boolean));
-  style.sources = Object.fromEntries(
-    Object.entries(style.sources).filter(([sourceId]) => usedSourceIds.has(sourceId)),
-  );
+  style.sources = Object.fromEntries(Object.entries(style.sources).filter(([sourceId]) => usedSourceIds.has(sourceId)));
 
   style.sources['runich-route'] = {
     type: 'geojson',
