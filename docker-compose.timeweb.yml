@@ -12,7 +12,7 @@ services:
         max-file: '3'
     env_file:
       - .env
-    command: ['xvfb-run', '--auto-servernum', '--server-args=-screen 0 1280x1024x24', 'yarn', 'start:prod']
+    command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'start:prod']
     environment:
       TZ: UTC
       RUNICH_PROCESS: api
@@ -38,7 +38,7 @@ services:
     cpus: 0.50
     env_file:
       - .env
-    command: ['xvfb-run', '--auto-servernum', '--server-args=-screen 0 1280x1024x24', 'yarn', 'worker:prod']
+    command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'worker:prod']
     environment:
       TZ: UTC
       RUNICH_PROCESS: worker
