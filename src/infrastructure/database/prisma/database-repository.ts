@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Prisma ORM collections are dynamic at this boundary. */
 import { and, not, or } from '@prisma/orm-postgres/orm-client';
+import { param } from '@prisma/orm-postgres/relational-core/expression';
 import type { PostgresClient } from '@prisma/orm-postgres/runtime';
 import type { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { databaseClient } from './client';
@@ -27,10 +28,6 @@ function quoteIdentifier(identifier: string) {
 
 function getCodecId(modelSpec: AnyRecord, field: string) {
   return modelSpec.fields[field]?.type?.codecId as string | undefined;
-}
-
-function serializeBulkValue(value: unknown, codecId: string) {
-  return codecId === 'pg/jsonb@1' && value !== null ? JSON.stringify(value) : value;
 }
 
 type ModelName =
@@ -404,7 +401,7 @@ export class ModelRepository {
         const cast = codecId ? SQL_CASTS[codecId.split('@')[0]] : undefined;
         if (!codecId || !cast) throw new Error(`Unsupported bulk insert field codec: ${this.model}.${field}`);
 
-        values.push(serializeBulkValue(row[field], codecId));
+        values.push(param(row[field], { codecId }));
         const isLastField = fieldIndex === fields.length - 1;
         const rowSeparator = rowIndex === rows.length - 1 ? ')' : '), (';
         parts.push(`::${cast}${isLastField ? rowSeparator : ', '}`);

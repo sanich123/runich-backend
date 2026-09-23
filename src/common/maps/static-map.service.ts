@@ -1,39 +1,15 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import StaticMaps from 'staticmaps';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { getActivityMapKey } from 'src/storage/storage-key';
 import { StorageService } from 'src/storage/storage.service';
+import { STATIC_MAP_CACHE_CONTROL, STATIC_MAP_MAX_CONCURRENCY } from './static-map.constants';
+import { renderRunichVectorMap } from './static-map.vector';
+import type { GenerateActivityMapInput, GeneratedActivityMap } from './static-map.types';
 import {
-  STATIC_MAP_CACHE_CONTROL,
-  STATIC_MAP_FAILURE_COOLDOWN_MS,
-  STATIC_MAP_FAILURE_THRESHOLD,
-  STATIC_MAP_FINISH_MARKER,
-  STATIC_MAP_HEIGHT,
-  STATIC_MAP_MAX_CONCURRENCY,
-  STATIC_MAP_MAX_ZOOM,
-  STATIC_MAP_MARKER_HEIGHT,
-  STATIC_MAP_MARKER_WIDTH,
-  STATIC_MAP_MIN_ZOOM,
-  STATIC_MAP_RENDER_TIMEOUT_MS,
-  STATIC_MAP_ROUTE_WIDTH,
-  STATIC_MAP_START_MARKER,
-  STATIC_MAP_TILE_HEALTH_CACHE_MS,
-  STATIC_MAP_TILE_HEADERS,
-  STATIC_MAP_TILE_REQUEST_LIMIT,
-  STATIC_MAP_TILE_TIMEOUT_MS,
-  STATIC_MAP_TILE_URL,
-  STATIC_MAP_WIDTH,
-} from './static-map.constants';
-import type { GenerateActivityMapInput, GeneratedActivityMap, StaticMapsWithTileFetcher } from './static-map.types';
-import {
-  addAttribution,
-  calculateStaticMapBbox,
-  fetchStaticMapTile,
+  calculateStaticMapViewport,
   getErrorMessage,
-  getMarkerDrawSize,
   normalizeStaticMapLocations,
   validateStaticMap,
-  withTimeout,
 } from './static-map.utils';
 
 @Injectable()
@@ -41,10 +17,6 @@ export class StaticMapService {
   private readonly logger = new Logger(StaticMapService.name);
   private activeRenders = 0;
   private readonly renderWaiters: Array<() => void> = [];
-  private staticMapsFailures = 0;
-  private staticMapsBlockedUntil = 0;
-  private tileProviderHealthyUntil = 0;
-  private healthyTileProviderUrl = '';
 
   constructor(@Inject(StorageService) private readonly storageService: StorageService) {}
 
@@ -53,90 +25,40 @@ export class StaticMapService {
     if (!locations.length) return null;
 
     try {
-      const staticMap = await this.renderAndUploadStaticMap(input.userId, input.activityId, locations);
-      this.resetStaticMapsFailures();
-      return staticMap;
+      return await this.renderAndUploadVectorMap(input.userId, input.activityId, locations);
     } catch (error) {
-      this.registerStaticMapsFailure(error);
+      this.logger.warn(`Vector static map недоступен, использую fallback Mapbox: ${getErrorMessage(error)}`);
     }
 
     try {
       return { url: getMapBoxImage(locations) };
     } catch (error) {
-      this.logger.error(
-        `Не удалось сформировать карту ни через staticmaps, ни через Mapbox: ${getErrorMessage(error)}`,
-      );
+      this.logger.error(`Не удалось сформировать карту через vector и Mapbox: ${getErrorMessage(error)}`);
       return null;
     }
   }
 
-  private async renderAndUploadStaticMap(
+  private async renderAndUploadVectorMap(
     userId: string,
     activityId: string | undefined,
     locations: GenerateActivityMapInput['locations'],
   ): Promise<GeneratedActivityMap> {
-    if (!activityId) throw new Error('Для сохранения static map нужен activityId');
-
-    if (Date.now() < this.staticMapsBlockedUntil) {
-      throw new Error('Источник тайлов static map временно отключён после серии ошибок');
-    }
-
-    await this.ensureTileProvider(STATIC_MAP_TILE_URL, STATIC_MAP_TILE_HEADERS, STATIC_MAP_TILE_TIMEOUT_MS);
+    if (!activityId) throw new Error('Для сохранения vector static map нужен activityId');
 
     const release = await this.acquireRenderSlot();
     try {
-      let tileFetchAttempted = false;
-      let successfulTileCount = 0;
       const route = locations.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
-      const bbox = calculateStaticMapBbox(route);
-      const map = new StaticMaps({
-        width: STATIC_MAP_WIDTH,
-        height: STATIC_MAP_HEIGHT,
-        paddingX: 0,
-        paddingY: 0,
-        tileUrl: STATIC_MAP_TILE_URL,
-        tileRequestTimeout: STATIC_MAP_TILE_TIMEOUT_MS,
-        tileRequestHeader: STATIC_MAP_TILE_HEADERS,
-        tileRequestLimit: STATIC_MAP_TILE_REQUEST_LIMIT,
-        zoomRange: { min: STATIC_MAP_MIN_ZOOM, max: STATIC_MAP_MAX_ZOOM },
-      }) as StaticMapsWithTileFetcher;
-      map.getTile = async (tile) => {
-        tileFetchAttempted = true;
-        const result = await fetchStaticMapTile(tile, STATIC_MAP_TILE_HEADERS, STATIC_MAP_TILE_TIMEOUT_MS);
-        if (result.success) successfulTileCount += 1;
-        return result;
-      };
-
-      map.addLine({ coords: route, color: '#F66767', width: STATIC_MAP_ROUTE_WIDTH });
-      map.addMarker({
-        coord: route[0],
-        img: STATIC_MAP_START_MARKER,
-        width: STATIC_MAP_MARKER_WIDTH,
-        height: STATIC_MAP_MARKER_HEIGHT,
-        drawWidth: getMarkerDrawSize(STATIC_MAP_MARKER_WIDTH),
-        drawHeight: getMarkerDrawSize(STATIC_MAP_MARKER_HEIGHT),
-        resizeMode: 'fill',
-      });
-      map.addMarker({
-        coord: route.at(-1) ?? route[0],
-        img: STATIC_MAP_FINISH_MARKER,
-        width: STATIC_MAP_MARKER_WIDTH,
-        height: STATIC_MAP_MARKER_HEIGHT,
-        drawWidth: getMarkerDrawSize(STATIC_MAP_MARKER_WIDTH),
-        drawHeight: getMarkerDrawSize(STATIC_MAP_MARKER_HEIGHT),
-        resizeMode: 'fill',
-      });
-
-      await withTimeout(map.render(bbox), STATIC_MAP_RENDER_TIMEOUT_MS, 'Превышено время генерации static map');
-      if (tileFetchAttempted && !successfulTileCount) throw new Error('Не удалось загрузить тайлы static map');
-
-      const renderedImage = (map.image as unknown as { image?: Buffer }).image;
-      if (!renderedImage) throw new Error('Static map не вернул внутренний буфер изображения');
-      const image = await addAttribution(renderedImage);
-      await validateStaticMap(image);
+      const viewport = calculateStaticMapViewport(route);
+      const renderedImage = await renderRunichVectorMap(route, viewport.center, viewport.zoom);
+      await validateStaticMap(renderedImage);
 
       const key = getActivityMapKey(userId, activityId);
-      const uploaded = await this.storageService.uploadObject(key, image, 'image/webp', STATIC_MAP_CACHE_CONTROL);
+      const uploaded = await this.storageService.uploadObject(
+        key,
+        renderedImage,
+        'image/webp',
+        STATIC_MAP_CACHE_CONTROL,
+      );
       return { url: uploaded.url, key: uploaded.key };
     } finally {
       release();
@@ -157,43 +79,5 @@ export class StaticMapService {
   private releaseRenderSlot() {
     this.activeRenders -= 1;
     this.renderWaiters.shift()?.();
-  }
-
-  private registerStaticMapsFailure(error: unknown) {
-    this.staticMapsFailures += 1;
-    if (this.staticMapsFailures >= STATIC_MAP_FAILURE_THRESHOLD) {
-      this.staticMapsBlockedUntil = Date.now() + STATIC_MAP_FAILURE_COOLDOWN_MS;
-    }
-    this.logger.warn(`Static map недоступен, использую fallback Mapbox: ${getErrorMessage(error)}`);
-  }
-
-  private resetStaticMapsFailures() {
-    this.staticMapsFailures = 0;
-    this.staticMapsBlockedUntil = 0;
-  }
-
-  private async ensureTileProvider(tileUrl: string, headers: Record<string, string>, timeoutMs: number) {
-    if (this.healthyTileProviderUrl === tileUrl && Date.now() < this.tileProviderHealthyUntil) return;
-
-    const healthUrl = tileUrl
-      .replace('{z}', '0')
-      .replace('{x}', '0')
-      .replace('{y}', '0')
-      .replace('{quadkey}', '0')
-      .replace('{s}', 'a');
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const response = await fetch(healthUrl, { headers, signal: controller.signal });
-      const contentType = response.headers.get('content-type') || '';
-      if (!response.ok || !contentType.toLowerCase().startsWith('image/')) {
-        throw new Error(`Tile provider вернул HTTP ${response.status} и тип ${contentType || 'unknown'}`);
-      }
-      await response.arrayBuffer();
-      this.healthyTileProviderUrl = tileUrl;
-      this.tileProviderHealthyUntil = Date.now() + STATIC_MAP_TILE_HEALTH_CACHE_MS;
-    } finally {
-      clearTimeout(timer);
-    }
   }
 }

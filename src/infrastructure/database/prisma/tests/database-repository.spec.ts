@@ -62,4 +62,33 @@ describe('ModelRepository', () => {
     await expect(repository.createMany({ data: [] })).resolves.toEqual({ count: 0 });
     expect(execute).not.toHaveBeenCalled();
   });
+
+  it('supports nullable values in createMany rows', async () => {
+    const execute = jest
+      .fn<(plan: unknown) => Promise<{ affectedRows: number }>>()
+      .mockResolvedValue({ affectedRows: 1 });
+    const client = {
+      orm: { public: { ActivityMedia: {} } },
+      runtime: () => ({ execute }),
+    };
+    const repository = new ModelRepository(client as never, 'ActivityMedia');
+
+    await expect(
+      repository.createMany({
+        data: [
+          {
+            activityId: '00000000-0000-4000-8000-000000000001',
+            userId: '00000000-0000-4000-8000-000000000002',
+            activityDate: '2026-09-23T07:00:00.000Z',
+            position: 0,
+            url: 'user/activity/photo.jpg',
+            thumbnail: null,
+            blurhash: null,
+          },
+        ],
+      }),
+    ).resolves.toEqual({ count: 1 });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
 });
