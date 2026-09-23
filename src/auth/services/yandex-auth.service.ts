@@ -3,6 +3,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
+import { normalizeEmail } from '../utils/russian-email';
 
 @Injectable()
 export class YandexAuthService {
@@ -58,8 +59,9 @@ export class YandexAuthService {
       city?: string;
       default_avatar_id?: string;
     };
-    const email = yandexUser.default_email ?? (yandexUser.login ? `${yandexUser.login}@yandex.ru` : undefined);
-    if (!email) throw new UnauthorizedException('Яндекс не вернул email пользователя');
+    const rawEmail = yandexUser.default_email ?? (yandexUser.login ? `${yandexUser.login}@yandex.ru` : undefined);
+    if (!rawEmail) throw new UnauthorizedException('Яндекс не вернул email пользователя');
+    const email = normalizeEmail(rawEmail);
 
     let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
     if (!user) {

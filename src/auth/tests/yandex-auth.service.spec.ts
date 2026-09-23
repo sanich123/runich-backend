@@ -128,12 +128,17 @@ describe('YandexAuthService', () => {
     jest
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'yandex-token' }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ login: 'runner' }), { status: 200 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ default_email: ' Runner@YANDEX.RU ' }), { status: 200 }));
     prisma.user.findUnique.mockResolvedValue({ id: 'user-1', emailConfirmedAt: null });
     prisma.user.update.mockResolvedValue({ id: 'user-1' });
     const response = responseMock();
     await service.callback('code', '', response as never);
 
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { email: 'runner@yandex.ru' },
+      select: { id: true, emailConfirmedAt: true },
+    });
+    expect(prisma.user.create).not.toHaveBeenCalled();
     expect(prisma.user.update).toHaveBeenCalledTimes(2);
     expect(response.redirect).toHaveBeenCalledWith('https://app.example/login-from-url?code=login-code');
   });

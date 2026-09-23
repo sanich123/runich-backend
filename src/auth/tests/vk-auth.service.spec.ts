@@ -272,7 +272,7 @@ describe('VkAuthService', () => {
     jest
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42, email: 'ivan@example.com' })),
+        new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42, email: ' IVAN@EXAMPLE.COM ' })),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ user: { first_name: 'Ivan' } })));
     (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({

@@ -188,6 +188,24 @@ describe('AuthService', () => {
     expect(dependencies.prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'user@example.com' } });
   });
 
+  it('allows password login for a provider account after a password is set', async () => {
+    const dependencies = createDependencies();
+    dependencies.prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      authProvider: 'YANDEX',
+      encryptedPassword: await (await import('bcrypt')).hash('secret123', 4),
+      emailConfirmedAt: new Date(),
+    });
+    dependencies.prisma.user.update.mockResolvedValue({ id: 'user-1' });
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+    );
+
+    await expect(service.login('user@yandex.ru', 'secret123')).resolves.toMatchObject({ userId: 'user-1' });
+  });
+
   it('revokes the current session on logout', async () => {
     const dependencies = createDependencies();
     const tokenService = { revokeSession: asyncMock() };

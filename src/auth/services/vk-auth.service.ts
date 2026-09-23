@@ -7,6 +7,7 @@ import { AuthTokenService } from './auth-token.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { VK_AUTHORIZE_URL, VK_TOKEN_URL, VK_USER_INFO_URL } from '../constants/auth.constants';
 import type { VkState } from '../types/auth.types';
+import { normalizeEmail } from '../utils/russian-email';
 
 @Injectable()
 export class VkAuthService {
@@ -114,7 +115,7 @@ export class VkAuthService {
       const profile = profilePayload.user;
 
       const profileId = profile.user_id ?? String(tokens.user_id);
-      const email = tokens.email ?? `vk_${profileId}@vk.local`;
+      const email = normalizeEmail(tokens.email?.trim() || `vk_${profileId}@vk.local`);
       let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
       if (!user) {
         user = await this.prisma.user.create({
