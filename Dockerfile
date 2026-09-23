@@ -1,11 +1,48 @@
-FROM node:26-alpine AS yarn-base
+ARG NODE_IMAGE=node:26.10.0-bookworm-slim
+
+# MapLibre Native publishes the Node binary for glibc-based Ubuntu 24.04, not
+# Alpine/musl. Reuse the official Node distribution while keeping Ubuntu 24.04
+# as the actual builder and runtime base.
+FROM ${NODE_IMAGE} AS node-runtime
+
+FROM ubuntu:24.04 AS yarn-base
+
+ENV PATH=/usr/local/bin:$PATH
 
 WORKDIR /usr/src/app
+
+COPY --from=node-runtime /usr/local /usr/local
 
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn/patches .yarn/patches
 
-RUN npm install --global @yarnpkg/cli-dist@4.18.0 \
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends \
+    ca-certificates \
+    curl \
+    libatomic1 \
+    libcurl4t64 \
+    libegl1 \
+    libfontconfig1 \
+    libfreetype6 \
+    libgl1 \
+    libgl1-mesa-dri \
+    libglfw3 \
+    libglx0 \
+    libicu74 \
+    libjpeg-turbo8 \
+    libopengl0 \
+    libpng16-16t64 \
+    libstdc++6 \
+    libuv1t64 \
+    libwebp7 \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
+    xauth \
+    xvfb \
+    zlib1g \
+  && npm install --global @yarnpkg/cli-dist@4.18.0 \
   && yarn --version
 
 FROM yarn-base AS builder
@@ -17,6 +54,10 @@ RUN yarn install --immutable
 COPY . .
 
 RUN yarn db:generate && yarn build
+
+# Fail the image build if the native MapLibre module cannot load/render in the
+# same Linux runtime that will execute production imports.
+RUN yarn maplibre:smoke
 
 FROM yarn-base AS runtime
 

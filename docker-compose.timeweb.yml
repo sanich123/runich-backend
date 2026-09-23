@@ -12,6 +12,7 @@ services:
         max-file: '3'
     env_file:
       - .env
+    command: ['xvfb-run', '--auto-servernum', '--server-args=-screen 0 1280x1024x24', 'yarn', 'start:prod']
     environment:
       TZ: UTC
       RUNICH_PROCESS: api
@@ -28,7 +29,6 @@ services:
       context: .
       dockerfile: Dockerfile
     image: ${BACKEND_IMAGE:-runich-backend:local}
-    command: ['yarn', 'worker:prod']
     restart: always
     logging:
       driver: json-file
@@ -38,6 +38,7 @@ services:
     cpus: 0.50
     env_file:
       - .env
+    command: ['xvfb-run', '--auto-servernum', '--server-args=-screen 0 1280x1024x24', 'yarn', 'worker:prod']
     environment:
       TZ: UTC
       RUNICH_PROCESS: worker

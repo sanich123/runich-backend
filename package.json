@@ -17,6 +17,7 @@
     "worker:dev": "yarn db:generate && yarn db:sync && tsx src/app/background-worker.ts",
     "worker:prod": "yarn db:sync && node dist/background-worker.js",
     "build": "tsup --config tsup.config.json",
+    "maplibre:smoke": "xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' node scripts/maplibre-runtime-smoke.mjs",
     "prepare": "husky",
     "db:generate": "yarn prisma contract emit",
     "db:sync": "node prisma/db-sync.mjs",
