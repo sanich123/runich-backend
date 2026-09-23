@@ -123,6 +123,17 @@ describe('StaticMapService', () => {
     expect(viewport.center[0]).toBeCloseTo(37.615, 3);
     expect(viewport.center[1]).toBeCloseTo(55.755, 3);
   });
+
+  it('uses MapLibre vector world scale when fitting the route zoom', () => {
+    const viewport = calculateStaticMapViewport([
+      [37.300755, 55.624046],
+      [37.411966, 55.674324],
+    ]);
+
+    expect(viewport.zoom).toBeCloseTo(12.0081159, 5);
+    expect(viewport.center[0]).toBeCloseTo(37.3563605, 5);
+    expect(viewport.center[1]).toBeCloseTo(55.6491931, 5);
+  });
 });
 
 async function createRenderedWebp() {
