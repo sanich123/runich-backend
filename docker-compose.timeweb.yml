@@ -5,6 +5,9 @@ services:
       dockerfile: Dockerfile
     image: ${BACKEND_IMAGE:-runich-backend:local}
     restart: always
+    # xvfb-run waits for Xvfb's SIGUSR1; it must run below a real init process,
+    # not as PID 1, so the readiness signal is delivered correctly in Docker.
+    init: true
     logging:
       driver: json-file
       options:
@@ -30,6 +33,7 @@ services:
       dockerfile: Dockerfile
     image: ${BACKEND_IMAGE:-runich-backend:local}
     restart: always
+    init: true
     logging:
       driver: json-file
       options:
