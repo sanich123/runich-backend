@@ -3,7 +3,10 @@ export const STATIC_MAP_HEIGHT = 538;
 export const MAX_STATIC_MAP_LOCATIONS = 500;
 export const STATIC_MAP_ROUTE_WIDTH = 8;
 export const STATIC_MAP_SIMPLIFICATION_TOLERANCE_METERS = 2;
-export const STATIC_MAP_TILE_SIZE = 256;
+// MapLibre vector sources use a 512px world at zoom 0. The viewport fit must
+// use the same world scale as the native renderer, otherwise every map is
+// rendered one zoom level too close.
+export const STATIC_MAP_TILE_SIZE = 512;
 export const STATIC_MAP_ZOOM_FIT_PADDING_PX = 8;
 export const STATIC_MAP_WEBP_QUALITY = 84;
 export const STATIC_MAP_WEBP_EFFORT = 4;
