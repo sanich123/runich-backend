@@ -133,13 +133,13 @@ export class AuthService {
           `Такой email адрес не зарегистрирован ни на одного пользователя: ${normalizedEmail}`,
         );
       } else {
-        if (user.authProvider === 'YANDEX' || user.authProvider === 'VK') {
+        if (!user.encryptedPassword && (user.authProvider === 'YANDEX' || user.authProvider === 'VK')) {
           const providerName = user.authProvider === 'VK' ? 'VK' : 'Яндекс';
           throw new UnauthorizedException(
             `Вы зарегистрированы без пароля с помощью ${providerName}. Авторизуйтесь через ${providerName}`,
           );
         }
-        const isPasswordValid = await bcrypt.compare(password, `${user.encryptedPassword}`);
+        const isPasswordValid = await bcrypt.compare(password, user.encryptedPassword ?? '');
         if (!isPasswordValid) {
           throw new UnauthorizedException('Неправильный пароль');
         }
