@@ -271,7 +271,7 @@ docker compose -f docker-compose.timeweb.yml ps
 `./dist/receivedArchive`, затем архив загружается в S3 под ключом
 `<userId>/migrations/<migrationId>/archive.zip`. Worker скачивает его во
 временный файл, а после terminal status удаляет S3-объект. Размер batch — 8,
-пауза — 25 мс, polling — 10 секунд, лимит worker — 0.50 CPU. Они не
+пауза — 25 мс, polling — 10 секунд, лимит worker — 1.0 CPU. Они не
 передаются через `.env`.
 
 Production S3 должен использовать отдельный бакет `runich-production`:

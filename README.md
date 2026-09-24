@@ -344,7 +344,7 @@ uploads the archive to S3 and queues the job. A separate worker downloads and
 extracts the archive, then commits each activity batch together with its
 progress, so a worker restart resumes from the last committed batch. Docker
 Compose is not used to share migration archives between API and worker; S3 is
-the durable handoff. The worker is limited to half a CPU by default.
+the durable handoff. The worker is limited to one CPU by default.
 
 Photo and video uploads use `POST /photo` with a `file` multipart field. The
 optional `scope` is `activity`, `profile` or `feedback`; feedback uploads also
