@@ -72,14 +72,14 @@ describe('ActivityService', () => {
     await service.createActivity({ ...activityDto, locations, media: [{ url: 'photo', thumbnail: null }] }, 'user-1');
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({
-        mapPhotoUrl: expect.stringContaining('mapbox-token&attribution=false&logo=false'),
+        mapPhotoUrl: expect.stringContaining('?access_token=mapbox-token'),
       }),
     });
 
     await service.createActivity({ ...activityDto, locations }, 'user-1');
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({
-        mapPhotoUrl: expect.stringContaining('mapbox-token&attribution=false&logo=false'),
+        mapPhotoUrl: expect.stringContaining('?access_token=mapbox-token'),
       }),
     });
   });
@@ -218,7 +218,7 @@ describe('ActivityService', () => {
     });
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({
-        mapPhotoUrl: expect.stringContaining('test-token&attribution=false&logo=false'),
+        mapPhotoUrl: expect.stringContaining('?access_token=test-token'),
       }),
     });
   });
