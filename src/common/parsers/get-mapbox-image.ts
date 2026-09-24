@@ -30,7 +30,7 @@ export function getMapBoxImage(locations: LocationObject[]) {
         : '';
     const overlays = routeOverlay ? `${routeOverlay}/` : '';
 
-    return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${overlays}auto/${STATIC_MAP_IMAGE_WIDTH}x${STATIC_MAP_IMAGE_HEIGHT}?access_token=${accessToken}&attribution=false&logo=false`;
+    return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${overlays}auto/${STATIC_MAP_IMAGE_WIDTH}x${STATIC_MAP_IMAGE_HEIGHT}?access_token=${accessToken}`;
   };
 
   let reducedLocations = simplifyStaticMapLocations(validLocations);

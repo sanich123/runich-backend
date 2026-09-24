@@ -14,7 +14,7 @@ describe('getMapBoxImage', () => {
     expect(() => getMapBoxImage([])).toThrow('MAPBOX_ACCESS_TOKEN');
   });
 
-  it('disables Mapbox attribution and endpoint markers for static images', () => {
+  it('keeps Mapbox attribution enabled for static images', () => {
     process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
 
     const imageUrl = getMapBoxImage([
@@ -22,9 +22,11 @@ describe('getMapBoxImage', () => {
       { coords: { latitude: 55.76, longitude: 37.62 } },
     ]);
 
-    expect(imageUrl).toContain('?access_token=test-token&attribution=false&logo=false');
+    expect(imageUrl).toContain('?access_token=test-token');
+    expect(imageUrl).not.toContain('attribution=false');
+    expect(imageUrl).not.toContain('logo=false');
     expect(imageUrl).toContain('/896x538');
-    expect(imageUrl).toContain('path-8+F66767-0.8');
+    expect(imageUrl).toContain('path-5+F66767-0.8');
     expect(imageUrl).not.toContain('pin-');
   });
 
