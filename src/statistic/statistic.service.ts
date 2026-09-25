@@ -3,7 +3,12 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { buildYearCategoryStatistics } from './utils';
 import { ActivityMetricsService } from './activity-metrics.service';
-import type { MetricAggregateRow, MonthlyMetricAggregateRow, YearCategoryMetricAggregateRow } from './type';
+import type {
+  MetricAggregateRow,
+  MonthlyMetricAggregateRow,
+  YearCategoryDailyActivities,
+  YearCategoryMetricAggregateRow,
+} from './type';
 import { DEFAULT_TIME_ZONE, getLocalDateParts, getLocalWeekRange } from 'src/common/utils/time-zone';
 
 @Injectable()
@@ -27,6 +32,28 @@ export class StatisticService {
       totalDistance: this.toMetricValue(row?.totalDistance),
       totalItems: this.toMetricValue(row?.totalItems),
     };
+  }
+
+  private groupDailyActivities(
+    activities: Array<{ duration: number; distance: number; date: Date; sport: string }>,
+    timeZone: string,
+  ) {
+    return activities.reduce<Record<string, YearCategoryDailyActivities>>((byYear, activity) => {
+      const localDate = getLocalDateParts(activity.date, timeZone);
+      const year = String(localDate.year);
+      const date = `${localDate.year}-${String(localDate.month).padStart(2, '0')}-${String(localDate.day).padStart(2, '0')}`;
+      const yearActivities = byYear[year] ?? {};
+      const dayActivities = yearActivities[date] ?? [];
+      dayActivities.push({
+        duration: activity.duration,
+        distance: activity.distance,
+        date: activity.date.toISOString(),
+        sport: activity.sport,
+      });
+      yearActivities[date] = dayActivities;
+      byYear[year] = yearActivities;
+      return byYear;
+    }, {});
   }
 
   async getYearsAndTypesOfActivities(id: string, timeZone = DEFAULT_TIME_ZONE) {
@@ -127,33 +154,47 @@ export class StatisticService {
 
   async getStatisticByYearAndCategory(userId: string, timeZone = DEFAULT_TIME_ZONE) {
     try {
-      const rows = await this.prisma.$queryRaw<YearCategoryMetricAggregateRow[]>`
-        SELECT
-          EXTRACT(YEAR FROM ("date" AT TIME ZONE ${timeZone}))::int AS "year",
-          (EXTRACT(MONTH FROM ("date" AT TIME ZONE ${timeZone})) - 1)::int AS "month",
-          "sport",
-          COALESCE(SUM("duration"), 0)::double precision / 3600000 AS "totalDuration",
-          COALESCE(SUM("distance"), 0)::double precision / 1000 AS "totalDistance",
-          COUNT(*)::int AS "totalItems"
-        FROM "Activity"
-        WHERE "user_id" = ${userId}::uuid
-        GROUP BY 1, 2, "sport"
-        ORDER BY 1, 2, "sport"
-      `;
+      const [rows, activities] = await Promise.all([
+        this.prisma.$queryRaw<YearCategoryMetricAggregateRow[]>`
+          SELECT
+            EXTRACT(YEAR FROM ("date" AT TIME ZONE ${timeZone}))::int AS "year",
+            (EXTRACT(MONTH FROM ("date" AT TIME ZONE ${timeZone})) - 1)::int AS "month",
+            "sport",
+            COALESCE(SUM("duration"), 0)::double precision / 3600000 AS "totalDuration",
+            COALESCE(SUM("distance"), 0)::double precision / 1000 AS "totalDistance",
+            COUNT(*)::int AS "totalItems"
+          FROM "Activity"
+          WHERE "user_id" = ${userId}::uuid
+          GROUP BY 1, 2, "sport"
+          ORDER BY 1, 2, "sport"
+        `,
+        this.prisma.activity.findMany({
+          where: { userId },
+          select: { duration: true, distance: true, date: true, sport: true },
+          orderBy: { date: 'asc' },
+        }),
+      ]);
       if (!rows.length) {
         return { isUserHasActivities: false };
       }
+      const dailyActivitiesByYear = this.groupDailyActivities(activities ?? [], timeZone);
+      const yearlyStatistics = buildYearCategoryStatistics(
+        rows.map((row) => ({
+          year: row.year,
+          month: row.month,
+          sport: row.sport,
+          totalDuration: this.toMetricValue(row.totalDuration),
+          totalDistance: this.toMetricValue(row.totalDistance),
+          totalItems: this.toMetricValue(row.totalItems),
+        })),
+      );
       return {
         isUserHasActivities: true,
-        ...buildYearCategoryStatistics(
-          rows.map((row) => ({
-            year: row.year,
-            month: row.month,
-            sport: row.sport,
-            totalDuration: this.toMetricValue(row.totalDuration),
-            totalDistance: this.toMetricValue(row.totalDistance),
-            totalItems: this.toMetricValue(row.totalItems),
-          })),
+        ...Object.fromEntries(
+          Object.entries(yearlyStatistics).map(([year, statistics]) => [
+            year,
+            { ...(statistics as Record<string, unknown>), dailyActivities: dailyActivitiesByYear[year] ?? {} },
+          ]),
         ),
       };
     } catch (error) {

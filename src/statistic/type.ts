@@ -23,6 +23,15 @@ export interface YearCategoryAggregate {
   totalItems: number;
 }
 
+export interface YearCategoryDailyActivity {
+  duration: number;
+  distance: number;
+  date: string;
+  sport: string;
+}
+
+export type YearCategoryDailyActivities = Record<string, YearCategoryDailyActivity[]>;
+
 export interface StatisticsNode {
   [key: string]: number | StatisticsNode;
 }

@@ -111,6 +111,7 @@ describe('StatisticService', () => {
           totalDistance: 3,
           totalItems: 1,
         },
+        dailyActivities: {},
       },
     });
     expect(getQueryText(prisma.$queryRaw.mock.calls[0])).toMatch(

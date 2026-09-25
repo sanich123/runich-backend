@@ -26,6 +26,24 @@ export class StatisticController {
       },
       additionalProperties: {
         type: 'object',
+        properties: {
+          dailyActivities: {
+            type: 'object',
+            additionalProperties: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  duration: { type: 'number' },
+                  distance: { type: 'number' },
+                  date: { type: 'string', format: 'date-time' },
+                  sport: { type: 'string' },
+                },
+                required: ['duration', 'distance', 'date', 'sport'],
+              },
+            },
+          },
+        },
         additionalProperties: {
           type: 'object',
           additionalProperties: {
