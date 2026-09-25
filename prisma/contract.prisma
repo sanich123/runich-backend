@@ -1,7 +1,7 @@
 // use prisma-next
 // Contract inferred from the live database schema. Edit as needed, then run `prisma contract emit`.
 model User {
-  id                       Uuid                   @id(map: "Users_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id                       Uuid                   @id(map: "Users_pkey") @default(sql`gen_random_uuid()`)
   instanceId               Uuid?                  @map("instance_id")
   aud                      VarChar(255)?
   role                     VarChar(255)?
@@ -47,7 +47,7 @@ model User {
 }
 
 model Profile {
-  id                    Uuid                   @id(map: "Profile_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id                    Uuid                   @id(map: "Profile_pkey") @default(sql`gen_random_uuid()`)
   createdAt             TimestamptzString(6)   @default(now()) @map("created_at")
   name                  String?
   userId                Uuid                   @map("user_id")
@@ -85,7 +85,7 @@ enum ActivityVisibility {
 }
 
 model Activity {
-  id                  Uuid                 @id(map: "Activity_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id                  Uuid                 @id(map: "Activity_pkey") @default(sql`gen_random_uuid()`)
   date                TimestamptzString(6) @default(now())
   timeZone            VarChar(64)?         @map("time_zone")
   createdAt           TimestamptzString(6) @default(now())
@@ -133,7 +133,7 @@ model Activity {
 }
 
 model ActivityMedia {
-  id           Uuid                  @id(map: "ActivityMedia_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id           Uuid                  @id(map: "ActivityMedia_pkey") @default(sql`gen_random_uuid()`)
   activityId   Uuid                  @map("activity_id")
   userId       Uuid                  @map("user_id")
   activityDate TimestamptzString(6)  @map("activity_date")
@@ -151,7 +151,7 @@ model ActivityMedia {
 }
 
 model ActivityMigrationJob {
-  id                  Uuid                  @id(map: "ActivityMigrationJob_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id                  Uuid                  @id(map: "ActivityMigrationJob_pkey") @default(sql`gen_random_uuid()`)
   userId              Uuid                  @map("user_id")
   profileId           Uuid
   archivePath         VarChar(2048)
@@ -173,7 +173,7 @@ model ActivityMigrationJob {
 }
 
 model AuthExchange {
-  id         Uuid                  @id(map: "AuthExchange_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id         Uuid                  @id(map: "AuthExchange_pkey") @default(sql`gen_random_uuid()`)
   userId     Uuid                  @map("user_id")
   codeHash   VarChar(128)          @map("code_hash")
   purpose    VarChar(32)
@@ -189,7 +189,7 @@ model AuthExchange {
 }
 
 model Comment {
-  id           Uuid                 @id(map: "Comment_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id           Uuid                 @id(map: "Comment_pkey") @default(sql`gen_random_uuid()`)
   date         TimestamptzString(6) @default(now())
   comment      String
   authorId     String
@@ -204,7 +204,7 @@ model Comment {
 }
 
 model CommentLike {
-  id        Uuid                 @id(map: "CommentLike_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id        Uuid                 @id(map: "CommentLike_pkey") @default(sql`gen_random_uuid()`)
   date      TimestamptzString(6) @default(now())
   authorId  String
   commentId Uuid
@@ -218,7 +218,7 @@ model CommentLike {
 }
 
 model Friend {
-  id        Uuid                 @id(map: "Friend_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id        Uuid                 @id(map: "Friend_pkey") @default(sql`gen_random_uuid()`)
   createdAt TimestamptzString(6) @default(now())
   updatedAt TimestamptzString(6)
   userId    Uuid                 @map("user_id")
@@ -233,7 +233,7 @@ model Friend {
 }
 
 model Like {
-  id         Uuid                 @id(map: "Like_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id         Uuid                 @id(map: "Like_pkey") @default(sql`gen_random_uuid()`)
   date       TimestamptzString(6) @default(now())
   authorId   String
   activityId Uuid
@@ -247,7 +247,7 @@ model Like {
 }
 
 model MediaCleanupJob {
-  id           Uuid                  @id(map: "MediaCleanupJob_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id           Uuid                  @id(map: "MediaCleanupJob_pkey") @default(sql`gen_random_uuid()`)
   userId       Uuid                  @map("user_id")
   storageKey   VarChar(512)?         @map("storage_key")
   status       VarChar(32)
@@ -262,7 +262,7 @@ model MediaCleanupJob {
 }
 
 model LoadTestSeedJob {
-  id                  Uuid                  @id(map: "LoadTestSeedJob_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id                  Uuid                  @id(map: "LoadTestSeedJob_pkey") @default(sql`gen_random_uuid()`)
   runId               VarChar(64)           @unique(map: "LoadTestSeedJob_runId_key") @map("run_id")
   targetUserId        Uuid                  @map("target_user_id")
   manifestKey         VarChar(512)          @map("manifest_key")
@@ -285,7 +285,7 @@ model LoadTestSeedJob {
 }
 
 model UserSession {
-  id             Uuid                  @id(map: "UserSession_pkey") @default(dbgenerated("gen_random_uuid()"))
+  id             Uuid                  @id(map: "UserSession_pkey") @default(sql`gen_random_uuid()`)
   userId         Uuid                  @map("user_id")
   refreshHash    VarChar(128)          @map("refresh_hash")
   deviceId       VarChar(128)          @map("device_id")
