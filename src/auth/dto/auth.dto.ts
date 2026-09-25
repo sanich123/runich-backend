@@ -105,7 +105,7 @@ export class AuthResponseDto {
   accessToken: string;
 }
 
-export class UserAuthResponseDto extends AuthResponseDto {
+class UserAuthResponseDto extends AuthResponseDto {
   @ApiProperty({ type: String, description: 'User identifier' })
   userId: string;
 }

@@ -12,7 +12,7 @@ export const MEDIA_UPLOAD_SCOPES = ['activity', 'profile', 'feedback'] as const;
 export type MediaUploadScope = (typeof MEDIA_UPLOAD_SCOPES)[number];
 
 export const MEDIA_UPLOAD_ROLES = ['media', 'thumbnail'] as const;
-export type MediaUploadRole = (typeof MEDIA_UPLOAD_ROLES)[number];
+type MediaUploadRole = (typeof MEDIA_UPLOAD_ROLES)[number];
 
 export type MediaUploadManifestEntry = {
   mediaId: string;

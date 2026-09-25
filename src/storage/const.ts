@@ -4,8 +4,8 @@ export const MAX_DELETE_BATCH_SIZE = 1_000;
 export const MEDIA_BATCH_CONCURRENCY = 3;
 export const ACTIVITY_ROUTE_CACHE_TTL_MS = 5 * 60_000;
 export const ACTIVITY_ROUTE_CACHE_MAX_ENTRIES = 64;
-export const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mov', 'mp4', 'webm']);
-export const SUPPORTED_VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm']);
+const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mov', 'mp4', 'webm']);
+const SUPPORTED_VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm']);
 
 export function isSupportedVideoUpload(originalName: string, mimetype: string) {
   if (!SUPPORTED_VIDEO_MIME_TYPES.has(mimetype)) return false;

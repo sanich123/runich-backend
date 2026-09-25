@@ -1,6 +1,6 @@
 import type { StatisticsNode, YearCategoryAggregate } from './type';
 
-export enum YearCategoryProps {
+enum YearCategoryProps {
   all = 'all',
   totalDuration = 'totalDuration',
   totalDistance = 'totalDistance',

@@ -34,7 +34,7 @@
     "lint": "eslint src --fix",
     "format": "prettier --config .prettierrc --write './src/**/*.{ts,tsx}'",
     "madge": "madge --ts-config ./tsconfig.json --warning --circular --extensions ts ./src",
-    "ts-prune": "ts-prune --ignore 'src/infrastructure|^prisma/|(^|/)generated/|\\.d\\.ts$|prisma\\.config\\.ts|\\.spec\\.ts$'",
+    "ts-prune": "ts-prune --ignore 'src/infrastructure|^prisma/|(^|/)generated/|(^|/)(migrations|snapshots)/|\\.d\\.ts$|prisma\\.config\\.ts|\\.spec\\.ts$'",
     "depcheck": "depcheck"
   },
   "dependencies": {

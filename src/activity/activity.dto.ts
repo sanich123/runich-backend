@@ -23,7 +23,7 @@ import {
 import { IsIanaTimeZoneConstraint } from 'src/common/validation/iana-time-zone.validator';
 import { ACTIVITY_VISIBILITY, type ActivityVisibility } from './activity-visibility';
 
-export class ActivityMediaDto {
+class ActivityMediaDto {
   @ApiProperty({ type: String })
   @IsString()
   @IsNotEmpty()
@@ -41,7 +41,7 @@ export class ActivityMediaDto {
   blurhash?: string | null;
 }
 
-export class ActivityCoordinatesDto {
+class ActivityCoordinatesDto {
   @ApiProperty({ type: Number })
   @IsNumber({ allowInfinity: false, allowNaN: false })
   latitude: number;
@@ -86,7 +86,7 @@ export class ActivityCoordinatesDto {
   mocked?: boolean;
 }
 
-export class ActivityLocationDto {
+class ActivityLocationDto {
   @ApiProperty({ type: ActivityCoordinatesDto })
   @IsDefined()
   @ValidateNested()
@@ -114,7 +114,7 @@ export type LocationObject = {
   };
 };
 
-export class ActivityKilometreSplitDto {
+class ActivityKilometreSplitDto {
   @ApiProperty({ type: Number })
   @IsNumber({ allowInfinity: false, allowNaN: false })
   lastKilometerDuration: number;
@@ -349,7 +349,7 @@ export class ActivityMigrationJobResponseDto {
   finishedAt: Date | null;
 }
 
-export class ActivityMediaItemDto {
+class ActivityMediaItemDto {
   @ApiProperty({ type: String })
   url: string;
 
@@ -360,7 +360,7 @@ export class ActivityMediaItemDto {
   blurhash?: string | null;
 }
 
-export class ActivityCoordinatesResponseDto {
+class ActivityCoordinatesResponseDto {
   @ApiProperty({ type: Number })
   latitude: number;
 
@@ -389,7 +389,7 @@ export class ActivityCoordinatesResponseDto {
   mocked?: boolean | null;
 }
 
-export class ActivityLocationResponseDto {
+class ActivityLocationResponseDto {
   @ApiPropertyOptional({ type: Number, nullable: true })
   timestamp?: number | null;
 
@@ -397,7 +397,7 @@ export class ActivityLocationResponseDto {
   coords: ActivityCoordinatesResponseDto;
 }
 
-export class ActivityKilometreSplitResponseDto {
+class ActivityKilometreSplitResponseDto {
   @ApiProperty({ type: Number })
   lastKilometerDuration: number;
 
@@ -433,12 +433,12 @@ export class ActivityLocationsResponseDto {
   kilometresSplit?: ActivityKilometreSplitResponseDto[] | null;
 }
 
-export class ActivityUserEmailResponseDto {
+class ActivityUserEmailResponseDto {
   @ApiProperty({ type: String, format: 'email' })
   email: string;
 }
 
-export class ActivityProfileResponseDto {
+class ActivityProfileResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   surname: string | null;
 
@@ -458,7 +458,7 @@ export class ActivityProfileResponseDto {
   user?: ActivityUserEmailResponseDto | null;
 }
 
-export class ActivityCountResponseDto {
+class ActivityCountResponseDto {
   @ApiProperty({ type: Number })
   comments: number;
 
@@ -574,9 +574,4 @@ export class ActivityListResponseDto {
 
   @ApiPropertyOptional({ type: Boolean, deprecated: true })
   isLastPage?: boolean;
-}
-
-export class ActivityImportResponseDto {
-  @ApiProperty({ type: Boolean })
-  success: boolean;
 }

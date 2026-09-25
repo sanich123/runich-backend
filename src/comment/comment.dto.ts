@@ -22,12 +22,12 @@ export class CommentUpdateDto {
   comment: string;
 }
 
-export class CommentUserEmailResponseDto {
+class CommentUserEmailResponseDto {
   @ApiProperty({ type: String, format: 'email' })
   email: string;
 }
 
-export class CommentProfileResponseDto {
+class CommentProfileResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   surname: string | null;
 

@@ -1,4 +1,4 @@
-export type AppEnvironment = 'local' | 'stage' | 'production';
+type AppEnvironment = 'local' | 'stage' | 'production';
 
 const LOCAL_CORS_ORIGINS = [
   /^https?:\/\/localhost(?::\d+)?$/,

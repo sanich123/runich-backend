@@ -9,7 +9,7 @@ export const DEFAULT_ACTIVITY_PAGE_SIZE = 20;
 // map endpoint so the response and Mapbox source stay responsive.
 export const MAX_MAP_ROUTE_LOCATIONS = 1_500;
 
-export const ACTIVITY_CARD_PROFILE_SELECT = {
+const ACTIVITY_CARD_PROFILE_SELECT = {
   surname: true,
   name: true,
   profilePhoto: true,
@@ -17,7 +17,7 @@ export const ACTIVITY_CARD_PROFILE_SELECT = {
   emailNotifications: true,
 } as const;
 
-export const ACTIVITY_FEED_PROFILE_SELECT = {
+const ACTIVITY_FEED_PROFILE_SELECT = {
   ...ACTIVITY_CARD_PROFILE_SELECT,
   user: { select: { email: true } },
 } as const;
@@ -51,7 +51,7 @@ export const ACTIVITY_CARD_SELECT = {
   _count: { select: { comments: true, likes: true } },
 } as const;
 
-export const ACTIVITY_FEED_SELECT = {
+const ACTIVITY_FEED_SELECT = {
   ...ACTIVITY_CARD_SELECT,
   profile: { select: ACTIVITY_FEED_PROFILE_SELECT },
 } as const;

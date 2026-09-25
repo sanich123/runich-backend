@@ -2,7 +2,7 @@ const MIN_REASONABLE_WEIGHT_KG = 20;
 const MAX_REASONABLE_WEIGHT_KG = 200;
 const MILLISECONDS_IN_HOUR = 60 * 60 * 1000;
 
-export type ActivityCaloriesInput = {
+type ActivityCaloriesInput = {
   weight?: string | number | null;
   height?: string | number | null;
   age?: string | number | null;

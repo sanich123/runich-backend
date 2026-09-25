@@ -11,7 +11,7 @@ export class StatisticMetricResponseDto {
   totalItems: number;
 }
 
-export class MonthActivityResponseDto {
+class MonthActivityResponseDto {
   @ApiProperty({ type: Number })
   duration: number;
 

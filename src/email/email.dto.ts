@@ -76,7 +76,7 @@ export class CommentEmailDTO extends CommentLikeEmailDTO {
   mapPhotoUrl?: string;
 }
 
-export class FeedbackAttachmentDto {
+class FeedbackAttachmentDto {
   @ApiProperty({ type: String, format: 'uri' })
   @IsUrl({ require_protocol: true })
   @IsNotEmpty()
