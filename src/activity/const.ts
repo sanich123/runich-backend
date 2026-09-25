@@ -4,6 +4,11 @@ export const { activity, id } = PATHS;
 
 export const DEFAULT_ACTIVITY_PAGE_SIZE = 20;
 
+// The map needs the shape of the route, not every recorded GPS sample. Keep
+// the full route in object storage, but send a smaller representation to the
+// map endpoint so the response and Mapbox source stay responsive.
+export const MAX_MAP_ROUTE_LOCATIONS = 1_500;
+
 export const ACTIVITY_CARD_PROFILE_SELECT = {
   surname: true,
   name: true,

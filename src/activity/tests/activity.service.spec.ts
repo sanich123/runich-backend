@@ -1,4 +1,5 @@
 import { ActivityService } from '../activity.service';
+import { MAX_MAP_ROUTE_LOCATIONS } from '../const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 import { parseActivityMediaCursor } from '../activity.pagination';
 import { jest } from '@jest/globals';
@@ -301,6 +302,39 @@ describe('ActivityService', () => {
     });
     expect(storage.readActivityRoute).toHaveBeenCalledWith(
       'user-1/activities/activity-1/locations/locations-v1.json.gz',
+    );
+  });
+
+  it('limits map route points without dropping timestamp or altitude', async () => {
+    const prisma = createPrismaMock();
+    const locations = Array.from({ length: MAX_MAP_ROUTE_LOCATIONS + 1 }, (_, index) => ({
+      timestamp: index,
+      coords: {
+        latitude: 55 + index / 100_000,
+        longitude: 37 + index / 100_000,
+        altitude: index,
+        speed: index / 10,
+      },
+    }));
+    const storage = { readActivityRoute: asyncMock().mockResolvedValue(locations) };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    prisma.activity.findUnique.mockResolvedValue({
+      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      kilometresSplit: [],
+      userId: 'user-1',
+      visibility: 'private',
+    });
+
+    const response = await service.getLocationsByActivityId('activity-1', 'user-1');
+
+    expect(response?.locations).toHaveLength(MAX_MAP_ROUTE_LOCATIONS);
+    expect(response?.locations?.[0]).toEqual(locations[0]);
+    expect(response?.locations?.at(-1)).toEqual(locations.at(-1));
+    expect(response?.locations?.[Math.floor(MAX_MAP_ROUTE_LOCATIONS / 2)]).toEqual(
+      expect.objectContaining({
+        timestamp: expect.any(Number),
+        coords: expect.objectContaining({ altitude: expect.any(Number) }),
+      }),
     );
   });
 

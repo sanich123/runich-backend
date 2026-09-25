@@ -390,6 +390,9 @@ export class ActivityCoordinatesResponseDto {
 }
 
 export class ActivityLocationResponseDto {
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  timestamp?: number | null;
+
   @ApiProperty({ type: ActivityCoordinatesResponseDto })
   coords: ActivityCoordinatesResponseDto;
 }

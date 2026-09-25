@@ -50,3 +50,9 @@ export type ActivityRouteStorageMetadata = {
   sizeBytes: number;
   checksum: string;
 };
+
+export type ActivityRouteCacheEntry = {
+  body?: Uint8Array;
+  pending?: Promise<Uint8Array>;
+  expiresAt: number;
+};

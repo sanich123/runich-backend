@@ -630,16 +630,17 @@ describe('StorageService', () => {
     s3Send.mockResolvedValue({ Body: { transformToByteArray: async () => encoded.body } } as never);
     const service = new StorageService();
 
-    await expect(
-      service.readActivityRoute('user-1/activities/activity-1/locations/locations-v1.json.gz'),
-    ).resolves.toEqual(locations);
+    const routeKey = 'user-1/activities/activity-1/locations/locations-v1.json.gz';
+    await expect(service.readActivityRoute(routeKey)).resolves.toEqual(locations);
+    await expect(service.readActivityRoute(routeKey)).resolves.toEqual(locations);
 
     const command = s3Send.mock.calls[0]?.[0] as GetObjectCommand;
     expect(command).toBeInstanceOf(GetObjectCommand);
     expect(command.input).toEqual({
       Bucket: 'runich-test',
-      Key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      Key: routeKey,
     });
+    expect(s3Send).toHaveBeenCalledTimes(1);
   });
 
   it('rejects an activity route response without a body', async () => {

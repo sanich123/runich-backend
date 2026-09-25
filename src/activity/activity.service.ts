@@ -9,7 +9,12 @@ import { chunkArray } from 'src/common/parsers/chunk-array';
 import { generateActivityTitle } from './activity-title';
 import { ActivityPersistenceService } from './activity-persistence.service';
 import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.constants';
-import { ACTIVITY_CARD_SELECT, ACTIVITY_DETAILS_SELECT, DEFAULT_ACTIVITY_PAGE_SIZE } from './const';
+import {
+  ACTIVITY_CARD_SELECT,
+  ACTIVITY_DETAILS_SELECT,
+  DEFAULT_ACTIVITY_PAGE_SIZE,
+  MAX_MAP_ROUTE_LOCATIONS,
+} from './const';
 import {
   encodeActivityCursor,
   encodeActivityMediaCursor,
@@ -30,6 +35,7 @@ import type { ActivityDatabase } from './activity-persistence.service';
 import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from './activity-visibility';
 import { calculateActiveCalories } from './activity-calories';
 import { StaticMapService } from 'src/common/maps/static-map.service';
+import { reduceLocations } from 'src/common/parsers/reduce-locations';
 
 @Injectable()
 export class ActivityService {
@@ -284,11 +290,25 @@ export class ActivityService {
         visibility: true,
       },
     });
-    if (!activity || !currentUserId || !(await this.canAccessActivity(id, currentUserId))) return null;
+    if (!activity || !currentUserId) return null;
+
+    // The activity row already contains the fields required for the common
+    // owner/public checks. Avoid fetching the same row a second time; only
+    // follower-only activities need the additional relationship lookup.
+    const isOwner = activity.userId === currentUserId;
+    const isPublic = activity.visibility === ACTIVITY_VISIBILITY.public;
+    const isFollowerActivity =
+      activity.visibility === ACTIVITY_VISIBILITY.followers &&
+      (isOwner || (await this.isFollower(currentUserId, activity.userId)));
+    if (!isOwner && !isPublic && !isFollowerActivity) return null;
+
     let locations: LocationObject[] | undefined;
     if (activity.routeStorageKey) {
       if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');
-      locations = await this.storageService.readActivityRoute(activity.routeStorageKey);
+      locations = reduceLocations(
+        await this.storageService.readActivityRoute(activity.routeStorageKey),
+        MAX_MAP_ROUTE_LOCATIONS,
+      );
     }
     return { locations, kilometresSplit: activity.kilometresSplit };
   }
