@@ -672,7 +672,7 @@
           "ActivityMigrationJob": {
             "fields": {
               "archivePath": {
-                "nullable": false,
+                "nullable": true,
                 "type": {
                   "codecId": "sql/varchar@1",
                   "kind": "scalar",
@@ -770,6 +770,30 @@
                   "kind": "scalar"
                 }
               },
+              "uploadBytesReceived": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "uploadBytesTotal": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "uploadUpdatedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
               "userId": {
                 "nullable": false,
                 "type": {
@@ -849,6 +873,15 @@
                 },
                 "totalActivities": {
                   "column": "totalActivities"
+                },
+                "uploadBytesReceived": {
+                  "column": "upload_bytes_received"
+                },
+                "uploadBytesTotal": {
+                  "column": "upload_bytes_total"
+                },
+                "uploadUpdatedAt": {
+                  "column": "upload_updated_at"
                 },
                 "userId": {
                   "column": "user_id"
@@ -3269,7 +3302,7 @@
                 "archivePath": {
                   "codecId": "sql/varchar@1",
                   "nativeType": "character varying",
-                  "nullable": false,
+                  "nullable": true,
                   "typeParams": {
                     "length": 2048
                   }
@@ -3364,6 +3397,32 @@
                   },
                   "nativeType": "int4",
                   "nullable": false
+                },
+                "upload_bytes_received": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "upload_bytes_total": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "upload_updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
@@ -4905,7 +4964,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "dd223e2a89efc0b4d433fa14a8a3d36dc6ef7318b4d1d3b4e17a67016f7fa569"
+    "storageHash": "570ab10da3e052dfc71358592ff6c4621002be2a7b977ca5215c81ecef7f3093"
   },
   "capabilities": {
     "postgres": {

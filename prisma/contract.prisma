@@ -154,8 +154,11 @@ model ActivityMigrationJob {
   id                  Uuid                  @id(map: "ActivityMigrationJob_pkey") @default(sql`gen_random_uuid()`)
   userId              Uuid                  @map("user_id")
   profileId           Uuid
-  archivePath         VarChar(2048)
+  archivePath         VarChar(2048)?
   status              VarChar(32)
+  uploadBytesReceived Int                   @default(0) @map("upload_bytes_received")
+  uploadBytesTotal    Int                   @default(0) @map("upload_bytes_total")
+  uploadUpdatedAt     TimestamptzString(6)?  @map("upload_updated_at")
   totalActivities     Int                   @default(0)
   processedActivities Int                   @default(0)
   importedActivities  Int                   @default(0)

@@ -58,7 +58,13 @@ describe('ActivityController Strava migration', () => {
   const accountService = { getOrCreateAccountByUserId: asyncMock() };
   const activityMigrationService = {
     enqueue: asyncMock(),
+    startUpload: asyncMock(),
+    updateUploadProgress: asyncMock(),
+    finishUpload: asyncMock(),
+    markUploadFailed: asyncMock(),
+    cancel: asyncMock(),
     getJobForUser: asyncMock(),
+    getCurrentJobForUser: asyncMock(),
   };
   const controller = new ActivityController(
     activityService,
@@ -83,6 +89,9 @@ describe('ActivityController Strava migration', () => {
       finishedAt: null,
     });
     activityMigrationService.getJobForUser.mockResolvedValue({ jobId: 'job-1', status: 'processing' });
+    activityMigrationService.getCurrentJobForUser.mockResolvedValue({ jobId: 'job-1', status: 'processing' });
+    activityMigrationService.startUpload.mockResolvedValue({ jobId: 'job-1', status: 'uploading' });
+    activityMigrationService.cancel.mockResolvedValue({ jobId: 'job-1', status: 'cancelled' });
     rm.mockResolvedValue(undefined);
   });
 
@@ -104,6 +113,31 @@ describe('ActivityController Strava migration', () => {
       controller.getStravaMigrationStatus({ jobId: 'job-1' }, { user: { id: 'user-1' } } as never),
     ).resolves.toEqual(expect.objectContaining({ jobId: 'job-1', status: 'processing' }));
     expect(activityMigrationService.getJobForUser).toHaveBeenCalledWith('job-1', 'user-1');
+  });
+
+  it('restores the active migration for the authenticated user without a client job id', async () => {
+    await expect(controller.getCurrentStravaMigrationStatus({ user: { userId: 'user-1' } } as never)).resolves.toEqual(
+      expect.objectContaining({ jobId: 'job-1', status: 'processing' }),
+    );
+    expect(activityMigrationService.getCurrentJobForUser).toHaveBeenCalledWith('user-1');
+  });
+
+  it('creates an upload job before the native background transport starts', async () => {
+    await expect(
+      controller.startStravaMigrationUpload({ uploadBytesTotal: 70_000_000 }, { id: 'user-1' }),
+    ).resolves.toMatchObject({ jobId: 'job-1', status: 'uploading' });
+    expect(activityMigrationService.startUpload).toHaveBeenCalledWith({
+      uploadBytesTotal: 70_000_000,
+      userId: 'user-1',
+      profileId: 'profile-1',
+    });
+  });
+
+  it('cancels an upload job for the authenticated user', async () => {
+    await expect(
+      controller.cancelStravaMigration({ jobId: 'job-1' }, { user: { id: 'user-1' } } as never),
+    ).resolves.toMatchObject({ jobId: 'job-1', status: 'cancelled' });
+    expect(activityMigrationService.cancel).toHaveBeenCalledWith('job-1', 'user-1');
   });
 
   it('rejects migration requests without an archive or account and removes an unqueued upload', async () => {

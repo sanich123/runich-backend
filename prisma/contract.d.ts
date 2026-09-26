@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'dd223e2a89efc0b4d433fa14a8a3d36dc6ef7318b4d1d3b4e17a67016f7fa569'>;
+  StorageHashBase<'570ab10da3e052dfc71358592ff6c4621002be2a7b977ca5215c81ecef7f3093'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -297,7 +297,7 @@ export type FieldOutputTypes = {
       readonly userId: CodecTypes['pg/uuid@1']['output'];
     };
     readonly ActivityMigrationJob: {
-      readonly archivePath: Varchar<2048>;
+      readonly archivePath: Varchar<2048> | null;
       readonly createdAt: TimestamptzString<6>;
       readonly errorMessage: CodecTypes['pg/text@1']['output'] | null;
       readonly finishedAt: TimestamptzString<6> | null;
@@ -309,6 +309,9 @@ export type FieldOutputTypes = {
       readonly startedAt: TimestamptzString<6> | null;
       readonly status: Varchar<32>;
       readonly totalActivities: CodecTypes['pg/int4@1']['output'];
+      readonly uploadBytesReceived: CodecTypes['pg/int4@1']['output'];
+      readonly uploadBytesTotal: CodecTypes['pg/int4@1']['output'];
+      readonly uploadUpdatedAt: TimestamptzString<6> | null;
       readonly userId: CodecTypes['pg/uuid@1']['output'];
     };
     readonly AuthExchange: {
@@ -510,7 +513,7 @@ export type FieldInputTypes = {
       readonly userId: CodecTypes['pg/uuid@1']['input'];
     };
     readonly ActivityMigrationJob: {
-      readonly archivePath: CodecTypes['sql/varchar@1']['input'];
+      readonly archivePath: CodecTypes['sql/varchar@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly errorMessage: CodecTypes['pg/text@1']['input'] | null;
       readonly finishedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
@@ -522,6 +525,9 @@ export type FieldInputTypes = {
       readonly startedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
       readonly status: CodecTypes['sql/varchar@1']['input'];
       readonly totalActivities: CodecTypes['pg/int4@1']['input'];
+      readonly uploadBytesReceived: CodecTypes['pg/int4@1']['input'];
+      readonly uploadBytesTotal: CodecTypes['pg/int4@1']['input'];
+      readonly uploadUpdatedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
       readonly userId: CodecTypes['pg/uuid@1']['input'];
     };
     readonly AuthExchange: {
@@ -723,7 +729,7 @@ export type StorageColumnTypes = {
       readonly user_id: CodecTypes['pg/uuid@1']['output'];
     };
     readonly ActivityMigrationJob: {
-      readonly archivePath: Varchar<2048>;
+      readonly archivePath: Varchar<2048> | null;
       readonly createdAt: TimestamptzString<6>;
       readonly errorMessage: CodecTypes['pg/text@1']['output'] | null;
       readonly finishedAt: TimestamptzString<6> | null;
@@ -735,6 +741,9 @@ export type StorageColumnTypes = {
       readonly startedAt: TimestamptzString<6> | null;
       readonly status: Varchar<32>;
       readonly totalActivities: CodecTypes['pg/int4@1']['output'];
+      readonly upload_bytes_received: CodecTypes['pg/int4@1']['output'];
+      readonly upload_bytes_total: CodecTypes['pg/int4@1']['output'];
+      readonly upload_updated_at: TimestamptzString<6> | null;
       readonly user_id: CodecTypes['pg/uuid@1']['output'];
     };
     readonly AuthExchange: {
@@ -936,7 +945,7 @@ export type StorageColumnInputTypes = {
       readonly user_id: CodecTypes['pg/uuid@1']['input'];
     };
     readonly ActivityMigrationJob: {
-      readonly archivePath: CodecTypes['sql/varchar@1']['input'];
+      readonly archivePath: CodecTypes['sql/varchar@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly errorMessage: CodecTypes['pg/text@1']['input'] | null;
       readonly finishedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
@@ -948,6 +957,9 @@ export type StorageColumnInputTypes = {
       readonly startedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
       readonly status: CodecTypes['sql/varchar@1']['input'];
       readonly totalActivities: CodecTypes['pg/int4@1']['input'];
+      readonly upload_bytes_received: CodecTypes['pg/int4@1']['input'];
+      readonly upload_bytes_total: CodecTypes['pg/int4@1']['input'];
+      readonly upload_updated_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
       readonly user_id: CodecTypes['pg/uuid@1']['input'];
     };
     readonly AuthExchange: {
@@ -1157,7 +1169,7 @@ export namespace Models {
     readonly [RelationKeys]?: 'activity';
   };
   export type public_ActivityMigrationJob = {
-    archivePath: Varchar<2048>;
+    archivePath: Varchar<2048> | null;
     createdAt: TimestamptzString<6>;
     errorMessage: CodecTypes['pg/text@1']['output'] | null;
     finishedAt: TimestamptzString<6> | null;
@@ -1169,6 +1181,9 @@ export namespace Models {
     startedAt: TimestamptzString<6> | null;
     status: Varchar<32>;
     totalActivities: CodecTypes['pg/int4@1']['output'];
+    uploadBytesReceived: CodecTypes['pg/int4@1']['output'];
+    uploadBytesTotal: CodecTypes['pg/int4@1']['output'];
+    uploadUpdatedAt: TimestamptzString<6> | null;
     userId: CodecTypes['pg/uuid@1']['output'];
     profile: public_Profile;
     user: public_User;
@@ -1763,7 +1778,7 @@ type ContractBase = Omit<
                 readonly archivePath: {
                   readonly nativeType: 'character varying';
                   readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
+                  readonly nullable: true;
                   readonly typeParams: { readonly length: 2048 };
                 };
                 readonly createdAt: {
@@ -1845,6 +1860,30 @@ type ContractBase = Omit<
                     readonly kind: 'literal';
                     readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
                   };
+                };
+                readonly upload_bytes_received: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly upload_bytes_total: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly upload_updated_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
                 };
                 readonly user_id: {
                   readonly nativeType: 'uuid';
@@ -3445,7 +3484,7 @@ type ContractBase = Omit<
           readonly ActivityMigrationJob: {
             readonly fields: {
               readonly archivePath: {
-                readonly nullable: false;
+                readonly nullable: true;
                 readonly type: {
                   readonly kind: 'scalar';
                   readonly codecId: 'sql/varchar@1';
@@ -3512,6 +3551,22 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
+              readonly uploadBytesReceived: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly uploadBytesTotal: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly uploadUpdatedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
               readonly userId: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
@@ -3556,6 +3611,9 @@ type ContractBase = Omit<
                 readonly startedAt: { readonly column: 'startedAt' };
                 readonly status: { readonly column: 'status' };
                 readonly totalActivities: { readonly column: 'totalActivities' };
+                readonly uploadBytesReceived: { readonly column: 'upload_bytes_received' };
+                readonly uploadBytesTotal: { readonly column: 'upload_bytes_total' };
+                readonly uploadUpdatedAt: { readonly column: 'upload_updated_at' };
                 readonly userId: { readonly column: 'user_id' };
               };
             };

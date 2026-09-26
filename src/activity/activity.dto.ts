@@ -294,10 +294,12 @@ export class ActivityDto {
 }
 
 export const ACTIVITY_MIGRATION_STATUS = {
+  uploading: 'uploading',
   queued: 'queued',
   processing: 'processing',
   completed: 'completed',
   failed: 'failed',
+  cancelled: 'cancelled',
 } as const;
 
 export type ActivityMigrationStatus = (typeof ACTIVITY_MIGRATION_STATUS)[keyof typeof ACTIVITY_MIGRATION_STATUS];
@@ -314,6 +316,12 @@ export class ActivityMigrationJobResponseDto {
 
   @ApiProperty({ enum: Object.values(ACTIVITY_MIGRATION_STATUS) })
   status: ActivityMigrationStatus;
+
+  @ApiProperty({ type: Number, description: 'Bytes received by the API' })
+  uploadBytesReceived: number;
+
+  @ApiProperty({ type: Number, description: 'Total archive bytes expected by the API' })
+  uploadBytesTotal: number;
 
   @ApiPropertyOptional({ type: Number, nullable: true, description: '1-based position in the active queue' })
   queuePosition: number | null;
@@ -347,6 +355,14 @@ export class ActivityMigrationJobResponseDto {
 
   @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
   finishedAt: Date | null;
+}
+
+export class ActivityMigrationUploadStartDto {
+  @ApiProperty({ type: Number, minimum: 1, description: 'Archive size in bytes' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  uploadBytesTotal: number;
 }
 
 class ActivityMediaItemDto {
