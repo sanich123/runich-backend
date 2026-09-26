@@ -71,6 +71,10 @@ describe('StatisticService', () => {
     await expect(service.getActivitiesByYearMonthCategory('u1', '2025', '0', 'run')).resolves.toEqual([
       { duration: 100, distance: 1000, speed: 5 },
     ]);
+    prisma.activity.findMany.mockResolvedValueOnce([
+      { duration: 100, distance: 1000, date: new Date('2025-01-02T12:00:00.000Z'), sport: 'run' },
+      { duration: 200, distance: 2000, date: new Date('2025-01-02T15:00:00.000Z'), sport: 'bike' },
+    ]);
 
     prisma.$queryRaw.mockResolvedValueOnce([
       {
@@ -90,7 +94,7 @@ describe('StatisticService', () => {
         totalItems: 1,
       },
     ]);
-    await expect(service.getStatisticByYearAndCategory('u1')).resolves.toEqual({
+    await expect(service.getStatisticByYearAndCategory('u1', 'UTC')).resolves.toEqual({
       isUserHasActivities: true,
       '2025': {
         all: {
@@ -111,18 +115,21 @@ describe('StatisticService', () => {
           totalDistance: 3,
           totalItems: 1,
         },
-        dailyActivities: {},
+        dailyActivities: {
+          '2025-01-02': [
+            { duration: 100, distance: 1000, date: '2025-01-02T12:00:00.000Z', sport: 'run' },
+            { duration: 200, distance: 2000, date: '2025-01-02T15:00:00.000Z', sport: 'bike' },
+          ],
+        },
       },
     });
     expect(getQueryText(prisma.$queryRaw.mock.calls[0])).toMatch(
       /EXTRACT\(YEAR.*AT TIME ZONE.*SUM\("duration"\).*SUM\("distance"\).*COUNT\(\*\).*GROUP BY 1, 2/s,
     );
-    expect(getQueryParameters(prisma.$queryRaw.mock.calls[0])).toEqual(
-      expect.arrayContaining(['u1', DEFAULT_TIME_ZONE]),
-    );
+    expect(getQueryParameters(prisma.$queryRaw.mock.calls[0])).toEqual(expect.arrayContaining(['u1', 'UTC']));
 
     prisma.$queryRaw.mockResolvedValueOnce([]);
-    await expect(service.getStatisticByYearAndCategory('u1')).resolves.toEqual({ isUserHasActivities: false });
+    await expect(service.getStatisticByYearAndCategory('u1', 'UTC')).resolves.toEqual({ isUserHasActivities: false });
   });
 
   it('calculates weekly and all-time metrics, including empty input', async () => {
