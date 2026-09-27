@@ -21,6 +21,7 @@ Production Compose (`docker-compose.timeweb.yml`) использует след�
 
 | Сервис              | Назначение                             |
 | ------------------- | -------------------------------------- |
+| `db_migrate`        | Одноразовый deploy job для схемы БД    |
 | `nestjs_app`        | HTTP API                               |
 | `background_worker` | Миграции Strava, blurhash и очистка S3 |
 
@@ -49,7 +50,11 @@ Production Compose (`docker-compose.timeweb.yml`) использует след�
 image на сервере: он переключает checkout на тот же SHA, скачивает image и
 запускает `nestjs_app` и `background_worker` через Compose с `--no-build`.
 Это важно для текущего сервера с 2 ГБ RAM: тяжёлая установка зависимостей и
-компиляция не конкурируют с PostgreSQL и работающим API.
+компиляция не конкурируют с PostgreSQL и работающим API. Перед переключением
+версии workflow запускает `db_migrate` ровно один раз. Если миграция или
+проверка схемы завершается ошибкой, workflow останавливается до запуска новой
+версии API/worker; старые процессы остаются на месте. При обычном перезапуске
+контейнеров схема БД не меняется.
 
 Локальный Compose по-прежнему собирается обычной командой ниже и использует
 локальный тег `runich-backend:local`:
@@ -198,33 +203,29 @@ curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
 { "status": "ok", "checks": { "database": "ok" } }
 ```
 
-## Синхронизация базы с контрактом Prisma 8
+## Изменения схемы Prisma 8
 
-В репозитории Prisma 8 использует контракт `prisma/contract.prisma` и
-именованный ref `db`. На чистой базе синхронизация создаёт все таблицы из этого
-контракта. Для существующей базы применяйте изменения в окне обслуживания.
-Сначала сделайте проверенную резервную копию PostgreSQL и остановите API/worker,
-чтобы во время операции не было записей.
+Production использует checked-in migrations из `migrations/`. Создавайте и
+проверяйте изменения локально или на stage командой `migration plan`, читайте
+`migration show`, затем включайте миграцию в тот же commit, что и код,
+ожидающий новую схему. Не запускайте `prisma db update` из API-контейнера или
+вручную на production: `db_migrate` выполняет `db migrate`, статус и проверку
+контракта перед переключением API/worker.
 
-На сервере:
+При ручном production deploy используйте команду ниже: Compose принудительно
+пересоздаст job зависимости, дождётся его успешного завершения, и только затем
+запустит API/worker:
 
 ```bash
 cd /opt/runich-backend/project
-docker compose -f docker-compose.timeweb.yml exec -T nestjs_app yarn prisma db update --dry-run
+BACKEND_IMAGE="ghcr.io/sanich123/runich-backend:$(git rev-parse HEAD)" \
+  docker compose -f docker-compose.timeweb.yml \
+  up -d --always-recreate-deps --no-build nestjs_app background_worker
 ```
 
-Проверьте план. Применяйте его только после проверки:
-
-```bash
-docker compose -f docker-compose.timeweb.yml exec -T nestjs_app \
-  yarn prisma db update --no-interactive --confirm default_db --advance-ref db
-docker compose -f docker-compose.timeweb.yml exec -T nestjs_app yarn prisma db verify
-```
-
-Ожидаемый результат `db verify` — `Database marker and schema match contract`.
-После этого пересоберите API и worker и снова проверьте `/health/ready`. Не
-запускайте `db update` на production без backup и предварительного `--dry-run`:
-это операция, которая может изменить структуру базы.
+Команда подключается к production-БД; не запускайте её вручную параллельно с
+GitHub Actions. Для изменений с потенциальной потерей данных заранее создайте и
+проверьте резервную копию и спланируйте совместимый rollout.
 
 ## Просмотр production-базы
 
@@ -300,7 +301,9 @@ docker compose -f docker-compose.timeweb.yml restart background_worker
 Пересборка и запуск API с worker:
 
 ```bash
-docker compose -f docker-compose.timeweb.yml up -d --build --remove-orphans nestjs_app background_worker
+BACKEND_IMAGE="ghcr.io/sanich123/runich-backend:$(git rev-parse HEAD)" \
+  docker compose -f docker-compose.timeweb.yml \
+  up -d --always-recreate-deps --no-build --remove-orphans nestjs_app background_worker
 ```
 
 После перезапуска снова выполните:
@@ -410,11 +413,13 @@ scp runich-timeweb:/opt/runich-backups/postgres/<BACKUP_FILE> ./
    Команда рассчитана на пустую базу. Опции `--clean --if-exists` используйте только
    если подтверждено, что содержимое целевой базы можно удалить.
 
-4. В production замените `DATABASE_URL_DOCKER` на URL нового сервиса, пересоберите и
-   запустите API/worker:
+4. В production замените `DATABASE_URL_DOCKER` на URL нового сервиса, сначала
+   примените миграции, затем запустите API/worker:
 
    ```bash
-   docker compose -f docker-compose.timeweb.yml up -d --build --remove-orphans nestjs_app background_worker
+   BACKEND_IMAGE="ghcr.io/sanich123/runich-backend:$(git rev-parse HEAD)" \
+     docker compose -f docker-compose.timeweb.yml \
+     up -d --always-recreate-deps --no-build --remove-orphans nestjs_app background_worker
    docker compose -f docker-compose.timeweb.yml ps
    curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
    ```

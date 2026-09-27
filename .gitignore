@@ -22,7 +22,8 @@ lerna-debug.log*
 # Tests
 /coverage
 /.nyc_output
-migrations/*
+# Kept locally from the pre-baseline Prisma preview; not part of the checked-in migration graph.
+migrations/snapshots/dd223e2a89efc0b4d433fa14a8a3d36dc6ef7318b4d1d3b4e17a67016f7fa569/
 # IDEs and editors
 /.idea
 .project

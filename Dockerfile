@@ -54,7 +54,7 @@ RUN yarn install --immutable
 
 COPY . .
 
-RUN yarn db:generate && yarn build
+RUN yarn db:generate && yarn prisma migration check && yarn build
 
 # Fail the image build if the native MapLibre module cannot load/render in the
 # same Linux runtime that will execute production imports.
@@ -71,6 +71,7 @@ LABEL org.opencontainers.image.source="https://github.com/sanich123/runich-backe
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/prisma ./prisma
+COPY --from=builder /usr/src/app/migrations ./migrations
 COPY --from=builder /usr/src/app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /usr/src/app/assets ./assets
 

@@ -22,6 +22,26 @@ services:
       timeout: 5s
       retries: 20
 
+  db_migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-runich-backend:local}
+    restart: 'no'
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    command: ['yarn', 'db:sync']
+    environment:
+      TZ: UTC
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must be set in .env or the shell}
+    volumes:
+      - .:/app
+      - /app/node_modules
+
   nestjs_app:
     build:
       context: .
@@ -34,8 +54,8 @@ services:
         max-size: 10m
         max-file: '3'
     depends_on:
-      db:
-        condition: service_healthy
+      db_migrate:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:
@@ -63,8 +83,8 @@ services:
         max-file: '3'
     cpus: 1.0
     depends_on:
-      db:
-        condition: service_healthy
+      db_migrate:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:
