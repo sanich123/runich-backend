@@ -72,6 +72,21 @@ Production Compose на Timeweb запускается отдельным фай
 DATABASE_URL_DOCKER=postgresql://gen_user:<пароль>@192.168.0.4:5432/default_db?schema=public
 ```
 
+## NestJS Observe
+
+Интеграция включается только если в production `.env` заданы обе переменные
+`OBSERVE_APP_KEY` и `OBSERVE_APP_SECRET`. Добавьте туда пару из API Keys
+проекта NestJS Observe; не сохраняйте её в Git и не выводите в терминал.
+Compose передаёт эти значения API и worker из `.env`, а после следующего deploy
+они появятся в приложениях `runich-backend` и `runich-backend-worker`.
+Версия приложения в Observe берётся из тега Docker image.
+
+Если задать только одну переменную, приложение остановится с понятной ошибкой.
+Без обеих переменных SDK не активируется. Передаются ошибки, трассы запросов,
+методы Nest и runtime-метрики; логи, содержимое запросов и фрагменты исходного
+кода отключены. Проверьте настройки приватности Observe перед включением
+production-телеметрии.
+
 `db-sync` перед синхронизацией включает расширение `pg_trgm`, а после
 успешного `db update` создаёт trigram GIN-индексы для поиска по email, имени и
 фамилии. Эти индексы намеренно создаются bootstrap-SQL: текущий Prisma 8 RC

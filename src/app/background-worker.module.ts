@@ -6,9 +6,11 @@ import { ActivityEnrichmentService } from 'src/activity/activity-enrichment.serv
 import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { StorageModule } from 'src/storage/storage.module';
 import { LoadTestModule } from 'src/load-test/load-test.module';
+import { observeImports } from 'src/common/observe/observe.config';
 
 @Module({
   imports: [
+    ...observeImports,
     ThrottlerModule.forRoot([{ name: 'default', limit: 5, ttl: 60_000 }]),
     PrismaModule,
     StorageModule,

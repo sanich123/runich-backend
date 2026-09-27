@@ -15,9 +15,11 @@ import LoggingService from 'src/common/logger/logger.middleware';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { StorageModule } from 'src/storage/storage.module';
 import { LoadTestModule } from 'src/load-test/load-test.module';
+import { observeImports } from 'src/common/observe/observe.config';
 
 @Module({
   imports: [
+    ...observeImports,
     ThrottlerModule.forRoot([{ name: 'default', limit: 5, ttl: 60_000 }]),
     UserModule,
     PrismaModule,

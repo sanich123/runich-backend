@@ -3342,7 +3342,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jridgewell/trace-mapping@npm:^0.3.12, @jridgewell/trace-mapping@npm:^0.3.23, @jridgewell/trace-mapping@npm:^0.3.24, @jridgewell/trace-mapping@npm:^0.3.28, @jridgewell/trace-mapping@npm:^0.3.31":
+"@jridgewell/trace-mapping@npm:0.3.31, @jridgewell/trace-mapping@npm:^0.3.12, @jridgewell/trace-mapping@npm:^0.3.23, @jridgewell/trace-mapping@npm:^0.3.24, @jridgewell/trace-mapping@npm:^0.3.28, @jridgewell/trace-mapping@npm:^0.3.31":
   version: 0.3.31
   resolution: "@jridgewell/trace-mapping@npm:0.3.31"
   dependencies:
@@ -3704,6 +3704,45 @@ __metadata:
     class-validator:
       optional: true
   checksum: 10c0/6b5d61f402b163b985060b3f8484b04ae6c176a46e3a7b49d006a2b19614b0640b18c327faf494288c3c48ae8fbaf1142b83ecd2c02bc29ca9f7c3b7f7cfc9bf
+  languageName: node
+  linkType: hard
+
+"@nestjs/observe@npm:0.3.1":
+  version: 0.3.1
+  resolution: "@nestjs/observe@npm:0.3.1"
+  dependencies:
+    "@jridgewell/trace-mapping": "npm:0.3.31"
+  peerDependencies:
+    "@nestjs/bull": ^11.0.0 || ^12.0.0
+    "@nestjs/bullmq": ^11.0.0 || ^12.0.0
+    "@nestjs/common": ^11.0.0 || ^12.0.0
+    "@nestjs/core": ^11.0.0 || ^12.0.0
+    "@nestjs/graphql": ^13.0.0 || ^14.0.0
+    "@nestjs/microservices": ^11.0.0 || ^12.0.0
+    "@nestjs/schedule": ^4.0.0 || ^5.0.0 || ^6.0.0 || ^12.0.0
+    "@nestjs/websockets": ^11.0.0 || ^12.0.0
+    bull: ^3.3.0 || ^4.0.0
+    bullmq: ^5.0.0 || ^6.0.0
+    reflect-metadata: ^0.1.12 || ^0.2.0
+    rxjs: ^7.0.0
+  peerDependenciesMeta:
+    "@nestjs/bull":
+      optional: true
+    "@nestjs/bullmq":
+      optional: true
+    "@nestjs/graphql":
+      optional: true
+    "@nestjs/microservices":
+      optional: true
+    "@nestjs/schedule":
+      optional: true
+    "@nestjs/websockets":
+      optional: true
+    bull:
+      optional: true
+    bullmq:
+      optional: true
+  checksum: 10c0/4af7398bfa98cb0d001c054d2ab5dddc4e0f06b4845b2beda606b4009ee0e62095fb7a8b24a679564b494c2e0bdce7fbfdb10a9fccfb914c2ba0fa12a8d6950a
   languageName: node
   linkType: hard
 
@@ -13773,6 +13812,7 @@ __metadata:
     "@nestjs/common": "npm:12.1.0"
     "@nestjs/core": "npm:12.1.0"
     "@nestjs/jwt": "npm:12.0.2"
+    "@nestjs/observe": "npm:0.3.1"
     "@nestjs/passport": "npm:12.0.0"
     "@nestjs/platform-express": "npm:12.1.0"
     "@nestjs/schematics": "npm:12.0.5"
