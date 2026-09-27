@@ -36,6 +36,7 @@ services:
     environment:
       TZ: UTC
       RUNICH_PROCESS: api
+      OBSERVE_SERVICE_VERSION: ${BACKEND_IMAGE:-local}
       LOG_FILE_PATH: /app/logs.log
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}
     ports:
@@ -66,4 +67,5 @@ services:
     environment:
       TZ: UTC
       RUNICH_PROCESS: worker
+      OBSERVE_SERVICE_VERSION: ${BACKEND_IMAGE:-local}
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}

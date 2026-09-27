@@ -24,6 +24,10 @@ lerna-debug.log*
 /.nyc_output
 # Kept locally from the pre-baseline Prisma preview; not part of the checked-in migration graph.
 migrations/snapshots/dd223e2a89efc0b4d433fa14a8a3d36dc6ef7318b4d1d3b4e17a67016f7fa569/
+# Local Prisma contract snapshots that are not referenced by a checked-in migration.
+migrations/snapshots/570ab10da3e052dfc71358592ff6c4621002be2a7b977ca5215c81ecef7f3093/
+migrations/snapshots/baf1a54b6e688ed5ec0901dbfb8ba40625748e4a6fde3f175581bc9c36b79cec/
+migrations/snapshots/d7c8b3629355cd49849b45bb896516ff5de7d4901ffe3f6c75203a2b0934fdc1/
 # IDEs and editors
 /.idea
 .project

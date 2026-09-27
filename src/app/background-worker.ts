@@ -9,10 +9,12 @@ import { getAppEnvironment } from 'src/common/config/environment';
 import { getLogLevels } from 'src/common/utils/log-levels';
 import { BackgroundWorkerModule } from './background-worker.module';
 import { LoadTestSeedService } from 'src/load-test/load-test.service';
+import { observeInstrument } from 'src/common/observe/observe.config';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(BackgroundWorkerModule, {
     logger: getLogLevels(getAppEnvironment() === 'production'),
+    ...(observeInstrument ? { instrument: observeInstrument } : {}),
   });
   const migrationService = app.get(ActivityMigrationService);
   const mediaProcessingService = app.get(ActivityMediaProcessingService);

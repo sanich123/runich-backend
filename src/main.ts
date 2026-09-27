@@ -13,6 +13,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions';
 import { uncaughtErrorHandler, unhandledRejectionHandler } from './common/utils/handling-process';
 import { formatValidationErrors } from './common/utils/validation-errors';
 import { getAppEnvironment, getCorsOrigins, isSwaggerEnabled } from './common/config/environment';
+import { observeInstrument } from './common/observe/observe.config';
 
 process.on('uncaughtException', uncaughtErrorHandler);
 process.on('unhandledRejection', (reason) => {
@@ -24,6 +25,7 @@ async function bootstrap() {
   const PORT = Number(process.env.PORT) || 3000;
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: getLogLevels(getAppEnvironment() === 'production'),
+    ...(observeInstrument ? { instrument: observeInstrument } : {}),
   });
   // Railway terminates the public connection at a proxy. Trust the first proxy
   // hop so request IPs, rate limiting and session metadata use the client IP.
