@@ -6,7 +6,7 @@ import type { LocationObject } from 'src/activity/activity.dto';
 const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
 
-export const ACTIVITY_ROUTE_FORMAT_VERSION = 1;
+const ACTIVITY_ROUTE_FORMAT_VERSION = 1;
 
 type CompactRoutePoint = [
   number,

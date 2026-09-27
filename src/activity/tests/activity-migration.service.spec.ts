@@ -76,6 +76,9 @@ const queuedJob = {
   profileId: 'profile-1',
   archivePath: '/tmp/archive.zip',
   status: 'queued',
+  uploadBytesReceived: 0,
+  uploadBytesTotal: 0,
+  uploadUpdatedAt: null,
   totalActivities: 0,
   processedActivities: 0,
   importedActivities: 0,
@@ -174,6 +177,56 @@ describe('ActivityMigrationService', () => {
     expect(unzipTransferArchive).not.toHaveBeenCalled();
   });
 
+  it('creates an upload job before bytes are sent to the API', async () => {
+    const uploadJob = {
+      ...queuedJob,
+      archivePath: null,
+      status: 'uploading',
+      uploadBytesTotal: 70_000_000,
+      uploadUpdatedAt: new Date(),
+    };
+    prisma.activityMigrationJob.create.mockResolvedValueOnce(uploadJob);
+
+    await expect(
+      service.startUpload({ userId: 'user-1', profileId: 'profile-1', uploadBytesTotal: 70_000_000 }),
+    ).resolves.toMatchObject({ jobId: queuedJob.id, status: 'uploading', uploadBytesTotal: 70_000_000 });
+
+    expect(prisma.activityMigrationJob.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-1',
+        profileId: 'profile-1',
+        archivePath: null,
+        status: 'uploading',
+        uploadBytesReceived: 0,
+        uploadBytesTotal: 70_000_000,
+      }),
+    });
+  });
+
+  it('cancels an upload job and prevents it from entering the worker queue', async () => {
+    const uploadJob = {
+      ...queuedJob,
+      archivePath: null,
+      status: 'uploading',
+      uploadBytesTotal: 70_000_000,
+      uploadUpdatedAt: new Date(),
+    };
+    prisma.activityMigrationJob.findFirst
+      .mockResolvedValueOnce(uploadJob)
+      .mockResolvedValueOnce({ ...uploadJob, status: 'cancelled', finishedAt: new Date() });
+    prisma.activityMigrationJob.updateMany.mockResolvedValueOnce({ count: 1 });
+
+    await expect(service.cancel(uploadJob.id, uploadJob.userId)).resolves.toMatchObject({ status: 'cancelled' });
+    expect(prisma.activityMigrationJob.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: uploadJob.id,
+        userId: uploadJob.userId,
+        status: { in: ['uploading', 'queued'] },
+      },
+      data: expect.objectContaining({ status: 'cancelled' }),
+    });
+  });
+
   it('downloads an S3 archive before processing it and removes the object after completion', async () => {
     const s3Job = {
       ...queuedJob,
@@ -203,6 +256,43 @@ describe('ActivityMigrationService', () => {
 
     prisma.activityMigrationJob.findFirst.mockResolvedValueOnce(null);
     await expect(service.getJobForUser(queuedJob.id, 'other-user')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('restores the latest active migration for the authenticated user', async () => {
+    const processingJob = { ...queuedJob, status: 'processing' };
+    prisma.activityMigrationJob.findFirst.mockResolvedValueOnce(processingJob);
+
+    await expect(service.getCurrentJobForUser('user-1')).resolves.toMatchObject({
+      jobId: queuedJob.id,
+      status: 'processing',
+    });
+    expect(prisma.activityMigrationJob.findFirst).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        status: { in: ['uploading', 'queued', 'processing'] },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+  });
+
+  it('returns no current migration when the user has no active job', async () => {
+    prisma.activityMigrationJob.findFirst.mockResolvedValueOnce(null);
+
+    await expect(service.getCurrentJobForUser('user-1')).resolves.toBeNull();
+  });
+
+  it('handles Prisma timestamp strings while checking stale uploads', async () => {
+    const uploadJob = {
+      ...queuedJob,
+      status: 'uploading',
+      uploadUpdatedAt: new Date().toISOString(),
+    };
+    prisma.activityMigrationJob.findFirst.mockResolvedValueOnce(uploadJob);
+
+    await expect(service.getJobForUser(uploadJob.id, uploadJob.userId)).resolves.toMatchObject({
+      jobId: uploadJob.id,
+      status: 'uploading',
+    });
   });
 
   it('reports the current job position without exposing other users', async () => {

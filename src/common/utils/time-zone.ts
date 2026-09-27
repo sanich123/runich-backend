@@ -8,13 +8,13 @@ function getRuntimeTimeZone() {
 
 export const DEFAULT_TIME_ZONE = getRuntimeTimeZone();
 
-export type LocalDate = {
+type LocalDate = {
   year: number;
   month: number;
   day: number;
 };
 
-export type LocalDateTime = LocalDate & {
+type LocalDateTime = LocalDate & {
   hour: number;
   minute: number;
   second: number;
@@ -118,7 +118,7 @@ export function localDateToUtc(date: LocalDate, timeZone = DEFAULT_TIME_ZONE): D
   return new Date(candidateTimestamp);
 }
 
-export function addCalendarDays(date: LocalDate, days: number): LocalDate {
+function addCalendarDays(date: LocalDate, days: number): LocalDate {
   const utcDate = new Date(0);
   utcDate.setUTCFullYear(date.year, date.month - 1, date.day + days);
   utcDate.setUTCHours(0, 0, 0, 0);
@@ -137,7 +137,7 @@ export function startOfLocalWeek(date: LocalDate): LocalDate {
   return addCalendarDays(date, -daysSinceMonday);
 }
 
-export function parseLocalCalendarDate(value: string, timeZone = DEFAULT_TIME_ZONE): LocalDate {
+function parseLocalCalendarDate(value: string, timeZone = DEFAULT_TIME_ZONE): LocalDate {
   const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (dateOnlyMatch) {
     const date = {

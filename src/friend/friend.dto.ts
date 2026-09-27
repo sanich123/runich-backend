@@ -6,7 +6,7 @@ export class FriendDto {
   private readonly _?: never;
 }
 
-export class FriendProfileResponseDto {
+class FriendProfileResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   surname: string | null;
 
@@ -20,7 +20,7 @@ export class FriendProfileResponseDto {
   profilePhotoBlurhash: string | null;
 }
 
-export class FriendUserResponseDto {
+class FriendUserResponseDto {
   @ApiPropertyOptional({ type: FriendProfileResponseDto, nullable: true })
   profile: FriendProfileResponseDto | null;
 }

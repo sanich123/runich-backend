@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 
-export const MAX_IMAGE_DIMENSION = 1600;
-export const IMAGE_QUALITY = 85;
+const MAX_IMAGE_DIMENSION = 1600;
+const IMAGE_QUALITY = 85;
 
 export async function normalizeImage(input: string | Buffer) {
   return await sharp(input)

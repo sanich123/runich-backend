@@ -672,7 +672,7 @@
           "ActivityMigrationJob": {
             "fields": {
               "archivePath": {
-                "nullable": false,
+                "nullable": true,
                 "type": {
                   "codecId": "sql/varchar@1",
                   "kind": "scalar",
@@ -770,6 +770,30 @@
                   "kind": "scalar"
                 }
               },
+              "uploadBytesReceived": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "uploadBytesTotal": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "uploadUpdatedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
               "userId": {
                 "nullable": false,
                 "type": {
@@ -849,6 +873,15 @@
                 },
                 "totalActivities": {
                   "column": "totalActivities"
+                },
+                "uploadBytesReceived": {
+                  "column": "upload_bytes_received"
+                },
+                "uploadBytesTotal": {
+                  "column": "upload_bytes_total"
+                },
+                "uploadUpdatedAt": {
+                  "column": "upload_updated_at"
                 },
                 "userId": {
                   "column": "user_id"
@@ -3269,7 +3302,7 @@
                 "archivePath": {
                   "codecId": "sql/varchar@1",
                   "nativeType": "character varying",
-                  "nullable": false,
+                  "nullable": true,
                   "typeParams": {
                     "length": 2048
                   }
@@ -3364,6 +3397,32 @@
                   },
                   "nativeType": "int4",
                   "nullable": false
+                },
+                "upload_bytes_received": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "upload_bytes_total": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "upload_updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
@@ -4360,7 +4419,29 @@
                   }
                 }
               ],
-              "indexes": [],
+              "indexes": [
+                {
+                  "expression": "email gin_trgm_ops",
+                  "name": "Profile_email_trgm_idx_4d9a0f8f",
+                  "prefix": "Profile_email_trgm_idx",
+                  "type": "gin",
+                  "unique": false
+                },
+                {
+                  "expression": "name gin_trgm_ops",
+                  "name": "Profile_name_trgm_idx_0595b3e0",
+                  "prefix": "Profile_name_trgm_idx",
+                  "type": "gin",
+                  "unique": false
+                },
+                {
+                  "expression": "surname gin_trgm_ops",
+                  "name": "Profile_surname_trgm_idx_ad71ab59",
+                  "prefix": "Profile_surname_trgm_idx",
+                  "type": "gin",
+                  "unique": false
+                }
+              ],
               "primaryKey": {
                 "columns": [
                   "id"
@@ -4867,7 +4948,15 @@
                 }
               },
               "foreignKeys": [],
-              "indexes": [],
+              "indexes": [
+                {
+                  "expression": "email gin_trgm_ops",
+                  "name": "Users_email_trgm_idx_4d9a0f8f",
+                  "prefix": "Users_email_trgm_idx",
+                  "type": "gin",
+                  "unique": false
+                }
+              ],
               "primaryKey": {
                 "columns": [
                   "id"
@@ -4905,7 +4994,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "dd223e2a89efc0b4d433fa14a8a3d36dc6ef7318b4d1d3b4e17a67016f7fa569"
+    "storageHash": "518d6e8fa3bed5df5d4ec67f28903980fccce428f32829ba31db896169568715"
   },
   "capabilities": {
     "postgres": {
@@ -4920,6 +5009,8 @@
       "checkConstraint": true,
       "defaultInInsert": true,
       "enums": true,
+      "insertOnConflictSkip": true,
+      "insertOnConflictWithoutTarget": true,
       "lateral": true,
       "returning": true,
       "scalarList": true

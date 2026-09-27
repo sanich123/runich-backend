@@ -7,12 +7,21 @@ export type EnqueueMigrationInput = {
   archivePath: string;
 };
 
+export type StartMigrationUploadInput = {
+  userId: string;
+  profileId: string;
+  uploadBytesTotal: number;
+};
+
 export type MigrationJob = {
   id: string;
   userId: string;
   profileId: string;
-  archivePath: string;
+  archivePath: string | null;
   status: string;
+  uploadBytesReceived: number;
+  uploadBytesTotal: number;
+  uploadUpdatedAt: Date | null;
   totalActivities: number;
   processedActivities: number;
   importedActivities: number;

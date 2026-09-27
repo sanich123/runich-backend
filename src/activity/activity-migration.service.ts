@@ -1,20 +1,27 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { rm } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setImmediate as yieldToEventLoop, setTimeout as delay } from 'node:timers/promises';
 import { ACTIVITY_MIGRATION_STATUS, ActivityMigrationJobResponseDto, ActivityMigrationStatus } from './activity.dto';
-import { getMigrationWorkDirectory } from './activity-migration-storage';
+import { getMigrationIncomingArchivePath, getMigrationWorkDirectory } from './activity-migration-storage';
 import { generateActivityTitle } from './activity-title';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-with-coordinates';
 import { parseCsvFileIntoArray } from 'src/common/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
 import { ACTIVITY_MIGRATION_CONFIG } from './activity-migration-config';
-import type { EnqueueMigrationInput, MigratedActivity, MigrationJob, MigrationProgress } from './type';
+import type {
+  EnqueueMigrationInput,
+  MigratedActivity,
+  MigrationJob,
+  MigrationProgress,
+  StartMigrationUploadInput,
+} from './type';
 import { fileExists, getMigrationErrorMessage } from './activity-migration.utils';
 import { ActivityService } from './activity.service';
 import { StorageService } from 'src/storage/storage.service';
+import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 
 @Injectable()
 export class ActivityMigrationService {
@@ -62,10 +69,163 @@ export class ActivityMigrationService {
     return await this.toResponse(job);
   }
 
+  async startUpload(input: StartMigrationUploadInput) {
+    if (input.uploadBytesTotal > UPLOAD_LIMITS.migrationArchiveBytes) {
+      throw new BadRequestException('Размер архива превышает допустимый лимит');
+    }
+
+    const job = await this.prisma.activityMigrationJob.create({
+      data: {
+        userId: input.userId,
+        profileId: input.profileId,
+        archivePath: null,
+        status: ACTIVITY_MIGRATION_STATUS.uploading,
+        uploadBytesReceived: 0,
+        uploadBytesTotal: input.uploadBytesTotal,
+        uploadUpdatedAt: new Date(),
+      },
+    });
+
+    return await this.toResponse(job);
+  }
+
+  async updateUploadProgress(jobId: string, userId: string, uploadBytesReceived: number, uploadBytesTotal: number) {
+    const result = await this.prisma.activityMigrationJob.updateMany({
+      where: { id: jobId, userId, status: ACTIVITY_MIGRATION_STATUS.uploading },
+      data: {
+        uploadBytesReceived: Math.min(uploadBytesReceived, uploadBytesTotal),
+        uploadBytesTotal,
+        uploadUpdatedAt: new Date(),
+      },
+    });
+    return result.count > 0;
+  }
+
+  async finishUpload(jobId: string, userId: string, archivePath: string) {
+    const job = await this.prisma.activityMigrationJob.findFirst({ where: { id: jobId, userId } });
+    if (!job) {
+      await rm(archivePath, { force: true });
+      throw new NotFoundException('Задача миграции не найдена');
+    }
+    if (job.status !== ACTIVITY_MIGRATION_STATUS.uploading) {
+      await rm(archivePath, { force: true });
+      return await this.toResponse(job);
+    }
+
+    let uploadedArchive: { key: string };
+    try {
+      uploadedArchive = await this.storageService.uploadMigrationArchive(userId, jobId, archivePath);
+    } catch (error) {
+      await this.markUploadFailed(jobId, userId, getMigrationErrorMessage(error));
+      throw error;
+    }
+
+    const queued = await this.prisma.activityMigrationJob.updateMany({
+      where: { id: jobId, userId, status: ACTIVITY_MIGRATION_STATUS.uploading },
+      data: {
+        archivePath: uploadedArchive.key,
+        status: ACTIVITY_MIGRATION_STATUS.queued,
+        uploadBytesReceived: job.uploadBytesTotal,
+        uploadUpdatedAt: null,
+        errorMessage: null,
+      },
+    });
+
+    if (queued.count === 0) {
+      await this.storageService.deleteObjectByKey(uploadedArchive.key);
+    }
+
+    return await this.getJobForUser(jobId, userId);
+  }
+
+  async markUploadFailed(jobId: string, userId: string, errorMessage: string) {
+    await this.prisma.activityMigrationJob.updateMany({
+      where: { id: jobId, userId, status: ACTIVITY_MIGRATION_STATUS.uploading },
+      data: {
+        status: ACTIVITY_MIGRATION_STATUS.failed,
+        errorMessage,
+        finishedAt: new Date(),
+        uploadUpdatedAt: null,
+      },
+    });
+  }
+
+  async cancel(jobId: string, userId: string) {
+    const job = await this.prisma.activityMigrationJob.findFirst({ where: { id: jobId, userId } });
+    if (!job) throw new NotFoundException('Задача миграции не найдена');
+    if (job.status === ACTIVITY_MIGRATION_STATUS.processing) {
+      throw new ConflictException('Архив уже обрабатывается и его нельзя отменить');
+    }
+    if (job.status === ACTIVITY_MIGRATION_STATUS.completed || job.status === ACTIVITY_MIGRATION_STATUS.failed) {
+      return await this.toResponse(job);
+    }
+
+    const cancelled = await this.prisma.activityMigrationJob.updateMany({
+      where: {
+        id: jobId,
+        userId,
+        status: { in: [ACTIVITY_MIGRATION_STATUS.uploading, ACTIVITY_MIGRATION_STATUS.queued] },
+      },
+      data: {
+        status: ACTIVITY_MIGRATION_STATUS.cancelled,
+        finishedAt: new Date(),
+        uploadUpdatedAt: null,
+      },
+    });
+
+    if (cancelled.count > 0) {
+      await rm(getMigrationIncomingArchivePath(jobId), { force: true });
+      if (job.archivePath && !isAbsolute(job.archivePath)) {
+        await this.storageService.deleteObjectByKey(job.archivePath);
+      }
+    }
+
+    return await this.getJobForUser(jobId, userId);
+  }
+
   async getJobForUser(jobId: string, userId: string) {
     const job = await this.prisma.activityMigrationJob.findFirst({ where: { id: jobId, userId } });
     if (!job) throw new NotFoundException('Задача миграции не найдена');
-    return await this.toResponse(job);
+    return await this.toResponse(await this.failStaleUpload(job));
+  }
+
+  async getCurrentJobForUser(userId: string) {
+    const activeStatuses: string[] = [
+      ACTIVITY_MIGRATION_STATUS.uploading,
+      ACTIVITY_MIGRATION_STATUS.queued,
+      ACTIVITY_MIGRATION_STATUS.processing,
+    ];
+    const job = await this.prisma.activityMigrationJob.findFirst({
+      where: { userId, status: { in: activeStatuses } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+    if (!job) return null;
+
+    const currentJob = await this.failStaleUpload(job);
+    if (!activeStatuses.includes(currentJob.status)) return null;
+
+    return await this.toResponse(currentJob);
+  }
+
+  private async failStaleUpload(job: MigrationJob) {
+    if (job.status !== ACTIVITY_MIGRATION_STATUS.uploading) return job;
+    const lastUploadActivity = getTimestamp(job.uploadUpdatedAt) ?? getTimestamp(job.createdAt) ?? Date.now();
+    if (Date.now() - lastUploadActivity <= ACTIVITY_MIGRATION_CONFIG.uploadStaleAfterMs) return job;
+
+    const errorMessage = 'Загрузка архива прервалась из-за отсутствия активности. Попробуйте снова.';
+    const result = await this.prisma.activityMigrationJob.updateMany({
+      where: { id: job.id, userId: job.userId, status: ACTIVITY_MIGRATION_STATUS.uploading },
+      data: { status: ACTIVITY_MIGRATION_STATUS.failed, errorMessage, finishedAt: new Date(), uploadUpdatedAt: null },
+    });
+    return result.count > 0
+      ? {
+          ...job,
+          status: ACTIVITY_MIGRATION_STATUS.failed,
+          errorMessage,
+          finishedAt: new Date(),
+          uploadUpdatedAt: null,
+        }
+      : job;
   }
 
   requestStop() {
@@ -122,6 +282,11 @@ export class ActivityMigrationService {
     });
 
     for (const job of interruptedJobs) {
+      if (!job.archivePath) {
+        await this.markFailed(job.id, 'Файл архива миграции не найден после перезапуска worker');
+        continue;
+      }
+
       if (isAbsolute(job.archivePath) && !(await fileExists(job.archivePath))) {
         await this.markFailed(job.id, 'Файл архива миграции не найден после перезапуска worker');
         continue;
@@ -140,6 +305,11 @@ export class ActivityMigrationService {
   }
 
   private async processJob(job: MigrationJob) {
+    if (!job.archivePath) {
+      await this.markFailed(job.id, 'Файл архива миграции не найден');
+      return;
+    }
+
     const workDirectory = getMigrationWorkDirectory(job.id);
     const downloadedArchivePath = `${workDirectory}.zip`;
     const isLegacyLocalArchive = isAbsolute(job.archivePath);
@@ -317,6 +487,8 @@ export class ActivityMigrationService {
     return {
       jobId: job.id,
       status: job.status as ActivityMigrationStatus,
+      uploadBytesReceived: job.uploadBytesReceived ?? 0,
+      uploadBytesTotal: job.uploadBytesTotal ?? 0,
       ...queue,
       totalActivities: job.totalActivities,
       processedActivities: job.processedActivities,
@@ -357,4 +529,16 @@ export class ActivityMigrationService {
       queueSize: processingCount + queuedCount,
     };
   }
+}
+
+function getTimestamp(value: unknown): number | null {
+  if (value instanceof Date) {
+    const timestamp = value.getTime();
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
 }

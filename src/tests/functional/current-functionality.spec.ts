@@ -23,28 +23,37 @@ type MockDb = Record<string, Record<string, jest.Mock<() => Promise<unknown>>>>;
 
 const createMock = () => jest.fn<() => Promise<unknown>>();
 
-const db = (): MockDb =>
-  new Proxy(
+const db = (): MockDb => {
+  const target: Record<string, unknown> = {};
+  const client = new Proxy(target, {
+    get: (rawTarget, model: string) => {
+      const target = rawTarget as Record<string, Record<string, jest.Mock<() => Promise<unknown>>>>;
+      if (!target[model]) {
+        target[model] = new Proxy(
+          {},
+          {
+            get: (rawModel, operation: string) => {
+              const model = rawModel as Record<string, jest.Mock<() => Promise<unknown>>>;
+              if (!model[operation]) model[operation] = createMock();
+              return model[operation];
+            },
+          },
+        );
+      }
+      return target[model];
+    },
+  }) as unknown as MockDb;
+  const transactionClient = new Proxy(
     {},
     {
-      get: (rawTarget, model: string) => {
-        const target = rawTarget as Record<string, Record<string, jest.Mock<() => Promise<unknown>>>>;
-        if (!target[model]) {
-          target[model] = new Proxy(
-            {},
-            {
-              get: (rawModel, operation: string) => {
-                const model = rawModel as Record<string, jest.Mock<() => Promise<unknown>>>;
-                if (!model[operation]) model[operation] = createMock();
-                return model[operation];
-              },
-            },
-          );
-        }
-        return target[model];
-      },
+      get: (_rawTarget, model: string) => client[model],
     },
   ) as MockDb;
+  Object.assign(target, {
+    $transaction: jest.fn((callback: (client: MockDb) => Promise<unknown>) => callback(transactionClient)),
+  });
+  return client;
+};
 
 describe('authentication', () => {
   const prisma = db();
@@ -265,7 +274,7 @@ describe('activity, comments and statistics', () => {
     await expect(service.deleteActivityById('a1')).resolves.toEqual({ id: 'a1' });
   });
 
-  it('skips duplicate activities during archive migration', async () => {
+  it('updates existing activities by Strava source identity during archive migration', async () => {
     const prisma = db();
     const service = new ActivityService(prisma as never, {} as never);
     const activity = {
@@ -279,16 +288,37 @@ describe('activity, comments and statistics', () => {
       source: 'strava' as const,
       sourceActivityId: 'strava-activity-1',
     };
-    prisma.activity.createMany.mockResolvedValue({ count: 1 });
+    prisma.activity.findMany.mockResolvedValue([
+      {
+        id: 'activity-existing',
+        userId: 'u1',
+        sourceActivityId: 'strava-activity-1',
+        routeStorageKey: null,
+        mapPhotoUrl: null,
+      },
+    ]);
 
     await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual({
       success: true,
       importedActivities: 1,
     });
-    expect(prisma.activity.createMany).toHaveBeenCalledWith({
-      data: [{ ...activity, elevationGain: 0 }],
-      skipDuplicates: true,
-    });
+    expect(prisma.activity.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId_source_sourceActivityId: {
+            userId: 'u1',
+            source: 'strava',
+            sourceActivityId: 'strava-activity-1',
+          },
+        },
+        create: expect.objectContaining({
+          id: 'activity-existing',
+          ...activity,
+          elevationGain: 0,
+        }),
+        update: expect.objectContaining({ title: 'Imported activity' }),
+      }),
+    );
   });
 
   it('creates comments, likes and returns comment collections', async () => {

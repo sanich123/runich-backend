@@ -23,7 +23,7 @@ export function isUniqueConstraintError(error: unknown) {
   return getDatabaseErrorCode(error) === 'P2002';
 }
 
-export function handleServiceError(error: unknown) {
+export function handleServiceError(error: unknown): never {
   if (error instanceof HttpException) throw error;
 
   const details = error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error;

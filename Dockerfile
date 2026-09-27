@@ -39,6 +39,7 @@ RUN apt-get update \
     libx11-6 \
     libxext6 \
     libxrender1 \
+    tini \
     xauth \
     xvfb \
     zlib1g \
@@ -75,4 +76,5 @@ COPY --from=builder /usr/src/app/assets ./assets
 
 EXPOSE 3000
 
+ENTRYPOINT ["tini", "--"]
 CMD ["yarn", "start:prod"]

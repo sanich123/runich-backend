@@ -24,7 +24,15 @@ import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.servic
 import { normalizeImage } from 'src/common/images/image-processing';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import type { ActivityMediaObject, LocationObject } from 'src/activity/activity.dto';
-import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION, isSupportedVideoUpload, MAX_DELETE_BATCH_SIZE } from './const';
+import {
+  ACTIVITY_ROUTE_CACHE_MAX_ENTRIES,
+  ACTIVITY_ROUTE_CACHE_TTL_MS,
+  DEFAULT_S3_ENDPOINT,
+  DEFAULT_S3_REGION,
+  isSupportedVideoUpload,
+  MAX_DELETE_BATCH_SIZE,
+  MEDIA_BATCH_CONCURRENCY,
+} from './const';
 import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from './activity-route';
 import {
   getActivityPhotoKey,
@@ -42,15 +50,15 @@ import type {
   StorageFile,
   StorageSettings,
   UploadedPhotoBatch,
+  ActivityRouteCacheEntry,
 } from './type';
-
-const MEDIA_BATCH_CONCURRENCY = 3;
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
   private readonly settings: StorageSettings;
   private readonly client: S3Client;
+  private readonly activityRouteCache = new Map<string, ActivityRouteCacheEntry>();
 
   constructor(@Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService) {
     const endpoint = process.env.S3_ENDPOINT?.trim() || DEFAULT_S3_ENDPOINT;
@@ -253,7 +261,38 @@ export class StorageService {
   }
 
   async readActivityRoute(key: string) {
-    return await decodeActivityRoute(await this.readObject(key, 'S3 не вернул файл маршрута активности'));
+    return await decodeActivityRoute(await this.readCachedActivityRouteBody(key));
+  }
+
+  private async readCachedActivityRouteBody(key: string) {
+    const now = Date.now();
+    const cached = this.activityRouteCache.get(key);
+    if (cached && cached.expiresAt > now) {
+      // Map insertion order is used as a small LRU: recently read routes stay
+      // available while old route bodies are evicted at the size limit.
+      this.activityRouteCache.delete(key);
+      this.activityRouteCache.set(key, cached);
+      return cached.body ?? cached.pending!;
+    }
+    if (cached) this.activityRouteCache.delete(key);
+
+    const pending = this.readObject(key, 'S3 не вернул файл маршрута активности');
+    this.activityRouteCache.set(key, { pending, expiresAt: now + ACTIVITY_ROUTE_CACHE_TTL_MS });
+
+    try {
+      const body = await pending;
+      this.activityRouteCache.set(key, { body, expiresAt: Date.now() + ACTIVITY_ROUTE_CACHE_TTL_MS });
+      while (this.activityRouteCache.size > ACTIVITY_ROUTE_CACHE_MAX_ENTRIES) {
+        const oldestKey = this.activityRouteCache.keys().next().value;
+        if (typeof oldestKey !== 'string') break;
+        this.activityRouteCache.delete(oldestKey);
+      }
+      return body;
+    } catch (error) {
+      const current = this.activityRouteCache.get(key);
+      if (current?.pending === pending) this.activityRouteCache.delete(key);
+      throw error;
+    }
   }
 
   async readJson<T>(key: string): Promise<T> {

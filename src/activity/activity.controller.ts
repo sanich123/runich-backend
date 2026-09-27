@@ -16,10 +16,14 @@ import {
   BadRequestException,
   UseGuards,
   ForbiddenException,
+  ConflictException,
   Req,
 } from '@nestjs/common';
 import type { AuthenticatedRequest as RequestWithUser } from 'src/auth/request/auth-request';
+import { createWriteStream } from 'node:fs';
 import { mkdir, rm } from 'fs/promises';
+import { pipeline } from 'node:stream/promises';
+import { Transform } from 'node:stream';
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { ActivityService } from './activity.service';
@@ -32,9 +36,13 @@ import {
   ActivityMediaResponseDto,
   ActivityResponseDto,
 } from './activity.dto';
-import { ActivityMigrationJobParams, ActivityMigrationJobResponseDto } from './activity.dto';
+import {
+  ActivityMigrationJobParams,
+  ActivityMigrationJobResponseDto,
+  ActivityMigrationUploadStartDto,
+} from './activity.dto';
 import { ActivityMigrationService } from './activity-migration.service';
-import { getMigrationArchiveDirectory } from './activity-migration-storage';
+import { getMigrationArchiveDirectory, getMigrationIncomingArchivePath } from './activity-migration-storage';
 import { ParamsId } from 'src/common/dto/params-validation';
 import {
   ApiBearerAuth,
@@ -193,6 +201,117 @@ export class ActivityController {
       if (file?.path) await rm(file.path, { force: true });
       throw error;
     }
+  }
+
+  @Post('migration-strava/:id/start')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard)
+  @RateLimit(RATE_LIMITS.stravaImport.limit, RATE_LIMITS.stravaImport.ttl)
+  @ApiOperation({ summary: 'Create a Strava archive upload job' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiResponse({ status: HttpStatus.CREATED, type: ActivityMigrationJobResponseDto })
+  async startStravaMigrationUpload(
+    @Body() body: ActivityMigrationUploadStartDto,
+    @Param() { id }: ParamsId,
+    @Req() request?: RequestWithUser,
+  ) {
+    const currentUserId = request?.user.userId ?? request?.user.id;
+    if (currentUserId && id !== currentUserId) throw new ForbiddenException('Недостаточно прав');
+    const account = await this.accountService.getOrCreateAccountByUserId(currentUserId ?? id);
+    if (!account) throw new NotFoundException(`Профиль пользователя не найден: ${id}`);
+
+    return await this.activityMigrationService.startUpload({
+      uploadBytesTotal: body.uploadBytesTotal,
+      userId: currentUserId ?? id,
+      profileId: account.id,
+    });
+  }
+
+  @Post('migration-strava/jobs/:jobId/archive')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Upload a Strava archive into an existing migration job' })
+  @ApiConsumes('application/zip')
+  @ApiParam({ name: 'jobId', description: 'Migration job identifier' })
+  @ApiResponse({ status: HttpStatus.ACCEPTED, type: ActivityMigrationJobResponseDto })
+  async uploadStravaMigrationArchive(@Param() { jobId }: ActivityMigrationJobParams, @Req() request: RequestWithUser) {
+    const currentUserId = request.user.userId ?? request.user.id;
+    const job = await this.activityMigrationService.getJobForUser(jobId, currentUserId);
+    if (job.status !== 'uploading') throw new ConflictException('Загрузка архива уже завершена или отменена');
+
+    const contentLength = Number(request.headers['content-length'] ?? 0);
+    const expectedBytes = job.uploadBytesTotal || contentLength;
+    if (contentLength > UPLOAD_LIMITS.migrationArchiveBytes || expectedBytes > UPLOAD_LIMITS.migrationArchiveBytes) {
+      throw new BadRequestException('Размер архива превышает допустимый лимит');
+    }
+
+    const archivePath = getMigrationIncomingArchivePath(jobId);
+    await mkdir(getMigrationArchiveDirectory(), { recursive: true });
+    let receivedBytes = 0;
+    let lastReportedBytes = 0;
+    let lastReportedAt = 0;
+    let reportChain = Promise.resolve();
+    const reportProgress = (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastReportedAt < 500 && receivedBytes - lastReportedBytes < 1024 * 1024) {
+        return reportChain;
+      }
+      lastReportedAt = now;
+      lastReportedBytes = receivedBytes;
+      reportChain = reportChain.then(async () => {
+        await this.activityMigrationService.updateUploadProgress(jobId, currentUserId, receivedBytes, expectedBytes);
+      });
+      return reportChain;
+    };
+    const countingStream = new Transform({
+      transform: (chunk: Buffer, _encoding, callback) => {
+        receivedBytes += chunk.length;
+        if (receivedBytes > UPLOAD_LIMITS.migrationArchiveBytes || receivedBytes > expectedBytes) {
+          callback(new BadRequestException('Размер архива не совпадает с заявленным размером'));
+          return;
+        }
+        void reportProgress();
+        callback(null, chunk);
+      },
+    });
+
+    try {
+      await pipeline(request, countingStream, createWriteStream(archivePath));
+      await reportProgress(true);
+      if (expectedBytes > 0 && receivedBytes !== expectedBytes) {
+        throw new BadRequestException('Загрузка архива завершилась не полностью');
+      }
+      return await this.activityMigrationService.finishUpload(jobId, currentUserId, archivePath);
+    } catch (error) {
+      await rm(archivePath, { force: true });
+      await this.activityMigrationService
+        .markUploadFailed(jobId, currentUserId, error instanceof Error ? error.message : 'Загрузка архива прервана')
+        .catch(() => undefined);
+      throw error;
+    }
+  }
+
+  @Post('migration-strava/jobs/:jobId/cancel')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Cancel an active Strava archive upload' })
+  @ApiParam({ name: 'jobId', description: 'Migration job identifier' })
+  @ApiOkResponse({ type: ActivityMigrationJobResponseDto })
+  async cancelStravaMigration(@Param() { jobId }: ActivityMigrationJobParams, @Req() request: RequestWithUser) {
+    const currentUserId = request.user.userId ?? request.user.id;
+    return await this.activityMigrationService.cancel(jobId, currentUserId);
+  }
+
+  @Get('migration-strava/current')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get the authenticated user’s active Strava migration, if any' })
+  @ApiOkResponse({
+    type: ActivityMigrationJobResponseDto,
+    description: 'The active migration job, or null when the user has no active migration',
+  })
+  async getCurrentStravaMigrationStatus(@Req() request: RequestWithUser) {
+    const currentUserId = request.user.userId ?? request.user.id;
+    return await this.activityMigrationService.getCurrentJobForUser(currentUserId);
   }
 
   @Get('migration-strava/jobs/:jobId')

@@ -1,11 +1,11 @@
-import { BadRequestException, createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { Request } from 'express';
 
 const DEFAULT_PAGE = 0;
 const DEFAULT_SIZE = 10;
 const MAX_SIZE = 100;
 
-export interface Pagination {
+interface Pagination {
   page: number;
   limit: number;
   size: number;
@@ -38,8 +38,3 @@ export function parsePagination(query: Request['query']): Pagination {
   if (!Number.isSafeInteger(offset)) throw new BadRequestException('Некорректное смещение пагинации: offset');
   return { page, limit, size, offset };
 }
-
-export const PaginationParams = createParamDecorator((_data, ctx: ExecutionContext): Pagination => {
-  const req: Request = ctx.switchToHttp().getRequest();
-  return parsePagination(req.query);
-});

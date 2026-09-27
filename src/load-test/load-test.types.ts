@@ -5,8 +5,6 @@ export const LOAD_TEST_SEED_STATUS = {
   failed: 'failed',
 } as const;
 
-export type LoadTestSeedStatus = (typeof LOAD_TEST_SEED_STATUS)[keyof typeof LOAD_TEST_SEED_STATUS];
-
 export const LOAD_TEST_DEFAULT_CONFIG = {
   followerCount: 100,
   activitiesPerFollower: 100,
@@ -25,7 +23,7 @@ export type LoadTestSeedConfig = {
   photosPerActivity: number;
 };
 
-export type LoadTestPhotoAsset = {
+type LoadTestPhotoAsset = {
   url: string;
   thumbnail: string | null;
 };
