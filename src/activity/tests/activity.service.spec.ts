@@ -16,6 +16,7 @@ function createPrismaMock() {
     activity: {
       create: asyncMock(),
       createMany: asyncMock(),
+      upsert: asyncMock(),
       update: asyncMock(),
       findUnique: asyncMock(),
       findMany: asyncMock(),
@@ -31,7 +32,7 @@ function createPrismaMock() {
     $queryRaw: asyncMock(),
   };
   prisma.$transaction.mockImplementation((async (callback: (client: unknown) => Promise<unknown>) =>
-    callback(prisma)) as never);
+    callback({ ...prisma })) as never);
   return prisma;
 }
 
@@ -412,10 +413,10 @@ describe('ActivityService', () => {
     });
   });
 
-  it('writes migration activities in chunks and skips duplicate records', async () => {
+  it('upserts migration activities and skips duplicate source identities', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
-    prisma.activity.createMany.mockResolvedValueOnce({ count: 100 }).mockResolvedValueOnce({ count: 1 });
+    prisma.activity.findMany.mockResolvedValue([]);
     const activities = Array.from({ length: 101 }, (_, index) => ({
       ...activityDto,
       title: 'Импортированная активность',
@@ -424,21 +425,25 @@ describe('ActivityService', () => {
       source: 'strava' as const,
       sourceActivityId: `strava-${index}`,
     }));
+    const duplicateActivity = { ...activities[0]!, title: 'Duplicate archive record' };
 
-    await expect(service.createActivitiesFromMigrationArchive(activities)).resolves.toEqual({
+    await expect(service.createActivitiesFromMigrationArchive([...activities, duplicateActivity])).resolves.toEqual({
       success: true,
       importedActivities: 101,
     });
-    expect(prisma.activity.createMany).toHaveBeenCalledTimes(2);
-    const persistedActivities = activities.map((activity) => ({ ...activity, elevationGain: 0 }));
-    expect(prisma.activity.createMany).toHaveBeenCalledWith({
-      data: persistedActivities.slice(0, 100),
-      skipDuplicates: true,
-    });
-    expect(prisma.activity.createMany).toHaveBeenCalledWith({
-      data: persistedActivities.slice(100),
-      skipDuplicates: true,
-    });
+    expect(prisma.activity.upsert).toHaveBeenCalledTimes(101);
+    expect(prisma.activity.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId_source_sourceActivityId: {
+            userId: 'user-1',
+            source: 'strava',
+            sourceActivityId: 'strava-0',
+          },
+        },
+        create: expect.objectContaining({ title: 'Импортированная активность', elevationGain: 0 }),
+      }),
+    );
     await expect(service.createActivitiesFromMigrationArchive([])).resolves.toEqual({
       success: true,
       importedActivities: 0,
@@ -448,7 +453,7 @@ describe('ActivityService', () => {
   it('uses Strava elevation gain from the migration CSV for imported routes', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
-    prisma.activity.createMany.mockResolvedValue({ count: 1 });
+    prisma.activity.findMany.mockResolvedValue([]);
 
     await service.createActivitiesFromMigrationArchive([
       {
@@ -465,14 +470,9 @@ describe('ActivityService', () => {
       },
     ]);
 
-    expect(prisma.activity.createMany).toHaveBeenCalledWith({
-      data: [expect.objectContaining({ elevationGain: 42.2 })],
-      skipDuplicates: true,
-    });
-    const createManyCalls = prisma.activity.createMany.mock.calls as unknown as Array<
-      [{ data: Record<string, unknown>[] }]
-    >;
-    expect(createManyCalls[0]?.[0]?.data[0]).not.toHaveProperty('sourceElevationGain');
+    const upsertCalls = prisma.activity.upsert.mock.calls as unknown as Array<[{ create: Record<string, unknown> }]>;
+    expect(upsertCalls[0]?.[0]?.create).toEqual(expect.objectContaining({ elevationGain: 42.2 }));
+    expect(upsertCalls[0]?.[0]?.create).not.toHaveProperty('sourceElevationGain');
   });
 
   it('uploads imported activity routes and stores only their metadata', async () => {
@@ -515,7 +515,7 @@ describe('ActivityService', () => {
       sourceActivityId: 'strava-1',
       locations,
     };
-    prisma.activity.createMany.mockResolvedValue({ count: 1 });
+    prisma.activity.findMany.mockResolvedValue([]);
 
     await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual({
       success: true,
@@ -528,9 +528,16 @@ describe('ActivityService', () => {
       activityId: 'activity-1',
       locations,
     });
-    expect(prisma.activity.createMany).toHaveBeenCalledWith({
-      data: [
-        expect.objectContaining({
+    expect(prisma.activity.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId_source_sourceActivityId: {
+            userId: 'user-1',
+            source: 'strava',
+            sourceActivityId: 'strava-1',
+          },
+        },
+        create: expect.objectContaining({
           id: 'activity-1',
           description: 'Imported activity description',
           routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
@@ -540,14 +547,10 @@ describe('ActivityService', () => {
           routeChecksum: 'a'.repeat(64),
           mapPhotoUrl: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
         }),
-      ],
-      skipDuplicates: true,
-    });
-    const createManyInput = (
-      prisma.activity.createMany.mock.calls as unknown as Array<[{ data: Record<string, unknown>[] }]>
-    )[0]?.[0];
-    expect(createManyInput).toBeDefined();
-    expect(createManyInput!.data[0]).not.toHaveProperty('locations');
+      }),
+    );
+    const upsertCalls = prisma.activity.upsert.mock.calls as unknown as Array<[{ create: Record<string, unknown> }]>;
+    expect(upsertCalls[0]?.[0]?.create).not.toHaveProperty('locations');
   });
 
   it('updates, reads, paginates and deletes activities', async () => {
@@ -760,7 +763,8 @@ describe('ActivityService', () => {
     const service = new ActivityService(prisma as never, account as never);
     prisma.activity.create.mockRejectedValue(error);
     await expectInternalServerError(service.createActivity({ ...activityDto }, 'u1'));
-    prisma.activity.createMany.mockRejectedValue(error);
+    prisma.activity.findMany.mockResolvedValue([]);
+    prisma.activity.upsert.mockRejectedValue(error);
     await expectInternalServerError(
       service.createActivitiesFromMigrationArchive([
         { ...activityDto, userId: 'u1', profileId: 'p1', source: 'strava', sourceActivityId: 's1' },

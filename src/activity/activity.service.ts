@@ -8,6 +8,7 @@ import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { chunkArray } from 'src/common/parsers/chunk-array';
 import { generateActivityTitle } from './activity-title';
 import { ActivityPersistenceService } from './activity-persistence.service';
+import { ACTIVITY_ENRICHMENT_STATUS } from './activity-enrichment.constants';
 import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.constants';
 import {
   ACTIVITY_CARD_SELECT,
@@ -196,35 +197,149 @@ export class ActivityService {
   async createActivitiesFromMigrationArchive(
     activities: Omit<MigratedActivity, 'id'>[],
     database: ActivityDatabase = this.prisma,
-  ) {
+  ): Promise<{ success: true; importedActivities: number }> {
+    if (!activities.length) return { success: true, importedActivities: 0 };
+
+    if (database === this.prisma) {
+      try {
+        return await this.prisma.$transaction((transaction) =>
+          this.createActivitiesFromMigrationArchive(activities, transaction),
+        );
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }
+
     try {
-      const activitiesWithTitles = activities.map((activity) => ({
-        ...activity,
-        title: activity.title?.trim()
-          ? activity.title
-          : generateActivityTitle(activity.sport, activity.date, activity.timeZone),
-      }));
+      const seenSourceActivities = new Set<string>();
+      const uniqueActivities = activities.filter((activity) => {
+        const key = activity.userId + '\u0000' + activity.source + '\u0000' + activity.sourceActivityId;
+        if (seenSourceActivities.has(key)) return false;
+        seenSourceActivities.add(key);
+        return true;
+      });
+      const activityIdsByUser = new Map<string, Set<string>>();
+      for (const activity of uniqueActivities) {
+        const ids = activityIdsByUser.get(activity.userId) ?? new Set<string>();
+        ids.add(activity.sourceActivityId);
+        activityIdsByUser.set(activity.userId, ids);
+      }
+      const existingActivities = activityIdsByUser.size
+        ? ((await database.activity.findMany({
+            where: {
+              OR: [...activityIdsByUser].map(([userId, sourceActivityIds]) => ({
+                userId,
+                source: 'strava',
+                sourceActivityId: { in: [...sourceActivityIds] },
+              })),
+            },
+            select: { id: true, userId: true, sourceActivityId: true, routeStorageKey: true, mapPhotoUrl: true },
+          })) as {
+            id: string;
+            userId: string;
+            sourceActivityId: string;
+            routeStorageKey: string | null;
+            mapPhotoUrl: string | null;
+          }[])
+        : [];
+      const existingActivitiesBySource = new Map(
+        existingActivities.map(
+          (activity) => [activity.userId + '\u0000strava\u0000' + activity.sourceActivityId, activity] as const,
+        ),
+      );
+      const activitiesWithTitles = uniqueActivities.map((activity) => {
+        const key = activity.userId + '\u0000' + activity.source + '\u0000' + activity.sourceActivityId;
+        const existingActivity = existingActivitiesBySource.get(key);
+        const sourceId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
+        return {
+          ...activity,
+          // Use a fresh storage namespace for replacements so immutable map caches cannot serve old imagery.
+          id: existingActivity ? randomUUID() : sourceId,
+          title: activity.title?.trim()
+            ? activity.title
+            : generateActivityTitle(activity.sport, activity.date, activity.timeZone),
+        };
+      });
       const chunkedActivities = chunkArray(activitiesWithTitles, 100);
-      const insertedCounts = await Promise.all(
+      const importedCounts = await Promise.all(
         chunkedActivities.map(async (activityBatch) => {
-          const preparedActivities: Awaited<ReturnType<typeof this.prepareActivityRoute>>[] = [];
+          const preparedActivities: {
+            data: Record<string, unknown>;
+            routeKey?: string;
+            mapKey?: string;
+            existingActivity?: (typeof existingActivities)[number];
+            userId: string;
+          }[] = [];
           try {
-            for (const activity of activityBatch) preparedActivities.push(await this.prepareActivityRoute(activity));
+            for (const activity of activityBatch) {
+              const key = activity.userId + '\u0000' + activity.source + '\u0000' + activity.sourceActivityId;
+              const existingActivity = existingActivitiesBySource.get(key);
+              const prepared = await this.prepareActivityRoute(activity);
+              const preparedData = prepared.data as unknown as Record<string, unknown>;
+              const data = existingActivity
+                ? {
+                    ...preparedData,
+                    id: existingActivity.id,
+                    timeZone: preparedData.timeZone ?? null,
+                    description: preparedData.description ?? null,
+                    elevationGain: preparedData.elevationGain ?? null,
+                    kilometresSplit: preparedData.kilometresSplit ?? [],
+                    mapPhotoUrl:
+                      typeof preparedData.mapPhotoUrl === 'string' && preparedData.mapPhotoUrl.trim()
+                        ? preparedData.mapPhotoUrl
+                        : null,
+                    routeStorageKey: preparedData.routeStorageKey ?? null,
+                    routeFormatVersion: preparedData.routeFormatVersion ?? null,
+                    routePointCount: preparedData.routePointCount ?? null,
+                    routeSizeBytes: preparedData.routeSizeBytes ?? null,
+                    routeChecksum: preparedData.routeChecksum ?? null,
+                    mapPhotoUrlBlurhash: null,
+                    mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued,
+                    locationName: null,
+                    weatherTemperature: null,
+                    weatherWindSpeed: null,
+                    weatherCode: null,
+                    locationEnrichmentStatus: ACTIVITY_ENRICHMENT_STATUS.queued,
+                    caloriesActive: null,
+                  }
+                : preparedData;
+              preparedActivities.push({
+                data,
+                routeKey: prepared.routeKey,
+                mapKey: prepared.mapKey,
+                existingActivity,
+                userId: activity.userId,
+              });
+            }
+
             this.logger.debug(`Writing activity batch (${activityBatch.length} records)`);
             const preparedData = preparedActivities.map(({ data }) => {
-              const activityData = { ...(data as unknown as Record<string, unknown>) };
+              const activityData = { ...data };
               delete activityData.media;
               return activityData;
             });
             const media = preparedActivities.flatMap(({ data }) =>
-              this.getActivityMediaRows(
-                (data as unknown as Record<string, unknown>).id as string,
-                (data as unknown as Record<string, unknown>).userId as string,
-                (data as unknown as Record<string, unknown>).date ?? new Date(),
-                (data as unknown as Record<string, unknown>).media,
-              ),
+              this.getActivityMediaRows(data.id, data.userId, data.date ?? new Date(), data.media),
             );
-            return await this.persistenceService.createMany(preparedData, database, media);
+            const result = await this.persistenceService.upsertMany(preparedData, database, media);
+            const cleanupJobs = preparedActivities.flatMap(({ routeKey, mapKey, existingActivity, userId }) => {
+              if (!existingActivity) return [];
+              const oldKeys = this.getActivityStorageKeys(userId, {
+                routeStorageKey: existingActivity.routeStorageKey,
+                mapPhotoUrl: existingActivity.mapPhotoUrl,
+                media: [],
+              });
+              const newKeys = new Set([routeKey, mapKey].filter((key): key is string => Boolean(key)));
+              return oldKeys.filter((key) => !newKeys.has(key)).map((storageKey) => ({ userId, storageKey }));
+            });
+            if (this.mediaCleanupService) {
+              await Promise.all(
+                cleanupJobs.map(({ userId, storageKey }) =>
+                  this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey, database),
+                ),
+              );
+            }
+            return result;
           } catch (error) {
             await Promise.all(
               preparedActivities
@@ -237,7 +352,7 @@ export class ActivityService {
       );
       return {
         success: true,
-        importedActivities: insertedCounts.reduce((total, result) => total + result.count, 0),
+        importedActivities: importedCounts.reduce((total, result) => total + result.count, 0),
       };
     } catch (error) {
       handleServiceError(error);

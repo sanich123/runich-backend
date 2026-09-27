@@ -246,9 +246,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/client-s3@npm:3.1140.0":
-  version: 3.1140.0
-  resolution: "@aws-sdk/client-s3@npm:3.1140.0"
+"@aws-sdk/client-s3@npm:3.1141.0":
+  version: 3.1141.0
+  resolution: "@aws-sdk/client-s3@npm:3.1141.0"
   dependencies:
     "@aws-sdk/checksums": "npm:^3.1001.1"
     "@aws-sdk/core": "npm:^3.978.1"
@@ -261,7 +261,7 @@ __metadata:
     "@smithy/node-http-handler": "npm:^4.12.1"
     "@smithy/types": "npm:^4.19.0"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/cab5157cbfc96ae235146bd3ccbf29ba1bb76e6e9318b99159abc6f87cc94b30ab685c209763a4b9beaf89a7515e80d27adb8c8cfe7ba86dcad42a6be5306ece
+  checksum: 10c0/6a9e712212ac58c60b92fc7b4ce023991ed5b4c0feec9671645c0d69311c6907e38f0ba8ce56dc355ea4cb46b3d7821bf114d5c30b406afbb37dac40aa6fee4a
   languageName: node
   linkType: hard
 
@@ -4116,12 +4116,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prisma/management-api-sdk@npm:^1.77.0":
-  version: 1.77.0
-  resolution: "@prisma/management-api-sdk@npm:1.77.0"
+"@prisma/management-api-sdk@npm:^1.79.0":
+  version: 1.79.0
+  resolution: "@prisma/management-api-sdk@npm:1.79.0"
   dependencies:
     openapi-fetch: "npm:0.14.0"
-  checksum: 10c0/750a6f4b35fc324710bca074397e2d04b0a96ed1ba9329f4bea1aea92d9044ae3a3d6e5da14fa763f0433c77a8021e17e20f0133689fbf92ea7346c2faabe041
+  checksum: 10c0/7f606798070bad116d6dd08e825812b3d1f7d4595bd5fbef5cba33b806b4b289cf3f39eac88bdfdc2e05a6d08e58b4e73e6695919c43d496302cc8d951b11c85
   languageName: node
   linkType: hard
 
@@ -5456,12 +5456,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^26.6.2":
-  version: 26.6.2
-  resolution: "@types/node@npm:26.6.2"
+"@types/node@npm:^26.6.3":
+  version: 26.6.3
+  resolution: "@types/node@npm:26.6.3"
   dependencies:
     undici-types: "npm:~8.9.0"
-  checksum: 10c0/bb411ff5863a79a28ffa4ebadf2499d44046aa114d25a7a6c78f57def118123a0a7dea99e8fe38849099e9dba2b41b8853a7a282037618559f58653c35e7c5c5
+  checksum: 10c0/51070287167d157d246a5ad83e6ead93aa310bbd9cc880ecd1f244a00c2a31491620f997fbbb6ba4ce164388694827999ec68c1d16c3fb64c1037056e64613c7
   languageName: node
   linkType: hard
 
@@ -11915,10 +11915,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nodemailer@npm:^10.0.10":
-  version: 10.0.10
-  resolution: "nodemailer@npm:10.0.10"
-  checksum: 10c0/062bf0861e4986eca150b8d78b8289c55f33ad689e9596aa71b4abd4ab4358b9c4881cec8acca3251643814d84d26ca6b1082153f47d35d65639d4ce858cfd67
+"nodemailer@npm:^10.0.11":
+  version: 10.0.11
+  resolution: "nodemailer@npm:10.0.11"
+  checksum: 10c0/8374781d1ac2e06a55dfc9bced0bdf6f34959ac1f2059714ac57fe2115b0a7f04ba548c9a34a7cf59bee8fabc3e2c8463d74907e8fb9818d25ca8f1c839d9b75
   languageName: node
   linkType: hard
 
@@ -13517,7 +13517,7 @@ __metadata:
   resolution: "runich-backend@workspace:."
   dependencies:
     "@ardentcode/sports-lib": "npm:^5.4.29"
-    "@aws-sdk/client-s3": "npm:3.1140.0"
+    "@aws-sdk/client-s3": "npm:3.1141.0"
     "@eslint/js": "npm:^10.0.1"
     "@jest/globals": "npm:^30.5.2"
     "@mapbox/polyline": "npm:^1.2.1"
@@ -13533,7 +13533,7 @@ __metadata:
     "@nestjs/testing": "npm:12.1.0"
     "@nestjs/throttler": "patch:@nestjs/throttler@npm%3A6.5.0#~/.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch"
     "@prisma/cli-engine": "npm:0.6.1"
-    "@prisma/management-api-sdk": "npm:^1.77.0"
+    "@prisma/management-api-sdk": "npm:^1.79.0"
     "@prisma/orm-postgres": "npm:8.0.0-rc.12"
     "@react-email/components": "npm:^1.0.12"
     "@swc/core": "npm:^1.16.2"
@@ -13541,7 +13541,7 @@ __metadata:
     "@types/express": "npm:^5.0.6"
     "@types/jest": "npm:30.0.0"
     "@types/multer": "npm:^2.2.0"
-    "@types/node": "npm:^26.6.2"
+    "@types/node": "npm:^26.6.3"
     "@types/passport-jwt": "npm:^4.0.1"
     "@types/pg": "npm:^8.23.1"
     "@types/react": "npm:^19.3.0"
@@ -13564,7 +13564,7 @@ __metadata:
     js-yaml: "npm:^5.4.2"
     madge: "npm:^8.0.0"
     multer: "npm:^2.4.0"
-    nodemailer: "npm:^10.0.10"
+    nodemailer: "npm:^10.0.11"
     passport: "npm:^0.7.0"
     passport-jwt: "npm:^4.0.1"
     pg: "npm:^8.23.0"

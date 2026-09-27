@@ -46,36 +46,11 @@ prisma.on('error', (error) => {
   process.exitCode = 1;
 });
 
-prisma.on('exit', async (code, signal) => {
+prisma.on('exit', (code, signal) => {
   if (signal) {
     process.kill(process.pid, signal);
     return;
   }
 
   process.exitCode = code ?? 1;
-
-  if (code !== 0 || signal) {
-    return;
-  }
-
-  const indexes = new Client({ connectionString: databaseUrl });
-  try {
-    await indexes.connect();
-    await indexes.query(`
-      CREATE INDEX IF NOT EXISTS "Users_email_trgm_idx"
-        ON "Users" USING GIN ("email" gin_trgm_ops);
-      CREATE INDEX IF NOT EXISTS "Profile_name_trgm_idx"
-        ON "Profile" USING GIN ("name" gin_trgm_ops);
-      CREATE INDEX IF NOT EXISTS "Profile_surname_trgm_idx"
-        ON "Profile" USING GIN ("surname" gin_trgm_ops);
-      CREATE INDEX IF NOT EXISTS "Profile_email_trgm_idx"
-        ON "Profile" USING GIN ("email" gin_trgm_ops);
-    `);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`Failed to create trigram indexes: ${message}`);
-    process.exitCode = 1;
-  } finally {
-    await indexes.end().catch(() => undefined);
-  }
 });

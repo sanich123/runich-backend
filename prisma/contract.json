@@ -4419,7 +4419,29 @@
                   }
                 }
               ],
-              "indexes": [],
+              "indexes": [
+                {
+                  "expression": "email gin_trgm_ops",
+                  "name": "Profile_email_trgm_idx_4d9a0f8f",
+                  "prefix": "Profile_email_trgm_idx",
+                  "type": "gin",
+                  "unique": false
+                },
+                {
+                  "expression": "name gin_trgm_ops",
+                  "name": "Profile_name_trgm_idx_0595b3e0",
+                  "prefix": "Profile_name_trgm_idx",
+                  "type": "gin",
+                  "unique": false
+                },
+                {
+                  "expression": "surname gin_trgm_ops",
+                  "name": "Profile_surname_trgm_idx_ad71ab59",
+                  "prefix": "Profile_surname_trgm_idx",
+                  "type": "gin",
+                  "unique": false
+                }
+              ],
               "primaryKey": {
                 "columns": [
                   "id"
@@ -4926,7 +4948,15 @@
                 }
               },
               "foreignKeys": [],
-              "indexes": [],
+              "indexes": [
+                {
+                  "expression": "email gin_trgm_ops",
+                  "name": "Users_email_trgm_idx_4d9a0f8f",
+                  "prefix": "Users_email_trgm_idx",
+                  "type": "gin",
+                  "unique": false
+                }
+              ],
               "primaryKey": {
                 "columns": [
                   "id"
@@ -4964,7 +4994,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "570ab10da3e052dfc71358592ff6c4621002be2a7b977ca5215c81ecef7f3093"
+    "storageHash": "518d6e8fa3bed5df5d4ec67f28903980fccce428f32829ba31db896169568715"
   },
   "capabilities": {
     "postgres": {

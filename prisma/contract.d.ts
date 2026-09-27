@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'570ab10da3e052dfc71358592ff6c4621002be2a7b977ca5215c81ecef7f3093'>;
+  StorageHashBase<'518d6e8fa3bed5df5d4ec67f28903980fccce428f32829ba31db896169568715'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -2665,7 +2665,29 @@ type ContractBase = Omit<
               uniques: readonly [
                 { readonly columns: readonly ['user_id']; readonly name: 'Profile_user_id_key' },
               ];
-              indexes: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'Profile_email_trgm_idx_4d9a0f8f';
+                  readonly prefix: 'Profile_email_trgm_idx';
+                  readonly expression: 'email gin_trgm_ops';
+                  readonly unique: false;
+                  readonly type: 'gin';
+                },
+                {
+                  readonly name: 'Profile_name_trgm_idx_0595b3e0';
+                  readonly prefix: 'Profile_name_trgm_idx';
+                  readonly expression: 'name gin_trgm_ops';
+                  readonly unique: false;
+                  readonly type: 'gin';
+                },
+                {
+                  readonly name: 'Profile_surname_trgm_idx_ad71ab59';
+                  readonly prefix: 'Profile_surname_trgm_idx';
+                  readonly expression: 'surname gin_trgm_ops';
+                  readonly unique: false;
+                  readonly type: 'gin';
+                },
+              ];
               foreignKeys: readonly [
                 {
                   readonly source: {
@@ -2904,7 +2926,15 @@ type ContractBase = Omit<
                 { readonly columns: readonly ['email']; readonly name: 'Users_email_key' },
                 { readonly columns: readonly ['phone']; readonly name: 'Users_phone_key' },
               ];
-              indexes: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'Users_email_trgm_idx_4d9a0f8f';
+                  readonly prefix: 'Users_email_trgm_idx';
+                  readonly expression: 'email gin_trgm_ops';
+                  readonly unique: false;
+                  readonly type: 'gin';
+                },
+              ];
               foreignKeys: readonly [];
             };
             readonly UserSession: {
