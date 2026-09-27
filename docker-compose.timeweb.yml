@@ -1,5 +1,22 @@
 services:
+  db_migrate:
+    image: ${BACKEND_IMAGE:-runich-backend:local}
+    restart: 'no'
+    init: true
+    env_file:
+      - .env
+    command: ['yarn', 'db:migrate:prod']
+    environment:
+      TZ: UTC
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}
+    volumes:
+      - .:/app
+      - /app/node_modules
+
   nestjs_app:
+    depends_on:
+      db_migrate:
+        condition: service_completed_successfully
     build:
       context: .
       dockerfile: Dockerfile
@@ -28,6 +45,9 @@ services:
       - /app/node_modules
 
   background_worker:
+    depends_on:
+      db_migrate:
+        condition: service_completed_successfully
     build:
       context: .
       dockerfile: Dockerfile

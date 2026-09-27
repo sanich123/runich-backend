@@ -94,9 +94,11 @@ jobs:
             # The immutable image was pulled and verified in the SSH command above.
             # Avoid a second registry request after docker logout; Compose can use
             # the image that is already present on the host.
+            # Both processes depend on one shared migration job. Recreate it
+            # even when workflow_dispatch deploys the same image SHA again.
             BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose \
               -f docker-compose.timeweb.yml up \
-              -d --remove-orphans --no-build nestjs_app background_worker
+              -d --always-recreate-deps --remove-orphans --no-build nestjs_app background_worker
 
             for attempt in $(seq 1 30); do
               if curl --fail --silent --show-error --max-time 5 \

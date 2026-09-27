@@ -100,7 +100,9 @@ Production on Timeweb uses `docker-compose.timeweb.yml`. It does not start a
 local PostgreSQL container: `DATABASE_URL_DOCKER` must contain the connection
 string of the separate Timeweb PostgreSQL service over the private network.
 The deployment workflow starts the API and worker with this file and keeps the
-local `docker-compose.yml` workflow unchanged.
+local `docker-compose.yml` workflow unchanged. It runs one database migration
+job before replacing either process; API and worker startup never mutate the
+database schema.
 
 For Railway, add `DATABASE_URL` as a reference to the PostgreSQL service's
 Railway variable, for example `${{Postgres.DATABASE_URL}}`. Do not copy the
@@ -246,15 +248,15 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 
 ### Application and worker
 
-| Command            | Description                                               |
-| ------------------ | --------------------------------------------------------- |
-| `yarn dev`         | Development API with watch mode                           |
-| `yarn start`       | Development API without watch mode                        |
-| `yarn start:debug` | Development API with Node inspector                       |
-| `yarn build`       | Build the production bundles with tsup                    |
-| `yarn start:prod`  | Synchronize the current contract and run the compiled API |
-| `yarn worker:dev`  | Development background worker                             |
-| `yarn worker:prod` | Synchronize the current contract and run the built worker |
+| Command            | Description                            |
+| ------------------ | -------------------------------------- |
+| `yarn dev`         | Development API with watch mode        |
+| `yarn start`       | Development API without watch mode     |
+| `yarn start:debug` | Development API with Node inspector    |
+| `yarn build`       | Build the production bundles with tsup |
+| `yarn start:prod`  | Run the compiled API                   |
+| `yarn worker:dev`  | Development background worker          |
+| `yarn worker:prod` | Run the built worker                   |
 
 ### Database
 
@@ -263,6 +265,7 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 | `yarn db:up`                                 | Start local PostgreSQL and reconcile its Prisma 8 marker  |
 | `yarn db:generate`                           | Emit the Prisma 8 contract artifacts                      |
 | `yarn db:sync`                               | Synchronize the database with the current contract        |
+| `yarn db:migrate:prod`                       | Apply and verify checked-in Prisma 8 migrations           |
 | `yarn db:seed`                               | Seed the configured database                              |
 | `yarn load-test:prepare [archive] [version]` | Upload 25 photo variants, 100 routes and a manifest to S3 |
 
@@ -290,15 +293,27 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 
 ## Database and seed data
 
-The Prisma 8 contract is in `prisma/contract.prisma`. A fresh database is
-created directly from this contract with `yarn db:sync`. There is no schema
-migration history in the repository; `contract.prisma` is the single source of
-truth. The database column names remain stable through `@map(...)`; application
-and API names use camelCase.
+The Prisma 8 contract is in `prisma/contract.prisma`. Schema changes are
+versioned under `migrations/`; the baseline records the current schema without
+being replayed on a database already signed at that contract. For a schema
+change, emit the contract, plan and inspect a migration, then commit the
+contract and migration together. Production applies migrations once in the
+Timeweb deployment workflow. Keep `yarn db:sync` for local/bootstrap use only;
+do not run it from API or worker startup. The database column names remain
+stable through `@map(...)`; application and API names use camelCase.
 
     yarn db:generate
     yarn db:sync
     yarn db:seed
+
+For later schema changes:
+
+    yarn db:generate
+    yarn prisma migration plan --name describe_the_change
+    yarn prisma migration show migrations/app/<migration_directory>
+
+Review the generated operations before committing. Do not use `prisma db update`
+to evolve a production database.
 
 In local and stage, the application creates 100 deterministic mock runners in
 the background. Each user gets 0–40 activities, each activity gets 0–40
