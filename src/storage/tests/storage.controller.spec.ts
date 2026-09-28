@@ -12,7 +12,8 @@ describe('StorageController', () => {
     uploadPhotos: asyncMock(),
     deletePhoto: asyncMock(),
   };
-  const controller = new StorageController(storageService as unknown as StorageService);
+  const subscriptionService = { hasPremiumSubscription: asyncMock().mockResolvedValue(true) };
+  const controller = new StorageController(storageService as unknown as StorageService, subscriptionService as never);
   const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
 
   beforeEach(() => jest.clearAllMocks());

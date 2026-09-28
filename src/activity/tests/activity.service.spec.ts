@@ -48,7 +48,16 @@ describe('ActivityService', () => {
   it('creates activities with and without a generated map image', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(true) };
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      subscription as never,
+    );
     prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
@@ -72,6 +81,7 @@ describe('ActivityService', () => {
       { coords: { latitude: 55.76, longitude: 37.62 } },
     ];
     await service.createActivity({ ...activityDto, locations, media: [{ url: 'photo', thumbnail: null }] }, 'user-1');
+    expect(subscription.hasPremiumSubscription).toHaveBeenCalledWith('user-1');
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({
         mapPhotoUrl: expect.stringContaining('?access_token=mapbox-token'),
