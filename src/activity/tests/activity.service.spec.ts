@@ -1,3 +1,4 @@
+import { ForbiddenException } from '@nestjs/common';
 import { ActivityService } from '../activity.service';
 import { MAX_MAP_ROUTE_LOCATIONS } from '../const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
@@ -23,6 +24,7 @@ function createPrismaMock() {
       delete: asyncMock(),
     },
     activityMedia: {
+      count: asyncMock(),
       createMany: asyncMock(),
       findMany: asyncMock(),
       updateMany: asyncMock(),
@@ -37,6 +39,52 @@ function createPrismaMock() {
 }
 
 describe('ActivityService', () => {
+  it('rejects saving activity media without a premium subscription', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock() };
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      subscription as never,
+    );
+
+    await expect(
+      service.createActivity(
+        { ...activityDto, media: [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }] },
+        'user-1',
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(subscription.hasPremiumSubscription).toHaveBeenCalledWith('user-1');
+    expect(account.getAccountByUserId).not.toHaveBeenCalled();
+    expect(prisma.activity.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects appending activity media without a premium subscription', async () => {
+    const prisma = createPrismaMock();
+    const storage = { promoteActivityPhotos: asyncMock() };
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      undefined,
+      undefined,
+      subscription as never,
+    );
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: new Date('2026-09-28T12:00:00.000Z') });
+
+    await expect(
+      service.appendActivityMedia('activity-1', 'user-1', [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }]),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(subscription.hasPremiumSubscription).toHaveBeenCalledWith('user-1');
+    expect(storage.promoteActivityPhotos).not.toHaveBeenCalled();
+  });
   const originalMapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
 
   afterEach(() => {
@@ -299,7 +347,16 @@ describe('ActivityService', () => {
   it('reads a stored route while keeping the locations endpoint response unchanged', async () => {
     const prisma = createPrismaMock();
     const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      undefined,
+      undefined,
+      subscription as never,
+    );
     prisma.activity.findUnique.mockResolvedValue({
       routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
       kilometresSplit: [],
@@ -314,6 +371,34 @@ describe('ActivityService', () => {
     expect(storage.readActivityRoute).toHaveBeenCalledWith(
       'user-1/activities/activity-1/locations/locations-v1.json.gz',
     );
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
+  });
+
+  it('requires a premium subscription before reading a route for replay', async () => {
+    const prisma = createPrismaMock();
+    const storage = { readActivityRoute: asyncMock() };
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      undefined,
+      undefined,
+      subscription as never,
+    );
+    prisma.activity.findUnique.mockResolvedValue({
+      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      kilometresSplit: [],
+      userId: 'owner-1',
+      visibility: 'public',
+    });
+
+    await expect(service.getLocationsByActivityId('activity-1', 'viewer-1', true)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(subscription.hasPremiumSubscription).toHaveBeenCalledWith('viewer-1');
+    expect(storage.readActivityRoute).not.toHaveBeenCalled();
   });
 
   it('limits map route points without dropping timestamp or altitude', async () => {

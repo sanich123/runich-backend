@@ -15,6 +15,24 @@ function createRoute(altitudes: number[], withTimestamps = true): LocationObject
 }
 
 describe('calculateKilometreSplits', () => {
+  it('returns no splits for short, invalid, or zero-distance routes', () => {
+    const onePoint = createRoute([100])[0];
+    const invalidPoint = { coords: { latitude: Number.NaN, longitude: 0 } };
+
+    expect(calculateKilometreSplits([], 60_000)).toEqual([]);
+    expect(calculateKilometreSplits([onePoint], 60_000)).toEqual([]);
+    expect(calculateKilometreSplits([invalidPoint, onePoint], 60_000)).toEqual([]);
+    expect(calculateKilometreSplits([onePoint, { ...onePoint }], 60_000)).toEqual([]);
+    expect(calculateKilometreSplits(createRoute([100, 101]), 60_000, 0)).toEqual([]);
+  });
+
+  it('ignores invalid declared distances and falls back to geometry', () => {
+    const route = createRoute([100, 100, 100, 100, 100], false);
+
+    expect(calculateKilometreSplits(route, 1_000_000, -1)).toHaveLength(1);
+    expect(calculateKilometreSplits(route, 1_000_000, Number.NaN)).toHaveLength(1);
+  });
+
   it('creates an interpolated point and assigns signed elevation changes to every crossed kilometre', () => {
     const splits = calculateKilometreSplits(createRoute([100, 101, 102, 112, 113, 114, 114, 120, 121]), 2_400_000);
 
@@ -85,5 +103,68 @@ describe('calculateKilometreSplits', () => {
 
     expect(splits).toHaveLength(1);
     expect(splits[0].kilometerPoint.coords.longitude).toBeCloseTo(1_600 / METERS_PER_EQUATOR_DEGREE, 5);
+  });
+
+  it('falls back to proportional timing and interpolates a single available altitude or timestamp', () => {
+    const route: LocationObject[] = [
+      {
+        coords: {
+          latitude: 0,
+          longitude: 0,
+          timestamp: 100_000,
+        },
+      },
+      {
+        coords: {
+          latitude: 0,
+          longitude: 1_500 / METERS_PER_EQUATOR_DEGREE,
+          altitude: 120,
+        },
+      },
+    ];
+
+    const splits = calculateKilometreSplits(route, 900_000);
+
+    expect(splits).toHaveLength(1);
+    expect(splits[0].lastKilometerDuration).toBeCloseTo(600_000, -1);
+    expect(splits[0].kilometerPoint.coords.altitude).toBe(120);
+    expect(splits[0].kilometerPoint.coords.timestamp).toBe(100_000);
+    expect(splits[0].lastKilometerAltitude).toBe(0);
+  });
+
+  it('ignores unreliable altitude samples and implausible timestamped elevation jumps', () => {
+    const unreliable = [
+      { altitude: 100, altitudeAccuracy: 20 },
+      { altitude: 101, mocked: true },
+      { altitude: Number.NaN },
+      { altitude: 100, altitudeAccuracy: -1 },
+      { altitude: 102, altitudeAccuracy: 10 },
+      { altitude: 103, altitudeAccuracy: 10 },
+    ].map(({ altitude, ...coords }, index) => ({
+      coords: {
+        latitude: 0,
+        longitude: (index * 250) / METERS_PER_EQUATOR_DEGREE,
+        altitude,
+        ...coords,
+      },
+    }));
+    const splits = calculateKilometreSplits(unreliable, 600_000);
+
+    expect(splits).toHaveLength(1);
+    expect(splits[0].lastKilometerAltitude).toBe(0);
+
+    const abruptClimb = [0, 0, 0, 0, 0, 100, 100, 100, 100, 100].map((altitude, index) => ({
+      coords: {
+        latitude: 0,
+        longitude: (index * 250) / METERS_PER_EQUATOR_DEGREE,
+        altitude,
+        timestamp: index * 30_000,
+      },
+    }));
+    const implausibleSplits = calculateKilometreSplits(abruptClimb, 300_000);
+
+    expect(implausibleSplits).toHaveLength(2);
+    expect(implausibleSplits[0].lastKilometerAltitude).toBe(0);
+    expect(implausibleSplits[1].lastKilometerAltitude).toBe(0);
   });
 });

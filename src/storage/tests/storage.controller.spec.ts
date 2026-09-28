@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { asyncMock } from 'src/tests/helpers';
 import { isSupportedVideoUpload } from '../const';
@@ -16,7 +16,10 @@ describe('StorageController', () => {
   const controller = new StorageController(storageService as unknown as StorageService, subscriptionService as never);
   const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    subscriptionService.hasPremiumSubscription.mockResolvedValue(true);
+  });
 
   it.each([
     ['video.mp4', 'video/mp4', true],
@@ -70,6 +73,34 @@ describe('StorageController', () => {
   it('rejects a batch without files', async () => {
     await expect(controller.uploadPhotos([], request, { manifest: '[]' })).rejects.toBeInstanceOf(BadRequestException);
     expect(storageService.uploadPhotos).not.toHaveBeenCalled();
+  });
+
+  it('blocks activity media uploads for accounts without a premium subscription', async () => {
+    const files = [{ originalname: 'one.jpg', mimetype: 'image/jpeg' }] as Express.Multer.File[];
+    const body = {
+      scope: 'activity' as const,
+      manifest: JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+    };
+    subscriptionService.hasPremiumSubscription.mockResolvedValue(false);
+
+    await expect(controller.uploadPhotos(files, request, body)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(subscriptionService.hasPremiumSubscription).toHaveBeenCalledWith('user-1');
+    expect(storageService.uploadPhotos).not.toHaveBeenCalled();
+  });
+
+  it('keeps profile uploads available without checking the activity subscription', async () => {
+    const files = [{ originalname: 'avatar.jpg', mimetype: 'image/jpeg' }] as Express.Multer.File[];
+    const body = {
+      scope: 'profile' as const,
+      manifest: JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+    };
+    storageService.uploadPhotos.mockResolvedValue([{ mediaId: 'media-1', role: 'media', url: 'avatar-url' }]);
+
+    await expect(controller.uploadPhotos(files, request, body)).resolves.toEqual([
+      { mediaId: 'media-1', role: 'media', url: 'avatar-url' },
+    ]);
+    expect(subscriptionService.hasPremiumSubscription).not.toHaveBeenCalled();
+    expect(storageService.uploadPhotos).toHaveBeenCalledWith('user-1', files, { scope: 'profile' }, body.manifest);
   });
 
   it('deletes the requested URL for the authenticated user', async () => {

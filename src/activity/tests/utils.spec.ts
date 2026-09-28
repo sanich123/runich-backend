@@ -9,6 +9,7 @@ import {
 describe('activity utilities', () => {
   it('removes media processing status only from object values', () => {
     expect(omitMediaProcessingStatus(null)).toBeNull();
+    expect(omitMediaProcessingStatus('queued')).toBe('queued');
     expect(omitMediaProcessingStatus(['queued'])).toEqual(['queued']);
     expect(omitMediaProcessingStatus({ id: 'activity-1', mediaProcessingStatus: 'queued' })).toEqual({
       id: 'activity-1',
@@ -43,6 +44,7 @@ describe('activity utilities', () => {
     ];
 
     expect(getElevationGainFromLocations([...invalidLocations, { coords: { altitude: 100 } }])).toBe(0);
+    expect(getElevationGainFromLocations([{ coords: { altitude: 100 } }])).toBe(0);
   });
 
   it('calculates a smoothed climb and ignores implausible vertical speed', () => {
@@ -87,5 +89,8 @@ describe('activity utilities', () => {
       kilometresSplit: [{ lastKilometerAltitude: 5 }],
       elevationGain: 5,
     });
+    expect(
+      normalizeActivityDetails({ id: 'activity-7', elevationGain: Number.POSITIVE_INFINITY, kilometresSplit: [] }),
+    ).toEqual({ id: 'activity-7', elevationGain: 0, kilometresSplit: [] });
   });
 });
