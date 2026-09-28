@@ -7,7 +7,7 @@ export class CurrentSubscriptionResponseDto {
   @ApiProperty({ type: String, format: 'uuid' })
   userId: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: Boolean })
   isPremium: boolean;
 
   @ApiProperty({ enum: SUBSCRIPTION_STATUSES })
@@ -25,6 +25,6 @@ export class CurrentSubscriptionResponseDto {
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   expiresAt: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ type: Boolean })
   cancelAtPeriodEnd: boolean;
 }
