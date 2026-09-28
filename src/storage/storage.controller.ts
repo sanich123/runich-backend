@@ -5,7 +5,9 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
   Inject,
+  Optional,
   Post,
   Req,
   UploadedFile,
@@ -27,6 +29,7 @@ import {
 import { extname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
+import { rm } from 'node:fs/promises';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
@@ -41,13 +44,41 @@ import {
   PhotoUploadResponseDto,
 } from './storage.dto';
 import { StorageService } from './storage.service';
+import { SubscriptionService } from 'src/subscription/subscription.service';
 
 @ApiTags('photo')
 @ApiBearerAuth('bearerAuth')
 @Controller('photo')
 @UseGuards(JwtAuthGuard)
 export class StorageController {
-  constructor(@Inject(StorageService) private readonly storageService: StorageService) {}
+  constructor(
+    @Inject(StorageService) private readonly storageService: StorageService,
+    @Optional() @Inject(SubscriptionService) private readonly subscriptionService?: SubscriptionService,
+  ) {}
+
+  private async requirePremiumForActivityUpload(
+    userId: string,
+    files: Array<Express.Multer.File | undefined>,
+    scope?: string,
+  ) {
+    if ((scope ?? 'activity') !== 'activity') return;
+    const cleanupTemporaryFiles = async () =>
+      Promise.all(
+        files
+          .filter((file): file is Express.Multer.File => Boolean(file?.path))
+          .map(({ path }) => rm(path, { force: true })),
+      );
+    let hasPremium: boolean;
+    try {
+      hasPremium = Boolean(await this.subscriptionService?.hasPremiumSubscription(userId));
+    } catch (error) {
+      await cleanupTemporaryFiles();
+      throw error;
+    }
+    if (hasPremium) return;
+    await cleanupTemporaryFiles();
+    throw new ForbiddenException('Для загрузки фото и видео активности нужна подписка Runich Plus');
+  }
 
   @Post('batch')
   @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)
@@ -106,7 +137,9 @@ export class StorageController {
   ) {
     if (!files?.length) throw new BadRequestException('Не указаны файлы: files');
     const { manifest, ...options } = body;
-    return await this.storageService.uploadPhotos(getAuthenticatedUserId(request), files, options, manifest);
+    const userId = getAuthenticatedUserId(request);
+    await this.requirePremiumForActivityUpload(userId, files, options.scope);
+    return await this.storageService.uploadPhotos(userId, files, options, manifest);
   }
 
   @Post()
@@ -158,7 +191,9 @@ export class StorageController {
     @Body() options: PhotoUploadOptionsDto = {},
   ) {
     if (!file) throw new BadRequestException('Не указан файл: file');
-    return await this.storageService.uploadPhoto(getAuthenticatedUserId(request), file, options);
+    const userId = getAuthenticatedUserId(request);
+    await this.requirePremiumForActivityUpload(userId, [file], options.scope);
+    return await this.storageService.uploadPhoto(userId, file, options);
   }
 
   @Delete()

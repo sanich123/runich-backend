@@ -20,6 +20,7 @@ import {
   Req,
 } from '@nestjs/common';
 import type { AuthenticatedRequest as RequestWithUser } from 'src/auth/request/auth-request';
+import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { createWriteStream } from 'node:fs';
 import { mkdir, rm } from 'fs/promises';
 import { pipeline } from 'node:stream/promises';
@@ -27,7 +28,7 @@ import { Transform } from 'node:stream';
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { ActivityService } from './activity.service';
-import { ActivityDto } from './activity.dto';
+import { ActivityDto, ActivityMediaAppendDto } from './activity.dto';
 import {
   ActivityCardResponseDto,
   ActivityDetailsResponseDto,
@@ -102,14 +103,36 @@ export class ActivityController {
     );
   }
 
+  @Post(id + '/media')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Append photos or videos to an activity' })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Activity media saved' })
+  @HttpCode(HttpStatus.CREATED)
+  async appendActivityMedia(
+    @Param() { id }: ParamsId,
+    @Body() body: ActivityMediaAppendDto,
+    @Req() request: RequestWithUser,
+  ) {
+    return this.activityService.appendActivityMedia(id, getAuthenticatedUserId(request), body.media);
+  }
+
   @Get(`${id}/locations`)
   @ApiOkResponse({ type: ActivityLocationsResponseDto })
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get locations by activity id' })
+  @ApiOperation({ summary: 'Get activity locations, optionally for premium route replay' })
   @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiQuery({ name: 'replay', required: false, enum: ['true'], description: 'Require premium access for replay' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
-  async getLocationsByActivityId(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
-    return this.activityService.getLocationsByActivityId(id, request?.user.userId ?? request?.user.id);
+  async getLocationsByActivityId(
+    @Param() { id }: ParamsId,
+    @Req() request?: RequestWithUser,
+    @Query('replay') replay?: string,
+  ) {
+    return this.activityService.getLocationsByActivityId(
+      id,
+      request?.user.userId ?? request?.user.id,
+      replay === 'true',
+    );
   }
 
   @Get('activityIds')

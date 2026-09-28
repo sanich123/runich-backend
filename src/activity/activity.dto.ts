@@ -4,6 +4,7 @@ import { MAX_ACTIVITY_LOCATIONS } from 'src/common/constants';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -97,6 +98,16 @@ class ActivityLocationDto {
   @IsNumber({ allowInfinity: false, allowNaN: false })
   @IsOptional()
   timestamp?: number;
+}
+
+export class ActivityMediaAppendDto {
+  @ApiProperty({ type: [ActivityMediaDto], minItems: 1, maxItems: UPLOAD_LIMITS.mediaBatchFiles })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(UPLOAD_LIMITS.mediaBatchFiles)
+  @ValidateNested({ each: true })
+  @Type(() => ActivityMediaDto)
+  media: ActivityMediaObject[];
 }
 
 export type LocationObject = {

@@ -14,6 +14,7 @@ import { HealthModule } from 'src/health/health.module';
 import LoggingService from 'src/common/logger/logger.middleware';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { StorageModule } from 'src/storage/storage.module';
+import { SubscriptionModule } from 'src/subscription/subscription.module';
 import { LoadTestModule } from 'src/load-test/load-test.module';
 import { observeImports } from 'src/common/observe/observe.config';
 
@@ -33,6 +34,7 @@ import { observeImports } from 'src/common/observe/observe.config';
     AuthModule,
     HealthModule,
     StorageModule,
+    SubscriptionModule,
     LoadTestModule,
   ],
 })

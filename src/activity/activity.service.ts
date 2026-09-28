@@ -1,4 +1,13 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ActivityDto, type ActivityMediaObject, type LocationObject } from './activity.dto';
@@ -37,6 +46,8 @@ import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from './activity-v
 import { calculateActiveCalories } from './activity-calories';
 import { StaticMapService } from 'src/common/maps/static-map.service';
 import { reduceLocations } from 'src/common/parsers/reduce-locations';
+import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import { SubscriptionService } from 'src/subscription/subscription.service';
 
 @Injectable()
 export class ActivityService {
@@ -58,17 +69,22 @@ export class ActivityService {
     @Optional()
     @Inject(StaticMapService)
     staticMapService?: StaticMapService,
+    @Optional()
+    @Inject(SubscriptionService)
+    subscriptionService?: SubscriptionService,
   ) {
     this.persistenceService = persistenceService ?? new ActivityPersistenceService(this.prisma);
     this.storageService = storageService;
     this.mediaCleanupService = mediaCleanupService;
     this.staticMapService = staticMapService;
+    this.subscriptionService = subscriptionService;
   }
 
   private readonly persistenceService: ActivityPersistenceService;
   private readonly storageService?: StorageService;
   private readonly mediaCleanupService?: MediaCleanupService;
   private readonly staticMapService?: StaticMapService;
+  private readonly subscriptionService?: SubscriptionService;
 
   private async isFollower(viewerId: string, ownerId: string) {
     if (viewerId === ownerId) return false;
@@ -101,7 +117,14 @@ export class ActivityService {
     return this.isFollower(currentUserId, activity.userId);
   }
 
+  private async requirePremiumSubscription(userId: string) {
+    if (!(await this.subscriptionService?.hasPremiumSubscription(userId))) {
+      throw new ForbiddenException('Для фото и видео активности и повтора маршрута нужна подписка Runich Plus');
+    }
+  }
+
   async createActivity(activityDto: ActivityDto, id: string) {
+    if (activityDto.media?.length) await this.requirePremiumSubscription(id);
     let uploadedRouteKey: string | undefined;
     let uploadedMapKey: string | undefined;
     let uploadedActivityMediaKeys: string[] = [];
@@ -359,6 +382,56 @@ export class ActivityService {
     }
   }
 
+  async appendActivityMedia(activityId: string, userId: string, media: ActivityMediaObject[]) {
+    const activity = await this.prisma.activity.findUnique({
+      where: { id: activityId },
+      select: { userId: true, date: true },
+    });
+    if (!activity) throw new NotFoundException('Активность не найдена');
+    if (activity.userId !== userId) throw new ForbiddenException('Недостаточно прав');
+    await this.requirePremiumSubscription(userId);
+    if (!this.storageService) throw new ServiceUnavailableException('Сервис хранения медиа не настроен');
+
+    const existingCount = await this.prisma.activityMedia.count({ where: { activityId } });
+    if (existingCount + media.length > UPLOAD_LIMITS.mediaBatchFiles) {
+      throw new BadRequestException(
+        'К активности можно добавить не больше ' + UPLOAD_LIMITS.mediaBatchFiles + ' файлов',
+      );
+    }
+
+    let promotedKeys: string[] = [];
+    try {
+      const promoted = await this.storageService.promoteActivityPhotos(userId, activityId, media, new Date());
+      promotedKeys = promoted.keys;
+      await this.prisma.$transaction(async (transaction) => {
+        const currentCount = await transaction.activityMedia.count({ where: { activityId } });
+        if (currentCount + promoted.photos.length > UPLOAD_LIMITS.mediaBatchFiles) {
+          throw new BadRequestException(
+            'К активности можно добавить не больше ' + UPLOAD_LIMITS.mediaBatchFiles + ' файлов',
+          );
+        }
+        const lastMedia = await transaction.activityMedia.findFirst({
+          where: { activityId },
+          orderBy: { position: 'desc' },
+          select: { position: true },
+        });
+        const positionOffset = (lastMedia?.position ?? -1) + 1;
+        const rows = this.getActivityMediaRows(activityId, userId, activity.date, promoted.photos).map(
+          (row, index) => ({ ...row, position: positionOffset + index }),
+        );
+        await transaction.activityMedia.createMany({ data: rows });
+        await transaction.activity.update({
+          where: { id: activityId },
+          data: { mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued },
+        });
+      });
+      return { success: true, media: promoted.photos };
+    } catch (error) {
+      await Promise.all(promotedKeys.map((key) => this.deleteUploadedRoute(key)));
+      handleServiceError(error);
+    }
+  }
+
   async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
       const { date, description, emotion, visibility, sport, title, distance, duration, speed } = activityDto;
@@ -395,7 +468,7 @@ export class ActivityService {
     }
   }
 
-  async getLocationsByActivityId(id: string, currentUserId?: string) {
+  async getLocationsByActivityId(id: string, currentUserId?: string, replay = false) {
     const activity = await this.prisma.activity.findUnique({
       where: { id },
       select: {
@@ -416,6 +489,7 @@ export class ActivityService {
       activity.visibility === ACTIVITY_VISIBILITY.followers &&
       (isOwner || (await this.isFollower(currentUserId, activity.userId)));
     if (!isOwner && !isPublic && !isFollowerActivity) return null;
+    if (replay) await this.requirePremiumSubscription(currentUserId);
 
     let locations: LocationObject[] | undefined;
     if (activity.routeStorageKey) {
