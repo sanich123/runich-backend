@@ -1,3 +1,33 @@
+import type { ReactNode } from 'react';
+
+export interface EmailLayoutProps {
+  preview: string;
+  children: ReactNode;
+}
+
+export interface EmailButtonProps {
+  href: string;
+  children: ReactNode;
+  variant?: 'default' | 'notification';
+}
+
+export interface EmailCodeProps {
+  label: string;
+  text: string;
+}
+
+export interface EmailSecurityNoteProps {
+  children: ReactNode;
+  variant?: 'default' | 'flush' | 'compact';
+}
+
+export interface NotificationActorProps {
+  name?: string;
+  surname?: string;
+  profilePhoto?: string;
+  description: string;
+}
+
 export interface NotificationEmailProps {
   name?: string;
   surname?: string;
@@ -17,14 +47,14 @@ export enum EmailType {
   locations = 'locations',
 }
 
-export const HEADING = {
+export const HEADING: Record<EmailType, string> = {
   [EmailType.comment]: 'Комментарий к активности',
   [EmailType.like]: 'Лайк к активности',
   [EmailType.commentLike]: 'Лайк к комментарию',
   [EmailType.locations]: 'Отслеженные локации',
 };
 
-export const PARAGRAPH = {
+export const PARAGRAPH: Record<EmailType, string> = {
   [EmailType.comment]: 'так прокомментировал Вашу активность:',
   [EmailType.like]: 'лайкнул Вашу активность:',
   [EmailType.commentLike]: 'Лайкнул комментарий к Вашей активности:',
