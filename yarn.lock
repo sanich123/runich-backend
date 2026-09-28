@@ -112,25 +112,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@angular-devkit/core@npm:22.1.8":
-  version: 22.1.8
-  resolution: "@angular-devkit/core@npm:22.1.8"
-  dependencies:
-    ajv: "npm:8.20.0"
-    ajv-formats: "npm:3.0.1"
-    jsonc-parser: "npm:3.3.1"
-    picomatch: "npm:4.0.5"
-    rxjs: "npm:7.8.2"
-    source-map: "npm:0.7.6"
-  peerDependencies:
-    chokidar: ^5.0.0
-  peerDependenciesMeta:
-    chokidar:
-      optional: true
-  checksum: 10c0/666156660be640ad3a3cd8f72acb26054a819017ff65b49898a31a98be971cf6759d40acfbbea92bc262a214a9f953e73878ec44a48b398f8d079a533ede9eab
-  languageName: node
-  linkType: hard
-
 "@angular-devkit/core@npm:22.2.0":
   version: 22.2.0
   resolution: "@angular-devkit/core@npm:22.2.0"
@@ -173,19 +154,6 @@ __metadata:
     ora: "npm:9.4.1"
     rxjs: "npm:7.8.2"
   checksum: 10c0/049a190d5cbd80ae152d2bfc17f80c1eb808571e36bb67fa9ec912c2936acd43e5270f88b8ddf3c688e397cbd1665ee5f9f2607f5cd6a27acd0837b4d86f1145
-  languageName: node
-  linkType: hard
-
-"@angular-devkit/schematics@npm:22.1.8":
-  version: 22.1.8
-  resolution: "@angular-devkit/schematics@npm:22.1.8"
-  dependencies:
-    "@angular-devkit/core": "npm:22.1.8"
-    jsonc-parser: "npm:3.3.1"
-    magic-string: "npm:1.0.0"
-    ora: "npm:9.4.1"
-    rxjs: "npm:7.8.2"
-  checksum: 10c0/aadf32388b331507e2f575b5b9c300bd2d214c217fec9a5d1551e4db2f4e4af54fa1d0447bc0b156df9ba354d068c0ebc0ccb57be2f89522894a14abe0789895
   languageName: node
   linkType: hard
 
@@ -3576,9 +3544,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/cli@npm:12.0.7":
-  version: 12.0.7
-  resolution: "@nestjs/cli@npm:12.0.7"
+"@nestjs/cli@npm:12.0.8":
+  version: 12.0.8
+  resolution: "@nestjs/cli@npm:12.0.8"
   dependencies:
     "@angular-devkit/core": "npm:22.2.0"
     "@angular-devkit/schematics": "npm:22.2.0"
@@ -3623,13 +3591,13 @@ __metadata:
       optional: true
   bin:
     nest: bin/nest.js
-  checksum: 10c0/61b0d3879b0e8ae6b483ad24c51618c59e3a6ad8618fee3758d82d8d5e30683df171f1baedfb6f844107653cd8f13bf01c04166157dc37c8b68610cfdc2ec58f
+  checksum: 10c0/98ee3cb789b6cb96f242986ca9dc94c7bc130e8c70272d463a51adc9d1e10b999447fb52cce1291d967c207a666f8ab1e57024b949db90782c59ad8263612a58
   languageName: node
   linkType: hard
 
-"@nestjs/common@npm:12.1.0":
-  version: 12.1.0
-  resolution: "@nestjs/common@npm:12.1.0"
+"@nestjs/common@npm:12.1.1":
+  version: 12.1.1
+  resolution: "@nestjs/common@npm:12.1.1"
   dependencies:
     "@standard-schema/spec": "npm:1.1.0"
     file-type: "npm:22.1.1"
@@ -3647,13 +3615,13 @@ __metadata:
       optional: true
     class-validator:
       optional: true
-  checksum: 10c0/ec1ad6663b19df293ebc9943753b20d1439c8633551e1eafc4122a91fab015cb4cb35188ae1fc2689e7225d743dbae344472376f10b9e02b4cae9f94917bcac3
+  checksum: 10c0/4d143c6adfff29b2fd54ed9ffc11da596091ec3f03bdacf666355650e6086322194b3efa2be314c912d487c7f85736416a9cb96e86cd3dbf94b8abc9c98d49e7
   languageName: node
   linkType: hard
 
-"@nestjs/core@npm:12.1.0":
-  version: 12.1.0
-  resolution: "@nestjs/core@npm:12.1.0"
+"@nestjs/core@npm:12.1.1":
+  version: 12.1.1
+  resolution: "@nestjs/core@npm:12.1.1"
   dependencies:
     fast-safe-stringify: "npm:2.1.1"
     iterare: "npm:1.2.1"
@@ -3674,7 +3642,7 @@ __metadata:
       optional: true
     "@nestjs/websockets":
       optional: true
-  checksum: 10c0/5ef9c17d9ac6ac629c85df5dbe1b8b2990a94672199739f7b596ae86b53a4a65208f74b7da19c3371588d81afcc6cb9eb9b3abae33d06f5ffdfc379a5424471c
+  checksum: 10c0/8a821a01d651d77319e7586bb4a7c8bd16b337a5ed3c22dfe724f97a98e24e967c098ff0ac31b0baa7d9e4a4707b51b5ed4b4b282046c2eac67c849cfd6d42fd
   languageName: node
   linkType: hard
 
@@ -3756,9 +3724,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/platform-express@npm:12.1.0":
-  version: 12.1.0
-  resolution: "@nestjs/platform-express@npm:12.1.0"
+"@nestjs/platform-express@npm:12.1.1":
+  version: 12.1.1
+  resolution: "@nestjs/platform-express@npm:12.1.1"
   dependencies:
     cors: "npm:2.8.6"
     express: "npm:5.2.1"
@@ -3768,16 +3736,16 @@ __metadata:
   peerDependencies:
     "@nestjs/common": ^12.0.0
     "@nestjs/core": ^12.0.0
-  checksum: 10c0/39b621899a9f4ac00d45615a346d77c11c7280ab058bed4865fee99794b417f4bda001f7821e2051e7db8234ad43a49135b9019343ef6e4ecb3eb73de1fcda4b
+  checksum: 10c0/e41cb40a703dd18329cc3f3cf1c9279da9be7bc0103d1426671fb25d3f436820c5c03b5fe9ecdf1602dc598b49e988d27fd63107dbb165808fd4e89eadb0ab77
   languageName: node
   linkType: hard
 
-"@nestjs/schematics@npm:12.0.5":
-  version: 12.0.5
-  resolution: "@nestjs/schematics@npm:12.0.5"
+"@nestjs/schematics@npm:12.0.6":
+  version: 12.0.6
+  resolution: "@nestjs/schematics@npm:12.0.6"
   dependencies:
-    "@angular-devkit/core": "npm:22.1.8"
-    "@angular-devkit/schematics": "npm:22.1.8"
+    "@angular-devkit/core": "npm:22.2.0"
+    "@angular-devkit/schematics": "npm:22.2.0"
     comment-json: "npm:5.0.0"
     jsonc-parser: "npm:3.3.1"
     pluralize: "npm:8.0.0"
@@ -3787,7 +3755,7 @@ __metadata:
   peerDependenciesMeta:
     prettier:
       optional: true
-  checksum: 10c0/762f0483181598117c43a3410d5e31eb113d10584daa3a0f06860af16c98d8f06ac28c64a51e3e2f2bab7eb60cd26e344e38107b2ceb0f3d9cf50b0bb33797c3
+  checksum: 10c0/81c1f1dfb3dc0c6c67926b97f06f1f3263e30a4988464c74563beeb038c9022649cc54397c39c317cef3c20256e6ed21679cd18edf590236a731af8e754721e6
   languageName: node
   linkType: hard
 
@@ -3842,9 +3810,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/testing@npm:12.1.0":
-  version: 12.1.0
-  resolution: "@nestjs/testing@npm:12.1.0"
+"@nestjs/testing@npm:12.1.1":
+  version: 12.1.1
+  resolution: "@nestjs/testing@npm:12.1.1"
   dependencies:
     tslib: "npm:2.8.1"
   peerDependencies:
@@ -3857,7 +3825,7 @@ __metadata:
       optional: true
     "@nestjs/platform-express":
       optional: true
-  checksum: 10c0/fa6539921b281a8d9f152233b89eb1bed9b03169722d638ffac2e1b1abe17bae8df1757fa0d70a56a133f91a763d0f53b60d6eff1134d6f84514d530753cc247
+  checksum: 10c0/6ecb9dd44839242d492f23cd1e12f0be127ecdf495d90b8df08fe5c794c253a7ea576d736cf29ecc5e113a21204a2b03a085d070013a7b462cc22522dbc7b84a
   languageName: node
   linkType: hard
 
@@ -4393,21 +4361,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prisma/management-api-sdk@npm:^1.79.0":
-  version: 1.79.0
-  resolution: "@prisma/management-api-sdk@npm:1.79.0"
+"@prisma/management-api-sdk@npm:^1.80.0":
+  version: 1.80.0
+  resolution: "@prisma/management-api-sdk@npm:1.80.0"
   dependencies:
     openapi-fetch: "npm:0.14.0"
-  checksum: 10c0/7f606798070bad116d6dd08e825812b3d1f7d4595bd5fbef5cba33b806b4b289cf3f39eac88bdfdc2e05a6d08e58b4e73e6695919c43d496302cc8d951b11c85
+  checksum: 10c0/9d0c6eedd957f52fd1214aeb49391037aff5d39ddf34218634f44c6316f8da62fa8ee7519e78f9ef0427d5b9722195ab65e69193125dbabd5c9157b6763f5006
   languageName: node
   linkType: hard
 
-"@prisma/orm-family-sql@npm:8.0.0-rc.12":
-  version: 8.0.0-rc.12
-  resolution: "@prisma/orm-family-sql@npm:8.0.0-rc.12"
+"@prisma/orm-family-sql@npm:8.0.0-rc.13":
+  version: 8.0.0-rc.13
+  resolution: "@prisma/orm-family-sql@npm:8.0.0-rc.13"
   dependencies:
-    "@prisma/orm-framework": "npm:8.0.0-rc.12"
-    "@prisma/orm-toolchain": "npm:8.0.0-rc.12"
+    "@prisma/orm-framework": "npm:8.0.0-rc.13"
+    "@prisma/orm-toolchain": "npm:8.0.0-rc.13"
     "@standard-schema/spec": "npm:^1.1.0"
     arktype: "npm:^2.2.2"
     pathe: "npm:^2.0.3"
@@ -4419,7 +4387,7 @@ __metadata:
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10c0/8d5e15cddd3c452877f73aeda5fdf8364b98d3b90f79bef421347780f579e2d966ab7d498d62f1d939e014f911f6e15948df35127325f784477d94059e8f080f
+  checksum: 10c0/815537defc1bcce60bc2125469aa0b1ffb5f1d6ee695f5714ce65b6421552628e8869628b7e6262ae9a6455b06a6413474ba2d080f3fa71cc45e79d911f88b8d
   languageName: node
   linkType: hard
 
@@ -4440,14 +4408,32 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prisma/orm-postgres@npm:8.0.0-rc.12":
-  version: 8.0.0-rc.12
-  resolution: "@prisma/orm-postgres@npm:8.0.0-rc.12"
+"@prisma/orm-framework@npm:8.0.0-rc.13":
+  version: 8.0.0-rc.13
+  resolution: "@prisma/orm-framework@npm:8.0.0-rc.13"
   dependencies:
-    "@prisma/orm-family-sql": "npm:8.0.0-rc.12"
-    "@prisma/orm-framework": "npm:8.0.0-rc.12"
-    "@prisma/orm-target-postgres": "npm:8.0.0-rc.12"
-    "@prisma/orm-toolchain": "npm:8.0.0-rc.12"
+    "@standard-schema/spec": "npm:^1.1.0"
+    arktype: "npm:^2.2.2"
+    pathe: "npm:^2.0.3"
+    tinyglobby: "npm:^0.2.17"
+    uniku: "npm:^0.5.0"
+  peerDependencies:
+    typescript: ">=5.9"
+  peerDependenciesMeta:
+    typescript:
+      optional: true
+  checksum: 10c0/2d995a25108cb4390806cea7ecc793b07fcb52180c39fb753a5cdf8eb1c884a28b6805acfc2a6ec1aee41bcac317622a369dc65532c1acbc75613a0fd3781337
+  languageName: node
+  linkType: hard
+
+"@prisma/orm-postgres@npm:8.0.0-rc.13":
+  version: 8.0.0-rc.13
+  resolution: "@prisma/orm-postgres@npm:8.0.0-rc.13"
+  dependencies:
+    "@prisma/orm-family-sql": "npm:8.0.0-rc.13"
+    "@prisma/orm-framework": "npm:8.0.0-rc.13"
+    "@prisma/orm-target-postgres": "npm:8.0.0-rc.13"
+    "@prisma/orm-toolchain": "npm:8.0.0-rc.13"
     "@types/node": "npm:26.1.2"
     "@types/pg": "npm:8.20.4"
     pathe: "npm:^2.0.3"
@@ -4458,17 +4444,17 @@ __metadata:
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10c0/cb73c10aec16238f443d80452628d6a1b6e5658d0c4188ba1ea0956564a56f51b63d1fce3fe0bd244e25620f887a186c9643645b7bd1751eb70d5c91e306c558
+  checksum: 10c0/c9a03209d6e94fb3f122357cac49ceddaa9b2f61364952474233511fbef84ebc72ce66b9998c74d5773c0f2fadfbfbd7bb97ea21c974bfe7eafcb1ac6c7a00e5
   languageName: node
   linkType: hard
 
-"@prisma/orm-target-postgres@npm:8.0.0-rc.12":
-  version: 8.0.0-rc.12
-  resolution: "@prisma/orm-target-postgres@npm:8.0.0-rc.12"
+"@prisma/orm-target-postgres@npm:8.0.0-rc.13":
+  version: 8.0.0-rc.13
+  resolution: "@prisma/orm-target-postgres@npm:8.0.0-rc.13"
   dependencies:
-    "@prisma/orm-family-sql": "npm:8.0.0-rc.12"
-    "@prisma/orm-framework": "npm:8.0.0-rc.12"
-    "@prisma/orm-toolchain": "npm:8.0.0-rc.12"
+    "@prisma/orm-family-sql": "npm:8.0.0-rc.13"
+    "@prisma/orm-framework": "npm:8.0.0-rc.13"
+    "@prisma/orm-toolchain": "npm:8.0.0-rc.13"
     "@standard-schema/spec": "npm:^1.1.0"
     "@types/node": "npm:26.1.2"
     "@types/pg": "npm:8.20.4"
@@ -4482,7 +4468,7 @@ __metadata:
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10c0/68a6a183d3ae96a7682b738e8484a924b0ed7d36a526aa39906cb83117bbd8172017effc05fef54e380fdacab284f351517f5290e16c071c35e2a51b1309d2f9
+  checksum: 10c0/d8d91ec81e2cde6b333444c3ecfcec9482a4dcc060d284a6e1ec9d4e5d58526ba95aeb59006be86e282aee20a53eb141c0f50d265f32cbfafb4d8df0238f6cea
   languageName: node
   linkType: hard
 
@@ -4519,6 +4505,42 @@ __metadata:
     vite:
       optional: true
   checksum: 10c0/87c1fac369572c941c951177d41cb81bbcc07db13c2e8753da0f2432c6c0d50fb95dae1ac872723a8434e3591f7b053885cae116b25ba36bf7337754fc5c8a40
+  languageName: node
+  linkType: hard
+
+"@prisma/orm-toolchain@npm:8.0.0-rc.13":
+  version: 8.0.0-rc.13
+  resolution: "@prisma/orm-toolchain@npm:8.0.0-rc.13"
+  dependencies:
+    "@prisma/orm-framework": "npm:8.0.0-rc.13"
+    "@vercel/detect-agent": "npm:^1.2.4"
+    arktype: "npm:^2.2.2"
+    c12: "npm:^3.3.4"
+    ci-info: "npm:^4.3.1"
+    clipanion: "npm:4.0.0-rc.4"
+    closest-match: "npm:^1.3.3"
+    colorette: "npm:^2.0.20"
+    esbuild: "npm:^0.28.2"
+    jsonc-parser: "npm:^3.3.1"
+    package-manager-detector: "npm:^1.8.0"
+    pathe: "npm:^2.0.3"
+    prettier: "npm:^3.9.6"
+    string-width: "npm:^8.2.2"
+    strip-ansi: "npm:^7.2.0"
+    tinyglobby: "npm:^0.2.17"
+    vscode-languageserver: "npm:10.1.0"
+    vscode-languageserver-textdocument: "npm:1.0.12"
+    wrap-ansi: "npm:^10.0.0"
+  peerDependencies:
+    "@prisma/cli-engine": 0.6.1
+    typescript: ">=5.9"
+    vite: ^7.0.0 || ^8.0.0
+  peerDependenciesMeta:
+    typescript:
+      optional: true
+    vite:
+      optional: true
+  checksum: 10c0/409ec3a7c9066505f739321c4724cb72bcdedf6be2e0af76d879f9742b3299bfb681f18a8dce0ef55f0dbdc7ce897a124d9cce1197f4624989d11ad23581e623
   languageName: node
   linkType: hard
 
@@ -12201,10 +12223,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nodemailer@npm:^10.0.11":
-  version: 10.0.11
-  resolution: "nodemailer@npm:10.0.11"
-  checksum: 10c0/8374781d1ac2e06a55dfc9bced0bdf6f34959ac1f2059714ac57fe2115b0a7f04ba548c9a34a7cf59bee8fabc3e2c8463d74907e8fb9818d25ca8f1c839d9b75
+"nodemailer@npm:^10.0.12":
+  version: 10.0.12
+  resolution: "nodemailer@npm:10.0.12"
+  checksum: 10c0/1d816272d9b611f3dde6b9b25cb69a54dba558cc4655b60c620d96fee6bedda3c30ae1c002a30c6e45690559324f06a35b7e585d18ae64c303dc2eebc5e6a184
   languageName: node
   linkType: hard
 
@@ -13808,20 +13830,20 @@ __metadata:
     "@jest/globals": "npm:^30.5.2"
     "@mapbox/polyline": "npm:^1.2.1"
     "@maplibre/maplibre-gl-native": "npm:6.5.0-pre.1"
-    "@nestjs/cli": "npm:12.0.7"
-    "@nestjs/common": "npm:12.1.0"
-    "@nestjs/core": "npm:12.1.0"
+    "@nestjs/cli": "npm:12.0.8"
+    "@nestjs/common": "npm:12.1.1"
+    "@nestjs/core": "npm:12.1.1"
     "@nestjs/jwt": "npm:12.0.2"
     "@nestjs/observe": "npm:0.3.2"
     "@nestjs/passport": "npm:12.0.0"
-    "@nestjs/platform-express": "npm:12.1.0"
-    "@nestjs/schematics": "npm:12.0.5"
+    "@nestjs/platform-express": "npm:12.1.1"
+    "@nestjs/schematics": "npm:12.0.6"
     "@nestjs/swagger": "npm:12.0.2"
-    "@nestjs/testing": "npm:12.1.0"
+    "@nestjs/testing": "npm:12.1.1"
     "@nestjs/throttler": "patch:@nestjs/throttler@npm%3A6.5.0#~/.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch"
     "@prisma/cli-engine": "npm:0.6.1"
-    "@prisma/management-api-sdk": "npm:^1.79.0"
-    "@prisma/orm-postgres": "npm:8.0.0-rc.12"
+    "@prisma/management-api-sdk": "npm:^1.80.0"
+    "@prisma/orm-postgres": "npm:8.0.0-rc.13"
     "@react-email/components": "npm:^1.0.12"
     "@swc/core": "npm:^1.16.2"
     "@types/bcrypt": "npm:^6.0.0"
@@ -13851,7 +13873,7 @@ __metadata:
     js-yaml: "npm:^5.4.2"
     madge: "npm:^8.0.0"
     multer: "npm:^2.4.0"
-    nodemailer: "npm:^10.0.11"
+    nodemailer: "npm:^10.0.12"
     passport: "npm:^0.7.0"
     passport-jwt: "npm:^4.0.1"
     pg: "npm:^8.23.0"
