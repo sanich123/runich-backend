@@ -3,7 +3,11 @@ import { isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { CurrentSubscriptionResponseDto, SubscriptionStatus } from './subscription.dto';
 
-const DEFAULT_ANNUAL_PREMIUM_EMAILS = new Set(['runich.app@yandex.ru', 'varon-in@yandex.ru']);
+const DEFAULT_ANNUAL_PREMIUM_EMAILS = new Set([
+  'runich.app@yandex.ru',
+  'varon-in@yandex.ru',
+  'aovoronin.piano@gmail.com',
+]);
 const DEFAULT_ANNUAL_PRODUCT_ID = 'complimentary-annual-premium';
 
 interface SubscriptionRecord {
