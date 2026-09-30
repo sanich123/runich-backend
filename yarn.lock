@@ -214,9 +214,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/client-s3@npm:3.1142.0":
-  version: 3.1142.0
-  resolution: "@aws-sdk/client-s3@npm:3.1142.0"
+"@aws-sdk/client-s3@npm:3.1143.0":
+  version: 3.1143.0
+  resolution: "@aws-sdk/client-s3@npm:3.1143.0"
   dependencies:
     "@aws-sdk/checksums": "npm:^3.1001.1"
     "@aws-sdk/core": "npm:^3.978.1"
@@ -229,7 +229,7 @@ __metadata:
     "@smithy/node-http-handler": "npm:^4.12.1"
     "@smithy/types": "npm:^4.19.0"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/4fe86ae6c5000ef64c557da0145d9ffc73fe9230d2fed47691004c48a745f23007d39f41467ba25fc032ca7ee99b19334add45cfaa9da7e50dd8b09929028673
+  checksum: 10c0/8e9c88148ad1c022e681bda1147277255ee3eb67d43267337114d1d2744c94aaeb3f17dda4603be3951b6ca9a07d98305bfc0294e8a32d542c95c4097be6ee05
   languageName: node
   linkType: hard
 
@@ -12172,10 +12172,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nodemailer@npm:^10.0.12":
-  version: 10.0.12
-  resolution: "nodemailer@npm:10.0.12"
-  checksum: 10c0/1d816272d9b611f3dde6b9b25cb69a54dba558cc4655b60c620d96fee6bedda3c30ae1c002a30c6e45690559324f06a35b7e585d18ae64c303dc2eebc5e6a184
+"nodemailer@npm:^10.0.13":
+  version: 10.0.13
+  resolution: "nodemailer@npm:10.0.13"
+  checksum: 10c0/3004362415e977a3fdf2a0c0ec0ad9fd3724d5ccba3951763bd28fa13a6b87cab13e790c934ccb66b6657ca8149a7efc4cc973867760588169efd8ec3fb99908
   languageName: node
   linkType: hard
 
@@ -13774,7 +13774,7 @@ __metadata:
   resolution: "runich-backend@workspace:."
   dependencies:
     "@ardentcode/sports-lib": "npm:^5.4.29"
-    "@aws-sdk/client-s3": "npm:3.1142.0"
+    "@aws-sdk/client-s3": "npm:3.1143.0"
     "@eslint/js": "npm:^10.0.1"
     "@jest/globals": "npm:^30.5.2"
     "@mapbox/polyline": "npm:^1.2.1"
@@ -13823,7 +13823,7 @@ __metadata:
     lint-staged: "npm:^17.6.0"
     madge: "npm:^8.0.0"
     multer: "npm:^2.4.0"
-    nodemailer: "npm:^10.0.12"
+    nodemailer: "npm:^10.0.13"
     passport: "npm:^0.7.0"
     passport-jwt: "npm:^4.0.1"
     pg: "npm:^8.23.0"
