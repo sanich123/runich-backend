@@ -87,6 +87,14 @@ export class StorageService {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
       this.assertConfigured();
+      const isVideo = file.mimetype.startsWith('video/');
+      const maximumFileSize = isVideo ? UPLOAD_LIMITS.videoBytes : UPLOAD_LIMITS.photoBytes;
+      const fileSize = file.size ?? file.buffer?.byteLength ?? 0;
+      if (fileSize > maximumFileSize) {
+        throw new BadRequestException(
+          isVideo ? 'Размер видео должен быть не более 50 МБ' : 'Размер изображения должен быть не более 15 МБ',
+        );
+      }
       const isUnsupportedVideo =
         file.mimetype.startsWith('video/') && !isSupportedVideoUpload(file.originalname, file.mimetype);
       if (isUnsupportedVideo) {

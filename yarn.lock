@@ -3595,9 +3595,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/common@npm:12.1.1":
-  version: 12.1.1
-  resolution: "@nestjs/common@npm:12.1.1"
+"@nestjs/common@npm:12.1.2":
+  version: 12.1.2
+  resolution: "@nestjs/common@npm:12.1.2"
   dependencies:
     "@standard-schema/spec": "npm:1.1.0"
     file-type: "npm:22.1.1"
@@ -3615,13 +3615,13 @@ __metadata:
       optional: true
     class-validator:
       optional: true
-  checksum: 10c0/4d143c6adfff29b2fd54ed9ffc11da596091ec3f03bdacf666355650e6086322194b3efa2be314c912d487c7f85736416a9cb96e86cd3dbf94b8abc9c98d49e7
+  checksum: 10c0/94675f98943b2414a2cffee5efc909280e57a36163ea54c037052345f4d0fb6d66c354074f2cd2e3cb8edfe0dc537e3bca994bd2a27804a8c62ff23a5411ace3
   languageName: node
   linkType: hard
 
-"@nestjs/core@npm:12.1.1":
-  version: 12.1.1
-  resolution: "@nestjs/core@npm:12.1.1"
+"@nestjs/core@npm:12.1.2":
+  version: 12.1.2
+  resolution: "@nestjs/core@npm:12.1.2"
   dependencies:
     fast-safe-stringify: "npm:2.1.1"
     iterare: "npm:1.2.1"
@@ -3642,7 +3642,7 @@ __metadata:
       optional: true
     "@nestjs/websockets":
       optional: true
-  checksum: 10c0/8a821a01d651d77319e7586bb4a7c8bd16b337a5ed3c22dfe724f97a98e24e967c098ff0ac31b0baa7d9e4a4707b51b5ed4b4b282046c2eac67c849cfd6d42fd
+  checksum: 10c0/09bc525c18d8416010f3a879df63392172dab76d87d4e2f0d95b3e0a2e074b82e34c8f6b22b83388409e0e650c07ba232459ecf1dc4d0b17060a7d0d13efe423
   languageName: node
   linkType: hard
 
@@ -3675,9 +3675,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/observe@npm:0.3.3":
-  version: 0.3.3
-  resolution: "@nestjs/observe@npm:0.3.3"
+"@nestjs/observe@npm:0.3.5":
+  version: 0.3.5
+  resolution: "@nestjs/observe@npm:0.3.5"
   dependencies:
     "@jridgewell/trace-mapping": "npm:0.3.31"
   peerDependencies:
@@ -3713,7 +3713,7 @@ __metadata:
       optional: true
     bullmq:
       optional: true
-  checksum: 10c0/be772e46d67e910154e1af84384db6ed09c58f35f97df66711208f612aa7ae896e148ca3bcccad10854c39467b40949a121ca808c84f1c9b648f15df4c9ca220
+  checksum: 10c0/78ddedae53eb10e1cee9139b37ce9a71b905efd6c98a6fba5197f73f6a9ffdbce21dde639416b3becc80a08d1b7053066f1c2da69c15be2848ab85326002f736
   languageName: node
   linkType: hard
 
@@ -3727,9 +3727,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/platform-express@npm:12.1.1":
-  version: 12.1.1
-  resolution: "@nestjs/platform-express@npm:12.1.1"
+"@nestjs/platform-express@npm:12.1.2":
+  version: 12.1.2
+  resolution: "@nestjs/platform-express@npm:12.1.2"
   dependencies:
     cors: "npm:2.8.6"
     express: "npm:5.2.1"
@@ -3739,7 +3739,7 @@ __metadata:
   peerDependencies:
     "@nestjs/common": ^12.0.0
     "@nestjs/core": ^12.0.0
-  checksum: 10c0/e41cb40a703dd18329cc3f3cf1c9279da9be7bc0103d1426671fb25d3f436820c5c03b5fe9ecdf1602dc598b49e988d27fd63107dbb165808fd4e89eadb0ab77
+  checksum: 10c0/5cb7ef6b48b510de4cc19c06acfb34b527c05cf0c361d60da0929834410f128d5641c5ef3cb0eb00786e1014386aedebfbfdbbb733a4bd5076a5803501dc5606
   languageName: node
   linkType: hard
 
@@ -3813,9 +3813,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/testing@npm:12.1.1":
-  version: 12.1.1
-  resolution: "@nestjs/testing@npm:12.1.1"
+"@nestjs/testing@npm:12.1.2":
+  version: 12.1.2
+  resolution: "@nestjs/testing@npm:12.1.2"
   dependencies:
     tslib: "npm:2.8.1"
   peerDependencies:
@@ -3828,7 +3828,7 @@ __metadata:
       optional: true
     "@nestjs/platform-express":
       optional: true
-  checksum: 10c0/6ecb9dd44839242d492f23cd1e12f0be127ecdf495d90b8df08fe5c794c253a7ea576d736cf29ecc5e113a21204a2b03a085d070013a7b462cc22522dbc7b84a
+  checksum: 10c0/5791e42e6087c5b460c5de6b911ca858cb67b7c8f7a8f7e8f235d34ec0982de921259999d68f494e3eff94a23e48ded5278b1ea242aaddbeadb3529b338eeb9a
   languageName: node
   linkType: hard
 
@@ -5237,106 +5237,106 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/core-darwin-arm64@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-darwin-arm64@npm:1.16.12"
+"@swc/core-darwin-arm64@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-darwin-arm64@npm:1.16.13"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@swc/core-darwin-x64@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-darwin-x64@npm:1.16.12"
+"@swc/core-darwin-x64@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-darwin-x64@npm:1.16.13"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm-gnueabihf@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.16.12"
+"@swc/core-linux-arm-gnueabihf@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.16.13"
   conditions: os=linux & cpu=arm
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm64-gnu@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-linux-arm64-gnu@npm:1.16.12"
+"@swc/core-linux-arm64-gnu@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-linux-arm64-gnu@npm:1.16.13"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm64-musl@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-linux-arm64-musl@npm:1.16.12"
+"@swc/core-linux-arm64-musl@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-linux-arm64-musl@npm:1.16.13"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@swc/core-linux-ppc64-gnu@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-linux-ppc64-gnu@npm:1.16.12"
+"@swc/core-linux-ppc64-gnu@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-linux-ppc64-gnu@npm:1.16.13"
   conditions: os=linux & cpu=ppc64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-s390x-gnu@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-linux-s390x-gnu@npm:1.16.12"
+"@swc/core-linux-s390x-gnu@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-linux-s390x-gnu@npm:1.16.13"
   conditions: os=linux & cpu=s390x & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-x64-gnu@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-linux-x64-gnu@npm:1.16.12"
+"@swc/core-linux-x64-gnu@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-linux-x64-gnu@npm:1.16.13"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-x64-musl@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-linux-x64-musl@npm:1.16.12"
+"@swc/core-linux-x64-musl@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-linux-x64-musl@npm:1.16.13"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@swc/core-win32-arm64-msvc@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-win32-arm64-msvc@npm:1.16.12"
+"@swc/core-win32-arm64-msvc@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-win32-arm64-msvc@npm:1.16.13"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@swc/core-win32-ia32-msvc@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-win32-ia32-msvc@npm:1.16.12"
+"@swc/core-win32-ia32-msvc@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-win32-ia32-msvc@npm:1.16.13"
   conditions: os=win32 & cpu=ia32
   languageName: node
   linkType: hard
 
-"@swc/core-win32-x64-msvc@npm:1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core-win32-x64-msvc@npm:1.16.12"
+"@swc/core-win32-x64-msvc@npm:1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core-win32-x64-msvc@npm:1.16.13"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@swc/core@npm:^1.16.12":
-  version: 1.16.12
-  resolution: "@swc/core@npm:1.16.12"
+"@swc/core@npm:^1.16.13":
+  version: 1.16.13
+  resolution: "@swc/core@npm:1.16.13"
   dependencies:
-    "@swc/core-darwin-arm64": "npm:1.16.12"
-    "@swc/core-darwin-x64": "npm:1.16.12"
-    "@swc/core-linux-arm-gnueabihf": "npm:1.16.12"
-    "@swc/core-linux-arm64-gnu": "npm:1.16.12"
-    "@swc/core-linux-arm64-musl": "npm:1.16.12"
-    "@swc/core-linux-ppc64-gnu": "npm:1.16.12"
-    "@swc/core-linux-s390x-gnu": "npm:1.16.12"
-    "@swc/core-linux-x64-gnu": "npm:1.16.12"
-    "@swc/core-linux-x64-musl": "npm:1.16.12"
-    "@swc/core-win32-arm64-msvc": "npm:1.16.12"
-    "@swc/core-win32-ia32-msvc": "npm:1.16.12"
-    "@swc/core-win32-x64-msvc": "npm:1.16.12"
+    "@swc/core-darwin-arm64": "npm:1.16.13"
+    "@swc/core-darwin-x64": "npm:1.16.13"
+    "@swc/core-linux-arm-gnueabihf": "npm:1.16.13"
+    "@swc/core-linux-arm64-gnu": "npm:1.16.13"
+    "@swc/core-linux-arm64-musl": "npm:1.16.13"
+    "@swc/core-linux-ppc64-gnu": "npm:1.16.13"
+    "@swc/core-linux-s390x-gnu": "npm:1.16.13"
+    "@swc/core-linux-x64-gnu": "npm:1.16.13"
+    "@swc/core-linux-x64-musl": "npm:1.16.13"
+    "@swc/core-win32-arm64-msvc": "npm:1.16.13"
+    "@swc/core-win32-ia32-msvc": "npm:1.16.13"
+    "@swc/core-win32-x64-msvc": "npm:1.16.13"
     "@swc/counter": "npm:^0.1.3"
     "@swc/types": "npm:^0.1.28"
   peerDependencies:
@@ -5369,7 +5369,7 @@ __metadata:
   peerDependenciesMeta:
     "@swc/helpers":
       optional: true
-  checksum: 10c0/e3a1ab0634549aa3fbb8b0f848f6eaf58f24ea0d71a3b09c34ce8381a98eb82e804a323dd1f4a34ccf5f5b438edd7cedecd8d4608f3fb0187e24b3bae99288da
+  checksum: 10c0/7dace9b66d1fb65ccc867c54d19316a4e70e1251790780a4e1d0b6ac60757312f30f40dd46c83a3cc3d79304c39e5279278fb400cd56fa468e322518dd1fbd52
   languageName: node
   linkType: hard
 
@@ -8226,12 +8226,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv@npm:^18.0.4":
-  version: 18.0.4
-  resolution: "dotenv@npm:18.0.4"
+"dotenv@npm:^18.0.5":
+  version: 18.0.5
+  resolution: "dotenv@npm:18.0.5"
   bin:
     dotenv: dist/index.cjs
-  checksum: 10c0/33be95df15269c0f1106da53b97bf8dd2ad17cec34aaa9e05ea1e97135195d50a9fbf0cdcac27a736b1dcd20575b2bfdea2287a5c86bf950430eb45de7ec4eda
+  checksum: 10c0/fade137f063f3d3483459b71c6ed0f98f18189fa52b14c9f192e57df6b76719340aa6d9a1d194e4fa0e025deb5af9d545efcc3a28f09230af815518f0b9c0785
   languageName: node
   linkType: hard
 
@@ -12727,10 +12727,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pg-cloudflare@npm:^1.4.1":
+  version: 1.4.1
+  resolution: "pg-cloudflare@npm:1.4.1"
+  checksum: 10c0/32e62c987073472e81c0dc218f850b1212b4e2c1f35d50433d87d054fe268f549ebaf8fc6c1227ab24c12b318f3e3a2a191ffbdfb2daa30b39aa6802ab8fe2f6
+  languageName: node
+  linkType: hard
+
 "pg-connection-string@npm:^2.14.0":
   version: 2.14.0
   resolution: "pg-connection-string@npm:2.14.0"
   checksum: 10c0/c26d85970f782de72b90aa45b4acfa34df90242fc08bc676e8827297164044dbfb40a2cf20b0646bd02662a6b14c5ed27f322db627e41e582f2b705bc41e8b47
+  languageName: node
+  linkType: hard
+
+"pg-connection-string@npm:^2.14.1":
+  version: 2.14.1
+  resolution: "pg-connection-string@npm:2.14.1"
+  checksum: 10c0/7321eed97579b4972a714909e7a444beb2186780fe7fd86ea719ff7c8f1fad07d7e5f85722c4992245b23683ed7d2fe2bdda8f7469fed4c016bb5c3379c575ca
   languageName: node
   linkType: hard
 
@@ -12766,10 +12780,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-protocol@npm:^1.16.0":
-  version: 1.16.0
-  resolution: "pg-protocol@npm:1.16.0"
-  checksum: 10c0/8ea4a8f4970aa0ca1e5bf9a482da0a41a043d7470fbaf7592736971146b09a2a4003d953c0091b72fc30bf7a7994a0b7fdf897bf50cd219787bd22806b3ffb04
+"pg-protocol@npm:^1.16.1":
+  version: 1.16.1
+  resolution: "pg-protocol@npm:1.16.1"
+  checksum: 10c0/84e8bf05c3548c8ffcad29247c075f8f1cf477600c92a7eb0ab27c6c4cbdbe1280433582bfba91f629b1f68bcaf4ae26436a898f430e884d7887543931e8ade6
   languageName: node
   linkType: hard
 
@@ -12808,14 +12822,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg@npm:^8.23.0":
-  version: 8.23.0
-  resolution: "pg@npm:8.23.0"
+"pg@npm:^8.23.1":
+  version: 8.23.1
+  resolution: "pg@npm:8.23.1"
   dependencies:
-    pg-cloudflare: "npm:^1.4.0"
-    pg-connection-string: "npm:^2.14.0"
+    pg-cloudflare: "npm:^1.4.1"
+    pg-connection-string: "npm:^2.14.1"
     pg-pool: "npm:^3.14.0"
-    pg-protocol: "npm:^1.16.0"
+    pg-protocol: "npm:^1.16.1"
     pg-types: "npm:2.2.0"
     pgpass: "npm:1.0.5"
   peerDependencies:
@@ -12826,7 +12840,7 @@ __metadata:
   peerDependenciesMeta:
     pg-native:
       optional: true
-  checksum: 10c0/11ce12a71b4239588c18f078531c378d5bcdbcb9ea892e080a6e71f91aaece2b4b8fd93ee5777f94210f9258ff56161f8ed1a45050c32d295aaca037bba12ee8
+  checksum: 10c0/084ce2bcd025705105d4d9a4c4438b178117acbaae5c766e3d3c9fb812cc55d826a212189e19937b8e3b0a8914a3c3e4ba78ad62af73890f37406a676c1f9e0c
   languageName: node
   linkType: hard
 
@@ -13780,21 +13794,21 @@ __metadata:
     "@mapbox/polyline": "npm:^1.2.1"
     "@maplibre/maplibre-gl-native": "npm:6.5.0-pre.1"
     "@nestjs/cli": "npm:12.0.8"
-    "@nestjs/common": "npm:12.1.1"
-    "@nestjs/core": "npm:12.1.1"
+    "@nestjs/common": "npm:12.1.2"
+    "@nestjs/core": "npm:12.1.2"
     "@nestjs/jwt": "npm:12.0.2"
-    "@nestjs/observe": "npm:0.3.3"
+    "@nestjs/observe": "npm:0.3.5"
     "@nestjs/passport": "npm:12.0.0"
-    "@nestjs/platform-express": "npm:12.1.1"
+    "@nestjs/platform-express": "npm:12.1.2"
     "@nestjs/schematics": "npm:12.0.6"
     "@nestjs/swagger": "npm:12.0.2"
-    "@nestjs/testing": "npm:12.1.1"
+    "@nestjs/testing": "npm:12.1.2"
     "@nestjs/throttler": "patch:@nestjs/throttler@npm%3A6.5.0#~/.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch"
     "@prisma/cli-engine": "npm:0.6.2"
     "@prisma/management-api-sdk": "npm:^1.80.0"
     "@prisma/orm-postgres": "npm:8.0.0-rc.13"
     "@react-email/components": "npm:^1.0.12"
-    "@swc/core": "npm:^1.16.12"
+    "@swc/core": "npm:^1.16.13"
     "@types/bcrypt": "npm:^6.0.0"
     "@types/express": "npm:^5.0.6"
     "@types/jest": "npm:30.0.0"
@@ -13813,7 +13827,7 @@ __metadata:
     class-validator: "npm:^0.15.1"
     csv-parse: "npm:^7.0.3"
     depcheck: "npm:^1.4.7"
-    dotenv: "npm:^18.0.4"
+    dotenv: "npm:^18.0.5"
     eslint: "npm:^10.11.0"
     express: "npm:^5.2.1"
     globals: "npm:^17.12.0"
@@ -13826,7 +13840,7 @@ __metadata:
     nodemailer: "npm:^10.0.13"
     passport: "npm:^0.7.0"
     passport-jwt: "npm:^4.0.1"
-    pg: "npm:^8.23.0"
+    pg: "npm:^8.23.1"
     prettier: "npm:^3.9.9"
     prisma: "npm:8.0.0-rc.19"
     react: "npm:^19.3.0"

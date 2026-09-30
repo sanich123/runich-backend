@@ -113,7 +113,7 @@ export class StorageController {
         },
       }),
       limits: {
-        fileSize: UPLOAD_LIMITS.photoBytes,
+        fileSize: UPLOAD_LIMITS.videoBytes,
         files: UPLOAD_LIMITS.mediaBatchFiles,
         parts: UPLOAD_LIMITS.mediaBatchFiles + 3,
       },
@@ -171,7 +171,7 @@ export class StorageController {
           callback(null, `${randomUUID()}${extension}`);
         },
       }),
-      limits: { fileSize: UPLOAD_LIMITS.photoBytes, files: 1 },
+      limits: { fileSize: UPLOAD_LIMITS.videoBytes, files: 1 },
       fileFilter: (_request, file, callback) => {
         const isImage = file.mimetype.startsWith('image/');
         const isSupportedVideo =
