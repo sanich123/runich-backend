@@ -5,6 +5,8 @@ enum YearCategoryProps {
   totalDuration = 'totalDuration',
   totalDistance = 'totalDistance',
   totalItems = 'totalItems',
+  totalSteps = 'totalSteps',
+  totalCaloriesActive = 'totalCaloriesActive',
 }
 
 function ensureNode(parent: StatisticsNode, key: string): StatisticsNode {
@@ -24,7 +26,7 @@ function addMetric(bucket: StatisticsNode, key: string, value: number) {
 }
 
 export function buildYearCategoryStatistics(rows: YearCategoryAggregate[]) {
-  const { all, totalDuration, totalDistance, totalItems } = YearCategoryProps;
+  const { all, totalDuration, totalDistance, totalItems, totalSteps, totalCaloriesActive } = YearCategoryProps;
 
   return rows.reduce<StatisticsNode>((acc, row) => {
     const yearStats = ensureNode(acc, String(row.year));
@@ -36,15 +38,23 @@ export function buildYearCategoryStatistics(rows: YearCategoryAggregate[]) {
     addMetric(allMonthStats, totalDuration, row.totalDuration);
     addMetric(allMonthStats, totalDistance, row.totalDistance);
     addMetric(allMonthStats, totalItems, row.totalItems);
+    addMetric(allMonthStats, totalSteps, row.totalSteps);
+    addMetric(allMonthStats, totalCaloriesActive, row.totalCaloriesActive);
     addMetric(allStats, totalDuration, row.totalDuration);
     addMetric(allStats, totalDistance, row.totalDistance);
     addMetric(allStats, totalItems, row.totalItems);
+    addMetric(allStats, totalSteps, row.totalSteps);
+    addMetric(allStats, totalCaloriesActive, row.totalCaloriesActive);
     addMetric(sportStats, totalDuration, row.totalDuration);
     addMetric(sportStats, totalDistance, row.totalDistance);
     addMetric(sportStats, totalItems, row.totalItems);
+    addMetric(sportStats, totalSteps, row.totalSteps);
+    addMetric(sportStats, totalCaloriesActive, row.totalCaloriesActive);
     addMetric(sportMonthStats, totalDuration, row.totalDuration);
     addMetric(sportMonthStats, totalDistance, row.totalDistance);
     addMetric(sportMonthStats, totalItems, row.totalItems);
+    addMetric(sportMonthStats, totalSteps, row.totalSteps);
+    addMetric(sportMonthStats, totalCaloriesActive, row.totalCaloriesActive);
 
     return acc;
   }, {});

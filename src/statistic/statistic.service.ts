@@ -35,7 +35,14 @@ export class StatisticService {
   }
 
   private groupDailyActivities(
-    activities: Array<{ duration: number; distance: number; date: Date; sport: string }>,
+    activities: Array<{
+      duration: number;
+      distance: number;
+      steps: number | null;
+      caloriesActive: number | null;
+      date: Date;
+      sport: string;
+    }>,
     timeZone: string,
   ) {
     return activities.reduce<Record<string, YearCategoryDailyActivities>>((byYear, activity) => {
@@ -47,6 +54,8 @@ export class StatisticService {
       dayActivities.push({
         duration: activity.duration,
         distance: activity.distance,
+        steps: activity.steps ?? 0,
+        caloriesActive: activity.caloriesActive ?? 0,
         date: activity.date.toISOString(),
         sport: activity.sport,
       });
@@ -162,6 +171,8 @@ export class StatisticService {
             "sport",
             COALESCE(SUM("duration"), 0)::double precision / 3600000 AS "totalDuration",
             COALESCE(SUM("distance"), 0)::double precision / 1000 AS "totalDistance",
+            COALESCE(SUM("steps"), 0)::double precision AS "totalSteps",
+            COALESCE(SUM("calories_active"), 0)::double precision AS "totalCaloriesActive",
             COUNT(*)::int AS "totalItems"
           FROM "Activity"
           WHERE "user_id" = ${userId}::uuid
@@ -170,7 +181,7 @@ export class StatisticService {
         `,
         this.prisma.activity.findMany({
           where: { userId },
-          select: { duration: true, distance: true, date: true, sport: true },
+          select: { duration: true, distance: true, steps: true, caloriesActive: true, date: true, sport: true },
           orderBy: { date: 'asc' },
         }),
       ]);
@@ -186,6 +197,8 @@ export class StatisticService {
           totalDuration: this.toMetricValue(row.totalDuration),
           totalDistance: this.toMetricValue(row.totalDistance),
           totalItems: this.toMetricValue(row.totalItems),
+          totalSteps: this.toMetricValue(row.totalSteps),
+          totalCaloriesActive: this.toMetricValue(row.totalCaloriesActive),
         })),
       );
       return {

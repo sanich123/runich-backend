@@ -12,6 +12,8 @@ export interface YearCategoryMetricAggregateRow extends MetricAggregateRow {
   year: number;
   month: number;
   sport: string;
+  totalSteps: number | string | null;
+  totalCaloriesActive: number | string | null;
 }
 
 export interface YearCategoryAggregate {
@@ -21,11 +23,15 @@ export interface YearCategoryAggregate {
   totalDuration: number;
   totalDistance: number;
   totalItems: number;
+  totalSteps: number;
+  totalCaloriesActive: number;
 }
 
 export interface YearCategoryDailyActivity {
   duration: number;
   distance: number;
+  steps: number;
+  caloriesActive: number;
   date: string;
   sport: string;
 }

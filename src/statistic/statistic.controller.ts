@@ -36,6 +36,8 @@ export class StatisticController {
                 properties: {
                   duration: { type: 'number' },
                   distance: { type: 'number' },
+                  steps: { type: 'number' },
+                  caloriesActive: { type: 'number' },
                   date: { type: 'string', format: 'date-time' },
                   sport: { type: 'string' },
                 },
@@ -52,6 +54,8 @@ export class StatisticController {
               totalDuration: { type: 'number' },
               totalDistance: { type: 'number' },
               totalItems: { type: 'number' },
+              totalSteps: { type: 'number' },
+              totalCaloriesActive: { type: 'number' },
             },
           },
         },
