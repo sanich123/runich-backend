@@ -121,18 +121,9 @@ export class ActivityController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get activity locations for route replay' })
   @ApiParam({ name: 'id', description: 'Activity identifier' })
-  @ApiQuery({ name: 'replay', required: false, enum: ['true'], description: 'Request route replay data' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
-  async getLocationsByActivityId(
-    @Param() { id }: ParamsId,
-    @Req() request?: RequestWithUser,
-    @Query('replay') replay?: string,
-  ) {
-    return this.activityService.getLocationsByActivityId(
-      id,
-      request?.user.userId ?? request?.user.id,
-      replay === 'true',
-    );
+  async getLocationsByActivityId(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
+    return this.activityService.getLocationsByActivityId(id, request?.user.userId ?? request?.user.id);
   }
 
   @Get('activityIds')

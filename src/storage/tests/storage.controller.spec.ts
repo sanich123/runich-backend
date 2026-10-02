@@ -12,13 +12,11 @@ describe('StorageController', () => {
     uploadPhotos: asyncMock(),
     deletePhoto: asyncMock(),
   };
-  const subscriptionService = { hasPremiumSubscription: asyncMock().mockResolvedValue(true) };
-  const controller = new StorageController(storageService as unknown as StorageService, subscriptionService as never);
+  const controller = new StorageController(storageService as unknown as StorageService);
   const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    subscriptionService.hasPremiumSubscription.mockResolvedValue(true);
   });
 
   it.each([
@@ -75,23 +73,21 @@ describe('StorageController', () => {
     expect(storageService.uploadPhotos).not.toHaveBeenCalled();
   });
 
-  it('allows activity media uploads for accounts without a premium subscription', async () => {
+  it('allows activity media uploads for every account', async () => {
     const files = [{ originalname: 'one.jpg', mimetype: 'image/jpeg' }] as Express.Multer.File[];
     const body = {
       scope: 'activity' as const,
       manifest: JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
     };
-    subscriptionService.hasPremiumSubscription.mockResolvedValue(false);
     storageService.uploadPhotos.mockResolvedValue([{ mediaId: 'media-1', role: 'media', url: 'photo-url' }]);
 
     await expect(controller.uploadPhotos(files, request, body)).resolves.toEqual([
       { mediaId: 'media-1', role: 'media', url: 'photo-url' },
     ]);
-    expect(subscriptionService.hasPremiumSubscription).not.toHaveBeenCalled();
     expect(storageService.uploadPhotos).toHaveBeenCalledWith('user-1', files, { scope: 'activity' }, body.manifest);
   });
 
-  it('keeps profile uploads available without checking the activity subscription', async () => {
+  it('uploads profile media', async () => {
     const files = [{ originalname: 'avatar.jpg', mimetype: 'image/jpeg' }] as Express.Multer.File[];
     const body = {
       scope: 'profile' as const,
@@ -102,7 +98,6 @@ describe('StorageController', () => {
     await expect(controller.uploadPhotos(files, request, body)).resolves.toEqual([
       { mediaId: 'media-1', role: 'media', url: 'avatar-url' },
     ]);
-    expect(subscriptionService.hasPremiumSubscription).not.toHaveBeenCalled();
     expect(storageService.uploadPhotos).toHaveBeenCalledWith('user-1', files, { scope: 'profile' }, body.manifest);
   });
 

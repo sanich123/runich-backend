@@ -47,7 +47,6 @@ import { calculateActiveCalories } from './activity-calories';
 import { StaticMapService } from 'src/common/maps/static-map.service';
 import { reduceLocations } from 'src/common/parsers/reduce-locations';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
-import { SubscriptionService } from 'src/subscription/subscription.service';
 
 @Injectable()
 export class ActivityService {
@@ -69,11 +68,7 @@ export class ActivityService {
     @Optional()
     @Inject(StaticMapService)
     staticMapService?: StaticMapService,
-    @Optional()
-    @Inject(SubscriptionService)
-    _subscriptionService?: SubscriptionService,
   ) {
-    void _subscriptionService;
     this.persistenceService = persistenceService ?? new ActivityPersistenceService(this.prisma);
     this.storageService = storageService;
     this.mediaCleanupService = mediaCleanupService;
@@ -459,8 +454,7 @@ export class ActivityService {
     }
   }
 
-  async getLocationsByActivityId(id: string, currentUserId?: string, _replay = false) {
-    void _replay;
+  async getLocationsByActivityId(id: string, currentUserId?: string) {
     const activity = await this.prisma.activity.findUnique({
       where: { id },
       select: {
