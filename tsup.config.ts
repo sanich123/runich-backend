@@ -1,6 +1,8 @@
-import { defineConfig } from 'tsup';
+type EsbuildJsxOptions = {
+  jsx?: 'transform' | 'preserve' | 'automatic' | 'react-jsx' | 'react-jsxdev';
+};
 
-export default defineConfig({
+export default {
   entry: {
     main: 'src/main.ts',
     'background-worker': 'src/app/background-worker.ts',
@@ -12,7 +14,7 @@ export default defineConfig({
   sourcemap: true,
   splitting: false,
   // The default classic JSX factory expects a global React binding.
-  esbuildOptions(options) {
+  esbuildOptions(options: EsbuildJsxOptions) {
     options.jsx = 'automatic';
   },
   external: [
@@ -52,4 +54,4 @@ export default defineConfig({
     'uuid',
     'xmldom-qsa',
   ],
-});
+};
