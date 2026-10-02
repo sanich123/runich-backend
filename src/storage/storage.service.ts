@@ -149,8 +149,8 @@ export class StorageService {
       throw new BadRequestException(`Можно загрузить не более ${UPLOAD_LIMITS.mediaBatchFiles} файлов за раз`);
     }
     const totalBytes = files.reduce((total, file) => total + (file.size ?? file.buffer?.byteLength ?? 0), 0);
-    if (totalBytes >= UPLOAD_LIMITS.mediaBatchBytes) {
-      throw new BadRequestException('Суммарный размер файлов должен быть меньше 100 МБ');
+    if (totalBytes > UPLOAD_LIMITS.mediaBatchBytes) {
+      throw new BadRequestException('Суммарный размер файлов не должен превышать 250 МБ');
     }
 
     const manifest = this.parseUploadManifest(rawManifest, files.length);

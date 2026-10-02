@@ -101,10 +101,10 @@ class ActivityLocationDto {
 }
 
 export class ActivityMediaAppendDto {
-  @ApiProperty({ type: [ActivityMediaDto], minItems: 1, maxItems: UPLOAD_LIMITS.mediaBatchFiles })
+  @ApiProperty({ type: [ActivityMediaDto], minItems: 1, maxItems: UPLOAD_LIMITS.activityMediaFiles })
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(UPLOAD_LIMITS.mediaBatchFiles)
+  @ArrayMaxSize(UPLOAD_LIMITS.activityMediaFiles)
   @ValidateNested({ each: true })
   @Type(() => ActivityMediaDto)
   media: ActivityMediaObject[];
@@ -216,6 +216,7 @@ export class ActivityDto {
   @ApiPropertyOptional({
     type: 'array',
     description: 'Photo and video URLs',
+    maxItems: UPLOAD_LIMITS.activityMediaFiles,
     items: {
       type: 'object',
       properties: {
@@ -228,7 +229,7 @@ export class ActivityDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(UPLOAD_LIMITS.mediaBatchFiles)
+  @ArrayMaxSize(UPLOAD_LIMITS.activityMediaFiles)
   @ValidateNested({ each: true })
   @Type(() => ActivityMediaDto)
   media?: ActivityMediaObject[];

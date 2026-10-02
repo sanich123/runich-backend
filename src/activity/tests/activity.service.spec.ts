@@ -1,4 +1,3 @@
-import { ForbiddenException } from '@nestjs/common';
 import { ActivityService } from '../activity.service';
 import { MAX_MAP_ROUTE_LOCATIONS } from '../const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
@@ -39,9 +38,9 @@ function createPrismaMock() {
 }
 
 describe('ActivityService', () => {
-  it('rejects saving activity media without a premium subscription', async () => {
+  it('saves activity media without a premium subscription', async () => {
     const prisma = createPrismaMock();
-    const account = { getAccountByUserId: asyncMock() };
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
     const service = new ActivityService(
       prisma as never,
@@ -52,19 +51,20 @@ describe('ActivityService', () => {
       undefined,
       subscription as never,
     );
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
 
     await expect(
       service.createActivity(
         { ...activityDto, media: [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }] },
         'user-1',
       ),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(subscription.hasPremiumSubscription).toHaveBeenCalledWith('user-1');
-    expect(account.getAccountByUserId).not.toHaveBeenCalled();
-    expect(prisma.activity.create).not.toHaveBeenCalled();
+    ).resolves.toEqual({ id: 'activity-1' });
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
+    expect(account.getAccountByUserId).toHaveBeenCalledWith('user-1');
+    expect(prisma.activity.create).toHaveBeenCalled();
   });
 
-  it('rejects appending activity media without a premium subscription', async () => {
+  it('rejects appending more than five media files without checking a subscription', async () => {
     const prisma = createPrismaMock();
     const storage = { promoteActivityPhotos: asyncMock() };
     const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
@@ -78,11 +78,16 @@ describe('ActivityService', () => {
       subscription as never,
     );
     prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: new Date('2026-09-28T12:00:00.000Z') });
+    prisma.activityMedia.count.mockResolvedValue(0);
 
     await expect(
-      service.appendActivityMedia('activity-1', 'user-1', [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }]),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(subscription.hasPremiumSubscription).toHaveBeenCalledWith('user-1');
+      service.appendActivityMedia(
+        'activity-1',
+        'user-1',
+        Array.from({ length: 6 }, (_, index) => ({ url: `https://cdn.example/photo-${index}.jpg`, thumbnail: null })),
+      ),
+    ).rejects.toThrow('К активности можно добавить не больше 5 файлов');
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
     expect(storage.promoteActivityPhotos).not.toHaveBeenCalled();
   });
   const originalMapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
@@ -129,7 +134,7 @@ describe('ActivityService', () => {
       { coords: { latitude: 55.76, longitude: 37.62 } },
     ];
     await service.createActivity({ ...activityDto, locations, media: [{ url: 'photo', thumbnail: null }] }, 'user-1');
-    expect(subscription.hasPremiumSubscription).toHaveBeenCalledWith('user-1');
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({
         mapPhotoUrl: expect.stringContaining('?access_token=mapbox-token'),
@@ -374,9 +379,9 @@ describe('ActivityService', () => {
     expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
   });
 
-  it('requires a premium subscription before reading a route for replay', async () => {
+  it('reads a route for replay without a premium subscription', async () => {
     const prisma = createPrismaMock();
-    const storage = { readActivityRoute: asyncMock() };
+    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
     const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
     const service = new ActivityService(
       prisma as never,
@@ -394,11 +399,14 @@ describe('ActivityService', () => {
       visibility: 'public',
     });
 
-    await expect(service.getLocationsByActivityId('activity-1', 'viewer-1', true)).rejects.toBeInstanceOf(
-      ForbiddenException,
+    await expect(service.getLocationsByActivityId('activity-1', 'viewer-1', true)).resolves.toEqual({
+      locations: [{ coords: { latitude: 55, longitude: 37 } }],
+      kilometresSplit: [],
+    });
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
+    expect(storage.readActivityRoute).toHaveBeenCalledWith(
+      'user-1/activities/activity-1/locations/locations-v1.json.gz',
     );
-    expect(subscription.hasPremiumSubscription).toHaveBeenCalledWith('viewer-1');
-    expect(storage.readActivityRoute).not.toHaveBeenCalled();
   });
 
   it('limits map route points without dropping timestamp or altitude', async () => {

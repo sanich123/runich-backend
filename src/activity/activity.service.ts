@@ -71,20 +71,19 @@ export class ActivityService {
     staticMapService?: StaticMapService,
     @Optional()
     @Inject(SubscriptionService)
-    subscriptionService?: SubscriptionService,
+    _subscriptionService?: SubscriptionService,
   ) {
+    void _subscriptionService;
     this.persistenceService = persistenceService ?? new ActivityPersistenceService(this.prisma);
     this.storageService = storageService;
     this.mediaCleanupService = mediaCleanupService;
     this.staticMapService = staticMapService;
-    this.subscriptionService = subscriptionService;
   }
 
   private readonly persistenceService: ActivityPersistenceService;
   private readonly storageService?: StorageService;
   private readonly mediaCleanupService?: MediaCleanupService;
   private readonly staticMapService?: StaticMapService;
-  private readonly subscriptionService?: SubscriptionService;
 
   private async isFollower(viewerId: string, ownerId: string) {
     if (viewerId === ownerId) return false;
@@ -117,14 +116,7 @@ export class ActivityService {
     return this.isFollower(currentUserId, activity.userId);
   }
 
-  private async requirePremiumSubscription(userId: string) {
-    if (!(await this.subscriptionService?.hasPremiumSubscription(userId))) {
-      throw new ForbiddenException('Для фото и видео активности и повтора маршрута нужна подписка Runich Plus');
-    }
-  }
-
   async createActivity(activityDto: ActivityDto, id: string) {
-    if (activityDto.media?.length) await this.requirePremiumSubscription(id);
     let uploadedRouteKey: string | undefined;
     let uploadedMapKey: string | undefined;
     let uploadedActivityMediaKeys: string[] = [];
@@ -389,13 +381,12 @@ export class ActivityService {
     });
     if (!activity) throw new NotFoundException('Активность не найдена');
     if (activity.userId !== userId) throw new ForbiddenException('Недостаточно прав');
-    await this.requirePremiumSubscription(userId);
     if (!this.storageService) throw new ServiceUnavailableException('Сервис хранения медиа не настроен');
 
     const existingCount = await this.prisma.activityMedia.count({ where: { activityId } });
-    if (existingCount + media.length > UPLOAD_LIMITS.mediaBatchFiles) {
+    if (existingCount + media.length > UPLOAD_LIMITS.activityMediaFiles) {
       throw new BadRequestException(
-        'К активности можно добавить не больше ' + UPLOAD_LIMITS.mediaBatchFiles + ' файлов',
+        'К активности можно добавить не больше ' + UPLOAD_LIMITS.activityMediaFiles + ' файлов',
       );
     }
 
@@ -405,9 +396,9 @@ export class ActivityService {
       promotedKeys = promoted.keys;
       await this.prisma.$transaction(async (transaction) => {
         const currentCount = await transaction.activityMedia.count({ where: { activityId } });
-        if (currentCount + promoted.photos.length > UPLOAD_LIMITS.mediaBatchFiles) {
+        if (currentCount + promoted.photos.length > UPLOAD_LIMITS.activityMediaFiles) {
           throw new BadRequestException(
-            'К активности можно добавить не больше ' + UPLOAD_LIMITS.mediaBatchFiles + ' файлов',
+            'К активности можно добавить не больше ' + UPLOAD_LIMITS.activityMediaFiles + ' файлов',
           );
         }
         const lastMedia = await transaction.activityMedia.findFirst({
@@ -468,7 +459,8 @@ export class ActivityService {
     }
   }
 
-  async getLocationsByActivityId(id: string, currentUserId?: string, replay = false) {
+  async getLocationsByActivityId(id: string, currentUserId?: string, _replay = false) {
+    void _replay;
     const activity = await this.prisma.activity.findUnique({
       where: { id },
       select: {
@@ -489,8 +481,6 @@ export class ActivityService {
       activity.visibility === ACTIVITY_VISIBILITY.followers &&
       (isOwner || (await this.isFollower(currentUserId, activity.userId)));
     if (!isOwner && !isPublic && !isFollowerActivity) return null;
-    if (replay) await this.requirePremiumSubscription(currentUserId);
-
     let locations: LocationObject[] | undefined;
     if (activity.routeStorageKey) {
       if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');

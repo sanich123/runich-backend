@@ -138,18 +138,18 @@ describe('StorageService', () => {
     expect(s3Send).not.toHaveBeenCalled();
   });
 
-  it('rejects a batch whose total size is 100 MB or more', async () => {
+  it('rejects a batch whose total size exceeds 250 MB', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
 
     await expect(
       service.uploadPhotos(
         'user-1',
-        [{ size: UPLOAD_LIMITS.mediaBatchBytes, originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
+        [{ size: UPLOAD_LIMITS.mediaBatchBytes + 1, originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
         {},
         JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
       ),
-    ).rejects.toThrow('Суммарный размер файлов должен быть меньше 100 МБ');
+    ).rejects.toThrow('Суммарный размер файлов не должен превышать 250 МБ');
     expect(s3Send).not.toHaveBeenCalled();
   });
 

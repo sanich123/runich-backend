@@ -10,6 +10,9 @@ describe('upload limits', () => {
 
   it('keeps bounded limits for media and archive uploads', () => {
     expect(UPLOAD_LIMITS.photoBytes).toBe(15 * 1024 * 1024);
+    expect(UPLOAD_LIMITS.videoBytes).toBe(50 * 1024 * 1024);
+    expect(UPLOAD_LIMITS.activityMediaFiles).toBe(5);
+    expect(UPLOAD_LIMITS.mediaBatchBytes).toBe(250 * 1024 * 1024);
     expect(UPLOAD_LIMITS.migrationArchiveBytes).toBe(150 * 1024 * 1024);
     expect(UPLOAD_LIMITS.migrationArchiveEntries).toBe(5_000);
     expect(UPLOAD_LIMITS.migrationArchiveUncompressedBytes).toBe(500 * 1024 * 1024);

@@ -119,9 +119,9 @@ export class ActivityController {
   @Get(`${id}/locations`)
   @ApiOkResponse({ type: ActivityLocationsResponseDto })
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get activity locations, optionally for premium route replay' })
+  @ApiOperation({ summary: 'Get activity locations for route replay' })
   @ApiParam({ name: 'id', description: 'Activity identifier' })
-  @ApiQuery({ name: 'replay', required: false, enum: ['true'], description: 'Require premium access for replay' })
+  @ApiQuery({ name: 'replay', required: false, enum: ['true'], description: 'Request route replay data' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   async getLocationsByActivityId(
     @Param() { id }: ParamsId,
