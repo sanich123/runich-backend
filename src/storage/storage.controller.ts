@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
-  Optional,
   Post,
   Req,
   UploadedFile,
@@ -42,19 +41,13 @@ import {
   PhotoUploadResponseDto,
 } from './storage.dto';
 import { StorageService } from './storage.service';
-import { SubscriptionService } from 'src/subscription/subscription.service';
 
 @ApiTags('photo')
 @ApiBearerAuth('bearerAuth')
 @Controller('photo')
 @UseGuards(JwtAuthGuard)
 export class StorageController {
-  constructor(
-    @Inject(StorageService) private readonly storageService: StorageService,
-    @Optional() @Inject(SubscriptionService) _subscriptionService?: SubscriptionService,
-  ) {
-    void _subscriptionService;
-  }
+  constructor(@Inject(StorageService) private readonly storageService: StorageService) {}
 
   @Post('batch')
   @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)

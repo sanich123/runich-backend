@@ -1,14 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { CurrentSubscriptionResponseDto, SubscriptionStatus } from './subscription.dto';
-
-const DEFAULT_ANNUAL_PREMIUM_EMAILS = new Set([
-  'runich.app@yandex.ru',
-  'varon-in@yandex.ru',
-  'aovoronin.piano@gmail.com',
-]);
-const DEFAULT_ANNUAL_PRODUCT_ID = 'complimentary-annual-premium';
 
 interface SubscriptionRecord {
   provider: string;
@@ -30,8 +22,6 @@ export class SubscriptionService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getCurrentSubscription(userId: string): Promise<CurrentSubscriptionResponseDto> {
-    await this.ensureDefaultAnnualSubscription(userId);
-
     const subscriptions = (await this.prisma.subscription.findMany({
       where: { userId },
       orderBy: [{ startsAt: 'desc' }, { createdAt: 'desc' }],
@@ -60,7 +50,7 @@ export class SubscriptionService {
     if (!record) {
       return {
         userId,
-        isPremium: false,
+        isPremium: true,
         status: 'none',
         provider: null,
         productId: null,
@@ -73,8 +63,8 @@ export class SubscriptionService {
     const startsAtDate = asDate(record.startsAt);
     const expiresAtDate = asDate(record.expiresAt);
     const startsInFuture = Boolean(startsAtDate && startsAtDate.getTime() > now);
-    const isPremium = record === current;
-    const status: SubscriptionStatus = isPremium
+    const hasCurrentSubscription = record === current;
+    const status: SubscriptionStatus = hasCurrentSubscription
       ? (record.status as 'active' | 'cancelled')
       : startsInFuture || record.status === 'pending'
         ? 'pending'
@@ -86,7 +76,7 @@ export class SubscriptionService {
 
     return {
       userId,
-      isPremium,
+      isPremium: true,
       status,
       provider: record.provider,
       productId: record.productId,
@@ -96,42 +86,8 @@ export class SubscriptionService {
     };
   }
 
-  private async ensureDefaultAnnualSubscription(userId: string) {
-    const user = (await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, emailConfirmedAt: true },
-    })) as { email: string; emailConfirmedAt: Date | string | null } | null;
-    const email = user?.email.trim().toLowerCase();
-    if (!email || !user?.emailConfirmedAt || !DEFAULT_ANNUAL_PREMIUM_EMAILS.has(email)) return;
-
-    const providerSubscriptionId = `complimentary-annual:${userId}`;
-    const where = { provider_providerSubscriptionId: { provider: 'manual', providerSubscriptionId } };
-    const startsAt = new Date();
-    const expiresAt = new Date(startsAt);
-    expiresAt.setUTCFullYear(expiresAt.getUTCFullYear() + 1);
-
-    try {
-      await this.prisma.subscription.upsert({
-        where,
-        update: {},
-        create: {
-          userId,
-          provider: 'manual',
-          providerSubscriptionId,
-          productId: DEFAULT_ANNUAL_PRODUCT_ID,
-          status: 'active',
-          startsAt,
-          expiresAt,
-          cancelAtPeriodEnd: false,
-        },
-      });
-    } catch (error) {
-      if (!isUniqueConstraintError(error)) throw error;
-      await this.prisma.subscription.findUnique({ where, select: { id: true } });
-    }
-  }
-
-  async hasPremiumSubscription(userId: string) {
-    return (await this.getCurrentSubscription(userId)).isPremium;
+  hasPremiumSubscription(userId: string): Promise<boolean> {
+    void userId;
+    return Promise.resolve(true);
   }
 }
