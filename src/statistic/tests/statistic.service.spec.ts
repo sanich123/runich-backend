@@ -72,8 +72,22 @@ describe('StatisticService', () => {
       { duration: 100, distance: 1000, speed: 5 },
     ]);
     prisma.activity.findMany.mockResolvedValueOnce([
-      { duration: 100, distance: 1000, date: new Date('2025-01-02T12:00:00.000Z'), sport: 'run' },
-      { duration: 200, distance: 2000, date: new Date('2025-01-02T15:00:00.000Z'), sport: 'bike' },
+      {
+        duration: 100,
+        distance: 1000,
+        steps: 2,
+        caloriesActive: 5,
+        date: new Date('2025-01-02T12:00:00.000Z'),
+        sport: 'run',
+      },
+      {
+        duration: 200,
+        distance: 2000,
+        steps: 4,
+        caloriesActive: 20,
+        date: new Date('2025-01-02T15:00:00.000Z'),
+        sport: 'bike',
+      },
     ]);
 
     prisma.$queryRaw.mockResolvedValueOnce([
@@ -84,6 +98,8 @@ describe('StatisticService', () => {
         totalDuration: 1,
         totalDistance: 2,
         totalItems: 1,
+        totalSteps: 2,
+        totalCaloriesActive: 5,
       },
       {
         year: 2025,
@@ -92,33 +108,73 @@ describe('StatisticService', () => {
         totalDuration: 2,
         totalDistance: 3,
         totalItems: 1,
+        totalSteps: 4,
+        totalCaloriesActive: 20,
       },
     ]);
     await expect(service.getStatisticByYearAndCategory('u1', 'UTC')).resolves.toEqual({
       isUserHasActivities: true,
       '2025': {
         all: {
-          0: { totalDuration: 3, totalDistance: 5, totalItems: 2 },
+          0: {
+            totalDuration: 3,
+            totalDistance: 5,
+            totalItems: 2,
+            totalSteps: 6,
+            totalCaloriesActive: 25,
+          },
           totalDuration: 3,
           totalDistance: 5,
           totalItems: 2,
+          totalSteps: 6,
+          totalCaloriesActive: 25,
         },
         run: {
-          0: { totalDuration: 1, totalDistance: 2, totalItems: 1 },
+          0: {
+            totalDuration: 1,
+            totalDistance: 2,
+            totalItems: 1,
+            totalSteps: 2,
+            totalCaloriesActive: 5,
+          },
           totalDuration: 1,
           totalDistance: 2,
           totalItems: 1,
+          totalSteps: 2,
+          totalCaloriesActive: 5,
         },
         bike: {
-          0: { totalDuration: 2, totalDistance: 3, totalItems: 1 },
+          0: {
+            totalDuration: 2,
+            totalDistance: 3,
+            totalItems: 1,
+            totalSteps: 4,
+            totalCaloriesActive: 20,
+          },
           totalDuration: 2,
           totalDistance: 3,
           totalItems: 1,
+          totalSteps: 4,
+          totalCaloriesActive: 20,
         },
         dailyActivities: {
           '2025-01-02': [
-            { duration: 100, distance: 1000, date: '2025-01-02T12:00:00.000Z', sport: 'run' },
-            { duration: 200, distance: 2000, date: '2025-01-02T15:00:00.000Z', sport: 'bike' },
+            {
+              duration: 100,
+              distance: 1000,
+              steps: 2,
+              caloriesActive: 5,
+              date: '2025-01-02T12:00:00.000Z',
+              sport: 'run',
+            },
+            {
+              duration: 200,
+              distance: 2000,
+              steps: 4,
+              caloriesActive: 20,
+              date: '2025-01-02T15:00:00.000Z',
+              sport: 'bike',
+            },
           ],
         },
       },

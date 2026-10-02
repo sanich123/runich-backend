@@ -40,6 +40,7 @@ model User {
   friends                  Friend[]
   profile                  Profile?
   userSessions             UserSession[]
+  subscriptions            Subscription[]
 
   @@unique([email], map: "Users_email_key")
   @@unique([phone], map: "Users_phone_key")
@@ -177,6 +178,25 @@ model ActivityMigrationJob {
   @@index([status, createdAt], map: "ActivityMigrationJob_status_createdAt_idx")
   @@index([userId, createdAt], map: "ActivityMigrationJob_user_id_createdAt_idx")
   @@map("ActivityMigrationJob")
+}
+
+model Subscription {
+  id                       Uuid                  @id(map: "Subscriptions_pkey") @default(sql`gen_random_uuid()`)
+  userId                   Uuid                  @map("user_id")
+  provider                 VarChar(32)           @default("manual")
+  providerSubscriptionId   VarChar(255)?         @map("provider_subscription_id")
+  productId                VarChar(128)?         @map("product_id")
+  status                   VarChar(24)           @default("active")
+  startsAt                 TimestamptzString(6)  @default(now()) @map("starts_at")
+  expiresAt                TimestamptzString(6)? @map("expires_at")
+  cancelAtPeriodEnd        Boolean               @default(false) @map("cancel_at_period_end")
+  createdAt                TimestamptzString(6)  @default(now()) @map("created_at")
+  updatedAt                TimestamptzString(6)  @default(now()) @map("updated_at")
+  user                     User                  @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Subscriptions_user_id_fkey", index: false)
+
+  @@unique([provider, providerSubscriptionId], map: "Subscriptions_provider_provider_subscription_id_key")
+  @@index([userId, status, expiresAt], map: "Subscriptions_user_id_status_expires_at_idx")
+  @@map("Subscriptions")
 }
 
 model AuthExchange {

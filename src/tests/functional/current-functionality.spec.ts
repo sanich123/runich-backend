@@ -391,6 +391,13 @@ describe('utility functions and configuration', () => {
   it('calculates timestamps, speeds and chunks', () => {
     expect(getTimeStampFromTime(new Date(1000))).toBe(1);
     expect(getSpeedInMinsInKm(1000, 60000)).toEqual({ paceAsNumber: 1, paceAsString: '1.00' });
+    expect(getSpeedInMinsInKm(14450, 4331000)).toEqual({ paceAsNumber: 5, paceAsString: '5.00' });
+    expect(getSpeedInMinsInKm(1000, 59400)).toEqual({ paceAsNumber: 0.59, paceAsString: '0.59' });
+    expect(getSpeedInMinsInKm(1000, 59500)).toEqual({ paceAsNumber: 1, paceAsString: '1.00' });
+    expect(getSpeedInMinsInKm(Number.NaN, 60000)).toEqual({ paceAsNumber: 0, paceAsString: '0.00' });
+    expect(getSpeedInMinsInKm(1000, Number.POSITIVE_INFINITY)).toEqual({ paceAsNumber: 0, paceAsString: '0.00' });
+    expect(getSpeedInMinsInKm(-1000, 60000)).toEqual({ paceAsNumber: 0, paceAsString: '0.00' });
+    expect(getSpeedInMinsInKm(1000, -60000)).toEqual({ paceAsNumber: 0, paceAsString: '0.00' });
     expect(getSpeedInMinsInKm(0, 0)).toEqual({ paceAsNumber: 0, paceAsString: '0.00' });
     expect(chunkArray([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
   });

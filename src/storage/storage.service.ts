@@ -87,6 +87,14 @@ export class StorageService {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
       this.assertConfigured();
+      const isVideo = file.mimetype.startsWith('video/');
+      const maximumFileSize = isVideo ? UPLOAD_LIMITS.videoBytes : UPLOAD_LIMITS.photoBytes;
+      const fileSize = file.size ?? file.buffer?.byteLength ?? 0;
+      if (fileSize > maximumFileSize) {
+        throw new BadRequestException(
+          isVideo ? 'Размер видео должен быть не более 50 МБ' : 'Размер изображения должен быть не более 15 МБ',
+        );
+      }
       const isUnsupportedVideo =
         file.mimetype.startsWith('video/') && !isSupportedVideoUpload(file.originalname, file.mimetype);
       if (isUnsupportedVideo) {
@@ -141,8 +149,8 @@ export class StorageService {
       throw new BadRequestException(`Можно загрузить не более ${UPLOAD_LIMITS.mediaBatchFiles} файлов за раз`);
     }
     const totalBytes = files.reduce((total, file) => total + (file.size ?? file.buffer?.byteLength ?? 0), 0);
-    if (totalBytes >= UPLOAD_LIMITS.mediaBatchBytes) {
-      throw new BadRequestException('Суммарный размер файлов должен быть меньше 100 МБ');
+    if (totalBytes > UPLOAD_LIMITS.mediaBatchBytes) {
+      throw new BadRequestException('Суммарный размер файлов не должен превышать 250 МБ');
     }
 
     const manifest = this.parseUploadManifest(rawManifest, files.length);

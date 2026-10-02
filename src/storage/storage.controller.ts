@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  Optional,
   Post,
   Req,
   UploadedFile,
@@ -41,13 +42,19 @@ import {
   PhotoUploadResponseDto,
 } from './storage.dto';
 import { StorageService } from './storage.service';
+import { SubscriptionService } from 'src/subscription/subscription.service';
 
 @ApiTags('photo')
 @ApiBearerAuth('bearerAuth')
 @Controller('photo')
 @UseGuards(JwtAuthGuard)
 export class StorageController {
-  constructor(@Inject(StorageService) private readonly storageService: StorageService) {}
+  constructor(
+    @Inject(StorageService) private readonly storageService: StorageService,
+    @Optional() @Inject(SubscriptionService) _subscriptionService?: SubscriptionService,
+  ) {
+    void _subscriptionService;
+  }
 
   @Post('batch')
   @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)
@@ -82,7 +89,7 @@ export class StorageController {
         },
       }),
       limits: {
-        fileSize: UPLOAD_LIMITS.photoBytes,
+        fileSize: UPLOAD_LIMITS.videoBytes,
         files: UPLOAD_LIMITS.mediaBatchFiles,
         parts: UPLOAD_LIMITS.mediaBatchFiles + 3,
       },
@@ -106,7 +113,8 @@ export class StorageController {
   ) {
     if (!files?.length) throw new BadRequestException('Не указаны файлы: files');
     const { manifest, ...options } = body;
-    return await this.storageService.uploadPhotos(getAuthenticatedUserId(request), files, options, manifest);
+    const userId = getAuthenticatedUserId(request);
+    return await this.storageService.uploadPhotos(userId, files, options, manifest);
   }
 
   @Post()
@@ -138,7 +146,7 @@ export class StorageController {
           callback(null, `${randomUUID()}${extension}`);
         },
       }),
-      limits: { fileSize: UPLOAD_LIMITS.photoBytes, files: 1 },
+      limits: { fileSize: UPLOAD_LIMITS.videoBytes, files: 1 },
       fileFilter: (_request, file, callback) => {
         const isImage = file.mimetype.startsWith('image/');
         const isSupportedVideo =
@@ -158,7 +166,8 @@ export class StorageController {
     @Body() options: PhotoUploadOptionsDto = {},
   ) {
     if (!file) throw new BadRequestException('Не указан файл: file');
-    return await this.storageService.uploadPhoto(getAuthenticatedUserId(request), file, options);
+    const userId = getAuthenticatedUserId(request);
+    return await this.storageService.uploadPhoto(userId, file, options);
   }
 
   @Delete()

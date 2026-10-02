@@ -11,7 +11,7 @@ import {
   RegisterUserDto,
 } from '../../auth/dto/auth.dto';
 import { UserIdParamsDto } from '../../auth/dto/auth.dto';
-import { ActivityDto } from '../../activity/activity.dto';
+import { ActivityDto, ActivityMediaAppendDto } from '../../activity/activity.dto';
 import { CommentDTO, CommentLikeDto, CommentUpdateDto } from '../../comment/comment.dto';
 import { EmailDTO, CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from '../../email/email.dto';
 import { FriendDto } from '../../friend/friend.dto';
@@ -130,6 +130,16 @@ describe('request DTO validation', () => {
         },
       ],
     });
+    const activityMedia = Array.from({ length: 5 }, (_, index) => ({
+      url: `https://example.com/photo-${index}.jpg`,
+      thumbnail: null,
+      blurhash: 'hash',
+    }));
+    const activityFields = { duration: 100, distance: 1000, speed: 10, sport: 'run' };
+    await expectValid(ActivityDto, { ...activityFields, media: activityMedia });
+    await expectInvalid(ActivityDto, { ...activityFields, media: [...activityMedia, ...activityMedia.slice(0, 1)] });
+    await expectValid(ActivityMediaAppendDto, { media: activityMedia });
+    await expectInvalid(ActivityMediaAppendDto, { media: [...activityMedia, ...activityMedia.slice(0, 1)] });
     await expectInvalid(ActivityDto, {});
     await expectInvalid(ActivityDto, { duration: 1.5, distance: 1, speed: 1, sport: 'run' });
     await expectInvalid(ActivityDto, { duration: 1, distance: 1, speed: 1, sport: 'walk', steps: -1 });

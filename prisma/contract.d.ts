@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'518d6e8fa3bed5df5d4ec67f28903980fccce428f32829ba31db896169568715'>;
+  StorageHashBase<'611579864d15b6ed6e4b976ac5583b78e1f9835bad2124436d5c326d13a5309c'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -403,6 +403,19 @@ export type FieldOutputTypes = {
       readonly userId: CodecTypes['pg/uuid@1']['output'];
       readonly weight: CodecTypes['pg/text@1']['output'] | null;
     };
+    readonly Subscription: {
+      readonly cancelAtPeriodEnd: CodecTypes['pg/bool@1']['output'];
+      readonly createdAt: TimestamptzString<6>;
+      readonly expiresAt: TimestamptzString<6> | null;
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly productId: Varchar<128> | null;
+      readonly provider: Varchar<32>;
+      readonly providerSubscriptionId: Varchar<255> | null;
+      readonly startsAt: TimestamptzString<6>;
+      readonly status: Varchar<24>;
+      readonly updatedAt: TimestamptzString<6>;
+      readonly userId: CodecTypes['pg/uuid@1']['output'];
+    };
     readonly User: {
       readonly aud: Varchar<255> | null;
       readonly authProvider: Varchar<32> | null;
@@ -618,6 +631,19 @@ export type FieldInputTypes = {
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
       readonly userId: CodecTypes['pg/uuid@1']['input'];
       readonly weight: CodecTypes['pg/text@1']['input'] | null;
+    };
+    readonly Subscription: {
+      readonly cancelAtPeriodEnd: CodecTypes['pg/bool@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly expiresAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly productId: CodecTypes['sql/varchar@1']['input'] | null;
+      readonly provider: CodecTypes['sql/varchar@1']['input'];
+      readonly providerSubscriptionId: CodecTypes['sql/varchar@1']['input'] | null;
+      readonly startsAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly status: CodecTypes['sql/varchar@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly userId: CodecTypes['pg/uuid@1']['input'];
     };
     readonly User: {
       readonly aud: CodecTypes['sql/varchar@1']['input'] | null;
@@ -835,6 +861,19 @@ export type StorageColumnTypes = {
       readonly user_id: CodecTypes['pg/uuid@1']['output'];
       readonly weight: CodecTypes['pg/text@1']['output'] | null;
     };
+    readonly Subscriptions: {
+      readonly cancel_at_period_end: CodecTypes['pg/bool@1']['output'];
+      readonly created_at: TimestamptzString<6>;
+      readonly expires_at: TimestamptzString<6> | null;
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly product_id: Varchar<128> | null;
+      readonly provider: Varchar<32>;
+      readonly provider_subscription_id: Varchar<255> | null;
+      readonly starts_at: TimestamptzString<6>;
+      readonly status: Varchar<24>;
+      readonly updated_at: TimestamptzString<6>;
+      readonly user_id: CodecTypes['pg/uuid@1']['output'];
+    };
     readonly Users: {
       readonly aud: Varchar<255> | null;
       readonly auth_provider: Varchar<32> | null;
@@ -1050,6 +1089,19 @@ export type StorageColumnInputTypes = {
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
       readonly user_id: CodecTypes['pg/uuid@1']['input'];
       readonly weight: CodecTypes['pg/text@1']['input'] | null;
+    };
+    readonly Subscriptions: {
+      readonly cancel_at_period_end: CodecTypes['pg/bool@1']['input'];
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly expires_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly product_id: CodecTypes['sql/varchar@1']['input'] | null;
+      readonly provider: CodecTypes['sql/varchar@1']['input'];
+      readonly provider_subscription_id: CodecTypes['sql/varchar@1']['input'] | null;
+      readonly starts_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly status: CodecTypes['sql/varchar@1']['input'];
+      readonly updated_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly user_id: CodecTypes['pg/uuid@1']['input'];
     };
     readonly Users: {
       readonly aud: CodecTypes['sql/varchar@1']['input'] | null;
@@ -1310,6 +1362,21 @@ export namespace Models {
       | 'likes'
       | 'user';
   };
+  export type public_Subscription = {
+    cancelAtPeriodEnd: CodecTypes['pg/bool@1']['output'];
+    createdAt: TimestamptzString<6>;
+    expiresAt: TimestamptzString<6> | null;
+    id: CodecTypes['pg/uuid@1']['output'];
+    productId: Varchar<128> | null;
+    provider: Varchar<32>;
+    providerSubscriptionId: Varchar<255> | null;
+    startsAt: TimestamptzString<6>;
+    status: Varchar<24>;
+    updatedAt: TimestamptzString<6>;
+    userId: CodecTypes['pg/uuid@1']['output'];
+    user: public_User;
+    readonly [RelationKeys]?: 'user';
+  };
   export type public_User = {
     aud: Varchar<255> | null;
     authProvider: Varchar<32> | null;
@@ -1349,6 +1416,7 @@ export namespace Models {
     authExchanges: public_AuthExchange[];
     friends: public_Friend[];
     profile: public_Profile | null;
+    subscriptions: public_Subscription[];
     userSessions: public_UserSession[];
     readonly [RelationKeys]?:
       | 'activities'
@@ -1356,6 +1424,7 @@ export namespace Models {
       | 'authExchanges'
       | 'friends'
       | 'profile'
+      | 'subscriptions'
       | 'userSessions';
   };
   export type public_UserSession = {
@@ -1398,6 +1467,7 @@ export declare const models: {
     LoadTestSeedJob: Models.public_LoadTestSeedJob;
     MediaCleanupJob: Models.public_MediaCleanupJob;
     Profile: Models.public_Profile;
+    Subscription: Models.public_Subscription;
     User: Models.public_User;
     UserSession: Models.public_UserSession;
   };
@@ -2704,6 +2774,124 @@ type ContractBase = Omit<
                 },
               ];
             };
+            readonly Subscriptions: {
+              columns: {
+                readonly cancel_at_period_end: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
+                  };
+                };
+                readonly created_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly expires_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'gen_random_uuid()';
+                  };
+                };
+                readonly product_id: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 128 };
+                };
+                readonly provider: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'sql/varchar@1', 'manual'>;
+                  };
+                  readonly typeParams: { readonly length: 32 };
+                };
+                readonly provider_subscription_id: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 255 };
+                };
+                readonly starts_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly status: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'sql/varchar@1', 'active'>;
+                  };
+                  readonly typeParams: { readonly length: 24 };
+                };
+                readonly updated_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly user_id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                };
+              };
+              primaryKey: {
+                readonly columns: readonly ['id'];
+                readonly name: 'Subscriptions_pkey';
+              };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['provider', 'provider_subscription_id'];
+                  readonly name: 'Subscriptions_provider_provider_subscription_id_key';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'Subscriptions_user_id_status_expires_at_idx';
+                  readonly columns: readonly ['user_id', 'status', 'expires_at'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Subscriptions';
+                    readonly columns: readonly ['user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Users';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'Subscriptions_user_id_fkey';
+                },
+              ];
+            };
             readonly Users: {
               columns: {
                 readonly aud: {
@@ -3149,6 +3337,10 @@ type ContractBase = Omit<
       readonly model: 'MediaCleanupJob';
     };
     readonly Profile: { readonly namespace: 'public' & NamespaceId; readonly model: 'Profile' };
+    readonly Subscriptions: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'Subscription';
+    };
     readonly UserSession: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'UserSession';
@@ -4384,6 +4576,114 @@ type ContractBase = Omit<
               };
             };
           };
+          readonly Subscription: {
+            readonly fields: {
+              readonly cancelAtPeriodEnd: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly expiresAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly productId: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 128 };
+                };
+              };
+              readonly provider: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 32 };
+                };
+              };
+              readonly providerSubscriptionId: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 255 };
+                };
+              };
+              readonly startsAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 24 };
+                };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+            };
+            readonly relations: {
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'Subscriptions';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly cancelAtPeriodEnd: { readonly column: 'cancel_at_period_end' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly expiresAt: { readonly column: 'expires_at' };
+                readonly id: { readonly column: 'id' };
+                readonly productId: { readonly column: 'product_id' };
+                readonly provider: { readonly column: 'provider' };
+                readonly providerSubscriptionId: { readonly column: 'provider_subscription_id' };
+                readonly startsAt: { readonly column: 'starts_at' };
+                readonly status: { readonly column: 'status' };
+                readonly updatedAt: { readonly column: 'updated_at' };
+                readonly userId: { readonly column: 'user_id' };
+              };
+            };
+          };
           readonly User: {
             readonly fields: {
               readonly aud: {
@@ -4671,6 +4971,17 @@ type ContractBase = Omit<
                 };
                 readonly cardinality: '1:1';
                 readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
+              readonly subscriptions: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Subscription';
+                };
+                readonly cardinality: '1:N';
                 readonly on: {
                   readonly localFields: readonly ['id'];
                   readonly targetFields: readonly ['userId'];

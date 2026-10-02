@@ -38,6 +38,7 @@ type ModelName =
   | 'Activity'
   | 'ActivityMedia'
   | 'ActivityMigrationJob'
+  | 'Subscription'
   | 'MediaCleanupJob'
   | 'LoadTestSeedJob'
   | 'Friend'
@@ -53,6 +54,7 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
     friends: 'Friend',
     profile: 'Profile',
     userSessions: 'UserSession',
+    subscriptions: 'Subscription',
   },
   Profile: {
     activities: 'Activity',
@@ -67,6 +69,7 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
   ActivityMedia: { activity: 'Activity' },
   ActivityMigrationJob: { profile: 'Profile', user: 'User' },
   AuthExchange: { user: 'User' },
+  Subscription: { user: 'User' },
   Comment: { activity: 'Activity', commentLikes: 'CommentLike', profile: 'Profile' },
   CommentLike: { comment: 'Comment', profile: 'Profile' },
   Friend: { profile: 'Profile', user: 'User' },
@@ -97,6 +100,7 @@ const dateFields: Record<ModelName, ReadonlySet<string>> = {
   ActivityMedia: new Set(['activityDate', 'createdAt']),
   ActivityMigrationJob: new Set(['createdAt', 'startedAt', 'finishedAt']),
   AuthExchange: new Set(['expiresAt', 'consumedAt', 'createdAt']),
+  Subscription: new Set(['startsAt', 'expiresAt', 'createdAt', 'updatedAt']),
   Comment: new Set(['date']),
   CommentLike: new Set(['date']),
   Friend: new Set(['createdAt', 'updatedAt']),
@@ -141,7 +145,7 @@ function normalizeMutationInput(model: ModelName, value: unknown): unknown {
     result[key] = normalizeMutationInput(nestedModel ?? model, nested);
   }
 
-  if ((model === 'Activity' || model === 'Friend') && result.updatedAt === undefined) {
+  if ((model === 'Activity' || model === 'Friend' || model === 'Subscription') && result.updatedAt === undefined) {
     result.updatedAt = new Date().toISOString();
   }
   return result;
@@ -500,6 +504,7 @@ export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics
     activity: new ModelRepository(client, 'Activity', latencyMetrics),
     activityMedia: new ModelRepository(client, 'ActivityMedia', latencyMetrics),
     activityMigrationJob: new ModelRepository(client, 'ActivityMigrationJob', latencyMetrics),
+    subscription: new ModelRepository(client, 'Subscription', latencyMetrics),
     mediaCleanupJob: new ModelRepository(client, 'MediaCleanupJob', latencyMetrics),
     loadTestSeedJob: new ModelRepository(client, 'LoadTestSeedJob', latencyMetrics),
     friend: new ModelRepository(client, 'Friend', latencyMetrics),

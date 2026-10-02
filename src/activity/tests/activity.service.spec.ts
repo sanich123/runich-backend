@@ -23,6 +23,7 @@ function createPrismaMock() {
       delete: asyncMock(),
     },
     activityMedia: {
+      count: asyncMock(),
       createMany: asyncMock(),
       findMany: asyncMock(),
       updateMany: asyncMock(),
@@ -37,6 +38,58 @@ function createPrismaMock() {
 }
 
 describe('ActivityService', () => {
+  it('saves activity media without a premium subscription', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      subscription as never,
+    );
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+
+    await expect(
+      service.createActivity(
+        { ...activityDto, media: [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }] },
+        'user-1',
+      ),
+    ).resolves.toEqual({ id: 'activity-1' });
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
+    expect(account.getAccountByUserId).toHaveBeenCalledWith('user-1');
+    expect(prisma.activity.create).toHaveBeenCalled();
+  });
+
+  it('rejects appending more than five media files without checking a subscription', async () => {
+    const prisma = createPrismaMock();
+    const storage = { promoteActivityPhotos: asyncMock() };
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      undefined,
+      undefined,
+      subscription as never,
+    );
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: new Date('2026-09-28T12:00:00.000Z') });
+    prisma.activityMedia.count.mockResolvedValue(0);
+
+    await expect(
+      service.appendActivityMedia(
+        'activity-1',
+        'user-1',
+        Array.from({ length: 6 }, (_, index) => ({ url: `https://cdn.example/photo-${index}.jpg`, thumbnail: null })),
+      ),
+    ).rejects.toThrow('К активности можно добавить не больше 5 файлов');
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
+    expect(storage.promoteActivityPhotos).not.toHaveBeenCalled();
+  });
   const originalMapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
 
   afterEach(() => {
@@ -48,7 +101,16 @@ describe('ActivityService', () => {
   it('creates activities with and without a generated map image', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(true) };
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      subscription as never,
+    );
     prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
@@ -72,6 +134,7 @@ describe('ActivityService', () => {
       { coords: { latitude: 55.76, longitude: 37.62 } },
     ];
     await service.createActivity({ ...activityDto, locations, media: [{ url: 'photo', thumbnail: null }] }, 'user-1');
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({
         mapPhotoUrl: expect.stringContaining('?access_token=mapbox-token'),
@@ -289,7 +352,16 @@ describe('ActivityService', () => {
   it('reads a stored route while keeping the locations endpoint response unchanged', async () => {
     const prisma = createPrismaMock();
     const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      undefined,
+      undefined,
+      subscription as never,
+    );
     prisma.activity.findUnique.mockResolvedValue({
       routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
       kilometresSplit: [],
@@ -301,6 +373,37 @@ describe('ActivityService', () => {
       locations: [{ coords: { latitude: 55, longitude: 37 } }],
       kilometresSplit: [],
     });
+    expect(storage.readActivityRoute).toHaveBeenCalledWith(
+      'user-1/activities/activity-1/locations/locations-v1.json.gz',
+    );
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
+  });
+
+  it('reads a route for replay without a premium subscription', async () => {
+    const prisma = createPrismaMock();
+    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
+    const subscription = { hasPremiumSubscription: asyncMock().mockResolvedValue(false) };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      undefined,
+      undefined,
+      subscription as never,
+    );
+    prisma.activity.findUnique.mockResolvedValue({
+      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      kilometresSplit: [],
+      userId: 'owner-1',
+      visibility: 'public',
+    });
+
+    await expect(service.getLocationsByActivityId('activity-1', 'viewer-1', true)).resolves.toEqual({
+      locations: [{ coords: { latitude: 55, longitude: 37 } }],
+      kilometresSplit: [],
+    });
+    expect(subscription.hasPremiumSubscription).not.toHaveBeenCalled();
     expect(storage.readActivityRoute).toHaveBeenCalledWith(
       'user-1/activities/activity-1/locations/locations-v1.json.gz',
     );
