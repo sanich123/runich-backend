@@ -13,7 +13,17 @@ export default {
   clean: true,
   sourcemap: true,
   splitting: false,
-  // The default classic JSX factory expects a global React binding.
+  // tsup runs SWC first to preserve Nest decorator metadata, so both transforms
+  // need the automatic JSX runtime configured.
+  swc: {
+    jsc: {
+      transform: {
+        react: {
+          runtime: 'automatic',
+        },
+      },
+    },
+  },
   esbuildOptions(options: EsbuildJsxOptions) {
     options.jsx = 'automatic';
   },
