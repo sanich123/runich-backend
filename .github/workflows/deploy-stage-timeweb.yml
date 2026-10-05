@@ -47,8 +47,6 @@ jobs:
           STAGE_DEPLOY_USER: runich-deploy
           STAGE_DEPLOY_SSH_KEY: ${{ secrets.STAGE_DEPLOY_SSH_KEY }}
           STAGE_DEPLOY_KNOWN_HOSTS: ${{ secrets.STAGE_DEPLOY_KNOWN_HOSTS }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
 
@@ -56,7 +54,6 @@ jobs:
           : "${STAGE_DEPLOY_USER:?STAGE_DEPLOY_USER must be set}"
           : "${STAGE_DEPLOY_SSH_KEY:?GitHub Actions secret STAGE_DEPLOY_SSH_KEY is required}"
           : "${STAGE_DEPLOY_KNOWN_HOSTS:?GitHub Actions secret STAGE_DEPLOY_KNOWN_HOSTS is required}"
-          : "${GITHUB_TOKEN:?GitHub Actions GITHUB_TOKEN is required}"
 
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$STAGE_DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
@@ -68,11 +65,10 @@ jobs:
           SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
           TARGET="$STAGE_DEPLOY_USER@$STAGE_DEPLOY_HOST"
 
-          # The short-lived Actions token is sent only over the pinned SSH host key.
-          printf '%s' "$GITHUB_TOKEN" |
-            "${SSH[@]}" "$TARGET" \
-              "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null && docker pull '$DEPLOY_IMAGE' && docker logout ghcr.io >/dev/null"
-          unset GITHUB_TOKEN STAGE_DEPLOY_SSH_KEY
+          # Stream the already-built image over the pinned SSH connection. This avoids
+          # storing a registry credential on the server or making the package public.
+          docker save "$DEPLOY_IMAGE" | "${SSH[@]}" "$TARGET" docker load
+          unset STAGE_DEPLOY_SSH_KEY
 
           "${SCP[@]}" docker-compose.timeweb.stage.yml Caddyfile.stage "$TARGET:/tmp/"
 
@@ -90,7 +86,7 @@ jobs:
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
           COMPOSE=(docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml)
 
-          "${COMPOSE[@]}" pull db nestjs_app background_worker db_migrate caddy
+          "${COMPOSE[@]}" pull db caddy
           "${COMPOSE[@]}" up -d --wait db
           "${COMPOSE[@]}" run --rm db_migrate
           "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nestjs_app background_worker caddy
