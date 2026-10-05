@@ -222,9 +222,10 @@ tested as a separate workload.
 The `stage` branch deploys to the Timeweb server with a colocated PostgreSQL
 container. `.github/workflows/deploy-stage-timeweb.yml` builds an immutable
 image for the exact pushed commit, runs checked-in Prisma migrations, and
-recreates the API, worker, and Caddy services. The database and Caddy state live
-in separate persistent Docker volumes. The app is exposed through
-`https://stage.runich-app.ru`; ports 80 and 443 must be open on the server.
+recreates the API, worker, and Nginx services. The database and Let's Encrypt
+state live in persistent Docker volumes. Nginx serves
+`https://stage.runich-app.ru`; Certbot renews its certificate automatically.
+Incoming TCP ports 80 and 443 must be available on the server.
 
 Stage uses the dedicated S3 bucket and these non-secret settings:
 

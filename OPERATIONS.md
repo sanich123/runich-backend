@@ -47,13 +47,14 @@ Production Compose (`docker-compose.timeweb.yml`) использует след�
 Workflow собирает образ из точного SHA коммита в GitHub Actions, публикует его
 в GHCR и подключается к серверу `runich-stage` по SSH. На сервере запуск
 проходит в таком порядке: PostgreSQL healthcheck, `db:migrate:prod`, API,
-worker и Caddy. Production workflow и его secrets остаются отдельными.
+worker и Nginx. Production workflow и его secrets остаются отдельными.
 
 Compose-файл `docker-compose.timeweb.stage.yml` хранит PostgreSQL и состояние
-Caddy в постоянных Docker volumes. API слушает только внутреннюю сеть Compose;
-Caddy принимает HTTPS на `stage.runich-app.ru` и автоматически выпускает TLS
-сертификат. На сервере должны быть доступны входящие TCP-порты 80 и 443 и UDP
-443.
+Let's Encrypt в постоянных Docker volumes. Nginx принимает HTTP/HTTPS на
+`stage.runich-app.ru`, проксирует запросы к API внутри Compose и обслуживает
+ACME challenge. Certbot выпускает сертификат при первом деплое и проверяет его
+обновление каждые 12 часов; после обновления он перезагружает Nginx. На сервере
+должны быть доступны входящие TCP-порты 80 и 443.
 
 Файлы `/opt/runich-stage/.env` и `app.env` создаются отдельно от Git checkout
 и хранятся владельцем пользователя деплоя с режимом `0600`. В `.env` задайте
