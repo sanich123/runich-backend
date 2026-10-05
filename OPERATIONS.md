@@ -41,6 +41,33 @@ Production Compose (`docker-compose.timeweb.yml`) использует след�
 
 `Ctrl+C` прекращает просмотр через `logs -f`, но не останавливает контейнеры.
 
+## Stage deploy на Timeweb
+
+Каждый push в `stage` запускает `.github/workflows/deploy-stage-timeweb.yml`.
+Workflow собирает образ из точного SHA коммита в GitHub Actions, публикует его
+в GHCR и подключается к серверу `runich-stage` по SSH. На сервере запуск
+проходит в таком порядке: PostgreSQL healthcheck, `db:migrate:prod`, API,
+worker и Caddy. Production workflow и его secrets остаются отдельными.
+
+Compose-файл `docker-compose.timeweb.stage.yml` хранит PostgreSQL и состояние
+Caddy в постоянных Docker volumes. API слушает только внутреннюю сеть Compose;
+Caddy принимает HTTPS на `stage.runich-app.ru` и автоматически выпускает TLS
+сертификат. На сервере должны быть доступны входящие TCP-порты 80 и 443 и UDP
+443.
+
+Файлы `/opt/runich-stage/.env` и `app.env` создаются отдельно от Git checkout
+и хранятся владельцем пользователя деплоя с режимом `0600`. В `.env` задайте
+`DATABASE_URL_DOCKER` с хостом `db`, именем базы и паролем, совпадающими с
+`POSTGRES_USER`, `POSTGRES_DB` и `POSTGRES_PASSWORD`; `app.env` содержит только
+переменные API и worker. Для новой пустой базы первый деплой создаёт схему
+применением всех миграций из коммита, после чего запускает API и worker.
+
+GitHub Actions использует environment `stage`, ограниченный веткой `stage`.
+Для него нужны отдельные значения `STAGE_DEPLOY_HOST`, `STAGE_DEPLOY_USER`,
+`STAGE_DEPLOY_SSH_KEY` и `STAGE_DEPLOY_KNOWN_HOSTS`; production secrets с общими
+именами не переиспользуются. В `STAGE_DEPLOY_KNOWN_HOSTS` записывается проверенная
+строка host key для адреса сервера.
+
 ## Как выполняется production deploy
 
 После merge в `master` GitHub Actions собирает Docker image на GitHub runner и

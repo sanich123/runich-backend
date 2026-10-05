@@ -1,0 +1,122 @@
+name: runich-stage
+
+services:
+  db:
+    image: postgres:18.6
+    command: ['postgres', '-c', 'timezone=UTC', '-c', 'max_connections=50', '-c', 'shared_buffers=128MB']
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set in .env}
+    volumes:
+      - stage-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db_migrate:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE must identify the commit image}
+    restart: 'no'
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - app.env
+    command: ['yarn', 'db:migrate:prod']
+    environment:
+      TZ: UTC
+      APP_ENV: stage
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to db}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  nestjs_app:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE must identify the commit image}
+    restart: always
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    env_file:
+      - app.env
+    command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'start:prod']
+    environment:
+      TZ: UTC
+      APP_ENV: stage
+      RUNICH_PROCESS: api
+      OBSERVE_SERVICE_VERSION: ${BACKEND_IMAGE}
+      LOG_FILE_PATH: /usr/src/app/logs.log
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to db}
+    healthcheck:
+      test: ['CMD-SHELL', 'curl --fail --silent --max-time 5 http://127.0.0.1:3000/health/live >/dev/null']
+      interval: 10s
+      timeout: 6s
+      retries: 12
+      start_period: 30s
+
+  background_worker:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE must identify the commit image}
+    restart: always
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    cpus: 0.5
+    env_file:
+      - app.env
+    command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'worker:prod']
+    environment:
+      TZ: UTC
+      APP_ENV: stage
+      RUNICH_PROCESS: worker
+      OBSERVE_SERVICE_VERSION: ${BACKEND_IMAGE}
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to db}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    depends_on:
+      nestjs_app:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    environment:
+      STAGE_DOMAIN: ${STAGE_DOMAIN:?STAGE_DOMAIN must be set in .env}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./Caddyfile.stage:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  stage-pgdata:
+  caddy-data:
+  caddy-config:
