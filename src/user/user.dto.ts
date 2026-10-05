@@ -77,6 +77,31 @@ export class UserDto {
   @IsOptional()
   emailNotifications?: boolean | null;
 
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow this profile to appear in user search' })
+  @IsBoolean()
+  @IsOptional()
+  profileSearchVisible?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow likes and comments on this user activities' })
+  @IsBoolean()
+  @IsOptional()
+  allowActivityInteractions?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide the profile total activity statistics' })
+  @IsBoolean()
+  @IsOptional()
+  hideActivityStatistics?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide the list of users followed by this profile' })
+  @IsBoolean()
+  @IsOptional()
+  hideFollowingList?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide activity media from the profile photo gallery' })
+  @IsBoolean()
+  @IsOptional()
+  hideProfilePhotos?: boolean;
+
   @ApiPropertyOptional({ type: String, description: "User's email" })
   @IsEmail()
   @IsOptional()

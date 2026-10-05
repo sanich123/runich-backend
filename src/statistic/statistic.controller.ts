@@ -1,10 +1,12 @@
-import { Controller, Get, HttpStatus, Inject, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Inject, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { PATHS, QueryParams } from 'src/common/constants';
 import { StatisticService } from './statistic.service';
 import { MonthStatisticsResponseDto, StatisticMetricResponseDto } from './statistic.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
+import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import {
   validateOptionalDateQuery,
   validateOptionalIntegerQuery,
@@ -129,7 +131,7 @@ export class StatisticController {
   @ApiParam({ name: 'id', description: 'User identifier' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getAllTimeStatistics(@Param() { id }: ParamsId) {
-    return this.statisticsService.getAllActivitiesStatisticsByUserId(id);
+  async getAllTimeStatistics(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
+    return this.statisticsService.getAllActivitiesStatisticsByUserId(id, getAuthenticatedUserId(request));
   }
 }

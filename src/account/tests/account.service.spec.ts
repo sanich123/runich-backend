@@ -46,13 +46,18 @@ describe('AccountService', () => {
       const expectedWhere = {
         AND: [
           {
-            OR: [
-              { name: { contains: term, mode: 'insensitive' } },
-              { surname: { contains: term, mode: 'insensitive' } },
-              { email: { contains: term, mode: 'insensitive' } },
-              { user: { email: { contains: term, mode: 'insensitive' } } },
+            AND: [
+              {
+                OR: [
+                  { name: { contains: term, mode: 'insensitive' } },
+                  { surname: { contains: term, mode: 'insensitive' } },
+                  { email: { contains: term, mode: 'insensitive' } },
+                  { user: { email: { contains: term, mode: 'insensitive' } } },
+                ],
+              },
             ],
           },
+          { profileSearchVisible: true },
         ],
       };
       expect(prisma.profile.findMany).toHaveBeenLastCalledWith({
@@ -88,21 +93,26 @@ describe('AccountService', () => {
         where: {
           AND: [
             {
-              OR: [
-                { name: { contains: 'Alexander', mode: 'insensitive' } },
-                { surname: { contains: 'Alexander', mode: 'insensitive' } },
-                { email: { contains: 'Alexander', mode: 'insensitive' } },
-                { user: { email: { contains: 'Alexander', mode: 'insensitive' } } },
+              AND: [
+                {
+                  OR: [
+                    { name: { contains: 'Alexander', mode: 'insensitive' } },
+                    { surname: { contains: 'Alexander', mode: 'insensitive' } },
+                    { email: { contains: 'Alexander', mode: 'insensitive' } },
+                    { user: { email: { contains: 'Alexander', mode: 'insensitive' } } },
+                  ],
+                },
+                {
+                  OR: [
+                    { name: { contains: 'Voronin', mode: 'insensitive' } },
+                    { surname: { contains: 'Voronin', mode: 'insensitive' } },
+                    { email: { contains: 'Voronin', mode: 'insensitive' } },
+                    { user: { email: { contains: 'Voronin', mode: 'insensitive' } } },
+                  ],
+                },
               ],
             },
-            {
-              OR: [
-                { name: { contains: 'Voronin', mode: 'insensitive' } },
-                { surname: { contains: 'Voronin', mode: 'insensitive' } },
-                { email: { contains: 'Voronin', mode: 'insensitive' } },
-                { user: { email: { contains: 'Voronin', mode: 'insensitive' } } },
-              ],
-            },
+            { profileSearchVisible: true },
           ],
         },
       }),
@@ -144,7 +154,25 @@ describe('AccountService', () => {
       nextCursor: null,
     });
     expect(prisma.profile.findMany).toHaveBeenLastCalledWith(
-      expect.objectContaining({ where: { AND: [{}, { id: { gt: 'profile-1' } }] } }),
+      expect.objectContaining({
+        where: { AND: [{}, { profileSearchVisible: true }, { id: { gt: 'profile-1' } }] },
+      }),
+    );
+  });
+
+  it('shows private search profiles only to their owner', async () => {
+    const prisma = createPrismaMock();
+    const service = new AccountService(prisma as never);
+    prisma.profile.findMany.mockResolvedValue([]);
+
+    await service.getFilteredAccounts('10', undefined, { name: 'Alex' }, 'viewer-1');
+
+    expect(prisma.profile.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [expect.any(Object), { OR: [{ profileSearchVisible: true }, { userId: 'viewer-1' }] }],
+        },
+      }),
     );
   });
 

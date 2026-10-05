@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError, isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
@@ -13,8 +13,21 @@ export class FriendService {
     private readonly accountService: AccountService,
   ) {}
 
-  async getUsersYouFollowByUserId(id: string) {
+  private async assertFollowListsVisible(id: string, currentUserId?: string) {
+    if (!currentUserId || currentUserId === id) return;
+
+    const profile = await this.prismaService.profile.findUnique({
+      where: { userId: id },
+      select: { hideFollowingList: true },
+    });
+    if (profile?.hideFollowingList) {
+      throw new ForbiddenException('Владелец профиля скрыл списки подписок и подписчиков');
+    }
+  }
+
+  async getUsersYouFollowByUserId(id: string, currentUserId?: string) {
     try {
+      await this.assertFollowListsVisible(id, currentUserId);
       return await this.prismaService.friend.findMany({
         where: { userId: id },
         select: {
@@ -42,8 +55,9 @@ export class FriendService {
     }
   }
 
-  async getFollowers(id: string) {
+  async getFollowers(id: string, currentUserId?: string) {
     try {
+      await this.assertFollowListsVisible(id, currentUserId);
       return await this.prismaService.friend.findMany({
         where: { friendId: id },
         select: {

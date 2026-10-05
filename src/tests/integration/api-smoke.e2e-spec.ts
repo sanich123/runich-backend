@@ -326,7 +326,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .get(`/like/${activityId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200)
-      .expect((response) => expect(response.body.map((item: { id: string }) => item.id)).toContain(likeId));
+      .expect((response) => expect(response.body.likes.map((item: { id: string }) => item.id)).toContain(likeId));
 
     await request(app.getHttpServer())
       .delete(`/like/${likeId}/${activityId}`)

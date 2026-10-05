@@ -18,12 +18,22 @@ describe('LikeController', () => {
     const like = { id: 'like-1' };
     service.addLike.mockResolvedValue(like);
     service.deleteLikeById.mockResolvedValue(like);
-    service.getLikesByActivityId.mockResolvedValue([like]);
+    service.getLikesByActivityId.mockResolvedValue({
+      likes: [like],
+      hasMore: false,
+      nextCursor: null,
+      currentUserLike: null,
+    });
     service.getLikesLengthByActivityId.mockResolvedValue(7);
 
     await expect(controller.sendOrDeleteLike({ activityId: 'a1' })).resolves.toEqual(like);
     await expect(controller.deleteLike({ id: 'like-1' }, undefined)).resolves.toEqual(like);
-    await expect(controller.getLikesByActivityId({ id: 'a1' })).resolves.toEqual([like]);
+    await expect(controller.getLikesByActivityId({ id: 'a1' })).resolves.toEqual({
+      likes: [like],
+      hasMore: false,
+      nextCursor: null,
+      currentUserLike: null,
+    });
     await expect(
       controller.getLikesLengthByActivityId({ id: 'a1' }, { user: { userId: 'user-1' } } as never),
     ).resolves.toBe(7);

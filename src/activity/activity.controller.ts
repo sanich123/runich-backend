@@ -28,7 +28,7 @@ import { Transform } from 'node:stream';
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { ActivityService } from './activity.service';
-import { ActivityDto, ActivityMediaAppendDto } from './activity.dto';
+import { ActivityDto, ActivityMediaAppendDto, ActivityMediaParamsDto } from './activity.dto';
 import {
   ActivityCardResponseDto,
   ActivityDetailsResponseDto,
@@ -51,6 +51,7 @@ import {
   ApiConsumes,
   ApiOperation,
   ApiOkResponse,
+  ApiNoContentResponse,
   ApiParam,
   ApiQuery,
   ApiResponse,
@@ -114,6 +115,18 @@ export class ActivityController {
     @Req() request: RequestWithUser,
   ) {
     return this.activityService.appendActivityMedia(id, getAuthenticatedUserId(request), body.media);
+  }
+
+  @Delete(`${id}/media/:mediaId`)
+  @RateLimit(RATE_LIMITS.photoDelete.limit, RATE_LIMITS.photoDelete.ttl)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Delete one photo or video from an owned activity' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiParam({ name: 'mediaId', description: 'Activity media identifier' })
+  @ApiNoContentResponse({ description: 'Activity media deleted' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteActivityMedia(@Param() { id, mediaId }: ActivityMediaParamsDto, @Req() request: RequestWithUser) {
+    await this.activityService.deleteActivityMedia(id, mediaId, getAuthenticatedUserId(request));
   }
 
   @Get(`${id}/locations`)

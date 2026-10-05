@@ -37,6 +37,16 @@ export class ProfileDto {
   profilePhotoBlurhash?: string | null;
   @ApiPropertyOptional({ type: Boolean, description: 'Email notifications enabled' })
   emailNotifications?: boolean | null;
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow this profile to appear in user search' })
+  profileSearchVisible?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow likes and comments on this user activities' })
+  allowActivityInteractions?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide the profile total activity statistics' })
+  hideActivityStatistics?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide the list of users followed by this profile' })
+  hideFollowingList?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide activity media from the profile photo gallery' })
+  hideProfilePhotos?: boolean;
   @ApiPropertyOptional({ type: String, description: 'Email value (optional)' })
   email?: string | null;
 }

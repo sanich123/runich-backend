@@ -1,9 +1,10 @@
+import { ForbiddenException } from '@nestjs/common';
 import { StatisticService } from '../statistic.service';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 import { DEFAULT_TIME_ZONE } from 'src/common/utils/time-zone';
 
 function createPrismaMock() {
-  return { activity: { findMany: asyncMock() }, $queryRaw: asyncMock() };
+  return { activity: { findMany: asyncMock() }, profile: { findUnique: asyncMock() }, $queryRaw: asyncMock() };
 }
 
 const activities = [
@@ -209,6 +210,26 @@ describe('StatisticService', () => {
       totalDuration: 0,
       totalItems: 0,
     });
+  });
+
+  it('hides total statistics from other users and keeps them visible to the owner', async () => {
+    const prisma = createPrismaMock();
+    const service = new StatisticService(prisma as never);
+    prisma.profile.findUnique.mockResolvedValue({ hideActivityStatistics: true });
+    prisma.$queryRaw.mockResolvedValue([{ totalDuration: 0, totalDistance: 0, totalItems: 0 }]);
+
+    await expect(service.getAllActivitiesStatisticsByUserId('owner-1', 'viewer-1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+
+    await expect(service.getAllActivitiesStatisticsByUserId('owner-1', 'owner-1')).resolves.toEqual({
+      totalDuration: 0,
+      totalDistance: 0,
+      totalItems: 0,
+    });
+    expect(prisma.profile.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
   it('converts database failures from every database-backed method to an internal server error', async () => {

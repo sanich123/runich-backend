@@ -111,6 +111,20 @@ export class ActivityService {
     return this.isFollower(currentUserId, activity.userId);
   }
 
+  async canInteractWithActivity(id: string, currentUserId: string) {
+    const activity = await this.prisma.activity.findUnique({
+      where: { id },
+      select: {
+        userId: true,
+        profile: { select: { allowActivityInteractions: true } },
+      },
+    });
+
+    return Boolean(
+      activity && (activity.userId === currentUserId || activity.profile?.allowActivityInteractions !== false),
+    );
+  }
+
   async createActivity(activityDto: ActivityDto, id: string) {
     let uploadedRouteKey: string | undefined;
     let uploadedMapKey: string | undefined;
@@ -418,6 +432,40 @@ export class ActivityService {
     }
   }
 
+  async deleteActivityMedia(activityId: string, mediaId: string, userId: string) {
+    try {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: activityId },
+        select: { userId: true },
+      });
+      if (!activity) throw new NotFoundException('Активность не найдена');
+      if (activity.userId !== userId) throw new ForbiddenException('Недостаточно прав');
+      if (!this.mediaCleanupService || !this.storageService) {
+        throw new ServiceUnavailableException('Сервис удаления медиа не настроен');
+      }
+
+      await this.prisma.$transaction(async (transaction) => {
+        const media = await transaction.activityMedia.findFirst({
+          where: { id: mediaId, activityId, userId },
+          select: { url: true, thumbnail: true },
+        });
+        if (!media) throw new NotFoundException('Медиа активности не найдено');
+
+        const storageKeys = this.getMediaStorageKeys(userId, media);
+        await Promise.all(
+          storageKeys.map((storageKey) =>
+            this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey, transaction as never),
+          ),
+        );
+        await transaction.activityMedia.delete({ where: { id: mediaId } });
+      });
+
+      return { success: true };
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }
+
   async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
       const { date, description, emotion, visibility, sport, title, distance, duration, speed } = activityDto;
@@ -502,6 +550,15 @@ export class ActivityService {
   async getMediaByUserId(id: string, take = '10', cursor?: ActivityMediaCursor, currentUserId?: string) {
     try {
       const pageSize = Number(take);
+      if (currentUserId && currentUserId !== id) {
+        const profile = await this.prisma.profile.findUnique({
+          where: { userId: id },
+          select: { hideProfilePhotos: true },
+        });
+        if (profile?.hideProfilePhotos) {
+          return { media: [], hasMore: false, nextCursor: null, isLastPage: true };
+        }
+      }
       const visibilityFilter = await this.getVisibilityFilter(id, currentUserId);
       const media = await this.prisma.activityMedia.findMany({
         where: {
@@ -523,6 +580,7 @@ export class ActivityService {
           activityDate: true,
           activityId: true,
           position: true,
+          id: true,
           url: true,
           thumbnail: true,
           blurhash: true,
@@ -530,6 +588,7 @@ export class ActivityService {
       });
       const hasMore = media.length > pageSize;
       const slicedMedia = media.slice(0, pageSize) as Array<{
+        id: string;
         activityDate: Date;
         activityId: string;
         position: number;
@@ -539,7 +598,13 @@ export class ActivityService {
       }>;
       const lastMedia = slicedMedia.at(-1);
       return {
-        media: slicedMedia.map(({ url, thumbnail, blurhash }) => ({ url, thumbnail, blurhash })),
+        media: slicedMedia.map(({ id, activityId, url, thumbnail, blurhash }) => ({
+          id,
+          activityId,
+          url,
+          thumbnail,
+          blurhash,
+        })),
         hasMore,
         nextCursor:
           hasMore && lastMedia
@@ -645,7 +710,12 @@ export class ActivityService {
           COALESCE(
             (
               SELECT json_agg(
-                json_build_object('url', am."url", 'thumbnail', am."thumbnail", 'blurhash', am."blurhash")
+                json_build_object(
+                  'id', am."id",
+                  'url', am."url",
+                  'thumbnail', am."thumbnail",
+                  'blurhash', am."blurhash"
+                )
                 ORDER BY am."position" ASC
               )
               FROM "ActivityMedia" AS am
@@ -666,11 +736,13 @@ export class ActivityService {
           a."elevationGain",
           a."kilometresSplit",
           json_build_object(
+            'userId', p."user_id",
             'surname', p."surname",
             'name', p."name",
             'profilePhoto', p."profilePhoto",
             'profilePhotoBlurhash', p."profilePhotoBlurhash",
             'emailNotifications', p."emailNotifications",
+            'allowActivityInteractions', p."allow_activity_interactions",
             'user', json_build_object('email', u."email")
           ) AS "profile",
           json_build_object(
@@ -722,6 +794,7 @@ export class ActivityService {
         ...(currentUserProfile
           ? {
               currentUserProfile: {
+                userId: currentUserProfile.userId,
                 surname: currentUserProfile.surname,
                 name: currentUserProfile.name,
                 profilePhoto: currentUserProfile.profilePhoto,
@@ -850,14 +923,22 @@ export class ActivityService {
       }
     }
 
-    if (!this.storageService || !Array.isArray(activity?.media)) return [...keys];
-    for (const media of activity.media) {
-      for (const url of this.getMediaUrls(media)) {
-        try {
-          keys.add(this.storageService.getOwnedKey(userId, url));
-        } catch {
-          this.logger.warn(`Пропускаю внешний или некорректный медиа-файл активности: ${url}`);
-        }
+    if (Array.isArray(activity?.media)) {
+      for (const media of activity.media) {
+        for (const key of this.getMediaStorageKeys(userId, media)) keys.add(key);
+      }
+    }
+    return [...keys];
+  }
+
+  private getMediaStorageKeys(userId: string, media: unknown) {
+    if (!this.storageService) return [];
+    const keys = new Set<string>();
+    for (const url of this.getMediaUrls(media)) {
+      try {
+        keys.add(this.storageService.getOwnedKey(userId, url));
+      } catch {
+        this.logger.warn(`Пропускаю внешний или некорректный медиа-файл активности: ${url}`);
       }
     }
     return [...keys];

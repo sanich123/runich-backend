@@ -68,6 +68,11 @@ model Profile {
   language              String?
   emailNotifications    Boolean?               @default(false)
   profilePhotoBlurhash  String?
+  profileSearchVisible Boolean                @default(true) @map("profile_search_visible")
+  allowActivityInteractions Boolean           @default(true) @map("allow_activity_interactions")
+  hideActivityStatistics Boolean              @default(false) @map("hide_activity_statistics")
+  hideFollowingList Boolean                   @default(false) @map("hide_following_list")
+  hideProfilePhotos Boolean                   @default(false) @map("hide_profile_photos")
   activities            Activity[]
   activityMigrationJobs ActivityMigrationJob[]
   comments              Comment[]
