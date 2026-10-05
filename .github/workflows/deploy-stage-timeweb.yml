@@ -1,0 +1,138 @@
+name: Deploy stage to Timeweb
+
+on:
+  push:
+    branches:
+      - stage
+
+concurrency:
+  group: runich-stage-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy:
+    name: Deploy exact stage commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: stage
+      url: https://stage.runich-app.ru
+    env:
+      STAGE_DOMAIN: stage.runich-app.ru
+      DEPLOY_IMAGE: ghcr.io/sanich123/runich-backend:${{ github.sha }}
+
+    steps:
+      - name: Check out the exact commit
+        uses: actions/checkout@v4
+
+      - name: Build and publish immutable image
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GITHUB_TOKEN" |
+            docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin >/dev/null
+          docker build --pull --tag "$DEPLOY_IMAGE" .
+          docker push "$DEPLOY_IMAGE"
+          docker logout ghcr.io >/dev/null
+
+      - name: Deploy the exact image over SSH
+        env:
+          STAGE_DEPLOY_HOST: ${{ secrets.STAGE_DEPLOY_HOST }}
+          STAGE_DEPLOY_USER: runich-deploy
+          STAGE_DEPLOY_SSH_KEY: ${{ secrets.STAGE_DEPLOY_SSH_KEY }}
+          STAGE_DEPLOY_KNOWN_HOSTS: ${{ secrets.STAGE_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          : "${STAGE_DEPLOY_HOST:?GitHub Actions secret STAGE_DEPLOY_HOST is required}"
+          : "${STAGE_DEPLOY_USER:?STAGE_DEPLOY_USER must be set}"
+          : "${STAGE_DEPLOY_SSH_KEY:?GitHub Actions secret STAGE_DEPLOY_SSH_KEY is required}"
+          : "${STAGE_DEPLOY_KNOWN_HOSTS:?GitHub Actions secret STAGE_DEPLOY_KNOWN_HOSTS is required}"
+
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$STAGE_DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$STAGE_DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
+          SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
+          TARGET="$STAGE_DEPLOY_USER@$STAGE_DEPLOY_HOST"
+
+          # Stream the already-built image over the pinned SSH connection. This avoids
+          # storing a registry credential on the server or making the package public.
+          docker save "$DEPLOY_IMAGE" | gzip -1 | "${SSH[@]}" "$TARGET" 'gzip -d | docker load'
+          unset STAGE_DEPLOY_SSH_KEY
+
+          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf nginx.stage.conf "$TARGET:/tmp/"
+
+          "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/runich-stage
+
+          test -s .env
+          test -s app.env
+          chmod 600 .env app.env
+          install -o "$(id -un)" -g docker -m 0640 /tmp/docker-compose.timeweb.stage.yml ./docker-compose.timeweb.stage.yml
+          install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.bootstrap.conf ./nginx.stage.bootstrap.conf
+          install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.conf ./nginx.stage.tls.conf
+          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/nginx.stage.conf
+
+          export BACKEND_IMAGE="$DEPLOY_IMAGE"
+          COMPOSE=(docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml)
+
+          "${COMPOSE[@]}" pull db nginx certbot certbot_renew
+          "${COMPOSE[@]}" up -d --wait db
+          "${COMPOSE[@]}" run --rm --no-TTY --interactive=false db_migrate </dev/null
+          "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nestjs_app background_worker
+
+          if [ -s .stage-cert-ready ]; then
+            install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.tls.conf ./nginx.active.conf
+          else
+            install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.bootstrap.conf ./nginx.active.conf
+          fi
+
+          "${COMPOSE[@]}" up -d --force-recreate nginx
+
+          if [ ! -s .stage-cert-ready ]; then
+            "${COMPOSE[@]}" run --rm --no-TTY --interactive=false --no-deps certbot \
+              certonly --webroot --webroot-path /var/www/certbot \
+              --domain "$STAGE_DOMAIN" --cert-name "$STAGE_DOMAIN" \
+              --non-interactive --agree-tos --register-unsafely-without-email </dev/null
+            install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.tls.conf ./nginx.active.conf
+            "${COMPOSE[@]}" up -d --force-recreate nginx
+            touch .stage-cert-ready
+          fi
+
+          "${COMPOSE[@]}" up -d --force-recreate certbot_renew
+
+          healthy=false
+          for attempt in $(seq 1 30); do
+            if "${COMPOSE[@]}" exec -T nestjs_app </dev/null \
+              curl --fail --silent --show-error --max-time 5 http://127.0.0.1:3000/health/ready >/dev/null; then
+              healthy=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$healthy" != true ]; then
+            echo 'Stage API readiness failed.' >&2
+            exit 1
+          fi
+
+          if ! curl --fail --silent --show-error --max-time 10 \
+            --resolve "$STAGE_DOMAIN:443:127.0.0.1" "https://$STAGE_DOMAIN/health/ready" >/dev/null; then
+            echo 'Stage HTTPS readiness failed.' >&2
+            exit 1
+          fi
+
+          printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
+          echo "Stage is healthy at commit $DEPLOY_SHA"
+          REMOTE

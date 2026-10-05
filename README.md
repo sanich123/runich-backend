@@ -217,12 +217,17 @@ regular media worker does not download the same 25 photos 10,000 times. This
 test measures the feed/database path; media blurhash processing should be
 tested as a separate workload.
 
-### Railway stage
+### Timeweb stage
 
-Railway stage uses a separate PostgreSQL service and the same application
-contract as production. Set `DATABASE_URL` in the API and worker services to a
-Railway reference such as `${{Postgres.DATABASE_URL}}`. Set the same S3
-variables in both services, using the stage-only Timeweb bucket:
+The `stage` branch deploys to the Timeweb server with a colocated PostgreSQL
+container. `.github/workflows/deploy-stage-timeweb.yml` builds an immutable
+image for the exact pushed commit, runs checked-in Prisma migrations, and
+recreates the API, worker, and Nginx services. The database and Let's Encrypt
+state live in persistent Docker volumes. Nginx serves
+`https://stage.runich-app.ru`; Certbot renews its certificate automatically.
+Incoming TCP ports 80 and 443 must be available on the server.
+
+Stage uses the dedicated S3 bucket and these non-secret settings:
 
     APP_ENV=stage
     S3_ENDPOINT=https://s3.twcstorage.ru
@@ -230,8 +235,11 @@ variables in both services, using the stage-only Timeweb bucket:
     S3_BUCKET=runich-stage
     S3_PUBLIC_URL=https://s3.twcstorage.ru/runich-stage
 
-Keep the S3 access key and secret in Railway variables. They are not committed
-to `.env.example` or copied from the local `.env` file.
+The server `.env` contains Compose settings and a local `DATABASE_URL_DOCKER`
+pointing to the Compose `db` service. The separate `app.env` contains Railway
+stage application credentials. Keep both files on the server only with mode `0600`; never commit them. GitHub
+Actions deploy credentials belong to the `stage` environment; its SSH key must
+be scoped to the stage deployment account.
 
 Production on Timeweb uses the same endpoint and region with:
 
