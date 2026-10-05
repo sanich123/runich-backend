@@ -31,13 +31,14 @@ describe('ownership authorization', () => {
 
   it('scopes comment and comment-like mutations to their authors', async () => {
     const prisma = {
-      comment: { update: mock(), delete: mock(), create: mock() },
+      comment: { update: mock(), delete: mock(), create: mock(), findUnique: mock() },
       commentLike: { delete: mock(), create: mock() },
     };
     const account = { getAccountByUserId: mock() };
     account.getAccountByUserId.mockResolvedValue({ id: 'profile-1' });
     prisma.comment.update.mockResolvedValue({ id: 'comment-1' });
     prisma.comment.delete.mockResolvedValue({ id: 'comment-1' });
+    prisma.comment.findUnique.mockResolvedValue({ authorId: 'owner-1', activity: { userId: 'activity-owner-1' } });
     prisma.commentLike.delete.mockResolvedValue({ id: 'comment-like-1' });
     const service = new CommentService(
       prisma as never,
@@ -57,7 +58,11 @@ describe('ownership authorization', () => {
       where: { id: 'comment-1', authorId: 'owner-1' },
       data: { comment: 'text' },
     });
-    expect(prisma.comment.delete).toHaveBeenCalledWith({ where: { id: 'comment-1', authorId: 'owner-1' } });
+    expect(prisma.comment.findUnique).toHaveBeenCalledWith({
+      where: { id: 'comment-1' },
+      select: { authorId: true, activity: { select: { userId: true } } },
+    });
+    expect(prisma.comment.delete).toHaveBeenCalledWith({ where: { id: 'comment-1' } });
     expect(prisma.commentLike.delete).toHaveBeenCalledWith('comment-like-1', 'owner-1');
   });
 

@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { LikeService } from '../like.service';
+import { parseLikeCursor } from '../like.pagination';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 
 function createPrismaMock() {
@@ -20,14 +21,21 @@ describe('LikeService', () => {
 
     await expect(service.addLike({ activityId: 'activity-1' })).resolves.toEqual({ id: 'like-1' });
     await expect(service.deleteLikeById('like-1')).resolves.toEqual({ id: 'like-1' });
-    await expect(service.getLikesByActivityId('activity-1')).resolves.toEqual([{ id: 'like-1' }]);
+    await expect(service.getLikesByActivityId('activity-1')).resolves.toEqual({
+      likes: [{ id: 'like-1' }],
+      hasMore: false,
+      nextCursor: null,
+      currentUserLike: null,
+    });
     const listQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
-      select?: { likes?: { select?: Record<string, unknown>; include?: unknown } };
+      select?: { likes?: { select?: Record<string, unknown>; include?: unknown; take?: number; orderBy?: unknown } };
       include?: unknown;
     };
     const likeQuery = listQuery.select?.likes ?? {};
     expect(listQuery.include).toBeUndefined();
     expect(likeQuery.include).toBeUndefined();
+    expect(likeQuery.take).toBe(31);
+    expect(likeQuery.orderBy).toEqual([{ date: 'desc' }, { id: 'desc' }]);
     expect(likeQuery.select).toEqual(
       expect.objectContaining({
         id: true,
@@ -69,6 +77,68 @@ describe('LikeService', () => {
     expect(prisma.activity.findUnique).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
       select: { _count: { select: { likes: true } } },
+    });
+  });
+
+  it('returns a page of newest likes and a cursor when more are available', async () => {
+    const prisma = createPrismaMock();
+    const service = new LikeService(prisma as never, {} as never, {} as never);
+    const date = new Date('2026-08-22T10:00:00.000Z');
+    prisma.activity.findUnique.mockResolvedValue({
+      likes: [
+        { id: 'like-3', date },
+        { id: 'like-2', date },
+        { id: 'like-1', date },
+      ],
+    });
+
+    const result = await service.getLikesByActivityId('activity-1', undefined, '2', {
+      date: new Date('2026-08-21T10:00:00.000Z'),
+      id: 'cursor-like',
+    });
+
+    expect(result).toEqual({
+      likes: [
+        { id: 'like-3', date },
+        { id: 'like-2', date },
+      ],
+      hasMore: true,
+      nextCursor: expect.any(String),
+      currentUserLike: null,
+    });
+    expect(parseLikeCursor(result?.nextCursor ?? undefined)).toEqual({ date, id: 'like-2' });
+    expect(prisma.activity.findUnique).toHaveBeenCalledWith({
+      where: { id: 'activity-1' },
+      select: {
+        likes: expect.objectContaining({
+          where: {
+            OR: [
+              { date: { lt: new Date('2026-08-21T10:00:00.000Z') } },
+              { date: new Date('2026-08-21T10:00:00.000Z'), id: { lt: 'cursor-like' } },
+            ],
+          },
+          take: 3,
+        }),
+      },
+    });
+  });
+
+  it('returns the authenticated user like separately from the paginated list', async () => {
+    const prisma = createPrismaMock();
+    const service = new LikeService(
+      prisma as never,
+      {} as never,
+      { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
+    );
+    prisma.activity.findUnique.mockResolvedValue({ likes: [] });
+    prisma.like.findUnique.mockResolvedValue({ id: 'old-like-id', authorId: 'viewer-1' });
+
+    const result = await service.getLikesByActivityId('activity-1', 'viewer-1');
+
+    expect(result?.currentUserLike).toEqual({ id: 'old-like-id', authorId: 'viewer-1' });
+    expect(prisma.like.findUnique).toHaveBeenCalledWith({
+      where: { authorId_activityId: { authorId: 'viewer-1', activityId: 'activity-1' } },
+      select: { id: true, authorId: true },
     });
   });
 

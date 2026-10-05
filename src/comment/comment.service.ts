@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
@@ -114,6 +114,9 @@ export class CommentService {
   async createCommentByActivityId({ comment }: CommentDTO, id: string, currentUserId?: string) {
     try {
       await this.ensureActivityAccess(id, currentUserId);
+      if (currentUserId && !(await this.activityService.canInteractWithActivity(id, currentUserId))) {
+        throw new ForbiddenException('Владелец активности запретил лайки и комментарии');
+      }
       const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       await this.prisma.comment.create({
@@ -131,7 +134,17 @@ export class CommentService {
 
   async deleteCommentByCommentId(id: string, authorId?: string) {
     try {
-      return await this.prisma.comment.delete({ where: authorId ? { id, authorId } : { id } });
+      if (!authorId) return await this.prisma.comment.delete({ where: { id } });
+
+      const comment = await this.prisma.comment.findUnique({
+        where: { id },
+        select: { authorId: true, activity: { select: { userId: true } } },
+      });
+      if (!comment) throw new NotFoundException('Комментарий не найден');
+      if (comment.authorId !== authorId && comment.activity.userId !== authorId) {
+        throw new ForbiddenException('Недостаточно прав для удаления комментария');
+      }
+      return await this.prisma.comment.delete({ where: { id } });
     } catch (error) {
       handleServiceError(error);
     }
@@ -177,6 +190,15 @@ export class CommentService {
   async createCommentLikeByCommentId({ commentId }: CommentLikeDto, currentUserId?: string) {
     try {
       await this.ensureCommentAccess(commentId, currentUserId);
+      if (currentUserId) {
+        const comment = await this.prisma.comment.findUnique({
+          where: { id: commentId },
+          select: { activity: { select: { id: true } } },
+        });
+        if (!comment || !(await this.activityService.canInteractWithActivity(comment.activity.id, currentUserId))) {
+          throw new ForbiddenException('Владелец активности запретил лайки и комментарии');
+        }
+      }
       const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       return await this.commentLikeService.create({ profileId: account.id, authorId: currentUserId ?? '', commentId });

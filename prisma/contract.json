@@ -1748,6 +1748,13 @@
                   "kind": "scalar"
                 }
               },
+              "allowActivityInteractions": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "bio": {
                 "nullable": true,
                 "type": {
@@ -1807,6 +1814,27 @@
                   "kind": "scalar"
                 }
               },
+              "hideActivityStatistics": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "hideFollowingList": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "hideProfilePhotos": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "id": {
                 "nullable": false,
                 "type": {
@@ -1839,6 +1867,13 @@
                 "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "profileSearchVisible": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
                   "kind": "scalar"
                 }
               },
@@ -1994,6 +2029,9 @@
                 "age": {
                   "column": "age"
                 },
+                "allowActivityInteractions": {
+                  "column": "allow_activity_interactions"
+                },
                 "bio": {
                   "column": "bio"
                 },
@@ -2018,6 +2056,15 @@
                 "height": {
                   "column": "height"
                 },
+                "hideActivityStatistics": {
+                  "column": "hide_activity_statistics"
+                },
+                "hideFollowingList": {
+                  "column": "hide_following_list"
+                },
+                "hideProfilePhotos": {
+                  "column": "hide_profile_photos"
+                },
                 "id": {
                   "column": "id"
                 },
@@ -2032,6 +2079,9 @@
                 },
                 "profilePhotoBlurhash": {
                   "column": "profilePhotoBlurhash"
+                },
+                "profileSearchVisible": {
+                  "column": "profile_search_visible"
                 },
                 "sport": {
                   "column": "sport"
@@ -4471,6 +4521,15 @@
                   "nativeType": "text",
                   "nullable": true
                 },
+                "allow_activity_interactions": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "bio": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -4522,6 +4581,33 @@
                   "nativeType": "text",
                   "nullable": true
                 },
+                "hide_activity_statistics": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "hide_following_list": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "hide_profile_photos": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "id": {
                   "codecId": "pg/uuid@1",
                   "default": {
@@ -4550,6 +4636,15 @@
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": true
+                },
+                "profile_search_visible": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
                 },
                 "sport": {
                   "codecId": "pg/text@1",
@@ -5332,7 +5427,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "611579864d15b6ed6e4b976ac5583b78e1f9835bad2124436d5c326d13a5309c"
+    "storageHash": "9485b1c0d30333c9b67c513c525784c58a78a0517b65d8e15d12d73fd879fb24"
   },
   "capabilities": {
     "postgres": {

@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, Query, Req, UseGuards } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { ApiBearerAuth, ApiResponse, ApiTags, ApiOperation, ApiQuery, ApiOkResponse } from '@nestjs/swagger';
 import { PATHS, QueryParams } from 'src/common/constants';
@@ -7,6 +7,7 @@ import { type Filtering, FilteringParams } from './filter.decorator';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import { parseProfileCursor } from './account.pagination';
+import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 
 @ApiTags(PATHS.profile)
 @ApiBearerAuth('bearerAuth')
@@ -32,11 +33,16 @@ export class AccountController {
     @Query(QueryParams.cursor) cursor: string | undefined,
     @Query(QueryParams.take) take: string | undefined,
     @FilteringParams(['name', 'email', 'surname']) filter: Filtering,
+    @Req() request?: AuthenticatedRequest,
   ) {
-    return await this.accountService.getFilteredAccounts(
+    const args = [
       validateOptionalIntegerQuery(take, QueryParams.take, { min: 1, max: 100 }),
       parseProfileCursor(cursor),
       filter,
-    );
+    ] as const;
+    const currentUserId = request?.user.userId ?? request?.user.id;
+    return currentUserId
+      ? await this.accountService.getFilteredAccounts(...args, currentUserId)
+      : await this.accountService.getFilteredAccounts(...args);
   }
 }

@@ -378,6 +378,12 @@ export class ActivityMigrationUploadStartDto {
 }
 
 class ActivityMediaItemDto {
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  id?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  activityId?: string;
+
   @ApiProperty({ type: String })
   url: string;
 
@@ -451,6 +457,16 @@ export class ActivityMediaResponseDto {
 
   @ApiPropertyOptional({ type: Boolean, deprecated: true })
   isLastPage?: boolean;
+}
+
+export class ActivityMediaParamsDto {
+  @IsUUID()
+  @IsNotEmpty()
+  id: string;
+
+  @IsUUID()
+  @IsNotEmpty()
+  mediaId: string;
 }
 
 export class ActivityLocationsResponseDto {

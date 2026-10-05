@@ -9,6 +9,7 @@ function createPrismaMock() {
     },
     activityMedia: { findMany: asyncMock() },
     friend: { findUnique: asyncMock() },
+    profile: { findUnique: asyncMock() },
   };
 }
 
@@ -18,6 +19,7 @@ describe('ActivityService privacy', () => {
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);
     prisma.activityMedia.findMany.mockResolvedValue([]);
+    prisma.profile.findUnique.mockResolvedValue({ hideProfilePhotos: false });
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       visibility: 'private',
@@ -82,5 +84,59 @@ describe('ActivityService privacy', () => {
 
     prisma.friend.findUnique.mockResolvedValue(null);
     await expect(service.canAccessActivity('activity-1', 'other-viewer')).resolves.toBe(false);
+  });
+
+  it('hides the profile photo gallery from other users but keeps it available to its owner', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.profile.findUnique.mockResolvedValue({ hideProfilePhotos: true });
+    prisma.activityMedia.findMany.mockResolvedValue([
+      {
+        id: 'media-1',
+        activityId: 'activity-1',
+        activityDate: new Date('2026-10-01T12:00:00.000Z'),
+        position: 0,
+        url: 'https://cdn.example/photo.jpg',
+        thumbnail: null,
+        blurhash: 'hash',
+      },
+    ]);
+
+    await expect(service.getMediaByUserId('owner-1', '4', undefined, 'viewer-1')).resolves.toEqual({
+      media: [],
+      hasMore: false,
+      nextCursor: null,
+      isLastPage: true,
+    });
+    expect(prisma.activityMedia.findMany).not.toHaveBeenCalled();
+    expect(prisma.profile.findUnique).toHaveBeenCalledWith({
+      where: { userId: 'owner-1' },
+      select: { hideProfilePhotos: true },
+    });
+
+    await expect(service.getMediaByUserId('owner-1', '4', undefined, 'owner-1')).resolves.toMatchObject({
+      media: [
+        {
+          id: 'media-1',
+          activityId: 'activity-1',
+          url: 'https://cdn.example/photo.jpg',
+          thumbnail: null,
+          blurhash: 'hash',
+        },
+      ],
+    });
+    expect(prisma.profile.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks activity likes and comments only for external users when disabled', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue({
+      userId: 'owner-1',
+      profile: { allowActivityInteractions: false },
+    });
+
+    await expect(service.canInteractWithActivity('activity-1', 'viewer-1')).resolves.toBe(false);
+    await expect(service.canInteractWithActivity('activity-1', 'owner-1')).resolves.toBe(true);
   });
 });
