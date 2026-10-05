@@ -14,9 +14,15 @@ export class AccountService {
     take = String(DEFAULT_PROFILE_PAGE_SIZE),
     cursor: ProfileCursor | undefined,
     filter: Filtering,
+    currentUserId?: string,
   ) {
     const filterWhere = buildProfileWhere(filter);
-    const where = cursor ? { AND: [filterWhere, { id: { gt: cursor.id } }] } : filterWhere;
+    const visibilityWhere = currentUserId
+      ? { OR: [{ profileSearchVisible: true }, { userId: currentUserId }] }
+      : { profileSearchVisible: true };
+    const where = {
+      AND: [filterWhere, visibilityWhere, ...(cursor ? [{ id: { gt: cursor.id } }] : [])],
+    };
 
     try {
       const profilesWithExtraItem = await this.prisma.profile.findMany({

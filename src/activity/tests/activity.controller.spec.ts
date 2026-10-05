@@ -9,6 +9,7 @@ import { ActivityMigrationService } from '../activity-migration.service';
 describe('ActivityController', () => {
   const activityService = {
     getMediaByUserId: asyncMock(),
+    deleteActivityMedia: asyncMock(),
     getLocationsByActivityId: asyncMock(),
     getActivitiesByTheirIds: asyncMock(),
     createActivitiesFromMigrationArchive: asyncMock(),
@@ -32,6 +33,7 @@ describe('ActivityController', () => {
   it('returns service results for all non-migration activity endpoints', async () => {
     const result = { id: 'activity-1' };
     activityService.getMediaByUserId.mockResolvedValue({ media: [] });
+    activityService.deleteActivityMedia.mockResolvedValue({ success: true });
     activityService.getLocationsByActivityId.mockResolvedValue({ locations: [] });
     activityService.getActivitiesByTheirIds.mockResolvedValue([result]);
     activityService.createActivity.mockResolvedValue(result);
@@ -45,7 +47,11 @@ describe('ActivityController', () => {
     activityService.getActivityByActivityId.mockResolvedValue(result);
     activityService.deleteActivityById.mockResolvedValue(result);
 
-    await expect(controller.getMediaByUserId({ id: 'u1' }, undefined, '10')).resolves.toEqual({ media: [] });
+    const request = { user: { id: 'u1' } } as never;
+    await expect(controller.getMediaByUserId({ id: 'u1' }, undefined, '10', request)).resolves.toEqual({ media: [] });
+    expect(activityService.getMediaByUserId).toHaveBeenCalledWith('u1', '10', undefined, 'u1');
+    await expect(controller.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, request)).resolves.toBeUndefined();
+    expect(activityService.deleteActivityMedia).toHaveBeenCalledWith('a1', 'm1', 'u1');
     await expect(controller.getLocationsByActivityId({ id: 'a1' })).resolves.toEqual({ locations: [] });
     await expect(controller.getActivitiesByActivitiesIds('a1,a2')).resolves.toEqual([result]);
     await expect(controller.getActivitiesByActivitiesIds(['a1', 'a2'])).resolves.toEqual([result]);
@@ -109,6 +115,9 @@ describe('ActivityController', () => {
     Object.values(activityService).forEach((method) => method.mockRejectedValue(error));
 
     await expect(controller.getMediaByUserId({ id: 'u1' }, undefined, '10')).rejects.toBe(error);
+    await expect(
+      controller.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, { user: { id: 'u1' } } as never),
+    ).rejects.toBe(error);
     await expect(controller.getLocationsByActivityId({ id: 'a1' })).rejects.toBe(error);
     await expect(controller.getActivitiesByActivitiesIds('a1')).rejects.toBe(error);
     await expect(

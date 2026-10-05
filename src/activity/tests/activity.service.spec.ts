@@ -617,6 +617,7 @@ describe('ActivityService', () => {
     prisma.activityMedia.findMany.mockResolvedValue([
       {
         activityDate: new Date('2026-08-12T23:15:00.000Z'),
+        id: 'media-1',
         activityId: 'activity-1',
         position: 0,
         url: 'photo',
@@ -632,7 +633,7 @@ describe('ActivityService', () => {
     await expect(service.getLocationsByActivityId('activity-1')).resolves.toBeNull();
     await expect(service.getActivityByActivityId('activity-1')).resolves.toBeNull();
     await expect(service.getMediaByUserId('user-1', '1')).resolves.toEqual({
-      media: [{ url: 'photo', thumbnail: null, blurhash: null }],
+      media: [{ id: 'media-1', activityId: 'activity-1', url: 'photo', thumbnail: null, blurhash: null }],
       hasMore: false,
       nextCursor: null,
       isLastPage: true,

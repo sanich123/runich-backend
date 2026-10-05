@@ -8,9 +8,60 @@ import type { DatabaseRepositories } from './database-repository';
 type AnyRecord = Record<string, any>;
 
 const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
-const MOCK_SEED_VERSION = 'runich-mock-v8';
+const MOCK_SEED_VERSION = 'runich-mock-v9';
+const PREVIOUS_MOCK_SEED_VERSION = 'runich-mock-v8';
 const MOCK_SEED_IN_PROGRESS = `${MOCK_SEED_VERSION}:in-progress`;
 const MOCK_USER_COUNT = 100;
+
+type MockProfilePrivacySettings = {
+  profileSearchVisible: boolean;
+  allowActivityInteractions: boolean;
+  hideActivityStatistics: boolean;
+  hideFollowingList: boolean;
+  hideProfilePhotos: boolean;
+};
+
+const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
+  {
+    profileSearchVisible: false,
+    allowActivityInteractions: false,
+    hideActivityStatistics: true,
+    hideFollowingList: true,
+    hideProfilePhotos: true,
+  },
+  {
+    profileSearchVisible: true,
+    allowActivityInteractions: false,
+    hideActivityStatistics: true,
+    hideFollowingList: true,
+    hideProfilePhotos: true,
+  },
+  {
+    profileSearchVisible: true,
+    allowActivityInteractions: true,
+    hideActivityStatistics: true,
+    hideFollowingList: false,
+    hideProfilePhotos: true,
+  },
+  {
+    profileSearchVisible: true,
+    allowActivityInteractions: false,
+    hideActivityStatistics: false,
+    hideFollowingList: false,
+    hideProfilePhotos: false,
+  },
+  {
+    profileSearchVisible: true,
+    allowActivityInteractions: true,
+    hideActivityStatistics: false,
+    hideFollowingList: false,
+    hideProfilePhotos: false,
+  },
+];
+
+export function mockProfilePrivacySettingsForIndex(index: number): MockProfilePrivacySettings {
+  return MOCK_PROFILE_PRIVACY_PRESETS[index % MOCK_PROFILE_PRIVACY_PRESETS.length];
+}
 const MAX_MOCK_RELATION_COUNT = 40;
 const CREATE_MANY_BATCH_SIZE = 1_000;
 const DAY_IN_MS = 86_400_000;
@@ -242,17 +293,35 @@ export async function seedMockData(prisma: DatabaseRepositories) {
   });
 
   if (existingMocks.length === MOCK_USER_COUNT) {
-    const isComplete = existingMocks.every((mock: any) => {
-      const localPart = mock.email.slice(MOCK_EMAIL_PREFIX.length, mock.email.indexOf('@'));
-      const userIndex = Number(localPart) - 1;
-      return (
-        userIndex >= 0 &&
-        userIndex < MOCK_USER_COUNT &&
-        mock.profile?.bio === MOCK_SEED_VERSION &&
-        mock._count.activities === mockActivityCount(userIndex)
+    const isCompleteForVersion = (version: string) =>
+      existingMocks.every((mock: any) => {
+        const localPart = mock.email.slice(MOCK_EMAIL_PREFIX.length, mock.email.indexOf('@'));
+        const userIndex = Number(localPart) - 1;
+        return (
+          userIndex >= 0 &&
+          userIndex < MOCK_USER_COUNT &&
+          mock.profile?.bio === version &&
+          mock._count.activities === mockActivityCount(userIndex)
+        );
+      });
+
+    if (isCompleteForVersion(MOCK_SEED_VERSION)) return;
+    if (isCompleteForVersion(PREVIOUS_MOCK_SEED_VERSION)) {
+      await Promise.all(
+        existingMocks.map((mock: any) => {
+          const localPart = mock.email.slice(MOCK_EMAIL_PREFIX.length, mock.email.indexOf('@'));
+          const userIndex = Number(localPart) - 1;
+          return prisma.profile.update({
+            where: { userId: mock.id },
+            data: {
+              ...mockProfilePrivacySettingsForIndex(userIndex),
+              bio: MOCK_SEED_VERSION,
+            },
+          });
+        }),
       );
-    });
-    if (isComplete) return;
+      return;
+    }
   }
   if (existingMocks.length > 0) {
     await prisma.user.deleteMany({ where: { email: { startsWith: MOCK_EMAIL_PREFIX } } });
@@ -306,6 +375,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
             bio: MOCK_SEED_IN_PROGRESS,
             profilePhoto: profileImageUrl(index),
             emailNotifications: false,
+            ...mockProfilePrivacySettingsForIndex(index),
           },
         },
       },

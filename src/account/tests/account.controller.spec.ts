@@ -30,6 +30,14 @@ describe('AccountController', () => {
     expect(service.getFilteredAccounts).toHaveBeenCalledWith(undefined, undefined, {});
   });
 
+  it('passes the current user id so they can find their own hidden profile', async () => {
+    service.getFilteredAccounts.mockResolvedValue({ items: [] });
+
+    await controller.getFilteredAccounts(undefined, '10', {}, { user: { id: 'owner-1' } } as never);
+
+    expect(service.getFilteredAccounts).toHaveBeenCalledWith('10', undefined, {}, 'owner-1');
+  });
+
   it('propagates service errors from every endpoint', async () => {
     const error = new Error('service failed');
     service.getFilteredAccounts.mockRejectedValue(error);

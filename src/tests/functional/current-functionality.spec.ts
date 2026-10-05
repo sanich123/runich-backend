@@ -196,7 +196,12 @@ describe('account, user and social services', () => {
     await expect(friend.deleteFriendById('f1')).resolves.toEqual({ id: 'f1' });
     await expect(like.addLike({ activityId: 'a1' })).resolves.toEqual({ id: 'l1' });
     await expect(like.deleteLikeById('l1')).resolves.toEqual({ id: 'l1' });
-    await expect(like.getLikesByActivityId('a1')).resolves.toEqual([]);
+    await expect(like.getLikesByActivityId('a1')).resolves.toEqual({
+      likes: [],
+      hasMore: false,
+      nextCursor: null,
+      currentUserLike: null,
+    });
   });
 
   it('rejects social writes when the author profile is missing', async () => {

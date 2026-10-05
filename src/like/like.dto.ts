@@ -28,3 +28,28 @@ export class LikeResponseDto {
   @ApiPropertyOptional({ type: ProfileDto, nullable: true })
   profile?: ProfileDto | null;
 }
+
+export class LikeAuthorReferenceDto {
+  @ApiProperty({ type: String, format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ type: String, format: 'uuid' })
+  authorId: string;
+}
+
+export class LikesPageResponseDto {
+  @ApiProperty({ type: [LikeResponseDto] })
+  likes: LikeResponseDto[];
+
+  @ApiProperty({ type: Boolean })
+  hasMore: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  nextCursor: string | null;
+
+  @ApiPropertyOptional({
+    type: LikeAuthorReferenceDto,
+    nullable: true,
+  })
+  currentUserLike: LikeAuthorReferenceDto | null;
+}
