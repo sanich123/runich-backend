@@ -44,7 +44,7 @@ jobs:
       - name: Deploy the exact image over SSH
         env:
           STAGE_DEPLOY_HOST: ${{ secrets.STAGE_DEPLOY_HOST }}
-          STAGE_DEPLOY_USER: ${{ secrets.STAGE_DEPLOY_USER }}
+          STAGE_DEPLOY_USER: ${{ vars.STAGE_DEPLOY_USER }}
           STAGE_DEPLOY_SSH_KEY: ${{ secrets.STAGE_DEPLOY_SSH_KEY }}
           STAGE_DEPLOY_KNOWN_HOSTS: ${{ secrets.STAGE_DEPLOY_KNOWN_HOSTS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
