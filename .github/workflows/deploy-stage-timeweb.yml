@@ -114,7 +114,7 @@ jobs:
 
           healthy=false
           for attempt in $(seq 1 30); do
-            if "${COMPOSE[@]}" exec -T nestjs_app \
+            if "${COMPOSE[@]}" exec -T nestjs_app </dev/null \
               curl --fail --silent --show-error --max-time 5 http://127.0.0.1:3000/health/ready >/dev/null; then
               healthy=true
               break
