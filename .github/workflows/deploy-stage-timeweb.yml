@@ -44,7 +44,7 @@ jobs:
       - name: Deploy the exact image over SSH
         env:
           STAGE_DEPLOY_HOST: ${{ secrets.STAGE_DEPLOY_HOST }}
-          STAGE_DEPLOY_USER: ${{ vars.STAGE_DEPLOY_USER }}
+          STAGE_DEPLOY_USER: runich-deploy
           STAGE_DEPLOY_SSH_KEY: ${{ secrets.STAGE_DEPLOY_SSH_KEY }}
           STAGE_DEPLOY_KNOWN_HOSTS: ${{ secrets.STAGE_DEPLOY_KNOWN_HOSTS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -53,7 +53,7 @@ jobs:
           set -euo pipefail
 
           : "${STAGE_DEPLOY_HOST:?GitHub Actions secret STAGE_DEPLOY_HOST is required}"
-          : "${STAGE_DEPLOY_USER:?GitHub Actions secret STAGE_DEPLOY_USER is required}"
+          : "${STAGE_DEPLOY_USER:?STAGE_DEPLOY_USER must be set}"
           : "${STAGE_DEPLOY_SSH_KEY:?GitHub Actions secret STAGE_DEPLOY_SSH_KEY is required}"
           : "${STAGE_DEPLOY_KNOWN_HOSTS:?GitHub Actions secret STAGE_DEPLOY_KNOWN_HOSTS is required}"
           : "${GITHUB_TOKEN:?GitHub Actions GITHUB_TOKEN is required}"
