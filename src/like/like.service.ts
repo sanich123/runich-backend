@@ -85,6 +85,7 @@ export class LikeService {
                   profilePhotoBlurhash: true,
                   city: true,
                   userId: true,
+                  allowNewFollowers: true,
                 },
               },
             },

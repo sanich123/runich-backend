@@ -75,6 +75,7 @@ model Profile {
   hideActivityStatistics Boolean              @default(false) @map("hide_activity_statistics")
   hideFollowingList Boolean                   @default(false) @map("hide_following_list")
   hideProfilePhotos Boolean                   @default(false) @map("hide_profile_photos")
+  allowNewFollowers Boolean                   @default(true) @map("allow_new_followers")
   activities            Activity[]
   activityMigrationJobs ActivityMigrationJob[]
   comments              Comment[]

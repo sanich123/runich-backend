@@ -72,6 +72,7 @@ describe('AccountService', () => {
           city: true,
           profilePhoto: true,
           profilePhotoBlurhash: true,
+          allowNewFollowers: true,
         },
       });
     }

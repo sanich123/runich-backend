@@ -40,6 +40,19 @@ describe('FriendService', () => {
     expect(prisma.friend.upsert).not.toHaveBeenCalled();
   });
 
+  it('rejects a new follower when the target profile disables following', async () => {
+    const prisma = createPrismaMock();
+    const account = {
+      getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1', allowNewFollowers: false }),
+    };
+    const service = new FriendService(prisma as never, account as never);
+
+    await expect(service.addFriendByFriendId('friend-user', { userId: 'user-1' })).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(prisma.friend.upsert).not.toHaveBeenCalled();
+  });
+
   it('hides both follow lists from other users while keeping them visible to the owner', async () => {
     const prisma = createPrismaMock();
     const service = new FriendService(prisma as never, {} as never);

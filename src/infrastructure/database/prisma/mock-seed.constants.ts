@@ -1,7 +1,7 @@
 import type { MockProfilePrivacySettings } from './mock-seed.types';
 
 export const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
-export const MOCK_SEED_VERSION = 'runich-mock-v12';
+export const MOCK_SEED_VERSION = 'runich-mock-v13';
 export const MOCK_USER_COUNT = 100;
 export const MAX_MOCK_RELATION_COUNT = 40;
 export const CREATE_MANY_BATCH_SIZE = 1_000;
@@ -11,6 +11,7 @@ export const MINUTE_IN_MS = 60_000;
 export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
   {
     profileSearchVisible: false,
+    allowNewFollowers: true,
     allowActivityInteractions: false,
     allowLikesListViewing: true,
     hideActivityStatistics: true,
@@ -19,6 +20,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
   },
   {
     profileSearchVisible: true,
+    allowNewFollowers: false,
     allowActivityInteractions: false,
     allowLikesListViewing: true,
     hideActivityStatistics: true,
@@ -27,6 +29,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
   },
   {
     profileSearchVisible: true,
+    allowNewFollowers: true,
     allowActivityInteractions: true,
     allowLikesListViewing: true,
     hideActivityStatistics: true,
@@ -35,6 +38,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
   },
   {
     profileSearchVisible: true,
+    allowNewFollowers: true,
     allowActivityInteractions: false,
     allowLikesListViewing: true,
     hideActivityStatistics: false,
@@ -43,6 +47,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
   },
   {
     profileSearchVisible: true,
+    allowNewFollowers: true,
     allowActivityInteractions: true,
     allowLikesListViewing: true,
     hideActivityStatistics: false,

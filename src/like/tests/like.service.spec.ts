@@ -44,6 +44,9 @@ describe('LikeService', () => {
         profile: expect.any(Object),
       }),
     );
+    expect(likeQuery.select?.profile).toEqual(
+      expect.objectContaining({ select: expect.objectContaining({ allowNewFollowers: true }) }),
+    );
     expect(prisma.like.findUnique).not.toHaveBeenCalled();
     expect(prisma.like.upsert).toHaveBeenCalledWith({
       where: { authorId_activityId: { authorId: '', activityId: 'activity-1' } },

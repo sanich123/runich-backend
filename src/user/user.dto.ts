@@ -111,6 +111,10 @@ export class UserDto {
   @IsBoolean()
   @IsOptional()
   hideProfilePhotos?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to follow this profile' })
+  @IsBoolean()
+  @IsOptional()
+  allowNewFollowers?: boolean;
 
   @ApiPropertyOptional({ type: String, description: "User's email" })
   @IsEmail()

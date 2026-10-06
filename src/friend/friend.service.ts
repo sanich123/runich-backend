@@ -86,6 +86,9 @@ export class FriendService {
       const ownerId = typeof currentUserId === 'string' ? currentUserId : currentUserId.userId;
       const profile = await this.accountService.getAccountByUserId(id);
       if (!profile) throw new NotFoundException('Профиль пользователя не найден: userId');
+      if (profile.allowNewFollowers === false) {
+        throw new ForbiddenException('Владелец профиля запретил новые подписки');
+      }
       const where = { userId_friendId: { userId: ownerId, friendId: id } };
       try {
         return await this.prismaService.friend.upsert({

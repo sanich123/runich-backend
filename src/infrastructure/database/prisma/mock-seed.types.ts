@@ -4,6 +4,7 @@ export type AnyRecord = Record<string, any>;
 
 export type MockProfilePrivacySettings = {
   profileSearchVisible: boolean;
+  allowNewFollowers: boolean;
   allowActivityInteractions: boolean;
   allowLikesListViewing: boolean;
   hideActivityStatistics: boolean;

@@ -51,6 +51,8 @@ export class ProfileDto {
   hideFollowingList?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Hide activity media from the profile photo gallery' })
   hideProfilePhotos?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to follow this profile' })
+  allowNewFollowers?: boolean;
   @ApiPropertyOptional({ type: String, description: 'Email value (optional)' })
   email?: string | null;
 }

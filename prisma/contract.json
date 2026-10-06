@@ -1769,6 +1769,13 @@
                   "kind": "scalar"
                 }
               },
+              "allowNewFollowers": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "bio": {
                 "nullable": true,
                 "type": {
@@ -2051,6 +2058,9 @@
                 },
                 "allowLikesListViewing": {
                   "column": "allow_likes_list_viewing"
+                },
+                "allowNewFollowers": {
+                  "column": "allow_new_followers"
                 },
                 "bio": {
                   "column": "bio"
@@ -4568,6 +4578,15 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
+                "allow_new_followers": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "bio": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -5465,7 +5484,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "7f00e2fabdb302c3c5393c4aabe74d51c5f0a9b4309c14be4826ddb06175f0d4"
+    "storageHash": "4e8b94e1e072b032e7e4f19a40918ea24d37c3838ee777493fb8183dd976e040"
   },
   "capabilities": {
     "postgres": {
