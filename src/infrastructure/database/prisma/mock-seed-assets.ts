@@ -1,5 +1,6 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION } from 'src/storage/const';
+import { MOCK_ACTIVITY_PHOTO_KEYS } from './mock-seed.constants';
 
 const MOCK_ACTIVITY_MANIFEST_KEY = 'mock-activities/manifest.json';
 const MOCK_ACTIVITY_PREFIX = 'mock-activities/';
@@ -68,12 +69,16 @@ function isMockActivityTemplate(value: unknown): value is MockActivityManifestEn
   );
 }
 
-function getPublicUrl(key: string) {
+export function getPublicUrl(key: string) {
   const endpoint = process.env.S3_ENDPOINT?.trim() || DEFAULT_S3_ENDPOINT;
   const bucket = process.env.S3_BUCKET?.trim() || '';
   const publicUrl = (process.env.S3_PUBLIC_URL?.trim() || `${endpoint}/${bucket}`).replace(/\/$/, '');
   const encodedKey = key.split('/').map(encodeURIComponent).join('/');
   return `${publicUrl}/${encodedKey}`;
+}
+
+export function getMockActivityPhotoUrls() {
+  return MOCK_ACTIVITY_PHOTO_KEYS.map(getPublicUrl);
 }
 
 export async function loadMockActivityTemplates(): Promise<MockActivityTemplate[]> {

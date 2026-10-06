@@ -1,9 +1,10 @@
 import type { MockProfilePrivacySettings } from './mock-seed.types';
 
 export const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
-export const MOCK_SEED_VERSION = 'runich-mock-v13';
+export const MOCK_SEED_VERSION = 'runich-mock-v17';
 export const MOCK_USER_COUNT = 100;
 export const MAX_MOCK_RELATION_COUNT = 40;
+export const MAX_MOCK_ACTIVITY_PHOTOS = 4;
 export const CREATE_MANY_BATCH_SIZE = 1_000;
 export const DAY_IN_MS = 86_400_000;
 export const MINUTE_IN_MS = 60_000;
@@ -14,6 +15,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: false,
     allowLikesListViewing: true,
+    allowActivitySharing: false,
     hideActivityStatistics: true,
     hideFollowingList: true,
     hideProfilePhotos: true,
@@ -23,6 +25,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: false,
     allowActivityInteractions: false,
     allowLikesListViewing: true,
+    allowActivitySharing: false,
     hideActivityStatistics: true,
     hideFollowingList: true,
     hideProfilePhotos: true,
@@ -31,7 +34,8 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     profileSearchVisible: true,
     allowNewFollowers: true,
     allowActivityInteractions: true,
-    allowLikesListViewing: true,
+    allowLikesListViewing: false,
+    allowActivitySharing: true,
     hideActivityStatistics: true,
     hideFollowingList: false,
     hideProfilePhotos: true,
@@ -41,6 +45,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: false,
     allowLikesListViewing: true,
+    allowActivitySharing: false,
     hideActivityStatistics: false,
     hideFollowingList: false,
     hideProfilePhotos: false,
@@ -50,6 +55,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: true,
     allowLikesListViewing: true,
+    allowActivitySharing: true,
     hideActivityStatistics: false,
     hideFollowingList: false,
     hideProfilePhotos: false,
@@ -79,8 +85,10 @@ export const MOCK_RUNNERS = [
   ['Paula', 'Radcliffe', 'London'],
 ] as const;
 
-export const MOCK_ACTIVITY_PHOTO =
-  'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=80';
+export const MOCK_ACTIVITY_PHOTO_KEYS = Array.from(
+  { length: 10 },
+  (_, index) => `mock-activities/photos/photo-${String(index + 1).padStart(2, '0')}.jpg`,
+);
 
 export const MOCK_COMMENT_TEXTS = [
   'Сильная тренировка!',

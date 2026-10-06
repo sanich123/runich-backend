@@ -7,6 +7,7 @@ describe('mock profile privacy seed presets', () => {
       allowNewFollowers: true,
       allowActivityInteractions: false,
       allowLikesListViewing: true,
+      allowActivitySharing: false,
       hideActivityStatistics: true,
       hideFollowingList: true,
       hideProfilePhotos: true,
@@ -19,6 +20,7 @@ describe('mock profile privacy seed presets', () => {
       allowNewFollowers: true,
       allowActivityInteractions: true,
       allowLikesListViewing: true,
+      allowActivitySharing: true,
       hideActivityStatistics: false,
       hideFollowingList: false,
       hideProfilePhotos: false,
@@ -30,7 +32,8 @@ describe('mock profile privacy seed presets', () => {
       profileSearchVisible: true,
       allowNewFollowers: true,
       allowActivityInteractions: true,
-      allowLikesListViewing: true,
+      allowLikesListViewing: false,
+      allowActivitySharing: true,
       hideActivityStatistics: true,
       hideFollowingList: false,
       hideProfilePhotos: true,
@@ -38,5 +41,20 @@ describe('mock profile privacy seed presets', () => {
     expect(mockProfilePrivacySettingsForIndex(1).allowNewFollowers).toBe(false);
     expect(mockProfilePrivacySettingsForIndex(6).allowNewFollowers).toBe(false);
     expect(mockProfilePrivacySettingsForIndex(5)).toEqual(mockProfilePrivacySettingsForIndex(0));
+  });
+
+  it.each([
+    'profileSearchVisible',
+    'allowNewFollowers',
+    'allowActivityInteractions',
+    'allowLikesListViewing',
+    'allowActivitySharing',
+    'hideActivityStatistics',
+    'hideFollowingList',
+    'hideProfilePhotos',
+  ] as const)('covers both values for %s', (field) => {
+    expect(new Set([0, 1, 2, 3, 4].map((index) => mockProfilePrivacySettingsForIndex(index)[field]))).toEqual(
+      new Set([false, true]),
+    );
   });
 });

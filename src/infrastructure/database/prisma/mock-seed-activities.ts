@@ -3,9 +3,9 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseRepositories } from './database-repository';
 import {
   DAY_IN_MS,
+  MAX_MOCK_ACTIVITY_PHOTOS,
   MAX_MOCK_RELATION_COUNT,
   MINUTE_IN_MS,
-  MOCK_ACTIVITY_PHOTO,
   MOCK_ACTIVITY_TITLES,
   MOCK_COMMENT_TEXTS,
   MOCK_EMOTIONS,
@@ -20,6 +20,7 @@ export async function seedMockActivities(
   mockUsers: MockUser[],
   allUsers: SeedUser[],
   activityTemplates: MockActivityTemplate[],
+  activityPhotoUrls: readonly string[],
 ): Promise<MockActivitySeedStats> {
   const seedStartedAt = Date.now();
   let activityTotal = 0;
@@ -37,7 +38,6 @@ export async function seedMockActivities(
       const template = activityTemplates.length
         ? activityTemplates[(userIndex * MAX_MOCK_RELATION_COUNT + activityIndex) % activityTemplates.length]
         : undefined;
-      const photo = MOCK_ACTIVITY_PHOTO;
       const activityDate = new Date(seedStartedAt - (activityIndex + MAX_MOCK_RELATION_COUNT) * DAY_IN_MS);
 
       activityRows.push({
@@ -77,14 +77,18 @@ export async function seedMockActivities(
       });
       const activity = activityRows.at(-1)!;
 
-      mediaRows.push({
-        activityId: activity.id,
-        userId: activity.userId,
-        activityDate: activity.date,
-        position: 0,
-        url: photo,
-        thumbnail: photo,
-      });
+      const photoCount = random((userIndex + 1) * 30_000 + activityIndex, MAX_MOCK_ACTIVITY_PHOTOS);
+      for (let photoIndex = 0; photoIndex < photoCount; photoIndex += 1) {
+        const photo = activityPhotoUrls[(userIndex + activityIndex + photoIndex) % activityPhotoUrls.length];
+        mediaRows.push({
+          activityId: activity.id,
+          userId: activity.userId,
+          activityDate: activity.date,
+          position: photoIndex,
+          url: photo,
+          thumbnail: photo,
+        });
+      }
     }
 
     await createManyInBatches(activityRows, (data) => prisma.activity.createMany({ data }));

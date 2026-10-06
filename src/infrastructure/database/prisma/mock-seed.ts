@@ -4,7 +4,7 @@ import { Logger } from '@nestjs/common';
 import type { DatabaseRepositories } from './database-repository';
 import { MOCK_EMAIL_PREFIX, MOCK_SEED_VERSION, MOCK_USER_COUNT } from './mock-seed.constants';
 import { seedMockActivities } from './mock-seed-activities';
-import { loadMockActivityTemplates } from './mock-seed-assets';
+import { getMockActivityPhotoUrls, loadMockActivityTemplates } from './mock-seed-assets';
 import { seedMockFollows } from './mock-seed-follows';
 import {
   mockActivityCount,
@@ -61,7 +61,8 @@ export async function seedMockData(prisma: DatabaseRepositories) {
   }
 
   const activityTemplates = await loadMockActivityTemplates();
-  const seedVersion = `${MOCK_SEED_VERSION}:${activityTemplates.length ? 'routes-v1' : 'generated'}`;
+  const activityPhotoUrls = getMockActivityPhotoUrls();
+  const seedVersion = `${MOCK_SEED_VERSION}:${activityTemplates.length ? 'routes-v1' : 'generated'}:photos-v1`;
   const seedInProgress = `${seedVersion}:in-progress`;
 
   if (existingMocks.length === MOCK_USER_COUNT) {
@@ -136,7 +137,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
     ...mockUsers.map((user) => ({ id: user.id, profile: user.profile! })),
   ];
 
-  const activityStats = await seedMockActivities(prisma, mockUsers, allUsers, activityTemplates);
+  const activityStats = await seedMockActivities(prisma, mockUsers, allUsers, activityTemplates, activityPhotoUrls);
   const friendCount = await seedMockFollows(prisma, allUsers);
 
   await prisma.profile.updateMany({
