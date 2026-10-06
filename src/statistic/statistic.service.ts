@@ -54,7 +54,7 @@ export class StatisticService {
       dayActivities.push({
         duration: activity.duration,
         distance: activity.distance,
-        steps: activity.steps ?? 0,
+        steps: activity.steps != null && activity.steps > 1 ? activity.steps : 0,
         caloriesActive: activity.caloriesActive ?? 0,
         date: activity.date.toISOString(),
         sport: activity.sport,
@@ -171,7 +171,7 @@ export class StatisticService {
             "sport",
             COALESCE(SUM("duration"), 0)::double precision / 3600000 AS "totalDuration",
             COALESCE(SUM("distance"), 0)::double precision / 1000 AS "totalDistance",
-            COALESCE(SUM("steps"), 0)::double precision AS "totalSteps",
+            COALESCE(SUM(CASE WHEN "steps" > 1 THEN "steps" ELSE 0 END), 0)::double precision AS "totalSteps",
             COALESCE(SUM("calories_active"), 0)::double precision AS "totalCaloriesActive",
             COUNT(*)::int AS "totalItems"
           FROM "Activity"

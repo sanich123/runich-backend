@@ -105,7 +105,11 @@ export class ActivityService {
       select: { userId: true, visibility: true },
     });
 
-    if (!activity) return false;
+    return this.canAccessActivityData(activity, currentUserId);
+  }
+
+  async canAccessActivityData(activity: { userId: string; visibility: string } | null, currentUserId?: string) {
+    if (!activity || !currentUserId) return false;
     if (activity.userId === currentUserId || activity.visibility === ACTIVITY_VISIBILITY.public) return true;
     if (activity.visibility !== ACTIVITY_VISIBILITY.followers) return false;
     return this.isFollower(currentUserId, activity.userId);
@@ -540,7 +544,7 @@ export class ActivityService {
         where: { id },
         select: ACTIVITY_DETAILS_SELECT,
       });
-      if (!activity || !currentUserId || !(await this.canAccessActivity(id, currentUserId))) return null;
+      if (!activity || !(await this.canAccessActivityData(activity, currentUserId))) return null;
       return activity ? normalizeActivityDetails(activity as Record<string, unknown>) : activity;
     } catch (error) {
       handleServiceError(error);
@@ -743,6 +747,7 @@ export class ActivityService {
             'profilePhotoBlurhash', p."profilePhotoBlurhash",
             'emailNotifications', p."emailNotifications",
             'allowActivityInteractions', p."allow_activity_interactions",
+            'allowLikesListViewing', p."allow_likes_list_viewing",
             'user', json_build_object('email', u."email")
           ) AS "profile",
           json_build_object(

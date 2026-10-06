@@ -17,6 +17,7 @@ const ACTIVITY_CARD_PROFILE_SELECT = {
   profilePhotoBlurhash: true,
   emailNotifications: true,
   allowActivityInteractions: true,
+  allowLikesListViewing: true,
 } as const;
 
 const ACTIVITY_FEED_PROFILE_SELECT = {

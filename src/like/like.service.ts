@@ -55,13 +55,13 @@ export class LikeService {
 
   async getLikesByActivityId(id: string, currentUserId?: string, limit = '30', cursor?: LikeCursor) {
     try {
-      if (currentUserId && !(await this.activityService.canAccessActivity(id, currentUserId))) {
-        throw new NotFoundException('Активность не найдена');
-      }
       const pageSize = Number(limit);
       const activity = await this.prismaService.activity.findUnique({
         where: { id },
         select: {
+          userId: true,
+          visibility: true,
+          profile: { select: { allowLikesListViewing: true } },
           likes: {
             ...(cursor
               ? {
@@ -96,6 +96,12 @@ export class LikeService {
         if (currentUserId) throw new NotFoundException('Активность не найдена');
         return { likes: [], hasMore: false, nextCursor: null, currentUserLike: null };
       }
+      if (currentUserId && !(await this.activityService.canAccessActivityData(activity, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
+      }
+      if (activity.userId !== currentUserId && activity.profile?.allowLikesListViewing === false) {
+        throw new NotFoundException('Список лайков недоступен');
+      }
       const likesWithExtraItem = activity.likes;
       const hasMore = likesWithExtraItem.length > pageSize;
       const likes = likesWithExtraItem.slice(0, pageSize);
@@ -119,16 +125,16 @@ export class LikeService {
 
   async getLikesLengthByActivityId(id: string, currentUserId?: string) {
     try {
-      if (currentUserId && !(await this.activityService.canAccessActivity(id, currentUserId))) {
-        throw new NotFoundException('Активность не найдена');
-      }
       const activity = await this.prismaService.activity.findUnique({
         where: { id },
-        select: { _count: { select: { likes: true } } },
+        select: { userId: true, visibility: true, _count: { select: { likes: true } } },
       });
       if (!activity) {
         if (currentUserId) throw new NotFoundException('Активность не найдена');
         return 0;
+      }
+      if (currentUserId && !(await this.activityService.canAccessActivityData(activity, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
       }
       return activity._count.likes;
     } catch (error) {

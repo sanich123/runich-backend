@@ -5,6 +5,7 @@ describe('mock profile privacy seed presets', () => {
     expect(mockProfilePrivacySettingsForIndex(0)).toEqual({
       profileSearchVisible: false,
       allowActivityInteractions: false,
+      allowLikesListViewing: true,
       hideActivityStatistics: true,
       hideFollowingList: true,
       hideProfilePhotos: true,
@@ -15,6 +16,7 @@ describe('mock profile privacy seed presets', () => {
     expect(mockProfilePrivacySettingsForIndex(4)).toEqual({
       profileSearchVisible: true,
       allowActivityInteractions: true,
+      allowLikesListViewing: true,
       hideActivityStatistics: false,
       hideFollowingList: false,
       hideProfilePhotos: false,
@@ -25,6 +27,7 @@ describe('mock profile privacy seed presets', () => {
     expect(mockProfilePrivacySettingsForIndex(2)).toEqual({
       profileSearchVisible: true,
       allowActivityInteractions: true,
+      allowLikesListViewing: true,
       hideActivityStatistics: true,
       hideFollowingList: false,
       hideProfilePhotos: true,
