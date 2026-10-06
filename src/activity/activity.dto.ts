@@ -495,6 +495,9 @@ class ActivityProfileResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   profilePhotoBlurhash: string | null;
 
+  @ApiPropertyOptional({ type: Boolean })
+  allowActivitySharing?: boolean;
+
   @ApiPropertyOptional({ type: Boolean, nullable: true })
   emailNotifications: boolean | null;
 

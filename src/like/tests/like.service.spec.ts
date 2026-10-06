@@ -69,14 +69,14 @@ describe('LikeService', () => {
     const service = new LikeService(
       prisma as never,
       {} as never,
-      { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
+      { canAccessActivityData: asyncMock().mockResolvedValue(true) } as never,
     );
-    prisma.activity.findUnique.mockResolvedValue({ _count: { likes: 7 } });
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1', visibility: 'public', _count: { likes: 7 } });
 
     await expect(service.getLikesLengthByActivityId('activity-1', 'viewer-1')).resolves.toBe(7);
     expect(prisma.activity.findUnique).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
-      select: { _count: { select: { likes: true } } },
+      select: { userId: true, visibility: true, _count: { select: { likes: true } } },
     });
   });
 
@@ -110,6 +110,9 @@ describe('LikeService', () => {
     expect(prisma.activity.findUnique).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
       select: {
+        userId: true,
+        visibility: true,
+        profile: { select: { allowLikesListViewing: true } },
         likes: expect.objectContaining({
           where: {
             OR: [
@@ -128,9 +131,14 @@ describe('LikeService', () => {
     const service = new LikeService(
       prisma as never,
       {} as never,
-      { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
+      { canAccessActivityData: asyncMock().mockResolvedValue(true) } as never,
     );
-    prisma.activity.findUnique.mockResolvedValue({ likes: [] });
+    prisma.activity.findUnique.mockResolvedValue({
+      userId: 'owner-1',
+      visibility: 'public',
+      profile: { allowLikesListViewing: true },
+      likes: [],
+    });
     prisma.like.findUnique.mockResolvedValue({ id: 'old-like-id', authorId: 'viewer-1' });
 
     const result = await service.getLikesByActivityId('activity-1', 'viewer-1');
@@ -150,7 +158,7 @@ describe('LikeService', () => {
     await expect(service.getLikesLengthByActivityId('activity-1')).resolves.toBe(0);
     expect(prisma.activity.findUnique).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
-      select: { _count: { select: { likes: true } } },
+      select: { userId: true, visibility: true, _count: { select: { likes: true } } },
     });
   });
 

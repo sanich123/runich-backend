@@ -71,6 +71,7 @@ model Profile {
   profileSearchVisible Boolean                @default(true) @map("profile_search_visible")
   allowActivityInteractions Boolean           @default(true) @map("allow_activity_interactions")
   allowLikesListViewing Boolean               @default(true) @map("allow_likes_list_viewing")
+  allowActivitySharing Boolean                @default(true) @map("allow_activity_sharing")
   hideActivityStatistics Boolean              @default(false) @map("hide_activity_statistics")
   hideFollowingList Boolean                   @default(false) @map("hide_following_list")
   hideProfilePhotos Boolean                   @default(false) @map("hide_profile_photos")

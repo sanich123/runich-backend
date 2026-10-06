@@ -1,0 +1,44 @@
+[
+  {
+    "id": "column.public.Profile.allow_activity_sharing",
+    "label": "Add column \"allow_activity_sharing\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "allow_activity_sharing",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"allow_activity_sharing\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "allow_activity_sharing"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"allow_activity_sharing\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"allow_activity_sharing\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"allow_activity_sharing\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "allow_activity_sharing"
+        ]
+      }
+    ]
+  }
+]

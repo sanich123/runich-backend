@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- seed payloads are intentionally dynamic at this boundary. */
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseRepositories } from './database-repository';
@@ -22,6 +21,7 @@ export async function seedMockActivities(
   allUsers: SeedUser[],
   activityTemplates: MockActivityTemplate[],
 ): Promise<MockActivitySeedStats> {
+  const seedStartedAt = Date.now();
   let activityTotal = 0;
   let commentTotal = 0;
   let activityLikeTotal = 0;
@@ -38,9 +38,7 @@ export async function seedMockActivities(
         ? activityTemplates[(userIndex * MAX_MOCK_RELATION_COUNT + activityIndex) % activityTemplates.length]
         : undefined;
       const photo = MOCK_ACTIVITY_PHOTO;
-      const activityDate = new Date(
-        Date.now() - (userIndex * MAX_MOCK_RELATION_COUNT + activityIndex + MAX_MOCK_RELATION_COUNT) * DAY_IN_MS,
-      );
+      const activityDate = new Date(seedStartedAt - (activityIndex + MAX_MOCK_RELATION_COUNT) * DAY_IN_MS);
 
       activityRows.push({
         id: randomUUID(),

@@ -748,6 +748,7 @@ export class ActivityService {
             'emailNotifications', p."emailNotifications",
             'allowActivityInteractions', p."allow_activity_interactions",
             'allowLikesListViewing', p."allow_likes_list_viewing",
+            'allowActivitySharing', p."allow_activity_sharing",
             'user', json_build_object('email', u."email")
           ) AS "profile",
           json_build_object(

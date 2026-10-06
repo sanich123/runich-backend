@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'d08a304c28b0916f3a3ab56d933cf5cb2b787c70e10406aae53811de1a9ed032'>;
+  StorageHashBase<'7f00e2fabdb302c3c5393c4aabe74d51c5f0a9b4309c14be4826ddb06175f0d4'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -385,6 +385,7 @@ export type FieldOutputTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['output'] | null;
       readonly allowActivityInteractions: CodecTypes['pg/bool@1']['output'];
+      readonly allowActivitySharing: CodecTypes['pg/bool@1']['output'];
       readonly allowLikesListViewing: CodecTypes['pg/bool@1']['output'];
       readonly bio: CodecTypes['pg/text@1']['output'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['output'] | null;
@@ -620,6 +621,7 @@ export type FieldInputTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['input'] | null;
       readonly allowActivityInteractions: CodecTypes['pg/bool@1']['input'];
+      readonly allowActivitySharing: CodecTypes['pg/bool@1']['input'];
       readonly allowLikesListViewing: CodecTypes['pg/bool@1']['input'];
       readonly bio: CodecTypes['pg/text@1']['input'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['input'] | null;
@@ -855,6 +857,7 @@ export type StorageColumnTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['output'] | null;
       readonly allow_activity_interactions: CodecTypes['pg/bool@1']['output'];
+      readonly allow_activity_sharing: CodecTypes['pg/bool@1']['output'];
       readonly allow_likes_list_viewing: CodecTypes['pg/bool@1']['output'];
       readonly bio: CodecTypes['pg/text@1']['output'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['output'] | null;
@@ -1090,6 +1093,7 @@ export type StorageColumnInputTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['input'] | null;
       readonly allow_activity_interactions: CodecTypes['pg/bool@1']['input'];
+      readonly allow_activity_sharing: CodecTypes['pg/bool@1']['input'];
       readonly allow_likes_list_viewing: CodecTypes['pg/bool@1']['input'];
       readonly bio: CodecTypes['pg/text@1']['input'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['input'] | null;
@@ -1353,6 +1357,7 @@ export namespace Models {
   export type public_Profile = {
     age: CodecTypes['pg/text@1']['output'] | null;
     allowActivityInteractions: CodecTypes['pg/bool@1']['output'];
+    allowActivitySharing: CodecTypes['pg/bool@1']['output'];
     allowLikesListViewing: CodecTypes['pg/bool@1']['output'];
     bio: CodecTypes['pg/text@1']['output'] | null;
     birthday: CodecTypes['pg/date-string@1']['output'] | null;
@@ -2660,6 +2665,15 @@ type ContractBase = Omit<
                   readonly nullable: true;
                 };
                 readonly allow_activity_interactions: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
+                readonly allow_activity_sharing: {
                   readonly nativeType: 'bool';
                   readonly codecId: 'pg/bool@1';
                   readonly nullable: false;
@@ -4483,6 +4497,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
+              readonly allowActivitySharing: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
               readonly allowLikesListViewing: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
@@ -4666,6 +4684,7 @@ type ContractBase = Omit<
                 readonly allowActivityInteractions: {
                   readonly column: 'allow_activity_interactions';
                 };
+                readonly allowActivitySharing: { readonly column: 'allow_activity_sharing' };
                 readonly allowLikesListViewing: { readonly column: 'allow_likes_list_viewing' };
                 readonly bio: { readonly column: 'bio' };
                 readonly birthday: { readonly column: 'birthday' };
