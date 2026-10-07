@@ -1755,6 +1755,13 @@
                   "kind": "scalar"
                 }
               },
+              "allowActivityReplayViewing": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "allowActivitySharing": {
                 "nullable": false,
                 "type": {
@@ -2052,6 +2059,9 @@
                 },
                 "allowActivityInteractions": {
                   "column": "allow_activity_interactions"
+                },
+                "allowActivityReplayViewing": {
+                  "column": "allow_activity_replay_viewing"
                 },
                 "allowActivitySharing": {
                   "column": "allow_activity_sharing"
@@ -4560,6 +4570,15 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
+                "allow_activity_replay_viewing": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "allow_activity_sharing": {
                   "codecId": "pg/bool@1",
                   "default": {
@@ -5484,7 +5503,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "4e8b94e1e072b032e7e4f19a40918ea24d37c3838ee777493fb8183dd976e040"
+    "storageHash": "03d055be0b6567ba1203b7cb0c127e4f16ab2f8e706c6c305f2ef2dcb1aa544d"
   },
   "capabilities": {
     "postgres": {

@@ -498,6 +498,9 @@ class ActivityProfileResponseDto {
   @ApiPropertyOptional({ type: Boolean })
   allowActivitySharing?: boolean;
 
+  @ApiPropertyOptional({ type: Boolean })
+  allowActivityReplayViewing?: boolean;
+
   @ApiPropertyOptional({ type: Boolean, nullable: true })
   emailNotifications: boolean | null;
 

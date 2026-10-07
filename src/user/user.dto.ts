@@ -92,6 +92,11 @@ export class UserDto {
   @IsOptional()
   allowLikesListViewing?: boolean;
 
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view activity route replays' })
+  @IsBoolean()
+  @IsOptional()
+  allowActivityReplayViewing?: boolean;
+
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to share this profile activities' })
   @IsBoolean()
   @IsOptional()

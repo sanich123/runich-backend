@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'4e8b94e1e072b032e7e4f19a40918ea24d37c3838ee777493fb8183dd976e040'>;
+  StorageHashBase<'03d055be0b6567ba1203b7cb0c127e4f16ab2f8e706c6c305f2ef2dcb1aa544d'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -385,6 +385,7 @@ export type FieldOutputTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['output'] | null;
       readonly allowActivityInteractions: CodecTypes['pg/bool@1']['output'];
+      readonly allowActivityReplayViewing: CodecTypes['pg/bool@1']['output'];
       readonly allowActivitySharing: CodecTypes['pg/bool@1']['output'];
       readonly allowLikesListViewing: CodecTypes['pg/bool@1']['output'];
       readonly allowNewFollowers: CodecTypes['pg/bool@1']['output'];
@@ -622,6 +623,7 @@ export type FieldInputTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['input'] | null;
       readonly allowActivityInteractions: CodecTypes['pg/bool@1']['input'];
+      readonly allowActivityReplayViewing: CodecTypes['pg/bool@1']['input'];
       readonly allowActivitySharing: CodecTypes['pg/bool@1']['input'];
       readonly allowLikesListViewing: CodecTypes['pg/bool@1']['input'];
       readonly allowNewFollowers: CodecTypes['pg/bool@1']['input'];
@@ -859,6 +861,7 @@ export type StorageColumnTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['output'] | null;
       readonly allow_activity_interactions: CodecTypes['pg/bool@1']['output'];
+      readonly allow_activity_replay_viewing: CodecTypes['pg/bool@1']['output'];
       readonly allow_activity_sharing: CodecTypes['pg/bool@1']['output'];
       readonly allow_likes_list_viewing: CodecTypes['pg/bool@1']['output'];
       readonly allow_new_followers: CodecTypes['pg/bool@1']['output'];
@@ -1096,6 +1099,7 @@ export type StorageColumnInputTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['input'] | null;
       readonly allow_activity_interactions: CodecTypes['pg/bool@1']['input'];
+      readonly allow_activity_replay_viewing: CodecTypes['pg/bool@1']['input'];
       readonly allow_activity_sharing: CodecTypes['pg/bool@1']['input'];
       readonly allow_likes_list_viewing: CodecTypes['pg/bool@1']['input'];
       readonly allow_new_followers: CodecTypes['pg/bool@1']['input'];
@@ -1361,6 +1365,7 @@ export namespace Models {
   export type public_Profile = {
     age: CodecTypes['pg/text@1']['output'] | null;
     allowActivityInteractions: CodecTypes['pg/bool@1']['output'];
+    allowActivityReplayViewing: CodecTypes['pg/bool@1']['output'];
     allowActivitySharing: CodecTypes['pg/bool@1']['output'];
     allowLikesListViewing: CodecTypes['pg/bool@1']['output'];
     allowNewFollowers: CodecTypes['pg/bool@1']['output'];
@@ -2670,6 +2675,15 @@ type ContractBase = Omit<
                   readonly nullable: true;
                 };
                 readonly allow_activity_interactions: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
+                readonly allow_activity_replay_viewing: {
                   readonly nativeType: 'bool';
                   readonly codecId: 'pg/bool@1';
                   readonly nullable: false;
@@ -4511,6 +4525,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
+              readonly allowActivityReplayViewing: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
               readonly allowActivitySharing: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
@@ -4701,6 +4719,9 @@ type ContractBase = Omit<
                 readonly age: { readonly column: 'age' };
                 readonly allowActivityInteractions: {
                   readonly column: 'allow_activity_interactions';
+                };
+                readonly allowActivityReplayViewing: {
+                  readonly column: 'allow_activity_replay_viewing';
                 };
                 readonly allowActivitySharing: { readonly column: 'allow_activity_sharing' };
                 readonly allowLikesListViewing: { readonly column: 'allow_likes_list_viewing' };

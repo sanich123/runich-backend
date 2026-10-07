@@ -514,6 +514,7 @@ export class ActivityService {
         kilometresSplit: true,
         userId: true,
         visibility: true,
+        profile: { select: { allowActivityReplayViewing: true } },
       },
     });
     if (!activity || !currentUserId) return null;
@@ -527,6 +528,7 @@ export class ActivityService {
       activity.visibility === ACTIVITY_VISIBILITY.followers &&
       (isOwner || (await this.isFollower(currentUserId, activity.userId)));
     if (!isOwner && !isPublic && !isFollowerActivity) return null;
+    if (!isOwner && activity.profile?.allowActivityReplayViewing === false) return null;
     let locations: LocationObject[] | undefined;
     if (activity.routeStorageKey) {
       if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');
@@ -748,6 +750,7 @@ export class ActivityService {
             'emailNotifications', p."emailNotifications",
             'allowActivityInteractions', p."allow_activity_interactions",
             'allowLikesListViewing', p."allow_likes_list_viewing",
+            'allowActivityReplayViewing', p."allow_activity_replay_viewing",
             'allowActivitySharing', p."allow_activity_sharing",
             'user', json_build_object('email', u."email")
           ) AS "profile",

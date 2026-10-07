@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@ardentcode/sports-lib": "^5.4.29",
-    "@aws-sdk/client-s3": "3.1146.0",
+    "@aws-sdk/client-s3": "3.1147.0",
     "@mapbox/polyline": "^1.2.1",
     "@maplibre/maplibre-gl-native": "6.5.0-pre.1",
     "@nestjs/common": "12.1.2",
@@ -61,7 +61,7 @@
     "class-transformer": "0.5.1",
     "class-validator": "^0.15.1",
     "csv-parse": "^7.0.3",
-    "dotenv": "^18.0.5",
+    "dotenv": "^18.0.6",
     "express": "^5.2.1",
     "multer": "^2.4.0",
     "nodemailer": "^10.0.15",
@@ -75,7 +75,7 @@
     "rxjs": "^7.8.2",
     "sharp": "^0.35.5",
     "tcx-js": "^1.0.1",
-    "temporal-polyfill": "^1.0.4",
+    "temporal-polyfill": "^1.0.5",
     "uuid": "^14.0.2",
     "xmldom-qsa": "^1.1.3"
   },

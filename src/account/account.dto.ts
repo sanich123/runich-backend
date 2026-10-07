@@ -43,6 +43,8 @@ export class ProfileDto {
   allowActivityInteractions?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view the activity likes list' })
   allowLikesListViewing?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view activity route replays' })
+  allowActivityReplayViewing?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to share this profile activities' })
   allowActivitySharing?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Hide the profile total activity statistics' })

@@ -7,6 +7,7 @@ export type MockProfilePrivacySettings = {
   allowNewFollowers: boolean;
   allowActivityInteractions: boolean;
   allowLikesListViewing: boolean;
+  allowActivityReplayViewing: boolean;
   allowActivitySharing: boolean;
   hideActivityStatistics: boolean;
   hideFollowingList: boolean;

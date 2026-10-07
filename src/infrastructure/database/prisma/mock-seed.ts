@@ -120,7 +120,9 @@ export async function seedMockData(prisma: DatabaseRepositories) {
             sport: 'RUNNING',
             language: 'en',
             bio: seedInProgress,
-            profilePhoto: profileImageUrl(index),
+            profilePhoto: activityPhotoUrls.length
+              ? activityPhotoUrls[index % activityPhotoUrls.length]
+              : profileImageUrl(index),
             emailNotifications: false,
             ...mockProfilePrivacySettingsForIndex(index),
           },

@@ -1,7 +1,7 @@
 import type { MockProfilePrivacySettings } from './mock-seed.types';
 
 export const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
-export const MOCK_SEED_VERSION = 'runich-mock-v17';
+export const MOCK_SEED_VERSION = 'runich-mock-v18';
 export const MOCK_USER_COUNT = 100;
 export const MAX_MOCK_RELATION_COUNT = 40;
 export const MAX_MOCK_ACTIVITY_PHOTOS = 4;
@@ -15,6 +15,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: false,
     allowLikesListViewing: true,
+    allowActivityReplayViewing: false,
     allowActivitySharing: false,
     hideActivityStatistics: true,
     hideFollowingList: true,
@@ -25,6 +26,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: false,
     allowActivityInteractions: false,
     allowLikesListViewing: true,
+    allowActivityReplayViewing: true,
     allowActivitySharing: false,
     hideActivityStatistics: true,
     hideFollowingList: true,
@@ -35,6 +37,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: true,
     allowLikesListViewing: false,
+    allowActivityReplayViewing: false,
     allowActivitySharing: true,
     hideActivityStatistics: true,
     hideFollowingList: false,
@@ -45,6 +48,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: false,
     allowLikesListViewing: true,
+    allowActivityReplayViewing: true,
     allowActivitySharing: false,
     hideActivityStatistics: false,
     hideFollowingList: false,
@@ -55,6 +59,7 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: true,
     allowLikesListViewing: true,
+    allowActivityReplayViewing: true,
     allowActivitySharing: true,
     hideActivityStatistics: false,
     hideFollowingList: false,
