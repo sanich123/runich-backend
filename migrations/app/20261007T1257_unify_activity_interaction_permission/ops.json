@@ -1,0 +1,78 @@
+[
+  {
+    "id": "preserveActivityInteractionPrivacy.Profile",
+    "label": "Preserve disabled likes-list access in activity interaction privacy",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure the Profile table is available for privacy backfill",
+        "sql": "SELECT TRUE AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "disable activity interactions for profiles with a disabled likes list",
+        "sql": "UPDATE \"public\".\"Profile\" SET \"allow_activity_interactions\" = false WHERE \"allow_likes_list_viewing\" = false AND \"allow_activity_interactions\" = true",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify no disabled likes list is exposed by activity interactions",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM \"public\".\"Profile\" WHERE \"allow_likes_list_viewing\" = false AND \"allow_activity_interactions\" = true) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "dropColumn.Profile.allow_likes_list_viewing",
+    "label": "Drop column \"allow_likes_list_viewing\" from \"Profile\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "allow_likes_list_viewing",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"allow_likes_list_viewing\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "allow_likes_list_viewing"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop column \"allow_likes_list_viewing\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" DROP COLUMN \"allow_likes_list_viewing\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"allow_likes_list_viewing\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "allow_likes_list_viewing"
+        ]
+      }
+    ]
+  }
+]

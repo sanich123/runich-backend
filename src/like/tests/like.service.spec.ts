@@ -115,7 +115,7 @@ describe('LikeService', () => {
       select: {
         userId: true,
         visibility: true,
-        profile: { select: { allowLikesListViewing: true } },
+        profile: { select: { allowActivityInteractions: true } },
         likes: expect.objectContaining({
           where: {
             OR: [
@@ -139,7 +139,7 @@ describe('LikeService', () => {
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       visibility: 'public',
-      profile: { allowLikesListViewing: true },
+      profile: { allowActivityInteractions: true },
       likes: [],
     });
     prisma.like.findUnique.mockResolvedValue({ id: 'old-like-id', authorId: 'viewer-1' });

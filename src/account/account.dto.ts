@@ -39,10 +39,11 @@ export class ProfileDto {
   emailNotifications?: boolean | null;
   @ApiPropertyOptional({ type: Boolean, description: 'Allow this profile to appear in user search' })
   profileSearchVisible?: boolean;
-  @ApiPropertyOptional({ type: Boolean, description: 'Allow likes and comments on this user activities' })
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Allow likes, comments, and viewing the list of likes on this user activities',
+  })
   allowActivityInteractions?: boolean;
-  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view the activity likes list' })
-  allowLikesListViewing?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view activity route replays' })
   allowActivityReplayViewing?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to share this profile activities' })

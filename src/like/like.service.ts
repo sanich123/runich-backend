@@ -61,7 +61,7 @@ export class LikeService {
         select: {
           userId: true,
           visibility: true,
-          profile: { select: { allowLikesListViewing: true } },
+          profile: { select: { allowActivityInteractions: true } },
           likes: {
             ...(cursor
               ? {
@@ -100,7 +100,7 @@ export class LikeService {
       if (currentUserId && !(await this.activityService.canAccessActivityData(activity, currentUserId))) {
         throw new NotFoundException('Активность не найдена');
       }
-      if (activity.userId !== currentUserId && activity.profile?.allowLikesListViewing === false) {
+      if (activity.userId !== currentUserId && activity.profile?.allowActivityInteractions === false) {
         throw new NotFoundException('Список лайков недоступен');
       }
       const likesWithExtraItem = activity.likes;
