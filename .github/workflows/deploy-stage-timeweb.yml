@@ -47,6 +47,7 @@ jobs:
           STAGE_DEPLOY_USER: runich-deploy
           STAGE_DEPLOY_SSH_KEY: ${{ secrets.STAGE_DEPLOY_SSH_KEY }}
           STAGE_DEPLOY_KNOWN_HOSTS: ${{ secrets.STAGE_DEPLOY_KNOWN_HOSTS }}
+          GRAFANA_LOKI_TOKEN: ${{ secrets.GRAFANA_LOKI_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -54,6 +55,7 @@ jobs:
           : "${STAGE_DEPLOY_USER:?STAGE_DEPLOY_USER must be set}"
           : "${STAGE_DEPLOY_SSH_KEY:?GitHub Actions secret STAGE_DEPLOY_SSH_KEY is required}"
           : "${STAGE_DEPLOY_KNOWN_HOSTS:?GitHub Actions secret STAGE_DEPLOY_KNOWN_HOSTS is required}"
+          : "${GRAFANA_LOKI_TOKEN:?GitHub Actions secret GRAFANA_LOKI_TOKEN is required}"
 
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$STAGE_DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
@@ -65,12 +67,18 @@ jobs:
           SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
           TARGET="$STAGE_DEPLOY_USER@$STAGE_DEPLOY_HOST"
 
+          # Keep the Loki token in the encrypted repository secret and server
+          # .env. Transfer it through SSH stdin, not process arguments.
+          printf '%s\n' "$GRAFANA_LOKI_TOKEN" |
+            "${SSH[@]}" "$TARGET" 'set -eu; cd /opt/runich-stage; umask 077; IFS= read -r token; tmp="$(mktemp .env.XXXXXX)"; sed "/^GRAFANA_LOKI_TOKEN=/d" .env > "$tmp"; printf "GRAFANA_LOKI_TOKEN=%s\\n" "$token" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token'
+          unset GRAFANA_LOKI_TOKEN
+
           # Stream the already-built image over the pinned SSH connection. This avoids
           # storing a registry credential on the server or making the package public.
           docker save "$DEPLOY_IMAGE" | gzip -1 | "${SSH[@]}" "$TARGET" 'gzip -d | docker load'
           unset STAGE_DEPLOY_SSH_KEY
 
-          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf nginx.stage.conf "$TARGET:/tmp/"
+          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf nginx.stage.conf deploy/grafana/config.alloy "$TARGET:/tmp/"
 
           "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' bash -s" <<'REMOTE'
           set -euo pipefail
@@ -82,7 +90,9 @@ jobs:
           install -o "$(id -un)" -g docker -m 0640 /tmp/docker-compose.timeweb.stage.yml ./docker-compose.timeweb.stage.yml
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.bootstrap.conf ./nginx.stage.bootstrap.conf
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.conf ./nginx.stage.tls.conf
-          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/nginx.stage.conf
+          install -d -o "$(id -un)" -g docker -m 0750 ./deploy/grafana
+          install -o "$(id -un)" -g docker -m 0644 /tmp/config.alloy ./deploy/grafana/config.alloy
+          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/nginx.stage.conf /tmp/config.alloy
 
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
           COMPOSE=(docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml)
@@ -124,6 +134,20 @@ jobs:
 
           if [ "$healthy" != true ]; then
             echo 'Stage API readiness failed.' >&2
+            exit 1
+          fi
+
+          "${COMPOSE[@]}" up -d --no-deps --force-recreate grafana_alloy
+          alloy_running=false
+          for attempt in $(seq 1 15); do
+            if [ "$("${COMPOSE[@]}" ps --status running --services grafana_alloy)" = grafana_alloy ]; then
+              alloy_running=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$alloy_running" != true ]; then
+            echo 'Grafana Alloy failed to reach running state.' >&2
             exit 1
           fi
 

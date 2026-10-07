@@ -1,0 +1,51 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+discovery.docker "runich" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "runich" {
+  targets = discovery.docker.runich.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "^(nestjs_app|background_worker)$"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    target_label = "environment"
+    replacement  = sys.env("RUNICH_ENV")
+  }
+
+  rule {
+    target_label = "host"
+    replacement  = constants.hostname
+  }
+}
+
+loki.source.docker "runich" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.runich.output
+  labels     = { job = "runich/backend" }
+  forward_to = [loki.write.grafana_cloud.receiver]
+}
+
+loki.write "grafana_cloud" {
+  endpoint {
+    url = "https://logs-prod-012.grafana.net/loki/api/v1/push"
+
+    basic_auth {
+      username = "1817257"
+      password = sys.env("GRAFANA_LOKI_TOKEN")
+    }
+  }
+}

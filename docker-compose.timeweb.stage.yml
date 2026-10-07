@@ -94,6 +94,38 @@ services:
       OBSERVE_SERVICE_VERSION: ${BACKEND_IMAGE}
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to db}
 
+  grafana_alloy:
+    image: grafana/alloy:v1.20.1
+    restart: always
+    user: "0:0"
+    command:
+      - run
+      - --server.http.listen-addr=127.0.0.1:12345
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
+      - /etc/alloy/config.alloy
+    environment:
+      RUNICH_ENV: stage
+      GRAFANA_LOKI_TOKEN: ${GRAFANA_LOKI_TOKEN:?GRAFANA_LOKI_TOKEN must be set in .env}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./deploy/grafana/config.alloy:/etc/alloy/config.alloy:ro
+      - grafana_alloy_data:/var/lib/alloy/data
+
   nginx:
     image: nginx:stable-alpine
     restart: always
@@ -140,6 +172,7 @@ services:
       - certbot-webroot:/var/www/certbot
 
 volumes:
+  grafana_alloy_data:
   stage-pgdata:
   letsencrypt:
   certbot-webroot:

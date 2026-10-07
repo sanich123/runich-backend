@@ -32,6 +32,7 @@ jobs:
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
+          GRAFANA_LOKI_TOKEN: ${{ secrets.GRAFANA_LOKI_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -40,6 +41,7 @@ jobs:
           : "${DEPLOY_SSH_KEY:?GitHub Secret DEPLOY_SSH_KEY is required}"
           : "${DEPLOY_KNOWN_HOSTS:?GitHub Secret DEPLOY_KNOWN_HOSTS is required}"
           : "${GITHUB_TOKEN:?GitHub Actions GITHUB_TOKEN is required}"
+          : "${GRAFANA_LOKI_TOKEN:?GitHub Actions secret GRAFANA_LOKI_TOKEN is required}"
 
           DEPLOY_IMAGE="ghcr.io/sanich123/runich-backend:${GITHUB_SHA}"
 
@@ -63,6 +65,13 @@ jobs:
               "$DEPLOY_USER@$DEPLOY_HOST" \
               "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null && docker pull '$DEPLOY_IMAGE' && docker logout ghcr.io >/dev/null"
           unset GITHUB_TOKEN
+
+          printf '%s\n' "$GRAFANA_LOKI_TOKEN" |
+            ssh -i "$HOME/.ssh/id_ed25519" \
+              -o BatchMode=yes -o IdentitiesOnly=yes \
+              "$DEPLOY_USER@$DEPLOY_HOST" \
+              'set -euo pipefail; cd /opt/runich-backend/project; IFS= read -r token; tmp="$(mktemp .env.XXXXXX)"; awk -F= '\''$1 != "GRAFANA_LOKI_TOKEN" { print }'\'' .env > "$tmp"; printf "GRAFANA_LOKI_TOKEN=%s\\n" "$token" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token; grep -q "^GRAFANA_LOKI_TOKEN=..*" .env'
+          unset GRAFANA_LOKI_TOKEN
 
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes \
@@ -105,6 +114,21 @@ jobs:
                 http://127.0.0.1:3000/health/live >/dev/null \
                 && test "$(docker compose -f docker-compose.timeweb.yml ps --status running --services background_worker)" = \
                   "background_worker"; then
+                docker compose -f docker-compose.timeweb.yml up \
+                  -d --no-deps --force-recreate grafana_alloy
+                alloy_running=false
+                for alloy_attempt in $(seq 1 15); do
+                  if test "$(docker compose -f docker-compose.timeweb.yml ps --status running --services grafana_alloy)" = \
+                    "grafana_alloy"; then
+                    alloy_running=true
+                    break
+                  fi
+                  sleep 1
+                done
+                if [ "$alloy_running" != true ]; then
+                  echo 'Grafana Alloy failed to reach running state.' >&2
+                  exit 1
+                fi
                 echo "Deployment is healthy at commit $DEPLOY_SHA"
                 # PostgreSQL is an external Timeweb DBaaS service and has no
                 # Docker volume here. Migration archives live in S3.
