@@ -22,11 +22,6 @@ export class CommentUpdateDto {
   comment: string;
 }
 
-class CommentUserEmailResponseDto {
-  @ApiProperty({ type: String, format: 'email' })
-  email: string;
-}
-
 class CommentProfileResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   surname: string | null;
@@ -39,12 +34,6 @@ class CommentProfileResponseDto {
 
   @ApiPropertyOptional({ type: String, nullable: true })
   profilePhotoBlurhash: string | null;
-
-  @ApiPropertyOptional({ type: Boolean, nullable: true })
-  emailNotifications: boolean | null;
-
-  @ApiPropertyOptional({ type: CommentUserEmailResponseDto, nullable: true })
-  user?: CommentUserEmailResponseDto | null;
 }
 
 export class CommentLikeSummaryResponseDto {

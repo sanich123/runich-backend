@@ -13,7 +13,6 @@ import {
 import { UserIdParamsDto } from '../../auth/dto/auth.dto';
 import { ActivityDto, ActivityMediaAppendDto } from '../../activity/activity.dto';
 import { CommentDTO, CommentLikeDto, CommentUpdateDto } from '../../comment/comment.dto';
-import { EmailDTO, CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from '../../email/email.dto';
 import { FriendDto } from '../../friend/friend.dto';
 import { LikeDto } from '../../like/like.dto';
 import { ParamsId } from '../../common/dto/params-validation';
@@ -205,25 +204,6 @@ describe('request DTO validation', () => {
     await expectInvalid(CommentLikeDto, {});
     await expectValid(FriendDto, { unexpected: 'ignored' });
     await expectValid(LikeDto, { activityId: uuid });
-
-    const baseEmail = {
-      name: 'Ann',
-      surname: 'Runner',
-      profilePhoto: 'https://example.com/profile.jpg',
-      activityId: uuid,
-      recepientName: 'Bob',
-      recepientSurname: 'Runner',
-      recepientEmail: email,
-    };
-    await expectValid(EmailDTO, baseEmail);
-    await expectValid(LikeEmailDTO, { ...baseEmail, mapPhotoUrl: 'https://example.com/map.jpg' });
-    await expectValid(CommentLikeEmailDTO, { ...baseEmail, comment: 'Great!' });
-    await expectValid(CommentEmailDTO, { ...baseEmail, comment: 'Great!', mapPhotoUrl: 'map' });
-    await expectInvalid(EmailDTO, { ...baseEmail, recepientEmail: 'bad' });
-    await expectInvalid(EmailDTO, { ...baseEmail, name: '' });
-    await expectInvalid(LikeEmailDTO, { ...baseEmail, mapPhotoUrl: '' });
-    await expectInvalid(CommentLikeEmailDTO, { ...baseEmail, comment: 1 });
-    await expectInvalid(CommentEmailDTO, { ...baseEmail, mapPhotoUrl: '' });
   });
 
   it('validates UUID route params used by controllers', async () => {

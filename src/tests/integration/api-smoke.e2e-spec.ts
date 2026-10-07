@@ -517,10 +517,10 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       });
   }, 60_000);
 
-  it('rejects protected email endpoints without authentication and redirects OAuth errors safely', async () => {
-    await request(app.getHttpServer()).post('/email/like').send({}).expect(401);
-    await request(app.getHttpServer()).post('/email/comment').send({}).expect(401);
-    await request(app.getHttpServer()).post('/email/commentLike').send({}).expect(401);
+  it('removes client-triggered email endpoints, protects feedback, and redirects OAuth errors safely', async () => {
+    await request(app.getHttpServer()).post('/email/like').send({}).expect(404);
+    await request(app.getHttpServer()).post('/email/comment').send({}).expect(404);
+    await request(app.getHttpServer()).post('/email/commentLike').send({}).expect(404);
     await request(app.getHttpServer()).post('/email/feedback').send({}).expect(401);
 
     const yandexError = await request(app.getHttpServer())

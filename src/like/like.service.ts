@@ -6,6 +6,7 @@ import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
 import { encodeLikeCursor } from './like.pagination';
 import type { LikeCursor } from './like.pagination';
+import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 
 @Injectable()
 export class LikeService {
@@ -31,10 +32,18 @@ export class LikeService {
       const authorId = currentUserId ?? '';
       const where = { authorId_activityId: { authorId, activityId } };
       try {
-        return await this.prismaService.like.upsert({
-          where,
-          update: {},
-          create: { profileId: account.id, authorId, activityId },
+        return await this.prismaService.$transaction(async (transaction) => {
+          const like = await transaction.like.create({
+            data: { profileId: account.id, authorId, activityId },
+          });
+          await transaction.emailNotificationJob.create({
+            data: {
+              notificationType: EMAIL_NOTIFICATION_TYPE.activityLike,
+              sourceId: like.id,
+              status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
+            },
+          });
+          return like;
         });
       } catch (error) {
         if (!isUniqueConstraintError(error)) throw error;

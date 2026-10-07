@@ -295,15 +295,6 @@ paths:
       summary: Get all-time statistics
       parameters:
         - $ref: '#/components/parameters/Id'
-  /email/like:
-    post:
-      summary: Send activity-like notification
-  /email/comment:
-    post:
-      summary: Send comment notification
-  /email/commentLike:
-    post:
-      summary: Send comment-like notification
   /email/feedback:
     post:
       summary: Send feedback with optional S3 media links

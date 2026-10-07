@@ -8,6 +8,7 @@ import { CommentLikeService } from './comment-like.service';
 import { encodeCommentCursor } from './comment.pagination';
 import type { CommentCursor } from './comment.pagination';
 import { COMMENT_PROFILE_SELECT } from './const';
+import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 
 @Injectable()
 export class CommentService {
@@ -119,13 +120,22 @@ export class CommentService {
       }
       const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
-      await this.prisma.comment.create({
-        data: {
-          profileId: account.id,
-          activityId: id,
-          authorId: currentUserId ?? '',
-          comment,
-        },
+      await this.prisma.$transaction(async (transaction) => {
+        const createdComment = await transaction.comment.create({
+          data: {
+            profileId: account.id,
+            activityId: id,
+            authorId: currentUserId ?? '',
+            comment,
+          },
+        });
+        await transaction.emailNotificationJob.create({
+          data: {
+            notificationType: EMAIL_NOTIFICATION_TYPE.comment,
+            sourceId: createdComment.id,
+            status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
+          },
+        });
       });
     } catch (error) {
       handleServiceError(error);
@@ -179,7 +189,6 @@ export class CommentService {
       }
       return {
         profile: comment?.profile,
-        email: comment?.profile?.user?.email,
         comment: comment?.comment,
       };
     } catch (error) {

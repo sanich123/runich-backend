@@ -1,13 +1,15 @@
 import { NotFoundException } from '@nestjs/common';
 import { LikeService } from '../like.service';
 import { parseLikeCursor } from '../like.pagination';
-import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
+import { asyncMock, expectInternalServerError, transactionMock } from 'src/tests/helpers';
 
 function createPrismaMock() {
-  return {
+  const prisma = {
     activity: { findUnique: asyncMock() },
-    like: { upsert: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
+    like: { create: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
+    emailNotificationJob: { create: asyncMock() },
   };
+  return Object.assign(prisma, { $transaction: transactionMock(prisma) });
 }
 
 describe('LikeService', () => {
@@ -15,7 +17,7 @@ describe('LikeService', () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new LikeService(prisma as never, account as never, {} as never);
-    prisma.like.upsert.mockResolvedValue({ id: 'like-1' });
+    prisma.like.create.mockResolvedValue({ id: 'like-1' });
     prisma.like.delete.mockResolvedValue({ id: 'like-1' });
     prisma.activity.findUnique.mockResolvedValue({ likes: [{ id: 'like-1' }] });
 
@@ -48,10 +50,11 @@ describe('LikeService', () => {
       expect.objectContaining({ select: expect.objectContaining({ allowNewFollowers: true }) }),
     );
     expect(prisma.like.findUnique).not.toHaveBeenCalled();
-    expect(prisma.like.upsert).toHaveBeenCalledWith({
-      where: { authorId_activityId: { authorId: '', activityId: 'activity-1' } },
-      update: {},
-      create: { profileId: 'profile-1', authorId: '', activityId: 'activity-1' },
+    expect(prisma.like.create).toHaveBeenCalledWith({
+      data: { profileId: 'profile-1', authorId: '', activityId: 'activity-1' },
+    });
+    expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
+      data: { notificationType: 'activity-like', sourceId: 'like-1', status: 'queued' },
     });
   });
 
@@ -60,11 +63,12 @@ describe('LikeService', () => {
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new LikeService(prisma as never, account as never, {} as never);
     const uniqueError = { code: 'P2002' };
-    prisma.like.upsert.mockRejectedValue(uniqueError);
+    prisma.like.create.mockRejectedValue(uniqueError);
     prisma.like.findUnique.mockResolvedValue({ id: 'like-1' });
 
     await expect(service.addLike({ activityId: 'activity-1' })).resolves.toEqual({ id: 'like-1' });
     expect(prisma.like.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.emailNotificationJob.create).not.toHaveBeenCalled();
   });
 
   it('returns only the likes count for an accessible activity', async () => {
@@ -188,7 +192,7 @@ describe('LikeService', () => {
     );
 
     await expect(service.addLike({ activityId: 'activity-1' })).rejects.toBeInstanceOf(NotFoundException);
-    expect(prisma.like.upsert).not.toHaveBeenCalled();
+    expect(prisma.like.create).not.toHaveBeenCalled();
   });
 
   it('converts database failures from every operation to an internal server error', async () => {

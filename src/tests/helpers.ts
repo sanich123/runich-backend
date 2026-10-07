@@ -9,6 +9,12 @@ export function syncMock() {
   return jest.fn<() => unknown>();
 }
 
+export function transactionMock<T extends object>(transaction: T) {
+  return jest
+    .fn<(operation: (transaction: T) => Promise<unknown>) => Promise<unknown>>()
+    .mockImplementation((operation) => operation(transaction));
+}
+
 export async function expectInternalServerError(operation: Promise<unknown>) {
   const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   try {

@@ -747,11 +747,9 @@ export class ActivityService {
             'name', p."name",
             'profilePhoto', p."profilePhoto",
             'profilePhotoBlurhash', p."profilePhotoBlurhash",
-            'emailNotifications', p."emailNotifications",
             'allowActivityInteractions', p."allow_activity_interactions",
             'allowActivityReplayViewing', p."allow_activity_replay_viewing",
-            'allowActivitySharing', p."allow_activity_sharing",
-            'user', json_build_object('email', u."email")
+            'allowActivitySharing', p."allow_activity_sharing"
           ) AS "profile",
           json_build_object(
             'comments', (
@@ -767,7 +765,6 @@ export class ActivityService {
           ) AS "_count"
         FROM "Activity" AS a
         INNER JOIN "Profile" AS p ON p."id" = a."profileId"
-        INNER JOIN "Users" AS u ON u."id" = a."user_id"
         WHERE a."visibility" IN ('public', 'followers')
           AND (
             a."user_id" = ${currentUserId}::uuid
@@ -807,7 +804,6 @@ export class ActivityService {
                 name: currentUserProfile.name,
                 profilePhoto: currentUserProfile.profilePhoto,
                 profilePhotoBlurhash: currentUserProfile.profilePhotoBlurhash,
-                emailNotifications: currentUserProfile.emailNotifications,
               },
             }
           : {}),
@@ -990,33 +986,5 @@ export class ActivityService {
         },
       ];
     });
-  }
-
-  async getActivityWithEmailData(activityId: string) {
-    try {
-      const activity = await this.prisma.activity.findUnique({
-        where: { id: activityId },
-        select: {
-          user: {
-            select: {
-              email: true,
-            },
-          },
-          profile: {
-            select: {
-              id: true,
-              profilePhoto: true,
-              name: true,
-              surname: true,
-              emailNotifications: true,
-            },
-          },
-          mapPhotoUrl: true,
-        },
-      });
-      return { profile: activity?.profile, email: activity?.user.email, mapPhotoUrl: activity?.mapPhotoUrl };
-    } catch (error) {
-      handleServiceError(error);
-    }
   }
 }

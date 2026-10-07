@@ -798,18 +798,6 @@ describe('ActivityService', () => {
     expect(detailQuery.select).toEqual(expect.objectContaining({ description: true, kilometresSplit: true }));
   });
 
-  it('returns email data even when the activity does not exist', async () => {
-    const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
-    prisma.activity.findUnique.mockResolvedValue(null);
-
-    await expect(service.getActivityWithEmailData('missing')).resolves.toEqual({
-      profile: undefined,
-      email: undefined,
-      mapPhotoUrl: undefined,
-    });
-  });
-
   it('converts database failures from every caught method to an internal server error', async () => {
     const prisma = createPrismaMock();
     const error = new Error('database unavailable');
@@ -828,7 +816,6 @@ describe('ActivityService', () => {
     await expectInternalServerError(service.updateActivity(activityDto, 'a1'));
     prisma.activity.findUnique.mockRejectedValue(error);
     await expectInternalServerError(service.getActivityByActivityId('a1'));
-    await expectInternalServerError(service.getActivityWithEmailData('a1'));
     prisma.activity.findMany.mockRejectedValue(error);
     await expectInternalServerError(service.getMediaByUserId('u1', '10'));
     await expectInternalServerError(service.getActivitesByUserId('u1'));

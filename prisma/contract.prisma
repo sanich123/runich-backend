@@ -319,6 +319,23 @@ model LoadTestSeedJob {
   @@map("LoadTestSeedJob")
 }
 
+model EmailNotificationJob {
+  id               Uuid                 @id @default(sql`gen_random_uuid()`)
+  notificationType VarChar(24)           @map("notification_type")
+  sourceId         Uuid                 @map("source_id")
+  status           VarChar(16)           @default("queued")
+  attempts         Int                  @default(0)
+  availableAt      TimestamptzString(6)  @default(now()) @map("available_at")
+  errorMessage     String?              @map("error_message")
+  createdAt        TimestamptzString(6)  @default(now()) @map("created_at")
+  startedAt        TimestamptzString(6)? @map("started_at")
+  finishedAt       TimestamptzString(6)? @map("finished_at")
+
+  @@unique([notificationType, sourceId], map: "EmailNotificationJob_notification_type_source_id_key")
+  @@index([status, availableAt, createdAt], map: "EmailNotificationJob_status_available_at_created_at_idx")
+  @@map("EmailNotificationJob")
+}
+
 model UserSession {
   id             Uuid                  @id(map: "UserSession_pkey") @default(sql`gen_random_uuid()`)
   userId         Uuid                  @map("user_id")
