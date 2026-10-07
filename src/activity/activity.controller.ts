@@ -27,6 +27,7 @@ import { pipeline } from 'node:stream/promises';
 import { Transform } from 'node:stream';
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
+import { isUUID } from 'class-validator';
 import { ActivityService } from './activity.service';
 import { ActivityDto, ActivityMediaAppendDto, ActivityMediaParamsDto } from './activity.dto';
 import {
@@ -67,6 +68,12 @@ import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { activity, id } from './const';
 import { parseActivityCursor, parseActivityMediaCursor } from './activity.pagination';
+
+function normalizeActivityIdsQuery(ids?: string | string[]) {
+  return (Array.isArray(ids) ? ids : [ids ?? ''])
+    .flatMap((activityId) => activityId.split(/[&,]/))
+    .map((activityId) => activityId.trim().replace(/^ids=/, ''));
+}
 
 @ApiTags(activity)
 @ApiBearerAuth('bearerAuth')
@@ -155,16 +162,14 @@ export class ActivityController {
     @Query(QueryParams.ids) ids?: string | string[],
     @Req() request?: RequestWithUser,
   ) {
-    const isValidIds =
-      typeof ids === 'string'
-        ? Boolean(ids.trim())
-        : Array.isArray(ids) &&
-          ids.length > 0 &&
-          ids.every((activityId) => typeof activityId === 'string' && Boolean(activityId.trim()));
-    if (!isValidIds) {
+    const normalizedIds = normalizeActivityIdsQuery(ids);
+    if (!normalizedIds.length) {
       throw new BadRequestException('Не указаны идентификаторы активностей: ids');
     }
-    return this.activityService.getActivitiesByTheirIds(ids, request?.user.userId ?? request?.user.id);
+    if (normalizedIds.some((activityId) => !isUUID(activityId))) {
+      throw new BadRequestException('Некорректные идентификаторы активностей: ids');
+    }
+    return this.activityService.getActivitiesByTheirIds(normalizedIds, request?.user.userId ?? request?.user.id);
   }
 
   @Post('migration-strava/:id')
