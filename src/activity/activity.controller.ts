@@ -28,7 +28,13 @@ import { Transform } from 'node:stream';
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { ActivityService } from './activity.service';
-import { ActivityDto, ActivityMediaAppendDto, ActivityMediaParamsDto } from './activity.dto';
+import {
+  ActivityDto,
+  ActivityMediaAppendDto,
+  ActivityMediaParamsDto,
+  WatchWorkoutBatchImportDto,
+  WatchWorkoutBatchImportResponseDto,
+} from './activity.dto';
 import {
   ActivityCardResponseDto,
   ActivityDetailsResponseDto,
@@ -48,6 +54,7 @@ import { ParamsId } from 'src/common/dto/params-validation';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiCreatedResponse,
   ApiConsumes,
   ApiOperation,
   ApiOkResponse,
@@ -349,6 +356,24 @@ export class ActivityController {
   async getStravaMigrationStatus(@Param() { jobId }: ActivityMigrationJobParams, @Req() request?: RequestWithUser) {
     const currentUserId = request?.user.userId ?? request?.user.id;
     return await this.activityMigrationService.getJobForUser(jobId, currentUserId ?? '');
+  }
+
+  @Post(id + '/watch-import')
+  @ApiCreatedResponse({ type: WatchWorkoutBatchImportResponseDto })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Import completed workouts from a connected watch health store' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiBody({ type: WatchWorkoutBatchImportDto })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
+  @HttpCode(HttpStatus.CREATED)
+  async importWatchWorkouts(
+    @Body() body: WatchWorkoutBatchImportDto,
+    @Param() { id }: ParamsId,
+    @Req() request?: RequestWithUser,
+  ) {
+    const currentUserId = request?.user.userId ?? request?.user.id ?? id;
+    if (currentUserId !== id) throw new ForbiddenException('Недостаточно прав');
+    return await this.activityService.importWatchWorkouts(body.workouts, currentUserId);
   }
 
   @Post(id)

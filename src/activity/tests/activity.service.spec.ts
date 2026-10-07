@@ -503,6 +503,34 @@ describe('ActivityService', () => {
     });
   });
 
+  it('imports watch workouts once per source identity', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new ActivityService(prisma as never, account as never);
+    prisma.activity.findMany.mockResolvedValue([{ source: 'health-connect', sourceActivityId: 'existing' }]);
+    prisma.activity.create.mockResolvedValue({ id: 'activity-new', mediaProcessingStatus: 'queued' });
+
+    const existingWorkout = {
+      ...activityDto,
+      source: 'health-connect' as const,
+      sourceActivityId: 'existing',
+      locations: [],
+    };
+    const newWorkout = {
+      ...activityDto,
+      source: 'health-connect' as const,
+      sourceActivityId: 'new',
+      locations: [],
+    };
+
+    await expect(service.importWatchWorkouts([existingWorkout, newWorkout, newWorkout], 'user-1')).resolves.toEqual({
+      imported: 1,
+      skipped: 2,
+      activities: [{ id: 'activity-new' }],
+    });
+    expect(prisma.activity.create).toHaveBeenCalledTimes(1);
+  });
+
   it('uses Strava elevation gain from the migration CSV for imported routes', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);

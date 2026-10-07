@@ -11,6 +11,8 @@ import {
   IsDefined,
   IsEnum,
   IsInt,
+  IsIn,
+  MaxLength,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -182,6 +184,17 @@ export class ActivityDto {
   @IsOptional()
   steps?: number;
 
+  @ApiPropertyOptional({ enum: ['health-connect', 'healthkit'], description: 'Source of an imported activity' })
+  @IsIn(['health-connect', 'healthkit'])
+  @IsOptional()
+  source?: string | null;
+
+  @ApiPropertyOptional({ type: String, maxLength: 128, description: 'Stable identifier in the source health store' })
+  @IsString()
+  @MaxLength(128)
+  @IsOptional()
+  sourceActivityId?: string | null;
+
   @ApiProperty({ type: String, description: 'Sport value' })
   @IsString()
   @IsNotEmpty()
@@ -303,6 +316,28 @@ export class ActivityDto {
   @ValidateNested({ each: true })
   @Type(() => ActivityKilometreSplitDto)
   kilometresSplit?: ActivityKilometreSplitObject[];
+}
+
+export class WatchWorkoutImportDto extends ActivityDto {
+  @ApiProperty({ enum: ['health-connect', 'healthkit'] })
+  @IsIn(['health-connect', 'healthkit'])
+  source: 'health-connect' | 'healthkit' = 'health-connect';
+
+  @ApiProperty({ type: String, maxLength: 128 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  sourceActivityId: string = '';
+}
+
+export class WatchWorkoutBatchImportDto {
+  @ApiProperty({ type: [WatchWorkoutImportDto], minItems: 1, maxItems: 50 })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => WatchWorkoutImportDto)
+  workouts: WatchWorkoutImportDto[];
 }
 
 export const ACTIVITY_MIGRATION_STATUS = {
@@ -536,10 +571,21 @@ export class ActivityResponseDto extends ActivityDto {
   caloriesActive?: number | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
-  source?: string | null;
+  source?: string | null = undefined;
 
   @ApiPropertyOptional({ type: String, nullable: true })
-  sourceActivityId?: string | null;
+  sourceActivityId?: string | null = undefined;
+}
+
+export class WatchWorkoutBatchImportResponseDto {
+  @ApiProperty({ type: Number })
+  imported: number;
+
+  @ApiProperty({ type: Number })
+  skipped: number;
+
+  @ApiProperty({ type: [ActivityResponseDto] })
+  activities: ActivityResponseDto[];
 }
 
 export class ActivityCardResponseDto {
