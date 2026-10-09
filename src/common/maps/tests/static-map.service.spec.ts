@@ -60,7 +60,7 @@ describe('StaticMapService', () => {
     });
 
     expect(result?.url).toContain('access_token=test-token');
-    expect(result?.url).toContain('path-5+F66767-0.8');
+    expect(result?.url).toContain('path-6+F66767-0.8');
     expect(storage.uploadObject).not.toHaveBeenCalled();
   });
 

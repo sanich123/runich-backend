@@ -1,6 +1,6 @@
 import {
   STATIC_MAP_ROUTE_WIDTH,
-  STATIC_MAP_ROUTE_CASING_WIDTH,
+  STATIC_MAP_ROUTE_COLOR,
   STATIC_MAP_VECTOR_STYLE_TIMEOUT_MS,
   STATIC_MAP_VECTOR_STYLE_URL,
   STATIC_MAP_TILE_USER_AGENT,
@@ -47,24 +47,12 @@ export async function createRunichMapStyle(route: [number, number][]) {
   style.layers = [
     ...requiredLayers,
     {
-      id: 'runich-route-casing',
-      type: 'line',
-      source: 'runich-route',
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: {
-        'line-color': '#FFFFFF',
-        'line-opacity': 0.9,
-        'line-width': STATIC_MAP_ROUTE_CASING_WIDTH,
-        'line-blur': 0.2,
-      },
-    },
-    {
       id: 'runich-route',
       type: 'line',
       source: 'runich-route',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
-        'line-color': '#F66767',
+        'line-color': STATIC_MAP_ROUTE_COLOR,
         'line-opacity': 0.95,
         'line-width': STATIC_MAP_ROUTE_WIDTH,
         'line-blur': 0.1,

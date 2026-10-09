@@ -46,7 +46,7 @@ describe('Runich static map style', () => {
     expect(style.sources).toEqual({
       'runich-route': expect.objectContaining({ type: 'geojson' }),
     });
-    expect(style.layers.map(({ id }) => id)).toEqual(['background', 'runich-route-casing', 'runich-route']);
+    expect(style.layers.map(({ id }) => id)).toEqual(['background', 'runich-route']);
   });
 
   it('keeps only map context needed for routes and labels', async () => {
@@ -208,16 +208,10 @@ describe('Runich static map style', () => {
       expect.objectContaining({
         type: 'line',
         source: 'runich-route',
-        paint: expect.objectContaining({ 'line-width': 5, 'line-blur': 0.1 }),
+        paint: expect.objectContaining({ 'line-color': '#F26422', 'line-width': 6, 'line-blur': 0.1 }),
       }),
     );
-    expect(layers['runich-route-casing']).toEqual(
-      expect.objectContaining({
-        type: 'line',
-        source: 'runich-route',
-        paint: expect.objectContaining({ 'line-width': 8, 'line-blur': 0.2 }),
-      }),
-    );
+    expect(layers['runich-route-casing']).toBeUndefined();
     expect(style.sources['runich-route']).toEqual(
       expect.objectContaining({ type: 'geojson', data: expect.objectContaining({ type: 'Feature' }) }),
     );

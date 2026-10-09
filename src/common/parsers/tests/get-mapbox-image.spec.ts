@@ -26,7 +26,7 @@ describe('getMapBoxImage', () => {
     expect(imageUrl).not.toContain('attribution=false');
     expect(imageUrl).not.toContain('logo=false');
     expect(imageUrl).toContain('/896x538');
-    expect(imageUrl).toContain('path-5+F66767-0.8');
+    expect(imageUrl).toContain('path-6+F66767-0.8');
     expect(imageUrl).not.toContain('pin-');
   });
 
