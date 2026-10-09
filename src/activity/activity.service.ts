@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ActivityDto, type ActivityMediaObject, type LocationObject } from './activity.dto';
+import { ActivityDto, type ActivityMediaObject, type LocationObject, type WatchWorkoutImportDto } from './activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
@@ -135,6 +135,19 @@ export class ActivityService {
     let uploadedActivityMediaKeys: string[] = [];
     const mediaCreatedAt = new Date();
     try {
+      if (activityDto.source && activityDto.sourceActivityId) {
+        const existingActivity = await this.prisma.activity.findUnique({
+          where: {
+            userId_source_sourceActivityId: {
+              userId: id,
+              source: activityDto.source,
+              sourceActivityId: activityDto.sourceActivityId,
+            },
+          },
+        });
+        if (existingActivity) return omitMediaProcessingStatus(existingActivity);
+      }
+
       const account = await this.accountService.getAccountByUserId(id);
       const locations = activityDto.locations;
       const storageService = this.storageService;
@@ -220,6 +233,45 @@ export class ActivityService {
       await Promise.all(uploadedActivityMediaKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);
     }
+  }
+
+  async importWatchWorkouts(workouts: WatchWorkoutImportDto[], userId: string) {
+    const uniqueWorkouts = workouts.filter((workout, index, all) => {
+      return (
+        all.findIndex(
+          (candidate) => candidate.source === workout.source && candidate.sourceActivityId === workout.sourceActivityId,
+        ) === index
+      );
+    });
+
+    const existingActivities = uniqueWorkouts.length
+      ? await this.prisma.activity.findMany({
+          where: {
+            userId,
+            OR: uniqueWorkouts.map(({ source, sourceActivityId }) => ({ source, sourceActivityId })),
+          },
+          select: { source: true, sourceActivityId: true },
+        })
+      : [];
+    const existingKeys = new Set(
+      existingActivities.map(
+        ({ source, sourceActivityId }: { source: string | null; sourceActivityId: string | null }) =>
+          `${source}\u0000${sourceActivityId}`,
+      ),
+    );
+    const activities: unknown[] = [];
+
+    for (const workout of uniqueWorkouts) {
+      const key = `${workout.source}\u0000${workout.sourceActivityId}`;
+      if (existingKeys.has(key)) continue;
+      activities.push(await this.createActivity(workout, userId));
+    }
+
+    return {
+      imported: activities.length,
+      skipped: workouts.length - activities.length,
+      activities,
+    };
   }
 
   async createActivitiesFromMigrationArchive(
