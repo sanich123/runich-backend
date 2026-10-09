@@ -187,7 +187,7 @@ describe('account, user and social services', () => {
     prisma.friend.upsert.mockResolvedValue({ id: 'f1' });
     prisma.friend.findUnique.mockResolvedValue({ id: 'f1' });
     prisma.friend.delete.mockResolvedValue({ id: 'f1' });
-    prisma.like.upsert.mockResolvedValue({ id: 'l1' });
+    prisma.like.create.mockResolvedValue({ id: 'l1' });
     prisma.like.findUnique.mockResolvedValue({ id: 'l1' });
     prisma.like.delete.mockResolvedValue({ id: 'l1' });
     prisma.like.findMany.mockResolvedValue([]);
@@ -266,11 +266,11 @@ describe('activity, comments and statistics', () => {
     await expect(service.getAllActivitiesWithFriends('u1')).resolves.toEqual({
       activities: [],
       currentUserProfile: {
+        userId: undefined,
         name: 'Ann',
         surname: 'Runner',
         profilePhoto: 'avatar',
         profilePhotoBlurhash: null,
-        emailNotifications: true,
       },
       hasMore: false,
       nextCursor: null,
@@ -335,7 +335,7 @@ describe('activity, comments and statistics', () => {
     prisma.comment.update.mockResolvedValue({ id: 'c1' });
     prisma.comment.delete.mockResolvedValue({ id: 'c1' });
     prisma.comment.findUnique.mockResolvedValue({ commentLikes: [{ id: 'cl1' }] });
-    prisma.commentLike.upsert.mockResolvedValue({ id: 'cl1' });
+    prisma.commentLike.create.mockResolvedValue({ id: 'cl1' });
     prisma.commentLike.findUnique.mockResolvedValue({ id: 'cl1' });
     prisma.commentLike.findMany.mockResolvedValue([{ id: 'cl1' }]);
     prisma.commentLike.delete.mockResolvedValue({ id: 'cl1' });

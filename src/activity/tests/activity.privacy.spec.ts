@@ -62,6 +62,22 @@ describe('ActivityService privacy', () => {
     );
   });
 
+  it('hides route replay locations from external viewers when disabled by the owner', async () => {
+    const prisma = createPrismaMock();
+    const storage = { readActivityRoute: asyncMock() };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    prisma.activity.findUnique.mockResolvedValue({
+      userId: 'owner-1',
+      visibility: 'public',
+      profile: { allowActivityReplayViewing: false },
+      routeStorageKey: 'owner-1/activities/activity-1/locations/locations-v1.json.gz',
+      kilometresSplit: [],
+    });
+
+    await expect(service.getLocationsByActivityId('activity-1', 'viewer-1')).resolves.toBeNull();
+    expect(storage.readActivityRoute).not.toHaveBeenCalled();
+  });
+
   it('hides a private activity detail from another user', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);

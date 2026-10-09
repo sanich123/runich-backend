@@ -668,3 +668,4 @@ export class ActivityListResponseDto {
   @ApiPropertyOptional({ type: Boolean, deprecated: true })
   isLastPage?: boolean;
 }
+

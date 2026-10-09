@@ -82,15 +82,18 @@ export class UserDto {
   @IsOptional()
   profileSearchVisible?: boolean;
 
-  @ApiPropertyOptional({ type: Boolean, description: 'Allow likes and comments on this user activities' })
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Allow likes, comments, and viewing the list of likes on this user activities',
+  })
   @IsBoolean()
   @IsOptional()
   allowActivityInteractions?: boolean;
 
-  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view the activity likes list' })
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view activity route replays' })
   @IsBoolean()
   @IsOptional()
-  allowLikesListViewing?: boolean;
+  allowActivityReplayViewing?: boolean;
 
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to share this profile activities' })
   @IsBoolean()

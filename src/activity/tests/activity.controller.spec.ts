@@ -7,6 +7,7 @@ import { asyncMock } from 'src/tests/helpers';
 import { ActivityMigrationService } from '../activity-migration.service';
 
 describe('ActivityController', () => {
+  const activityIds = ['51f499f2-3332-4fdb-ac78-cb6ab1e6106a', '4755835b-8591-4cf2-ac17-3a2785706f16'];
   const activityService = {
     getMediaByUserId: asyncMock(),
     deleteActivityMedia: asyncMock(),
@@ -53,9 +54,9 @@ describe('ActivityController', () => {
     await expect(controller.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, request)).resolves.toBeUndefined();
     expect(activityService.deleteActivityMedia).toHaveBeenCalledWith('a1', 'm1', 'u1');
     await expect(controller.getLocationsByActivityId({ id: 'a1' })).resolves.toEqual({ locations: [] });
-    await expect(controller.getActivitiesByActivitiesIds('a1,a2')).resolves.toEqual([result]);
-    await expect(controller.getActivitiesByActivitiesIds(['a1', 'a2'])).resolves.toEqual([result]);
-    expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(['a1', 'a2'], undefined);
+    await expect(controller.getActivitiesByActivitiesIds(activityIds.join(','))).resolves.toEqual([result]);
+    await expect(controller.getActivitiesByActivitiesIds(activityIds)).resolves.toEqual([result]);
+    expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(activityIds, undefined);
     await expect(
       controller.createActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'u1' }),
     ).resolves.toEqual(result);
@@ -91,8 +92,22 @@ describe('ActivityController', () => {
     await expect(controller.getActivitiesByActivitiesIds('')).rejects.toBeInstanceOf(BadRequestException);
     await expect(controller.getActivitiesByActivitiesIds('   ')).rejects.toBeInstanceOf(BadRequestException);
     await expect(controller.getActivitiesByActivitiesIds([])).rejects.toBeInstanceOf(BadRequestException);
-    await expect(controller.getActivitiesByActivitiesIds(['a1', '   '])).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getActivitiesByActivitiesIds([activityIds[0], '   '])).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(controller.getActivitiesByActivitiesIds('not-an-activity-id')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     expect(activityService.getActivitiesByTheirIds).not.toHaveBeenCalled();
+  });
+
+  it('normalizes legacy activity ids encoded as a route segment', async () => {
+    activityService.getActivitiesByTheirIds.mockResolvedValue([]);
+
+    await expect(
+      controller.getActivitiesByActivitiesIds(`ids=${activityIds[0]}&ids=${activityIds[1]}`),
+    ).resolves.toEqual([]);
+    expect(activityService.getActivitiesByTheirIds).toHaveBeenCalledWith(activityIds, undefined);
   });
 
   it('rejects malformed pagination queries before calling the activity service', async () => {
@@ -119,7 +134,7 @@ describe('ActivityController', () => {
       controller.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, { user: { id: 'u1' } } as never),
     ).rejects.toBe(error);
     await expect(controller.getLocationsByActivityId({ id: 'a1' })).rejects.toBe(error);
-    await expect(controller.getActivitiesByActivitiesIds('a1')).rejects.toBe(error);
+    await expect(controller.getActivitiesByActivitiesIds(activityIds[0])).rejects.toBe(error);
     await expect(
       controller.createActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'u1' }),
     ).rejects.toBe(error);

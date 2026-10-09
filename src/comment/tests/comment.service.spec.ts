@@ -1,9 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
 import { CommentService } from '../comment.service';
-import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
+import { asyncMock, expectInternalServerError, transactionMock } from 'src/tests/helpers';
 
 function createPrismaMock() {
-  return {
+  const prisma = {
     activity: { findUnique: asyncMock() },
     comment: {
       count: asyncMock(),
@@ -13,8 +13,10 @@ function createPrismaMock() {
       update: asyncMock(),
       findUnique: asyncMock(),
     },
-    commentLike: { upsert: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
+    commentLike: { create: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
+    emailNotificationJob: { create: asyncMock() },
   };
+  return Object.assign(prisma, { $transaction: transactionMock(prisma) });
 }
 
 describe('CommentService', () => {
@@ -33,11 +35,11 @@ describe('CommentService', () => {
     prisma.comment.update.mockResolvedValue(comment);
     prisma.comment.findUnique.mockResolvedValue({
       comment: 'Hello',
-      profile: { user: { email: 'user@example.com' } },
+      profile: { name: 'Ann', surname: 'Runner' },
       activity: { id: 'activity-1' },
       commentLikes: [like],
     });
-    prisma.commentLike.upsert.mockResolvedValue(like);
+    prisma.commentLike.create.mockResolvedValue(like);
     prisma.commentLike.delete.mockResolvedValue(like);
 
     await expect(service.getCommentsbyActivityId('activity-1', '10')).resolves.toEqual({
@@ -47,11 +49,13 @@ describe('CommentService', () => {
     });
     await expect(service.getCommentsLengthbyActivityId('activity-1')).resolves.toBe(2);
     await expect(service.createCommentByActivityId({ comment: 'Hello' }, 'activity-1')).resolves.toBeUndefined();
+    expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
+      data: { notificationType: 'comment', sourceId: 'comment-1', status: 'queued' },
+    });
     await expect(service.deleteCommentByCommentId('comment-1')).resolves.toEqual(comment);
     await expect(service.updateCommentByCommentId('Updated', 'comment-1')).resolves.toEqual(comment);
     await expect(service.getCommentByCommentId('comment-1')).resolves.toEqual({
-      profile: { user: { email: 'user@example.com' } },
-      email: 'user@example.com',
+      profile: { name: 'Ann', surname: 'Runner' },
       comment: 'Hello',
     });
     await expect(service.createCommentLikeByCommentId({ commentId: 'comment-1' })).resolves.toEqual(like);
@@ -145,13 +149,12 @@ describe('CommentService', () => {
     );
     prisma.comment.findUnique.mockResolvedValue({
       comment: 'Hello',
-      profile: { user: { email: 'user@example.com' } },
+      profile: { name: 'Ann', surname: 'Runner' },
       activity: { id: 'activity-1' },
     });
 
     await expect(service.getCommentByCommentId('comment-1', 'owner-1')).resolves.toEqual({
-      profile: { user: { email: 'user@example.com' } },
-      email: 'user@example.com',
+      profile: { name: 'Ann', surname: 'Runner' },
       comment: 'Hello',
     });
     expect(prisma.comment.findUnique).toHaveBeenCalledTimes(1);
@@ -187,7 +190,7 @@ describe('CommentService', () => {
       NotFoundException,
     );
     expect(prisma.comment.create).not.toHaveBeenCalled();
-    expect(prisma.commentLike.upsert).not.toHaveBeenCalled();
+    expect(prisma.commentLike.create).not.toHaveBeenCalled();
   });
 
   it('converts database failures from every operation to an internal server error', async () => {

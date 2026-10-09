@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { isUniqueConstraintError } from 'src/common/utils/database-errors';
+import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 
 @Injectable()
 export class CommentLikeService {
@@ -9,10 +10,16 @@ export class CommentLikeService {
   async create(data: { profileId: string; authorId: string; commentId: string }) {
     const where = { authorId_commentId: { authorId: data.authorId, commentId: data.commentId } };
     try {
-      return await this.prisma.commentLike.upsert({
-        where,
-        update: {},
-        create: data,
+      return await this.prisma.$transaction(async (transaction) => {
+        const commentLike = await transaction.commentLike.create({ data });
+        await transaction.emailNotificationJob.create({
+          data: {
+            notificationType: EMAIL_NOTIFICATION_TYPE.commentLike,
+            sourceId: commentLike.id,
+            status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
+          },
+        });
+        return commentLike;
       });
     } catch (error) {
       if (!isUniqueConstraintError(error)) throw error;

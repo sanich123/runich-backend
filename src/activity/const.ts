@@ -15,15 +15,13 @@ const ACTIVITY_CARD_PROFILE_SELECT = {
   name: true,
   profilePhoto: true,
   profilePhotoBlurhash: true,
-  emailNotifications: true,
   allowActivityInteractions: true,
-  allowLikesListViewing: true,
+  allowActivityReplayViewing: true,
   allowActivitySharing: true,
 } as const;
 
 const ACTIVITY_FEED_PROFILE_SELECT = {
   ...ACTIVITY_CARD_PROFILE_SELECT,
-  user: { select: { email: true } },
 } as const;
 
 export const ACTIVITY_CARD_SELECT = {

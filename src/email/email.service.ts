@@ -1,4 +1,4 @@
-import { CommentEmailDTO, CommentLikeEmailDTO, FeedbackDto, LikeEmailDTO } from './email.dto';
+import { FeedbackDto } from './email.dto';
 import { sendEmail } from 'src/common/email/nodemailer';
 import { render } from '@react-email/components';
 import { ConfirmEmailAddressWithLinkAndCode, LoginByEmailLink, PasswordChangeCode } from './templates';
@@ -11,103 +11,21 @@ import {
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { EmailNotificationService } from './email-notification.service';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { escapeHtml } from './utils';
 import { StorageService } from 'src/storage/storage.service';
-import { ActivityService } from 'src/activity/activity.service';
-
-function getActivityFrontendUrl(activityId: string) {
-  const activityUrl = new URL(getAuthFrontendRedirectUri());
-  activityUrl.pathname = `/activity/${encodeURIComponent(activityId)}`;
-  activityUrl.search = '';
-  activityUrl.hash = '';
-  return activityUrl.toString();
-}
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  private readonly notificationService: EmailNotificationService;
-
   constructor(
-    @Inject(EmailNotificationService) notificationService?: EmailNotificationService,
     @Inject(PrismaService) private readonly prisma?: PrismaService,
     @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
     @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
-    @Optional() @Inject(ActivityService) private readonly activityService?: ActivityService,
-  ) {
-    this.notificationService = notificationService ?? new EmailNotificationService(this.latencyMetrics);
-  }
-
-  private async getEmailNotificationRecipient(activityId: string) {
-    if (!this.activityService) return null;
-
-    const activity = await this.activityService.getActivityWithEmailData(activityId);
-    if (activity?.profile?.emailNotifications !== true || !activity.email) return null;
-
-    return {
-      email: activity.email,
-      name: activity.profile.name ?? '',
-      surname: activity.profile.surname ?? '',
-      mapPhotoUrl: activity.mapPhotoUrl ?? '',
-    };
-  }
-
-  async sendLikeEmailNotification({ profilePhoto, name, surname, activityId }: LikeEmailDTO) {
-    const recipient = await this.getEmailNotificationRecipient(activityId);
-    if (!recipient) return;
-
-    return this.notificationService.sendLike({
-      profilePhoto,
-      name,
-      surname,
-      activityId,
-      recepientEmail: recipient.email,
-      recepientName: recipient.name,
-      recepientSurname: recipient.surname,
-      mapPhotoUrl: recipient.mapPhotoUrl,
-      activityUrl: getActivityFrontendUrl(activityId),
-    });
-  }
-
-  async sendCommentEmailNotification({ profilePhoto, name, surname, comment, activityId }: CommentEmailDTO) {
-    const recipient = await this.getEmailNotificationRecipient(activityId);
-    if (!recipient) return;
-
-    return this.notificationService.sendComment({
-      profilePhoto,
-      name,
-      surname,
-      activityId,
-      comment,
-      recepientEmail: recipient.email,
-      recepientName: recipient.name,
-      recepientSurname: recipient.surname,
-      mapPhotoUrl: recipient.mapPhotoUrl,
-      activityUrl: getActivityFrontendUrl(activityId),
-    });
-  }
-
-  async sendCommentLikeEmailNotification({ profilePhoto, name, surname, comment, activityId }: CommentLikeEmailDTO) {
-    const recipient = await this.getEmailNotificationRecipient(activityId);
-    if (!recipient) return;
-
-    return this.notificationService.sendCommentLike({
-      profilePhoto,
-      name,
-      surname,
-      activityId,
-      comment,
-      recepientEmail: recipient.email,
-      recepientName: recipient.name,
-      recepientSurname: recipient.surname,
-      activityUrl: getActivityFrontendUrl(activityId),
-    });
-  }
+  ) {}
   async sendConfirmationCode(emailAddress: string, confirmationCode: number, loginCredential: string) {
     try {
       const subject = 'Подтверждение электронной почты';

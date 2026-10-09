@@ -28,6 +28,10 @@
       "model": "CommentLike",
       "namespace": "public"
     },
+    "EmailNotificationJob": {
+      "model": "EmailNotificationJob",
+      "namespace": "public"
+    },
     "Friend": {
       "model": "Friend",
       "namespace": "public"
@@ -1227,6 +1231,135 @@
               "table": "CommentLike"
             }
           },
+          "EmailNotificationJob": {
+            "fields": {
+              "attempts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "availableAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "errorMessage": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "finishedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "notificationType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 24
+                  }
+                }
+              },
+              "sourceId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "startedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "attempts": {
+                  "column": "attempts"
+                },
+                "availableAt": {
+                  "column": "available_at"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "errorMessage": {
+                  "column": "error_message"
+                },
+                "finishedAt": {
+                  "column": "finished_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "notificationType": {
+                  "column": "notification_type"
+                },
+                "sourceId": {
+                  "column": "source_id"
+                },
+                "startedAt": {
+                  "column": "started_at"
+                },
+                "status": {
+                  "column": "status"
+                }
+              },
+              "namespaceId": "public",
+              "table": "EmailNotificationJob"
+            }
+          },
           "Friend": {
             "fields": {
               "createdAt": {
@@ -1755,14 +1888,14 @@
                   "kind": "scalar"
                 }
               },
-              "allowActivitySharing": {
+              "allowActivityReplayViewing": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/bool@1",
                   "kind": "scalar"
                 }
               },
-              "allowLikesListViewing": {
+              "allowActivitySharing": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/bool@1",
@@ -2053,11 +2186,11 @@
                 "allowActivityInteractions": {
                   "column": "allow_activity_interactions"
                 },
+                "allowActivityReplayViewing": {
+                  "column": "allow_activity_replay_viewing"
+                },
                 "allowActivitySharing": {
                   "column": "allow_activity_sharing"
-                },
-                "allowLikesListViewing": {
-                  "column": "allow_likes_list_viewing"
                 },
                 "allowNewFollowers": {
                   "column": "allow_new_followers"
@@ -4071,6 +4204,124 @@
                 }
               ]
             },
+            "EmailNotificationJob": {
+              "columns": {
+                "attempts": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "available_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "error_message": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "finished_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "notification_type": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 24
+                  }
+                },
+                "source_id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "started_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "status": {
+                  "codecId": "sql/varchar@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "queued"
+                  },
+                  "nativeType": "character varying",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "status",
+                    "available_at",
+                    "created_at"
+                  ],
+                  "name": "EmailNotificationJob_status_available_at_created_at_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "notification_type",
+                    "source_id"
+                  ],
+                  "name": "EmailNotificationJob_notification_type_source_id_key"
+                }
+              ]
+            },
             "Friend": {
               "columns": {
                 "createdAt": {
@@ -4560,7 +4811,7 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
-                "allow_activity_sharing": {
+                "allow_activity_replay_viewing": {
                   "codecId": "pg/bool@1",
                   "default": {
                     "kind": "literal",
@@ -4569,7 +4820,7 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
-                "allow_likes_list_viewing": {
+                "allow_activity_sharing": {
                   "codecId": "pg/bool@1",
                   "default": {
                     "kind": "literal",
@@ -5484,7 +5735,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "4e8b94e1e072b032e7e4f19a40918ea24d37c3838ee777493fb8183dd976e040"
+    "storageHash": "8739ef25f6644b02d587a1adf45bdd65d785faa624b2ca84f01383955dbd71b0"
   },
   "capabilities": {
     "postgres": {

@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'4e8b94e1e072b032e7e4f19a40918ea24d37c3838ee777493fb8183dd976e040'>;
+  StorageHashBase<'8739ef25f6644b02d587a1adf45bdd65d785faa624b2ca84f01383955dbd71b0'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -338,6 +338,18 @@ export type FieldOutputTypes = {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
     };
+    readonly EmailNotificationJob: {
+      readonly attempts: CodecTypes['pg/int4@1']['output'];
+      readonly availableAt: TimestamptzString<6>;
+      readonly createdAt: TimestamptzString<6>;
+      readonly errorMessage: CodecTypes['pg/text@1']['output'] | null;
+      readonly finishedAt: TimestamptzString<6> | null;
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly notificationType: Varchar<24>;
+      readonly sourceId: CodecTypes['pg/uuid@1']['output'];
+      readonly startedAt: TimestamptzString<6> | null;
+      readonly status: Varchar<16>;
+    };
     readonly Friend: {
       readonly createdAt: TimestamptzString<6>;
       readonly friendId: CodecTypes['pg/uuid@1']['output'];
@@ -385,8 +397,8 @@ export type FieldOutputTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['output'] | null;
       readonly allowActivityInteractions: CodecTypes['pg/bool@1']['output'];
+      readonly allowActivityReplayViewing: CodecTypes['pg/bool@1']['output'];
       readonly allowActivitySharing: CodecTypes['pg/bool@1']['output'];
-      readonly allowLikesListViewing: CodecTypes['pg/bool@1']['output'];
       readonly allowNewFollowers: CodecTypes['pg/bool@1']['output'];
       readonly bio: CodecTypes['pg/text@1']['output'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['output'] | null;
@@ -575,6 +587,18 @@ export type FieldInputTypes = {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
     };
+    readonly EmailNotificationJob: {
+      readonly attempts: CodecTypes['pg/int4@1']['input'];
+      readonly availableAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly errorMessage: CodecTypes['pg/text@1']['input'] | null;
+      readonly finishedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly notificationType: CodecTypes['sql/varchar@1']['input'];
+      readonly sourceId: CodecTypes['pg/uuid@1']['input'];
+      readonly startedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly status: CodecTypes['sql/varchar@1']['input'];
+    };
     readonly Friend: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly friendId: CodecTypes['pg/uuid@1']['input'];
@@ -622,8 +646,8 @@ export type FieldInputTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['input'] | null;
       readonly allowActivityInteractions: CodecTypes['pg/bool@1']['input'];
+      readonly allowActivityReplayViewing: CodecTypes['pg/bool@1']['input'];
       readonly allowActivitySharing: CodecTypes['pg/bool@1']['input'];
-      readonly allowLikesListViewing: CodecTypes['pg/bool@1']['input'];
       readonly allowNewFollowers: CodecTypes['pg/bool@1']['input'];
       readonly bio: CodecTypes['pg/text@1']['input'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['input'] | null;
@@ -812,6 +836,18 @@ export type StorageColumnTypes = {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
     };
+    readonly EmailNotificationJob: {
+      readonly attempts: CodecTypes['pg/int4@1']['output'];
+      readonly available_at: TimestamptzString<6>;
+      readonly created_at: TimestamptzString<6>;
+      readonly error_message: CodecTypes['pg/text@1']['output'] | null;
+      readonly finished_at: TimestamptzString<6> | null;
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly notification_type: Varchar<24>;
+      readonly source_id: CodecTypes['pg/uuid@1']['output'];
+      readonly started_at: TimestamptzString<6> | null;
+      readonly status: Varchar<16>;
+    };
     readonly Friend: {
       readonly createdAt: TimestamptzString<6>;
       readonly friendId: CodecTypes['pg/uuid@1']['output'];
@@ -859,8 +895,8 @@ export type StorageColumnTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['output'] | null;
       readonly allow_activity_interactions: CodecTypes['pg/bool@1']['output'];
+      readonly allow_activity_replay_viewing: CodecTypes['pg/bool@1']['output'];
       readonly allow_activity_sharing: CodecTypes['pg/bool@1']['output'];
-      readonly allow_likes_list_viewing: CodecTypes['pg/bool@1']['output'];
       readonly allow_new_followers: CodecTypes['pg/bool@1']['output'];
       readonly bio: CodecTypes['pg/text@1']['output'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['output'] | null;
@@ -1049,6 +1085,18 @@ export type StorageColumnInputTypes = {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
     };
+    readonly EmailNotificationJob: {
+      readonly attempts: CodecTypes['pg/int4@1']['input'];
+      readonly available_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly error_message: CodecTypes['pg/text@1']['input'] | null;
+      readonly finished_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly notification_type: CodecTypes['sql/varchar@1']['input'];
+      readonly source_id: CodecTypes['pg/uuid@1']['input'];
+      readonly started_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly status: CodecTypes['sql/varchar@1']['input'];
+    };
     readonly Friend: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly friendId: CodecTypes['pg/uuid@1']['input'];
@@ -1096,8 +1144,8 @@ export type StorageColumnInputTypes = {
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['input'] | null;
       readonly allow_activity_interactions: CodecTypes['pg/bool@1']['input'];
+      readonly allow_activity_replay_viewing: CodecTypes['pg/bool@1']['input'];
       readonly allow_activity_sharing: CodecTypes['pg/bool@1']['input'];
-      readonly allow_likes_list_viewing: CodecTypes['pg/bool@1']['input'];
       readonly allow_new_followers: CodecTypes['pg/bool@1']['input'];
       readonly bio: CodecTypes['pg/text@1']['input'] | null;
       readonly birthday: CodecTypes['pg/date-string@1']['input'] | null;
@@ -1306,6 +1354,19 @@ export namespace Models {
     profile: public_Profile;
     readonly [RelationKeys]?: 'comment' | 'profile';
   };
+  export type public_EmailNotificationJob = {
+    attempts: CodecTypes['pg/int4@1']['output'];
+    availableAt: TimestamptzString<6>;
+    createdAt: TimestamptzString<6>;
+    errorMessage: CodecTypes['pg/text@1']['output'] | null;
+    finishedAt: TimestamptzString<6> | null;
+    id: CodecTypes['pg/uuid@1']['output'];
+    notificationType: Varchar<24>;
+    sourceId: CodecTypes['pg/uuid@1']['output'];
+    startedAt: TimestamptzString<6> | null;
+    status: Varchar<16>;
+    readonly [RelationKeys]?: never;
+  };
   export type public_Friend = {
     createdAt: TimestamptzString<6>;
     friendId: CodecTypes['pg/uuid@1']['output'];
@@ -1361,8 +1422,8 @@ export namespace Models {
   export type public_Profile = {
     age: CodecTypes['pg/text@1']['output'] | null;
     allowActivityInteractions: CodecTypes['pg/bool@1']['output'];
+    allowActivityReplayViewing: CodecTypes['pg/bool@1']['output'];
     allowActivitySharing: CodecTypes['pg/bool@1']['output'];
-    allowLikesListViewing: CodecTypes['pg/bool@1']['output'];
     allowNewFollowers: CodecTypes['pg/bool@1']['output'];
     bio: CodecTypes['pg/text@1']['output'] | null;
     birthday: CodecTypes['pg/date-string@1']['output'] | null;
@@ -1502,6 +1563,7 @@ export declare const models: {
     AuthExchange: Models.public_AuthExchange;
     Comment: Models.public_Comment;
     CommentLike: Models.public_CommentLike;
+    EmailNotificationJob: Models.public_EmailNotificationJob;
     Friend: Models.public_Friend;
     Like: Models.public_Like;
     LoadTestSeedJob: Models.public_LoadTestSeedJob;
@@ -2284,6 +2346,95 @@ type ContractBase = Omit<
                 },
               ];
             };
+            readonly EmailNotificationJob: {
+              columns: {
+                readonly attempts: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly available_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly created_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly error_message: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly finished_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'gen_random_uuid()';
+                  };
+                };
+                readonly notification_type: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 24 };
+                };
+                readonly source_id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                };
+                readonly started_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                };
+                readonly status: {
+                  readonly nativeType: 'character varying';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'sql/varchar@1', 'queued'>;
+                  };
+                  readonly typeParams: { readonly length: 16 };
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['notification_type', 'source_id'];
+                  readonly name: 'EmailNotificationJob_notification_type_source_id_key';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'EmailNotificationJob_status_available_at_created_at_idx';
+                  readonly columns: readonly ['status', 'available_at', 'created_at'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [];
+            };
             readonly Friend: {
               columns: {
                 readonly createdAt: {
@@ -2678,7 +2829,7 @@ type ContractBase = Omit<
                     readonly value: DefaultLiteralValue<'pg/bool@1', true>;
                   };
                 };
-                readonly allow_activity_sharing: {
+                readonly allow_activity_replay_viewing: {
                   readonly nativeType: 'bool';
                   readonly codecId: 'pg/bool@1';
                   readonly nullable: false;
@@ -2687,7 +2838,7 @@ type ContractBase = Omit<
                     readonly value: DefaultLiteralValue<'pg/bool@1', true>;
                   };
                 };
-                readonly allow_likes_list_viewing: {
+                readonly allow_activity_sharing: {
                   readonly nativeType: 'bool';
                   readonly codecId: 'pg/bool@1';
                   readonly nullable: false;
@@ -3438,6 +3589,10 @@ type ContractBase = Omit<
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'CommentLike';
     };
+    readonly EmailNotificationJob: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'EmailNotificationJob';
+    };
     readonly Friend: { readonly namespace: 'public' & NamespaceId; readonly model: 'Friend' };
     readonly Like: { readonly namespace: 'public' & NamespaceId; readonly model: 'Like' };
     readonly LoadTestSeedJob: {
@@ -4174,6 +4329,91 @@ type ContractBase = Omit<
               };
             };
           };
+          readonly EmailNotificationJob: {
+            readonly fields: {
+              readonly attempts: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly availableAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly errorMessage: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly finishedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly notificationType: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 24 };
+                };
+              };
+              readonly sourceId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly startedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 16 };
+                };
+              };
+            };
+            readonly relations: Record<string, never>;
+            readonly storage: {
+              readonly table: 'EmailNotificationJob';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly attempts: { readonly column: 'attempts' };
+                readonly availableAt: { readonly column: 'available_at' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly errorMessage: { readonly column: 'error_message' };
+                readonly finishedAt: { readonly column: 'finished_at' };
+                readonly id: { readonly column: 'id' };
+                readonly notificationType: { readonly column: 'notification_type' };
+                readonly sourceId: { readonly column: 'source_id' };
+                readonly startedAt: { readonly column: 'started_at' };
+                readonly status: { readonly column: 'status' };
+              };
+            };
+          };
           readonly Friend: {
             readonly fields: {
               readonly createdAt: {
@@ -4511,11 +4751,11 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
-              readonly allowActivitySharing: {
+              readonly allowActivityReplayViewing: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
-              readonly allowLikesListViewing: {
+              readonly allowActivitySharing: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
@@ -4702,8 +4942,10 @@ type ContractBase = Omit<
                 readonly allowActivityInteractions: {
                   readonly column: 'allow_activity_interactions';
                 };
+                readonly allowActivityReplayViewing: {
+                  readonly column: 'allow_activity_replay_viewing';
+                };
                 readonly allowActivitySharing: { readonly column: 'allow_activity_sharing' };
-                readonly allowLikesListViewing: { readonly column: 'allow_likes_list_viewing' };
                 readonly allowNewFollowers: { readonly column: 'allow_new_followers' };
                 readonly bio: { readonly column: 'bio' };
                 readonly birthday: { readonly column: 'birthday' };

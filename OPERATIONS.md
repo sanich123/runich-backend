@@ -155,6 +155,34 @@ health check можно отдельно удалить только rebuildable
 `docker builder prune --all --force`; именованные volumes она не удаляет, но
 следующая сборка заново скачает и соберёт очищенные слои.
 
+## Логи в Grafana Cloud
+
+Stage отправляет в Loki только логи контейнеров `nestjs_app` и
+`background_worker`. Подготовлены те же настройки для production; его workflow
+запишет секрет и запустит Alloy только при production deploy после merge.
+Grafana Alloy фильтрует контейнеры по Compose service label и добавляет метки
+`environment`, `service` и `host`. Токен Loki хранится в серверном `.env` с
+режимом `0600`; не коммитьте его. Stage workflow обновляет значение из GitHub
+Actions secret `GRAFANA_LOKI_TOKEN` при каждом deploy.
+
+Compose запускает `grafana_alloy` отдельно от API и worker. Его конфигурация
+находится в `deploy/grafana/config.alloy`, образ закреплен на `v1.20.1`, а
+отправка идет по HTTPS в Grafana Cloud Loki. Collector не публикует HTTP-порт;
+root filesystem доступна только для чтения, capabilities сброшены кроме
+`DAC_OVERRIDE`. Docker API позволяет Alloy обнаруживать контейнеры и читать их
+логи; конфигурация отбрасывает все контейнеры, кроме API и worker.
+
+После stage deploy откройте Grafana Explore и выберите datasource Grafana Cloud
+Logs:
+
+```logql
+{job="runich/backend", environment="stage", service="nestjs_app"}
+```
+
+Для production после его deploy замените `environment="stage"` на
+`environment="production"`. Для фонового worker используйте
+`service="background_worker"`.
+
 ### Проверка Yandex SMTP
 
 Проверка ниже устанавливает TCP/TLS-соединение и выполняет SMTP-auth, но не
