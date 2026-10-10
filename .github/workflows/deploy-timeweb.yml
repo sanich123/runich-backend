@@ -26,22 +26,25 @@ jobs:
       - name: Check out the exact commit
         uses: actions/checkout@v4
 
-      - name: Pull the image that passed Stage for this exact source tree
+      - name: Confirm Stage passed and build the Production image
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
           TREE_SHA="$(git rev-parse 'HEAD^{tree}')"
-          DEPLOY_IMAGE="ghcr.io/sanich123/runich-backend:stage-verified-${TREE_SHA}"
+          STAGE_VERIFIED_IMAGE="ghcr.io/sanich123/runich-backend:stage-verified-${TREE_SHA}"
+          DEPLOY_IMAGE="ghcr.io/sanich123/runich-backend:production-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           printf 'TREE_SHA=%s\n' "$TREE_SHA" >> "$GITHUB_ENV"
           printf 'DEPLOY_IMAGE=%s\n' "$DEPLOY_IMAGE" >> "$GITHUB_ENV"
           printf '%s' "$GITHUB_TOKEN" |
             docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin >/dev/null
-          docker pull "$DEPLOY_IMAGE"
+          docker manifest inspect "$STAGE_VERIFIED_IMAGE" >/dev/null
+          docker build --pull --tag "$DEPLOY_IMAGE" .
+          docker push "$DEPLOY_IMAGE"
           docker logout ghcr.io >/dev/null
 
-      - name: Deploy the Stage-verified image over SSH
+      - name: Deploy the Production image over SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
