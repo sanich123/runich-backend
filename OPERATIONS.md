@@ -47,8 +47,8 @@ Production Compose (`docker-compose.timeweb.yml`) использует след�
 Workflow собирает образ из точного коммита в GitHub Actions и подключается к
 серверу `runich-stage` по SSH. На сервере запуск проходит в таком порядке:
 PostgreSQL healthcheck, `db:migrate:prod`, API и worker, затем проверки API,
-Alloy и HTTPS. Только после их успешного завершения тот же образ публикуется
-как прошедший Stage для этого дерева исходников.
+Alloy и HTTPS. Только после их успешного завершения workflow публикует метку
+`stage-verified-<tree-sha>` для этого дерева исходников.
 
 Compose-файл `docker-compose.timeweb.stage.yml` хранит PostgreSQL и состояние
 Let's Encrypt в постоянных Docker volumes. Nginx принимает HTTP/HTTPS на
@@ -61,32 +61,22 @@ ACME challenge. Certbot выпускает сертификат при перв�
 и хранятся владельцем пользователя деплоя с режимом `0600`. В `.env` задайте
 `DATABASE_URL_DOCKER` с хостом `db`, именем базы и паролем, совпадающими с
 `POSTGRES_USER`, `POSTGRES_DB` и `POSTGRES_PASSWORD`; `app.env` содержит только
-переменные API и worker. Для новой пустой базы первый деплой создаёт схему
-одной начальной миграцией, после чего запускает API и worker.
+переменные API и worker. Для пустой базы `db:migrate:prod` применяет всю
+зафиксированную цепочку миграций, начиная с baseline `20261010T1638_initial_schema`,
+затем workflow запускает API и worker.
 
-Перед первым deploy с новым baseline один раз удалите старую pre-release схему
-и историю миграций в Stage и Production. После сброса Stage выполните:
+### Пустая Production база
 
-```bash
-docker exec runich-stage-db-1 sh -lc \
-  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 \
-  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public AUTHORIZATION CURRENT_USER; DROP SCHEMA IF EXISTS prisma_contract CASCADE;"'
-```
+Production использует внешнюю PostgreSQL DBaaS Timeweb. При установке на пустую
+базу обычный `db_migrate` применяет baseline и создаёт текущую схему; workflow сам
+не удаляет базу и не сбрасывает данные. Такой сброс выполняется отдельно только
+для явно согласованного переустановления. После начальной установки обычные релизы
+применяют следующие миграции без сброса базы.
 
-Если в Production уже создавалась схема, выполните тот же SQL в клиенте
-Production PostgreSQL от имени владельца схемы:
-
-```sql
-DROP SCHEMA public CASCADE;
-CREATE SCHEMA public AUTHORIZATION CURRENT_USER;
-DROP SCHEMA IF EXISTS prisma_contract CASCADE;
-```
-
-Сброс удаляет таблицы, данные и расширения в `public`, а также служебный ledger
-Prisma в `prisma_contract`. Это важно: если сохранить ledger, Prisma сочтёт
-миграцию уже применённой и не создаст таблицы в пустой схеме. `db:migrate:prod`
-создаст ledger заново, установит `pg_trgm` и применит начальную миграцию. После
-этого среды сохраняют собственные данные и используют обычные новые миграции.
+Не удаляйте `public`, `prisma_contract` или данные при обычном deploy ради
+согласования migration marker. Не подписывайте базу на последний контракт как
+замену миграции: `db sign` допустим только после проверки, что схема уже совпадает
+с этим контрактом.
 
 После успешных проверок API, Grafana Alloy и HTTPS stage workflow автоматически
 запускает `docker system prune --all --force`. Очистка не удаляет volumes:
@@ -101,15 +91,15 @@ GitHub Actions использует environment `stage`, ограниченны�
 
 ## Как выполняется production deploy
 
-После merge в `master` GitHub Actions ищет в GHCR image с тегом дерева исходников,
-который Stage публикует только после успешных readiness-проверок. Если точное
-дерево не прошло Stage, production deploy останавливается до подключения к
-серверу. Timeweb не собирает образ: он получает тот же Docker image, который
-прошёл Stage, переключает checkout на production commit и запускает `db_migrate`
-один раз, затем API и worker. На Production повторяются внутренний readiness,
-проверка worker и Alloy; workflow также проверяет публичный HTTPS readiness URL.
-Ошибка миграции или readiness останавливает workflow. URLs, секреты,
-наблюдаемость и `APP_ENV` задаются отдельно для каждой среды.
+После merge в `master` GitHub Actions проверяет метку `stage-verified-<tree-sha>`.
+Она появляется только после успешных readiness-проверок Stage. Production не
+скачивает и не запускает Stage-образ: Actions отдельно собирает и публикует образ
+из точного production-коммита, затем передаёт его на Timeweb по SSH. Сервер
+переключает checkout на этот коммит и запускает `db_migrate` один раз, затем API
+и worker. На Production повторяются внутренний readiness, проверка worker и
+Alloy; workflow также проверяет публичный HTTPS readiness URL. Ошибка миграции
+или readiness останавливает workflow. URLs, секреты, наблюдаемость и `APP_ENV`
+задаются отдельно для каждой среды.
 
 Локальный Compose по-прежнему собирается обычной командой ниже и использует
 локальный тег `runich-backend:local`:
@@ -318,15 +308,16 @@ Production использует checked-in migrations из `migrations/`. Соз
 вручную на production: `db_migrate` выполняет `db migrate`, статус и проверку
 контракта перед переключением API/worker.
 
-При ручном production deploy используйте Stage-verified image. Сначала запустите
-миграцию и дождитесь её успешного завершения, затем API и worker:
+При ручном production deploy используйте production-образ из соответствующего
+успешного Actions run (тег `production-<commit-sha>-<run-id>-<attempt>`). Сначала
+запустите миграцию и дождитесь её успешного завершения, затем API и worker:
 
 ```bash
 cd /opt/runich-backend/project
-BACKEND_IMAGE='ghcr.io/sanich123/runich-backend:stage-verified-<source-tree-sha>' \
+BACKEND_IMAGE='ghcr.io/sanich123/runich-backend:production-<commit-sha>-<run-id>-<attempt>' \
   docker compose -f docker-compose.timeweb.yml up --no-build --force-recreate \
   --abort-on-container-exit --exit-code-from db_migrate db_migrate
-BACKEND_IMAGE='ghcr.io/sanich123/runich-backend:stage-verified-<source-tree-sha>' \
+BACKEND_IMAGE='ghcr.io/sanich123/runich-backend:production-<commit-sha>-<run-id>-<attempt>' \
   docker compose -f docker-compose.timeweb.yml up -d --force-recreate \
   --remove-orphans --no-build nestjs_app background_worker
 curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
