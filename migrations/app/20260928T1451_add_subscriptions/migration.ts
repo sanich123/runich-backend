@@ -1,8 +1,8 @@
 #!/usr/bin/env -S node
-import type { Contract as Start } from '../../snapshots/518d6e8fa3bed5df5d4ec67f28903980fccce428f32829ba31db896169568715/contract';
-import startContract from '../../snapshots/518d6e8fa3bed5df5d4ec67f28903980fccce428f32829ba31db896169568715/contract.json' with { type: 'json' };
-import type { Contract as End } from '../../snapshots/611579864d15b6ed6e4b976ac5583b78e1f9835bad2124436d5c326d13a5309c/contract';
-import endContract from '../../snapshots/611579864d15b6ed6e4b976ac5583b78e1f9835bad2124436d5c326d13a5309c/contract.json' with { type: 'json' };
+import type { Contract as Start } from '../../snapshots/b5752d38489d5a558f86b045cff04e4e3bbfece01e26caf130496c7aedce3a63/contract';
+import startContract from '../../snapshots/b5752d38489d5a558f86b045cff04e4e3bbfece01e26caf130496c7aedce3a63/contract.json' with { type: 'json' };
+import type { Contract as End } from '../../snapshots/c17207568d8f83a16ee5a53cfc9a6348c72cc1f68079541001da180215c738a3/contract';
+import endContract from '../../snapshots/c17207568d8f83a16ee5a53cfc9a6348c72cc1f68079541001da180215c738a3/contract.json' with { type: 'json' };
 import { Migration, MigrationCLI, col, fn, lit, primaryKey } from '@prisma/orm-postgres/migration';
 
 export default class M extends Migration<Start, End> {
