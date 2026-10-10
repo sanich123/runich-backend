@@ -68,9 +68,9 @@ ACME challenge. Certbot выпускает сертификат при перв�
 и историю миграций в Stage и Production. После сброса Stage выполните:
 
 ```bash
-cd /opt/runich-stage
-docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml \
-  exec -T db sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public AUTHORIZATION CURRENT_USER;"'
+docker exec runich-stage-db-1 sh -lc \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 \
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public AUTHORIZATION CURRENT_USER;"'
 ```
 
 Если в Production уже создавалась схема, выполните тот же SQL в клиенте

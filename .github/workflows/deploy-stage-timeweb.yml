@@ -101,7 +101,7 @@ jobs:
 
           "${COMPOSE[@]}" pull db nginx certbot certbot_renew
           "${COMPOSE[@]}" up -d --wait db
-          "${COMPOSE[@]}" up --no-TTY --force-recreate --abort-on-container-exit \
+          "${COMPOSE[@]}" up --force-recreate --abort-on-container-exit \
             --exit-code-from db_migrate db_migrate
           "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nestjs_app background_worker
 
@@ -114,7 +114,7 @@ jobs:
           "${COMPOSE[@]}" up -d --force-recreate nginx
 
           if [ ! -s .stage-cert-ready ]; then
-            "${COMPOSE[@]}" run --rm --no-TTY --interactive=false --no-deps certbot \
+            "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps certbot \
               certonly --webroot --webroot-path /var/www/certbot \
               --domain "$STAGE_DOMAIN" --cert-name "$STAGE_DOMAIN" \
               --non-interactive --agree-tos --register-unsafely-without-email </dev/null
