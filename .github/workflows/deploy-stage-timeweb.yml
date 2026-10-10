@@ -66,6 +66,7 @@ jobs:
           SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
           SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
           TARGET="$STAGE_DEPLOY_USER@$STAGE_DEPLOY_HOST"
+          DEPLOY_RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
           # Keep the Loki token in the encrypted repository secret and server
           # .env. Transfer it through SSH stdin, not process arguments.
@@ -80,7 +81,7 @@ jobs:
 
           "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf nginx.stage.conf deploy/grafana/config.alloy "$TARGET:/tmp/"
 
-          "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' bash -s" <<'REMOTE'
+          "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
           set -euo pipefail
           cd /opt/runich-stage
 
@@ -163,6 +164,10 @@ jobs:
 
           printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
           echo "Stage is healthy at commit $DEPLOY_SHA"
+
+          "${COMPOSE[@]}" exec -T \
+            --env DEPLOY_SHA --env DEPLOY_RUN_URL \
+            nestjs_app node scripts/send-deployment-success-email.mjs
 
           # The stage host has limited disk space. Keep active containers and
           # all named volumes (PostgreSQL and Let's Encrypt), but remove old

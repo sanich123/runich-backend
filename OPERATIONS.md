@@ -70,7 +70,7 @@ ACME challenge. Certbot выпускает сертификат при перв�
 ```bash
 docker exec runich-stage-db-1 sh -lc \
   'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 \
-  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public AUTHORIZATION CURRENT_USER;"'
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public AUTHORIZATION CURRENT_USER; DROP SCHEMA IF EXISTS prisma_contract CASCADE;"'
 ```
 
 Если в Production уже создавалась схема, выполните тот же SQL в клиенте
@@ -79,11 +79,14 @@ Production PostgreSQL от имени владельца схемы:
 ```sql
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public AUTHORIZATION CURRENT_USER;
+DROP SCHEMA IF EXISTS prisma_contract CASCADE;
 ```
 
-Сброс удаляет таблицы, данные, расширения и migration metadata в `public`.
-`db:migrate:prod` создаст `pg_trgm` и применит начальную миграцию. После этого
-среды сохраняют собственные данные и используют обычные новые миграции.
+Сброс удаляет таблицы, данные и расширения в `public`, а также служебный ledger
+Prisma в `prisma_contract`. Это важно: если сохранить ledger, Prisma сочтёт
+миграцию уже применённой и не создаст таблицы в пустой схеме. `db:migrate:prod`
+создаст ledger заново, установит `pg_trgm` и применит начальную миграцию. После
+этого среды сохраняют собственные данные и используют обычные новые миграции.
 
 После успешных проверок API, Grafana Alloy и HTTPS stage workflow автоматически
 запускает `docker system prune --all --force`. Очистка не удаляет volumes:
@@ -247,6 +250,13 @@ docker compose -f docker-compose.timeweb.yml exec -T -e TEST_EMAIL="$TEST_EMAIL"
   transporter.close();
 '
 ```
+
+После успешных readiness-проверок Stage и Production вызывают
+`scripts/send-deployment-success-email.mjs` внутри контейнера `nestjs_app` на
+соответствующем сервере. Скрипт использует SMTP-переменные из Stage `app.env` и
+Production `.env` и отправляет письмо на `aovoronin.piano@gmail.com` с названием
+среды, коротким SHA коммита и ссылкой на запуск деплоя. При ошибке SMTP deploy
+workflow завершится ошибкой; до успешных readiness-проверок письмо не отправляется.
 
 ## Фильтрация логов
 
