@@ -165,4 +165,15 @@ jobs:
 
           printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
           echo "Stage is healthy at commit $DEPLOY_SHA"
+
+          # The stage host has limited disk space. Keep active containers and
+          # all named volumes (PostgreSQL and Let's Encrypt), but remove old
+          # images, stopped containers, unused networks, and build cache only
+          # after every deployment health check has passed.
+          echo 'Docker disk usage before cleanup:'
+          docker system df || echo 'Could not inspect Docker disk usage before cleanup.' >&2
+          docker system prune --all --force || \
+            echo 'Docker cleanup failed; keeping the healthy deployment.' >&2
+          echo 'Docker disk usage after cleanup:'
+          docker system df || echo 'Could not inspect Docker disk usage after cleanup.' >&2
           REMOTE

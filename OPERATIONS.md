@@ -63,6 +63,11 @@ ACME challenge. Certbot выпускает сертификат при перв�
 переменные API и worker. Для новой пустой базы первый деплой создаёт схему
 применением всех миграций из коммита, после чего запускает API и worker.
 
+После успешных проверок API, Grafana Alloy и HTTPS stage workflow автоматически
+запускает `docker system prune --all --force`. Очистка не удаляет volumes:
+PostgreSQL и состояние Let's Encrypt сохраняются. Если сам prune завершается
+ошибкой, уже проверенный деплой не откатывается и workflow остаётся успешным.
+
 GitHub Actions использует environment `stage`, ограниченный веткой `stage`.
 Для него нужны отдельные значения `STAGE_DEPLOY_HOST`, `STAGE_DEPLOY_USER`,
 `STAGE_DEPLOY_SSH_KEY` и `STAGE_DEPLOY_KNOWN_HOSTS`; production secrets с общими
