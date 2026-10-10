@@ -92,6 +92,8 @@ jobs:
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.conf ./nginx.stage.tls.conf
           install -d -o "$(id -un)" -g docker -m 0750 ./deploy/grafana
           install -o "$(id -un)" -g docker -m 0644 /tmp/config.alloy ./deploy/grafana/config.alloy
+          touch logs.log
+          chmod 0644 logs.log
           rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/nginx.stage.conf /tmp/config.alloy
 
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
@@ -99,13 +101,8 @@ jobs:
 
           "${COMPOSE[@]}" pull db nginx certbot certbot_renew
           "${COMPOSE[@]}" up -d --wait db
-          # Prisma 8 changed the storage representation of the same schema.
-          # Repair a legacy stage marker only after db sign confirms that the
-          # live schema already matches the current contract; real schema drift
-          # still fails here and must go through the migration graph.
-          "${COMPOSE[@]}" run --rm --no-TTY --interactive=false db_migrate \
-            sh -lc 'yarn prisma db sign --db "$DATABASE_URL" --no-advance-ref' </dev/null
-          "${COMPOSE[@]}" run --rm --no-TTY --interactive=false db_migrate </dev/null
+          "${COMPOSE[@]}" up --no-TTY --force-recreate --abort-on-container-exit \
+            --exit-code-from db_migrate db_migrate
           "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nestjs_app background_worker
 
           if [ -s .stage-cert-ready ]; then
@@ -131,7 +128,8 @@ jobs:
           healthy=false
           for attempt in $(seq 1 30); do
             if "${COMPOSE[@]}" exec -T nestjs_app </dev/null \
-              curl --fail --silent --show-error --max-time 5 http://127.0.0.1:3000/health/ready >/dev/null; then
+              curl --fail --silent --show-error --max-time 5 http://127.0.0.1:3000/health/ready >/dev/null \
+              && [ "$("${COMPOSE[@]}" ps --status running --services background_worker)" = background_worker ]; then
               healthy=true
               break
             fi
@@ -177,3 +175,17 @@ jobs:
           echo 'Docker disk usage after cleanup:'
           docker system df || echo 'Could not inspect Docker disk usage after cleanup.' >&2
           REMOTE
+
+      - name: Publish the Stage-verified image for this source tree
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          TREE_SHA="$(git rev-parse 'HEAD^{tree}')"
+          VERIFIED_IMAGE="ghcr.io/sanich123/runich-backend:stage-verified-${TREE_SHA}"
+          printf '%s' "$GITHUB_TOKEN" |
+            docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin >/dev/null
+          docker tag "$DEPLOY_IMAGE" "$VERIFIED_IMAGE"
+          docker push "$VERIFIED_IMAGE"
+          docker logout ghcr.io >/dev/null

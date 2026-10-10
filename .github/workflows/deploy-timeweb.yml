@@ -19,19 +19,34 @@ jobs:
     name: Deploy backend
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      PRODUCTION_API_URL: https://api.runich-app.ru/health/ready
 
     steps:
       - name: Check out the exact commit
         uses: actions/checkout@v4
 
-      - name: Deploy exact commit over SSH
+      - name: Pull the image that passed Stage for this exact source tree
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          TREE_SHA="$(git rev-parse 'HEAD^{tree}')"
+          DEPLOY_IMAGE="ghcr.io/sanich123/runich-backend:stage-verified-${TREE_SHA}"
+          printf 'TREE_SHA=%s\n' "$TREE_SHA" >> "$GITHUB_ENV"
+          printf 'DEPLOY_IMAGE=%s\n' "$DEPLOY_IMAGE" >> "$GITHUB_ENV"
+          printf '%s' "$GITHUB_TOKEN" |
+            docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin >/dev/null
+          docker pull "$DEPLOY_IMAGE"
+          docker logout ghcr.io >/dev/null
+
+      - name: Deploy the Stage-verified image over SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
           GRAFANA_LOKI_TOKEN: ${{ secrets.GRAFANA_LOKI_TOKEN }}
         run: |
           set -euo pipefail
@@ -40,18 +55,7 @@ jobs:
           : "${DEPLOY_USER:?GitHub Secret DEPLOY_USER is required}"
           : "${DEPLOY_SSH_KEY:?GitHub Secret DEPLOY_SSH_KEY is required}"
           : "${DEPLOY_KNOWN_HOSTS:?GitHub Secret DEPLOY_KNOWN_HOSTS is required}"
-          : "${GITHUB_TOKEN:?GitHub Actions GITHUB_TOKEN is required}"
           : "${GRAFANA_LOKI_TOKEN:?GitHub Actions secret GRAFANA_LOKI_TOKEN is required}"
-
-          DEPLOY_IMAGE="ghcr.io/sanich123/runich-backend:${GITHUB_SHA}"
-
-          # Build on the GitHub runner instead of the 2 GB production host.
-          # The host only pulls the immutable image and starts the services.
-          printf '%s' "$GITHUB_TOKEN" |
-            docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin >/dev/null
-          docker build --tag "$DEPLOY_IMAGE" .
-          docker push "$DEPLOY_IMAGE"
-          docker logout ghcr.io >/dev/null
 
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
@@ -59,24 +63,22 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 644 "$HOME/.ssh/known_hosts"
 
-          printf '%s' "$GITHUB_TOKEN" |
+          docker save "$DEPLOY_IMAGE" | gzip -1 |
             ssh -i "$HOME/.ssh/id_ed25519" \
-              -o BatchMode=yes -o IdentitiesOnly=yes \
-              "$DEPLOY_USER@$DEPLOY_HOST" \
-              "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null && docker pull '$DEPLOY_IMAGE' && docker logout ghcr.io >/dev/null"
-          unset GITHUB_TOKEN
+              -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              "$DEPLOY_USER@$DEPLOY_HOST" 'gzip -d | docker load'
 
           printf '%s\n' "$GRAFANA_LOKI_TOKEN" |
             ssh -i "$HOME/.ssh/id_ed25519" \
-              -o BatchMode=yes -o IdentitiesOnly=yes \
+              -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
               "$DEPLOY_USER@$DEPLOY_HOST" \
               'set -euo pipefail; cd /opt/runich-backend/project; IFS= read -r token; tmp="$(mktemp .env.XXXXXX)"; awk -F= '\''$1 != "GRAFANA_LOKI_TOKEN" { print }'\'' .env > "$tmp"; printf "GRAFANA_LOKI_TOKEN=%s\\n" "$token" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token; grep -q "^GRAFANA_LOKI_TOKEN=..*" .env'
           unset GRAFANA_LOKI_TOKEN
 
           ssh -i "$HOME/.ssh/id_ed25519" \
-            -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_IMAGE='$DEPLOY_IMAGE' bash -s" <<'REMOTE'
+            "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_IMAGE='$DEPLOY_IMAGE' DEPLOY_TREE_SHA='$TREE_SHA' bash -s" <<'REMOTE'
             set -euo pipefail
 
             cd /opt/runich-backend/project
@@ -99,19 +101,21 @@ jobs:
             git fetch --prune origin master
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+            test "$(git rev-parse 'HEAD^{tree}')" = "$DEPLOY_TREE_SHA"
+            touch logs.log
+            chmod 0644 logs.log
 
-            # The immutable image was pulled and verified in the SSH command above.
-            # Avoid a second registry request after docker logout; Compose can use
-            # the image that is already present on the host.
-            # Both processes depend on one shared migration job. Recreate it
-            # even when workflow_dispatch deploys the same image SHA again.
+            # Run the same migration job Stage ran before replacing either process.
+            BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose \
+              -f docker-compose.timeweb.yml up --no-build --force-recreate \
+              --abort-on-container-exit --exit-code-from db_migrate db_migrate
             BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose \
               -f docker-compose.timeweb.yml up \
-              -d --always-recreate-deps --remove-orphans --no-build nestjs_app background_worker
+              -d --force-recreate --remove-orphans --no-build nestjs_app background_worker
 
             for attempt in $(seq 1 30); do
               if curl --fail --silent --show-error --max-time 5 \
-                http://127.0.0.1:3000/health/live >/dev/null \
+                http://127.0.0.1:3000/health/ready >/dev/null \
                 && test "$(docker compose -f docker-compose.timeweb.yml ps --status running --services background_worker)" = \
                   "background_worker"; then
                 docker compose -f docker-compose.timeweb.yml up \
@@ -129,7 +133,8 @@ jobs:
                   echo 'Grafana Alloy failed to reach running state.' >&2
                   exit 1
                 fi
-                echo "Deployment is healthy at commit $DEPLOY_SHA"
+                printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
+                echo "Production is ready at commit $DEPLOY_SHA using image $DEPLOY_IMAGE"
                 # PostgreSQL is an external Timeweb DBaaS service and has no
                 # Docker volume here. Migration archives live in S3.
                 # --remove-orphans above removes services retired from Compose;
@@ -150,3 +155,16 @@ jobs:
             docker compose -f docker-compose.timeweb.yml logs --tail=100 nestjs_app background_worker
             exit 1
           REMOTE
+
+      - name: Verify production HTTPS readiness
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --max-time 10 "$PRODUCTION_API_URL" >/dev/null; then
+              echo "Production HTTPS readiness passed: $PRODUCTION_API_URL"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Production HTTPS readiness failed: $PRODUCTION_API_URL" >&2
+          exit 1

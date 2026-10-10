@@ -44,10 +44,11 @@ Production Compose (`docker-compose.timeweb.yml`) использует след�
 ## Stage deploy на Timeweb
 
 Каждый push в `stage` запускает `.github/workflows/deploy-stage-timeweb.yml`.
-Workflow собирает образ из точного SHA коммита в GitHub Actions, публикует его
-в GHCR и подключается к серверу `runich-stage` по SSH. На сервере запуск
-проходит в таком порядке: PostgreSQL healthcheck, `db:migrate:prod`, API,
-worker и Nginx. Production workflow и его secrets остаются отдельными.
+Workflow собирает образ из точного коммита в GitHub Actions и подключается к
+серверу `runich-stage` по SSH. На сервере запуск проходит в таком порядке:
+PostgreSQL healthcheck, `db:migrate:prod`, API и worker, затем проверки API,
+Alloy и HTTPS. Только после их успешного завершения тот же образ публикуется
+как прошедший Stage для этого дерева исходников.
 
 Compose-файл `docker-compose.timeweb.stage.yml` хранит PostgreSQL и состояние
 Let's Encrypt в постоянных Docker volumes. Nginx принимает HTTP/HTTPS на
@@ -61,7 +62,28 @@ ACME challenge. Certbot выпускает сертификат при перв�
 `DATABASE_URL_DOCKER` с хостом `db`, именем базы и паролем, совпадающими с
 `POSTGRES_USER`, `POSTGRES_DB` и `POSTGRES_PASSWORD`; `app.env` содержит только
 переменные API и worker. Для новой пустой базы первый деплой создаёт схему
-применением всех миграций из коммита, после чего запускает API и worker.
+одной начальной миграцией, после чего запускает API и worker.
+
+Перед первым deploy с новым baseline один раз удалите старую pre-release схему
+и историю миграций в Stage и Production. После сброса Stage выполните:
+
+```bash
+cd /opt/runich-stage
+docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml \
+  exec -T db sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public AUTHORIZATION CURRENT_USER;"'
+```
+
+Если в Production уже создавалась схема, выполните тот же SQL в клиенте
+Production PostgreSQL от имени владельца схемы:
+
+```sql
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public AUTHORIZATION CURRENT_USER;
+```
+
+Сброс удаляет таблицы, данные, расширения и migration metadata в `public`.
+`db:migrate:prod` создаст `pg_trgm` и применит начальную миграцию. После этого
+среды сохраняют собственные данные и используют обычные новые миграции.
 
 После успешных проверок API, Grafana Alloy и HTTPS stage workflow автоматически
 запускает `docker system prune --all --force`. Очистка не удаляет volumes:
@@ -76,18 +98,15 @@ GitHub Actions использует environment `stage`, ограниченны�
 
 ## Как выполняется production deploy
 
-После merge в `master` GitHub Actions собирает Docker image на GitHub runner и
-публикует его в GitHub Container Registry (`ghcr.io`) с immutable-тегом commit SHA.
-Для публикации и скачивания используется временный `GITHUB_TOKEN`, поэтому
-отдельный Docker Hub PAT для production deploy не нужен. Timeweb не собирает
-image на сервере: он переключает checkout на тот же SHA, скачивает image и
-запускает `nestjs_app` и `background_worker` через Compose с `--no-build`.
-Это важно для текущего сервера с 2 ГБ RAM: тяжёлая установка зависимостей и
-компиляция не конкурируют с PostgreSQL и работающим API. Перед переключением
-версии workflow запускает `db_migrate` ровно один раз. Если миграция или
-проверка схемы завершается ошибкой, workflow останавливается до запуска новой
-версии API/worker; старые процессы остаются на месте. При обычном перезапуске
-контейнеров схема БД не меняется.
+После merge в `master` GitHub Actions ищет в GHCR image с тегом дерева исходников,
+который Stage публикует только после успешных readiness-проверок. Если точное
+дерево не прошло Stage, production deploy останавливается до подключения к
+серверу. Timeweb не собирает образ: он получает тот же Docker image, который
+прошёл Stage, переключает checkout на production commit и запускает `db_migrate`
+один раз, затем API и worker. На Production повторяются внутренний readiness,
+проверка worker и Alloy; workflow также проверяет публичный HTTPS readiness URL.
+Ошибка миграции или readiness останавливает workflow. URLs, секреты,
+наблюдаемость и `APP_ENV` задаются отдельно для каждой среды.
 
 Локальный Compose по-прежнему собирается обычной командой ниже и использует
 локальный тег `runich-backend:local`:
@@ -120,10 +139,10 @@ Compose передаёт эти значения API и worker из `.env`, а �
 кода отключены. Проверьте настройки приватности Observe перед включением
 production-телеметрии.
 
-`db-sync` перед синхронизацией включает расширение `pg_trgm`, а после
-успешного `db update` создаёт trigram GIN-индексы для поиска по email, имени и
-фамилии. Эти индексы намеренно создаются bootstrap-SQL: текущий Prisma 8 RC
-не сохраняет `gin_trgm_ops` при генерации DDL из контракта.
+`db:migrate:prod` перед миграцией включает расширение `pg_trgm`; начальная
+миграция создаёт trigram GIN-индексы для поиска по email, имени и фамилии.
+Будущие изменения схемы добавляйте отдельными migration packages в тот же
+commit, что и совместимый код.
 
 ```bash
 docker compose -f docker-compose.timeweb.yml ps
@@ -133,7 +152,8 @@ docker compose -f docker-compose.timeweb.yml logs -f --tail=200 nestjs_app backg
 ## Ротация логов
 
 Приложение пишет только ошибки в `/opt/runich-backend/project/logs.log` через
-bind mount `/app/logs.log`. Конфигурация
+отдельный bind mount `./logs.log:/app/logs.log`; Compose не монтирует весь
+checkout приложения внутрь контейнера. Конфигурация
 `deploy/logrotate/runich-backend` ротирует этот файл ежедневно и хранит два
 архива. Установите её на production один раз:
 
@@ -288,15 +308,18 @@ Production использует checked-in migrations из `migrations/`. Соз
 вручную на production: `db_migrate` выполняет `db migrate`, статус и проверку
 контракта перед переключением API/worker.
 
-При ручном production deploy используйте команду ниже: Compose принудительно
-пересоздаст job зависимости, дождётся его успешного завершения, и только затем
-запустит API/worker:
+При ручном production deploy используйте Stage-verified image. Сначала запустите
+миграцию и дождитесь её успешного завершения, затем API и worker:
 
 ```bash
 cd /opt/runich-backend/project
-BACKEND_IMAGE="ghcr.io/sanich123/runich-backend:$(git rev-parse HEAD)" \
-  docker compose -f docker-compose.timeweb.yml \
-  up -d --always-recreate-deps --no-build nestjs_app background_worker
+BACKEND_IMAGE='ghcr.io/sanich123/runich-backend:stage-verified-<source-tree-sha>' \
+  docker compose -f docker-compose.timeweb.yml up --no-build --force-recreate \
+  --abort-on-container-exit --exit-code-from db_migrate db_migrate
+BACKEND_IMAGE='ghcr.io/sanich123/runich-backend:stage-verified-<source-tree-sha>' \
+  docker compose -f docker-compose.timeweb.yml up -d --force-recreate \
+  --remove-orphans --no-build nestjs_app background_worker
+curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
 ```
 
 Команда подключается к production-БД; не запускайте её вручную параллельно с

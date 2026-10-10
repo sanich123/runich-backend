@@ -251,6 +251,45 @@
     ]
   },
   {
+    "id": "table.EmailNotificationJob",
+    "label": "Create table \"EmailNotificationJob\"",
+    "summary": "Creates table \"EmailNotificationJob\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "EmailNotificationJob"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"EmailNotificationJob\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"EmailNotificationJob\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"EmailNotificationJob\"",
+        "sql": "CREATE TABLE \"public\".\"EmailNotificationJob\" (\n  \"attempts\" int4 DEFAULT 0 NOT NULL,\n  \"available_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"error_message\" text,\n  \"finished_at\" timestamptz(6),\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"notification_type\" character varying(24) NOT NULL,\n  \"source_id\" uuid NOT NULL,\n  \"started_at\" timestamptz(6),\n  \"status\" character varying(16) DEFAULT 'queued' NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"EmailNotificationJob\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"EmailNotificationJob\""
+        ]
+      }
+    ]
+  },
+  {
     "id": "table.Friend",
     "label": "Create table \"Friend\"",
     "summary": "Creates table \"Friend\"",
@@ -431,7 +470,7 @@
     "execute": [
       {
         "description": "create table \"Profile\"",
-        "sql": "CREATE TABLE \"public\".\"Profile\" (\n  \"age\" text,\n  \"bio\" text,\n  \"birthday\" date,\n  \"city\" text,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"email\" text,\n  \"emailNotifications\" bool DEFAULT false,\n  \"gender\" text,\n  \"height\" text,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"language\" text,\n  \"name\" text,\n  \"profilePhoto\" text,\n  \"profilePhotoBlurhash\" text,\n  \"sport\" text,\n  \"surname\" text,\n  \"updatedAt\" timestamptz(6),\n  \"user_id\" uuid NOT NULL,\n  \"weight\" text,\n  CONSTRAINT \"Profile_pkey\" PRIMARY KEY (\"id\")\n)",
+        "sql": "CREATE TABLE \"public\".\"Profile\" (\n  \"age\" text,\n  \"allow_activity_interactions\" bool DEFAULT true NOT NULL,\n  \"allow_activity_replay_viewing\" bool DEFAULT true NOT NULL,\n  \"allow_activity_sharing\" bool DEFAULT true NOT NULL,\n  \"allow_new_followers\" bool DEFAULT true NOT NULL,\n  \"bio\" text,\n  \"birthday\" date,\n  \"city\" text,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"email\" text,\n  \"emailNotifications\" bool DEFAULT false,\n  \"gender\" text,\n  \"height\" text,\n  \"hide_activity_statistics\" bool DEFAULT false NOT NULL,\n  \"hide_following_list\" bool DEFAULT false NOT NULL,\n  \"hide_profile_photos\" bool DEFAULT false NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"language\" text,\n  \"name\" text,\n  \"profilePhoto\" text,\n  \"profilePhotoBlurhash\" text,\n  \"profile_search_visible\" bool DEFAULT true NOT NULL,\n  \"sport\" text,\n  \"surname\" text,\n  \"updatedAt\" timestamptz(6),\n  \"user_id\" uuid NOT NULL,\n  \"weight\" text,\n  CONSTRAINT \"Profile_pkey\" PRIMARY KEY (\"id\")\n)",
         "params": []
       }
     ],
@@ -441,6 +480,45 @@
         "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
         "params": [
           "\"public\".\"Profile\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.Subscriptions",
+    "label": "Create table \"Subscriptions\"",
+    "summary": "Creates table \"Subscriptions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Subscriptions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Subscriptions\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Subscriptions\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Subscriptions\"",
+        "sql": "CREATE TABLE \"public\".\"Subscriptions\" (\n  \"cancel_at_period_end\" bool DEFAULT false NOT NULL,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"expires_at\" timestamptz(6),\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"product_id\" character varying(128),\n  \"provider\" character varying(32) DEFAULT 'manual' NOT NULL,\n  \"provider_subscription_id\" character varying(255),\n  \"starts_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"status\" character varying(24) DEFAULT 'active' NOT NULL,\n  \"updated_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"user_id\" uuid NOT NULL,\n  CONSTRAINT \"Subscriptions_pkey\" PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Subscriptions\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Subscriptions\""
         ]
       }
     ]
@@ -692,6 +770,48 @@
     ]
   },
   {
+    "id": "unique.EmailNotificationJob.EmailNotificationJob_notification_type_source_id_key",
+    "label": "Add unique constraint on \"EmailNotificationJob\" (notification_type, source_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "EmailNotificationJob_notification_type_source_id_key",
+        "table": "EmailNotificationJob"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"EmailNotificationJob_notification_type_source_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "EmailNotificationJob_notification_type_source_id_key",
+          "public",
+          "\"public\".\"EmailNotificationJob\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"EmailNotificationJob_notification_type_source_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"EmailNotificationJob\" ADD CONSTRAINT \"EmailNotificationJob_notification_type_source_id_key\" UNIQUE (\"notification_type\", \"source_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"EmailNotificationJob_notification_type_source_id_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "EmailNotificationJob_notification_type_source_id_key",
+          "public",
+          "\"public\".\"EmailNotificationJob\""
+        ]
+      }
+    ]
+  },
+  {
     "id": "unique.Friend.Friend_user_id_friendId_key",
     "label": "Add unique constraint on \"Friend\" (user_id, friendId)",
     "operationClass": "additive",
@@ -855,6 +975,48 @@
           "Profile_user_id_key",
           "public",
           "\"public\".\"Profile\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Subscriptions.Subscriptions_provider_provider_subscription_id_key",
+    "label": "Add unique constraint on \"Subscriptions\" (provider, provider_subscription_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Subscriptions_provider_provider_subscription_id_key",
+        "table": "Subscriptions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Subscriptions_provider_provider_subscription_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Subscriptions_provider_provider_subscription_id_key",
+          "public",
+          "\"public\".\"Subscriptions\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Subscriptions_provider_provider_subscription_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"Subscriptions\" ADD CONSTRAINT \"Subscriptions_provider_provider_subscription_id_key\" UNIQUE (\"provider\", \"provider_subscription_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Subscriptions_provider_provider_subscription_id_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Subscriptions_provider_provider_subscription_id_key",
+          "public",
+          "\"public\".\"Subscriptions\""
         ]
       }
     ]
@@ -1415,6 +1577,45 @@
     ]
   },
   {
+    "id": "index.EmailNotificationJob.EmailNotificationJob_status_available_at_created_at_idx",
+    "label": "Create index \"EmailNotificationJob_status_available_at_created_at_idx\" on \"EmailNotificationJob\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "EmailNotificationJob_status_available_at_created_at_idx",
+        "table": "EmailNotificationJob"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"EmailNotificationJob_status_available_at_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"EmailNotificationJob_status_available_at_created_at_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"EmailNotificationJob_status_available_at_created_at_idx\"",
+        "sql": "CREATE INDEX \"EmailNotificationJob_status_available_at_created_at_idx\" ON \"public\".\"EmailNotificationJob\" (\"status\", \"available_at\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"EmailNotificationJob_status_available_at_created_at_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"EmailNotificationJob_status_available_at_created_at_idx\""
+        ]
+      }
+    ]
+  },
+  {
     "id": "index.Friend.Friend_friendId_idx",
     "label": "Create index \"Friend_friendId_idx\" on \"Friend\"",
     "operationClass": "additive",
@@ -1722,6 +1923,45 @@
         "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
         "params": [
           "\"public\".\"Profile_surname_trgm_idx_ad71ab59\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Subscriptions.Subscriptions_user_id_status_expires_at_idx",
+    "label": "Create index \"Subscriptions_user_id_status_expires_at_idx\" on \"Subscriptions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Subscriptions_user_id_status_expires_at_idx",
+        "table": "Subscriptions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Subscriptions_user_id_status_expires_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Subscriptions_user_id_status_expires_at_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Subscriptions_user_id_status_expires_at_idx\"",
+        "sql": "CREATE INDEX \"Subscriptions_user_id_status_expires_at_idx\" ON \"public\".\"Subscriptions\" (\"user_id\", \"status\", \"expires_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Subscriptions_user_id_status_expires_at_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Subscriptions_user_id_status_expires_at_idx\""
         ]
       }
     ]
@@ -2469,6 +2709,48 @@
           "Profile_user_id_fkey",
           "public",
           "\"public\".\"Profile\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Subscriptions.Subscriptions_user_id_fkey",
+    "label": "Add foreign key \"Subscriptions_user_id_fkey\" on \"Subscriptions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Subscriptions_user_id_fkey",
+        "table": "Subscriptions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Subscriptions_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Subscriptions_user_id_fkey",
+          "public",
+          "\"public\".\"Subscriptions\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Subscriptions_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Subscriptions\"\nADD CONSTRAINT \"Subscriptions_user_id_fkey\"\nFOREIGN KEY (\"user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Subscriptions_user_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Subscriptions_user_id_fkey",
+          "public",
+          "\"public\".\"Subscriptions\""
         ]
       }
     ]

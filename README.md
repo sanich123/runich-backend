@@ -54,8 +54,9 @@ Start the background worker in a second terminal:
 `yarn dev` emits the Prisma 8 contract and synchronizes the database with the
 current contract before starting the development server. To update only the
 database, run `yarn db:sync`. Prisma 8 uses `prisma/contract.prisma` as the
-source of truth; the generated `contract.json` and `contract.d.ts` are runtime
-artifacts.
+source of truth; `contract.json` and `contract.d.ts` are generated runtime
+artifacts and are ignored by Git. Scripts that need them emit them with
+`yarn db:generate`.
 
 The API is available at http://localhost:3000; Swagger is at http://localhost:3000/api.
 Liveness is available at `/health/live`, and Railway readiness checks should use
@@ -221,9 +222,10 @@ tested as a separate workload.
 
 The `stage` branch deploys to the Timeweb server with a colocated PostgreSQL
 container. `.github/workflows/deploy-stage-timeweb.yml` builds an immutable
-image for the exact pushed commit, runs checked-in Prisma migrations, and
-recreates the API, worker, and Nginx services. The database and Let's Encrypt
-state live in persistent Docker volumes. Nginx serves
+image for the exact pushed commit, runs the checked-in Prisma migration, and
+checks API, worker and HTTPS readiness. It publishes the image for production
+only after those checks pass. The database and Let's Encrypt state live in
+persistent Docker volumes. Nginx serves
 `https://stage.runich-app.ru`; Certbot renews its certificate automatically.
 Incoming TCP ports 80 and 443 must be available on the server.
 
@@ -302,8 +304,10 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 ## Database and seed data
 
 The Prisma 8 contract is in `prisma/contract.prisma`. Schema changes are
-versioned under `migrations/`; the baseline records the current schema without
-being replayed on a database already signed at that contract. For a schema
+versioned under `migrations/`. The pre-release graph contains one initial
+migration, which creates the full schema in a clean database. Existing Stage
+and Production pre-release schemas must be reset once before applying it. After
+launch, add migrations without rewriting the applied history. For a schema
 change, emit the contract, plan and inspect a migration, then commit the
 contract and migration together. Production applies migrations once in the
 Timeweb deployment workflow. Keep `yarn db:sync` for local/bootstrap use only;

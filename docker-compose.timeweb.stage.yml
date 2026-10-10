@@ -47,8 +47,8 @@ services:
     restart: always
     init: true
     depends_on:
-      db:
-        condition: service_healthy
+      db_migrate:
+        condition: service_completed_successfully
     logging:
       driver: json-file
       options:
@@ -62,10 +62,12 @@ services:
       APP_ENV: stage
       RUNICH_PROCESS: api
       OBSERVE_SERVICE_VERSION: ${BACKEND_IMAGE}
-      LOG_FILE_PATH: /usr/src/app/logs.log
+      LOG_FILE_PATH: /app/logs.log
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to db}
+    volumes:
+      - ./logs.log:/app/logs.log
     healthcheck:
-      test: ['CMD-SHELL', 'curl --fail --silent --max-time 5 http://127.0.0.1:3000/health/live >/dev/null']
+      test: ['CMD-SHELL', 'curl --fail --silent --max-time 5 http://127.0.0.1:3000/health/ready >/dev/null']
       interval: 10s
       timeout: 6s
       retries: 12
@@ -76,14 +78,14 @@ services:
     restart: always
     init: true
     depends_on:
-      db:
-        condition: service_healthy
+      db_migrate:
+        condition: service_completed_successfully
     logging:
       driver: json-file
       options:
         max-size: 10m
         max-file: '3'
-    cpus: 0.5
+    cpus: 1.0
     env_file:
       - app.env
     command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'worker:prod']

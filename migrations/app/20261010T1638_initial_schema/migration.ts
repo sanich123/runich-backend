@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node
-import type { Contract as End } from '../../snapshots/b5752d38489d5a558f86b045cff04e4e3bbfece01e26caf130496c7aedce3a63/contract';
-import endContract from '../../snapshots/b5752d38489d5a558f86b045cff04e4e3bbfece01e26caf130496c7aedce3a63/contract.json' with { type: 'json' };
+import type { Contract as End } from '../../snapshots/3efb48b9264a2456ae47ae133573e8f8f132c2e9ec9de007412bf5cef2990a1c/contract';
+import endContract from '../../snapshots/3efb48b9264a2456ae47ae133573e8f8f132c2e9ec9de007412bf5cef2990a1c/contract.json' with { type: 'json' };
 import {
   Migration,
   MigrationCLI,
@@ -97,7 +97,7 @@ export default class M extends Migration<never, End> {
           primaryKey(['id'], { name: 'Activity_pkey' }),
           checkExpression(
             'Activity_visibility_check_3bfc61f5',
-            "\"visibility\" IN ('public', 'followers', 'private')",
+            `"visibility" IN ('public', 'followers', 'private')`,
           ),
         ],
       }),
@@ -270,6 +270,50 @@ export default class M extends Migration<never, End> {
       }),
       this.createTable({
         schema: 'public',
+        table: 'EmailNotificationJob',
+        columns: [
+          col('attempts', 'int4', {
+            notNull: true,
+            default: lit(0),
+            codecRef: { codecId: 'pg/int4@1' },
+          }),
+          col('available_at', 'timestamptz(6)', {
+            notNull: true,
+            default: fn('now()'),
+            codecRef: { codecId: 'pg/timestamptz-string@1', typeParams: { precision: 6 } },
+          }),
+          col('created_at', 'timestamptz(6)', {
+            notNull: true,
+            default: fn('now()'),
+            codecRef: { codecId: 'pg/timestamptz-string@1', typeParams: { precision: 6 } },
+          }),
+          col('error_message', 'text', { codecRef: { codecId: 'pg/text@1' } }),
+          col('finished_at', 'timestamptz(6)', {
+            codecRef: { codecId: 'pg/timestamptz-string@1', typeParams: { precision: 6 } },
+          }),
+          col('id', 'uuid', {
+            notNull: true,
+            default: fn('gen_random_uuid()'),
+            codecRef: { codecId: 'pg/uuid@1' },
+          }),
+          col('notification_type', 'character varying(24)', {
+            notNull: true,
+            codecRef: { codecId: 'sql/varchar@1', typeParams: { length: 24 } },
+          }),
+          col('source_id', 'uuid', { notNull: true, codecRef: { codecId: 'pg/uuid@1' } }),
+          col('started_at', 'timestamptz(6)', {
+            codecRef: { codecId: 'pg/timestamptz-string@1', typeParams: { precision: 6 } },
+          }),
+          col('status', 'character varying(16)', {
+            notNull: true,
+            default: lit('queued'),
+            codecRef: { codecId: 'sql/varchar@1', typeParams: { length: 16 } },
+          }),
+        ],
+        constraints: [primaryKey(['id'])],
+      }),
+      this.createTable({
+        schema: 'public',
         table: 'Friend',
         columns: [
           col('createdAt', 'timestamptz(6)', {
@@ -422,6 +466,26 @@ export default class M extends Migration<never, End> {
         table: 'Profile',
         columns: [
           col('age', 'text', { codecRef: { codecId: 'pg/text@1' } }),
+          col('allow_activity_interactions', 'bool', {
+            notNull: true,
+            default: lit(true),
+            codecRef: { codecId: 'pg/bool@1' },
+          }),
+          col('allow_activity_replay_viewing', 'bool', {
+            notNull: true,
+            default: lit(true),
+            codecRef: { codecId: 'pg/bool@1' },
+          }),
+          col('allow_activity_sharing', 'bool', {
+            notNull: true,
+            default: lit(true),
+            codecRef: { codecId: 'pg/bool@1' },
+          }),
+          col('allow_new_followers', 'bool', {
+            notNull: true,
+            default: lit(true),
+            codecRef: { codecId: 'pg/bool@1' },
+          }),
           col('bio', 'text', { codecRef: { codecId: 'pg/text@1' } }),
           col('birthday', 'date', { codecRef: { codecId: 'pg/date-string@1' } }),
           col('city', 'text', { codecRef: { codecId: 'pg/text@1' } }),
@@ -437,6 +501,21 @@ export default class M extends Migration<never, End> {
           }),
           col('gender', 'text', { codecRef: { codecId: 'pg/text@1' } }),
           col('height', 'text', { codecRef: { codecId: 'pg/text@1' } }),
+          col('hide_activity_statistics', 'bool', {
+            notNull: true,
+            default: lit(false),
+            codecRef: { codecId: 'pg/bool@1' },
+          }),
+          col('hide_following_list', 'bool', {
+            notNull: true,
+            default: lit(false),
+            codecRef: { codecId: 'pg/bool@1' },
+          }),
+          col('hide_profile_photos', 'bool', {
+            notNull: true,
+            default: lit(false),
+            codecRef: { codecId: 'pg/bool@1' },
+          }),
           col('id', 'uuid', {
             notNull: true,
             default: fn('gen_random_uuid()'),
@@ -446,6 +525,11 @@ export default class M extends Migration<never, End> {
           col('name', 'text', { codecRef: { codecId: 'pg/text@1' } }),
           col('profilePhoto', 'text', { codecRef: { codecId: 'pg/text@1' } }),
           col('profilePhotoBlurhash', 'text', { codecRef: { codecId: 'pg/text@1' } }),
+          col('profile_search_visible', 'bool', {
+            notNull: true,
+            default: lit(true),
+            codecRef: { codecId: 'pg/bool@1' },
+          }),
           col('sport', 'text', { codecRef: { codecId: 'pg/text@1' } }),
           col('surname', 'text', { codecRef: { codecId: 'pg/text@1' } }),
           col('updatedAt', 'timestamptz(6)', {
@@ -455,6 +539,58 @@ export default class M extends Migration<never, End> {
           col('weight', 'text', { codecRef: { codecId: 'pg/text@1' } }),
         ],
         constraints: [primaryKey(['id'], { name: 'Profile_pkey' })],
+      }),
+      this.createTable({
+        schema: 'public',
+        table: 'Subscriptions',
+        columns: [
+          col('cancel_at_period_end', 'bool', {
+            notNull: true,
+            default: lit(false),
+            codecRef: { codecId: 'pg/bool@1' },
+          }),
+          col('created_at', 'timestamptz(6)', {
+            notNull: true,
+            default: fn('now()'),
+            codecRef: { codecId: 'pg/timestamptz-string@1', typeParams: { precision: 6 } },
+          }),
+          col('expires_at', 'timestamptz(6)', {
+            codecRef: { codecId: 'pg/timestamptz-string@1', typeParams: { precision: 6 } },
+          }),
+          col('id', 'uuid', {
+            notNull: true,
+            default: fn('gen_random_uuid()'),
+            codecRef: { codecId: 'pg/uuid@1' },
+          }),
+          col('product_id', 'character varying(128)', {
+            codecRef: { codecId: 'sql/varchar@1', typeParams: { length: 128 } },
+          }),
+          col('provider', 'character varying(32)', {
+            notNull: true,
+            default: lit('manual'),
+            codecRef: { codecId: 'sql/varchar@1', typeParams: { length: 32 } },
+          }),
+          col('provider_subscription_id', 'character varying(255)', {
+            codecRef: { codecId: 'sql/varchar@1', typeParams: { length: 255 } },
+          }),
+          col('starts_at', 'timestamptz(6)', {
+            notNull: true,
+            default: fn('now()'),
+            codecRef: { codecId: 'pg/timestamptz-string@1', typeParams: { precision: 6 } },
+          }),
+          col('status', 'character varying(24)', {
+            notNull: true,
+            default: lit('active'),
+            codecRef: { codecId: 'sql/varchar@1', typeParams: { length: 24 } },
+          }),
+          col('updated_at', 'timestamptz(6)', {
+            notNull: true,
+            default: fn('now()'),
+            codecRef: { codecId: 'pg/timestamptz-string@1', typeParams: { precision: 6 } },
+          }),
+          col('user_id', 'uuid', { notNull: true, codecRef: { codecId: 'pg/uuid@1' } }),
+        ],
+        constraints: [primaryKey(['id'], { name: 'Subscriptions_pkey' })],
       }),
       this.createTable({
         schema: 'public',
@@ -655,6 +791,12 @@ export default class M extends Migration<never, End> {
       }),
       this.addUnique({
         schema: 'public',
+        table: 'EmailNotificationJob',
+        constraint: 'EmailNotificationJob_notification_type_source_id_key',
+        columns: ['notification_type', 'source_id'],
+      }),
+      this.addUnique({
+        schema: 'public',
         table: 'Friend',
         constraint: 'Friend_user_id_friendId_key',
         columns: ['user_id', 'friendId'],
@@ -676,6 +818,12 @@ export default class M extends Migration<never, End> {
         table: 'Profile',
         constraint: 'Profile_user_id_key',
         columns: ['user_id'],
+      }),
+      this.addUnique({
+        schema: 'public',
+        table: 'Subscriptions',
+        constraint: 'Subscriptions_provider_provider_subscription_id_key',
+        columns: ['provider', 'provider_subscription_id'],
       }),
       this.addUnique({
         schema: 'public',
@@ -763,6 +911,12 @@ export default class M extends Migration<never, End> {
       }),
       this.createIndex({
         schema: 'public',
+        table: 'EmailNotificationJob',
+        index: 'EmailNotificationJob_status_available_at_created_at_idx',
+        columns: ['status', 'available_at', 'created_at'],
+      }),
+      this.createIndex({
+        schema: 'public',
         table: 'Friend',
         index: 'Friend_friendId_idx',
         columns: ['friendId'],
@@ -811,6 +965,12 @@ export default class M extends Migration<never, End> {
         index: 'Profile_surname_trgm_idx_ad71ab59',
         expression: 'surname gin_trgm_ops',
         extras: { type: 'gin' },
+      }),
+      this.createIndex({
+        schema: 'public',
+        table: 'Subscriptions',
+        index: 'Subscriptions_user_id_status_expires_at_idx',
+        columns: ['user_id', 'status', 'expires_at'],
       }),
       this.createIndex({
         schema: 'public',
@@ -976,6 +1136,16 @@ export default class M extends Migration<never, End> {
         table: 'Profile',
         foreignKey: {
           name: 'Profile_user_id_fkey',
+          columns: ['user_id'],
+          references: { schema: 'public', table: 'Users', columns: ['id'] },
+          onDelete: 'cascade',
+        },
+      }),
+      this.addForeignKey({
+        schema: 'public',
+        table: 'Subscriptions',
+        foreignKey: {
+          name: 'Subscriptions_user_id_fkey',
           columns: ['user_id'],
           references: { schema: 'public', table: 'Users', columns: ['id'] },
           onDelete: 'cascade',
