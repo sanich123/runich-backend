@@ -99,6 +99,12 @@ jobs:
 
           "${COMPOSE[@]}" pull db nginx certbot certbot_renew
           "${COMPOSE[@]}" up -d --wait db
+          # Prisma 8 changed the storage representation of the same schema.
+          # Repair a legacy stage marker only after db sign confirms that the
+          # live schema already matches the current contract; real schema drift
+          # still fails here and must go through the migration graph.
+          "${COMPOSE[@]}" run --rm --no-TTY --interactive=false db_migrate \
+            sh -lc 'yarn prisma db sign --db "$DATABASE_URL" --no-advance-ref' </dev/null
           "${COMPOSE[@]}" run --rm --no-TTY --interactive=false db_migrate </dev/null
           "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nestjs_app background_worker
 
