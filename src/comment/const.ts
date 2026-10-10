@@ -9,6 +9,4 @@ export const COMMENT_PROFILE_SELECT = {
   name: true,
   profilePhoto: true,
   profilePhotoBlurhash: true,
-  emailNotifications: true,
-  user: { select: { email: true } },
 } as const;

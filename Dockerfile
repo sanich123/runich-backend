@@ -74,6 +74,7 @@ COPY --from=builder /usr/src/app/prisma ./prisma
 COPY --from=builder /usr/src/app/migrations ./migrations
 COPY --from=builder /usr/src/app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /usr/src/app/assets ./assets
+COPY --from=builder /usr/src/app/scripts/send-deployment-success-email.mjs ./scripts/send-deployment-success-email.mjs
 
 EXPOSE 3000
 

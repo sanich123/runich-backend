@@ -26,11 +26,11 @@ export function getMapBoxImage(locations: LocationObject[]) {
     const lineWidth = STATIC_MAP_ROUTE_WIDTH;
     const routeOverlay =
       routeLocations.length > 1
-        ? `path-${lineWidth}+F66767-${lineOpacity}(${encodeURIComponent(encodedPolyline)})`
+        ? `path-${lineWidth}+EA5B22-${lineOpacity}(${encodeURIComponent(encodedPolyline)})`
         : '';
     const overlays = routeOverlay ? `${routeOverlay}/` : '';
 
-    return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${overlays}auto/${STATIC_MAP_IMAGE_WIDTH}x${STATIC_MAP_IMAGE_HEIGHT}?access_token=${accessToken}`;
+    return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${overlays}auto/${STATIC_MAP_IMAGE_WIDTH}x${STATIC_MAP_IMAGE_HEIGHT}?access_token=${accessToken}`;
   };
 
   let reducedLocations = simplifyStaticMapLocations(validLocations);

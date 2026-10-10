@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ActivityDto, type ActivityMediaObject, type LocationObject } from './activity.dto';
+import { ActivityDto, type ActivityMediaObject, type LocationObject, type WatchWorkoutImportDto } from './activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
@@ -105,10 +105,28 @@ export class ActivityService {
       select: { userId: true, visibility: true },
     });
 
-    if (!activity) return false;
+    return this.canAccessActivityData(activity, currentUserId);
+  }
+
+  async canAccessActivityData(activity: { userId: string; visibility: string } | null, currentUserId?: string) {
+    if (!activity || !currentUserId) return false;
     if (activity.userId === currentUserId || activity.visibility === ACTIVITY_VISIBILITY.public) return true;
     if (activity.visibility !== ACTIVITY_VISIBILITY.followers) return false;
     return this.isFollower(currentUserId, activity.userId);
+  }
+
+  async canInteractWithActivity(id: string, currentUserId: string) {
+    const activity = await this.prisma.activity.findUnique({
+      where: { id },
+      select: {
+        userId: true,
+        profile: { select: { allowActivityInteractions: true } },
+      },
+    });
+
+    return Boolean(
+      activity && (activity.userId === currentUserId || activity.profile?.allowActivityInteractions !== false),
+    );
   }
 
   async createActivity(activityDto: ActivityDto, id: string) {
@@ -117,6 +135,19 @@ export class ActivityService {
     let uploadedActivityMediaKeys: string[] = [];
     const mediaCreatedAt = new Date();
     try {
+      if (activityDto.source && activityDto.sourceActivityId) {
+        const existingActivity = await this.prisma.activity.findUnique({
+          where: {
+            userId_source_sourceActivityId: {
+              userId: id,
+              source: activityDto.source,
+              sourceActivityId: activityDto.sourceActivityId,
+            },
+          },
+        });
+        if (existingActivity) return omitMediaProcessingStatus(existingActivity);
+      }
+
       const account = await this.accountService.getAccountByUserId(id);
       const locations = activityDto.locations;
       const storageService = this.storageService;
@@ -202,6 +233,45 @@ export class ActivityService {
       await Promise.all(uploadedActivityMediaKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);
     }
+  }
+
+  async importWatchWorkouts(workouts: WatchWorkoutImportDto[], userId: string) {
+    const uniqueWorkouts = workouts.filter((workout, index, all) => {
+      return (
+        all.findIndex(
+          (candidate) => candidate.source === workout.source && candidate.sourceActivityId === workout.sourceActivityId,
+        ) === index
+      );
+    });
+
+    const existingActivities = uniqueWorkouts.length
+      ? await this.prisma.activity.findMany({
+          where: {
+            userId,
+            OR: uniqueWorkouts.map(({ source, sourceActivityId }) => ({ source, sourceActivityId })),
+          },
+          select: { source: true, sourceActivityId: true },
+        })
+      : [];
+    const existingKeys = new Set(
+      existingActivities.map(
+        ({ source, sourceActivityId }: { source: string | null; sourceActivityId: string | null }) =>
+          `${source}\u0000${sourceActivityId}`,
+      ),
+    );
+    const activities: unknown[] = [];
+
+    for (const workout of uniqueWorkouts) {
+      const key = `${workout.source}\u0000${workout.sourceActivityId}`;
+      if (existingKeys.has(key)) continue;
+      activities.push(await this.createActivity(workout, userId));
+    }
+
+    return {
+      imported: activities.length,
+      skipped: workouts.length - activities.length,
+      activities,
+    };
   }
 
   async createActivitiesFromMigrationArchive(
@@ -418,6 +488,40 @@ export class ActivityService {
     }
   }
 
+  async deleteActivityMedia(activityId: string, mediaId: string, userId: string) {
+    try {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: activityId },
+        select: { userId: true },
+      });
+      if (!activity) throw new NotFoundException('Активность не найдена');
+      if (activity.userId !== userId) throw new ForbiddenException('Недостаточно прав');
+      if (!this.mediaCleanupService || !this.storageService) {
+        throw new ServiceUnavailableException('Сервис удаления медиа не настроен');
+      }
+
+      await this.prisma.$transaction(async (transaction) => {
+        const media = await transaction.activityMedia.findFirst({
+          where: { id: mediaId, activityId, userId },
+          select: { url: true, thumbnail: true },
+        });
+        if (!media) throw new NotFoundException('Медиа активности не найдено');
+
+        const storageKeys = this.getMediaStorageKeys(userId, media);
+        await Promise.all(
+          storageKeys.map((storageKey) =>
+            this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey, transaction as never),
+          ),
+        );
+        await transaction.activityMedia.delete({ where: { id: mediaId } });
+      });
+
+      return { success: true };
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }
+
   async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
       const { date, description, emotion, visibility, sport, title, distance, duration, speed } = activityDto;
@@ -462,6 +566,7 @@ export class ActivityService {
         kilometresSplit: true,
         userId: true,
         visibility: true,
+        profile: { select: { allowActivityReplayViewing: true } },
       },
     });
     if (!activity || !currentUserId) return null;
@@ -475,6 +580,7 @@ export class ActivityService {
       activity.visibility === ACTIVITY_VISIBILITY.followers &&
       (isOwner || (await this.isFollower(currentUserId, activity.userId)));
     if (!isOwner && !isPublic && !isFollowerActivity) return null;
+    if (!isOwner && activity.profile?.allowActivityReplayViewing === false) return null;
     let locations: LocationObject[] | undefined;
     if (activity.routeStorageKey) {
       if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');
@@ -492,7 +598,7 @@ export class ActivityService {
         where: { id },
         select: ACTIVITY_DETAILS_SELECT,
       });
-      if (!activity || !currentUserId || !(await this.canAccessActivity(id, currentUserId))) return null;
+      if (!activity || !(await this.canAccessActivityData(activity, currentUserId))) return null;
       return activity ? normalizeActivityDetails(activity as Record<string, unknown>) : activity;
     } catch (error) {
       handleServiceError(error);
@@ -502,6 +608,15 @@ export class ActivityService {
   async getMediaByUserId(id: string, take = '10', cursor?: ActivityMediaCursor, currentUserId?: string) {
     try {
       const pageSize = Number(take);
+      if (currentUserId && currentUserId !== id) {
+        const profile = await this.prisma.profile.findUnique({
+          where: { userId: id },
+          select: { hideProfilePhotos: true },
+        });
+        if (profile?.hideProfilePhotos) {
+          return { media: [], hasMore: false, nextCursor: null, isLastPage: true };
+        }
+      }
       const visibilityFilter = await this.getVisibilityFilter(id, currentUserId);
       const media = await this.prisma.activityMedia.findMany({
         where: {
@@ -523,6 +638,7 @@ export class ActivityService {
           activityDate: true,
           activityId: true,
           position: true,
+          id: true,
           url: true,
           thumbnail: true,
           blurhash: true,
@@ -530,6 +646,7 @@ export class ActivityService {
       });
       const hasMore = media.length > pageSize;
       const slicedMedia = media.slice(0, pageSize) as Array<{
+        id: string;
         activityDate: Date;
         activityId: string;
         position: number;
@@ -539,7 +656,13 @@ export class ActivityService {
       }>;
       const lastMedia = slicedMedia.at(-1);
       return {
-        media: slicedMedia.map(({ url, thumbnail, blurhash }) => ({ url, thumbnail, blurhash })),
+        media: slicedMedia.map(({ id, activityId, url, thumbnail, blurhash }) => ({
+          id,
+          activityId,
+          url,
+          thumbnail,
+          blurhash,
+        })),
         hasMore,
         nextCursor:
           hasMore && lastMedia
@@ -645,7 +768,12 @@ export class ActivityService {
           COALESCE(
             (
               SELECT json_agg(
-                json_build_object('url', am."url", 'thumbnail', am."thumbnail", 'blurhash', am."blurhash")
+                json_build_object(
+                  'id', am."id",
+                  'url', am."url",
+                  'thumbnail', am."thumbnail",
+                  'blurhash', am."blurhash"
+                )
                 ORDER BY am."position" ASC
               )
               FROM "ActivityMedia" AS am
@@ -666,12 +794,14 @@ export class ActivityService {
           a."elevationGain",
           a."kilometresSplit",
           json_build_object(
+            'userId', p."user_id",
             'surname', p."surname",
             'name', p."name",
             'profilePhoto', p."profilePhoto",
             'profilePhotoBlurhash', p."profilePhotoBlurhash",
-            'emailNotifications', p."emailNotifications",
-            'user', json_build_object('email', u."email")
+            'allowActivityInteractions', p."allow_activity_interactions",
+            'allowActivityReplayViewing', p."allow_activity_replay_viewing",
+            'allowActivitySharing', p."allow_activity_sharing"
           ) AS "profile",
           json_build_object(
             'comments', (
@@ -687,7 +817,6 @@ export class ActivityService {
           ) AS "_count"
         FROM "Activity" AS a
         INNER JOIN "Profile" AS p ON p."id" = a."profileId"
-        INNER JOIN "Users" AS u ON u."id" = a."user_id"
         WHERE a."visibility" IN ('public', 'followers')
           AND (
             a."user_id" = ${currentUserId}::uuid
@@ -722,11 +851,11 @@ export class ActivityService {
         ...(currentUserProfile
           ? {
               currentUserProfile: {
+                userId: currentUserProfile.userId,
                 surname: currentUserProfile.surname,
                 name: currentUserProfile.name,
                 profilePhoto: currentUserProfile.profilePhoto,
                 profilePhotoBlurhash: currentUserProfile.profilePhotoBlurhash,
-                emailNotifications: currentUserProfile.emailNotifications,
               },
             }
           : {}),
@@ -850,14 +979,22 @@ export class ActivityService {
       }
     }
 
-    if (!this.storageService || !Array.isArray(activity?.media)) return [...keys];
-    for (const media of activity.media) {
-      for (const url of this.getMediaUrls(media)) {
-        try {
-          keys.add(this.storageService.getOwnedKey(userId, url));
-        } catch {
-          this.logger.warn(`Пропускаю внешний или некорректный медиа-файл активности: ${url}`);
-        }
+    if (Array.isArray(activity?.media)) {
+      for (const media of activity.media) {
+        for (const key of this.getMediaStorageKeys(userId, media)) keys.add(key);
+      }
+    }
+    return [...keys];
+  }
+
+  private getMediaStorageKeys(userId: string, media: unknown) {
+    if (!this.storageService) return [];
+    const keys = new Set<string>();
+    for (const url of this.getMediaUrls(media)) {
+      try {
+        keys.add(this.storageService.getOwnedKey(userId, url));
+      } catch {
+        this.logger.warn(`Пропускаю внешний или некорректный медиа-файл активности: ${url}`);
       }
     }
     return [...keys];
@@ -901,33 +1038,5 @@ export class ActivityService {
         },
       ];
     });
-  }
-
-  async getActivityWithEmailData(activityId: string) {
-    try {
-      const activity = await this.prisma.activity.findUnique({
-        where: { id: activityId },
-        select: {
-          user: {
-            select: {
-              email: true,
-            },
-          },
-          profile: {
-            select: {
-              id: true,
-              profilePhoto: true,
-              name: true,
-              surname: true,
-              emailNotifications: true,
-            },
-          },
-          mapPhotoUrl: true,
-        },
-      });
-      return { profile: activity?.profile, email: activity?.user.email, mapPhotoUrl: activity?.mapPhotoUrl };
-    } catch (error) {
-      handleServiceError(error);
-    }
   }
 }

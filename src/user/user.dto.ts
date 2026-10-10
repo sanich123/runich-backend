@@ -77,6 +77,48 @@ export class UserDto {
   @IsOptional()
   emailNotifications?: boolean | null;
 
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow this profile to appear in user search' })
+  @IsBoolean()
+  @IsOptional()
+  profileSearchVisible?: boolean;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Allow likes, comments, and viewing the list of likes on this user activities',
+  })
+  @IsBoolean()
+  @IsOptional()
+  allowActivityInteractions?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view activity route replays' })
+  @IsBoolean()
+  @IsOptional()
+  allowActivityReplayViewing?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to share this profile activities' })
+  @IsBoolean()
+  @IsOptional()
+  allowActivitySharing?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide the profile total activity statistics' })
+  @IsBoolean()
+  @IsOptional()
+  hideActivityStatistics?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide the list of users followed by this profile' })
+  @IsBoolean()
+  @IsOptional()
+  hideFollowingList?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide activity media from the profile photo gallery' })
+  @IsBoolean()
+  @IsOptional()
+  hideProfilePhotos?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to follow this profile' })
+  @IsBoolean()
+  @IsOptional()
+  allowNewFollowers?: boolean;
+
   @ApiPropertyOptional({ type: String, description: "User's email" })
   @IsEmail()
   @IsOptional()

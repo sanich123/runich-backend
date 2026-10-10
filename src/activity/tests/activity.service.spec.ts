@@ -503,6 +503,34 @@ describe('ActivityService', () => {
     });
   });
 
+  it('imports watch workouts once per source identity', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new ActivityService(prisma as never, account as never);
+    prisma.activity.findMany.mockResolvedValue([{ source: 'health-connect', sourceActivityId: 'existing' }]);
+    prisma.activity.create.mockResolvedValue({ id: 'activity-new', mediaProcessingStatus: 'queued' });
+
+    const existingWorkout = {
+      ...activityDto,
+      source: 'health-connect' as const,
+      sourceActivityId: 'existing',
+      locations: [],
+    };
+    const newWorkout = {
+      ...activityDto,
+      source: 'health-connect' as const,
+      sourceActivityId: 'new',
+      locations: [],
+    };
+
+    await expect(service.importWatchWorkouts([existingWorkout, newWorkout, newWorkout], 'user-1')).resolves.toEqual({
+      imported: 1,
+      skipped: 2,
+      activities: [{ id: 'activity-new' }],
+    });
+    expect(prisma.activity.create).toHaveBeenCalledTimes(1);
+  });
+
   it('uses Strava elevation gain from the migration CSV for imported routes', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
@@ -617,6 +645,7 @@ describe('ActivityService', () => {
     prisma.activityMedia.findMany.mockResolvedValue([
       {
         activityDate: new Date('2026-08-12T23:15:00.000Z'),
+        id: 'media-1',
         activityId: 'activity-1',
         position: 0,
         url: 'photo',
@@ -632,7 +661,7 @@ describe('ActivityService', () => {
     await expect(service.getLocationsByActivityId('activity-1')).resolves.toBeNull();
     await expect(service.getActivityByActivityId('activity-1')).resolves.toBeNull();
     await expect(service.getMediaByUserId('user-1', '1')).resolves.toEqual({
-      media: [{ url: 'photo', thumbnail: null, blurhash: null }],
+      media: [{ id: 'media-1', activityId: 'activity-1', url: 'photo', thumbnail: null, blurhash: null }],
       hasMore: false,
       nextCursor: null,
       isLastPage: true,
@@ -797,18 +826,6 @@ describe('ActivityService', () => {
     expect(detailQuery.select).toEqual(expect.objectContaining({ description: true, kilometresSplit: true }));
   });
 
-  it('returns email data even when the activity does not exist', async () => {
-    const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
-    prisma.activity.findUnique.mockResolvedValue(null);
-
-    await expect(service.getActivityWithEmailData('missing')).resolves.toEqual({
-      profile: undefined,
-      email: undefined,
-      mapPhotoUrl: undefined,
-    });
-  });
-
   it('converts database failures from every caught method to an internal server error', async () => {
     const prisma = createPrismaMock();
     const error = new Error('database unavailable');
@@ -827,7 +844,6 @@ describe('ActivityService', () => {
     await expectInternalServerError(service.updateActivity(activityDto, 'a1'));
     prisma.activity.findUnique.mockRejectedValue(error);
     await expectInternalServerError(service.getActivityByActivityId('a1'));
-    await expectInternalServerError(service.getActivityWithEmailData('a1'));
     prisma.activity.findMany.mockRejectedValue(error);
     await expectInternalServerError(service.getMediaByUserId('u1', '10'));
     await expectInternalServerError(service.getActivitesByUserId('u1'));

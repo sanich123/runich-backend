@@ -9,4 +9,5 @@ export const FRIEND_PROFILE_SELECT = {
   name: true,
   profilePhoto: true,
   profilePhotoBlurhash: true,
+  allowNewFollowers: true,
 } as const;

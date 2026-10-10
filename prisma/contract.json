@@ -28,6 +28,10 @@
       "model": "CommentLike",
       "namespace": "public"
     },
+    "EmailNotificationJob": {
+      "model": "EmailNotificationJob",
+      "namespace": "public"
+    },
     "Friend": {
       "model": "Friend",
       "namespace": "public"
@@ -1227,6 +1231,135 @@
               "table": "CommentLike"
             }
           },
+          "EmailNotificationJob": {
+            "fields": {
+              "attempts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "availableAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "errorMessage": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "finishedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "notificationType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 24
+                  }
+                }
+              },
+              "sourceId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "startedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "attempts": {
+                  "column": "attempts"
+                },
+                "availableAt": {
+                  "column": "available_at"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "errorMessage": {
+                  "column": "error_message"
+                },
+                "finishedAt": {
+                  "column": "finished_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "notificationType": {
+                  "column": "notification_type"
+                },
+                "sourceId": {
+                  "column": "source_id"
+                },
+                "startedAt": {
+                  "column": "started_at"
+                },
+                "status": {
+                  "column": "status"
+                }
+              },
+              "namespaceId": "public",
+              "table": "EmailNotificationJob"
+            }
+          },
           "Friend": {
             "fields": {
               "createdAt": {
@@ -1748,6 +1881,34 @@
                   "kind": "scalar"
                 }
               },
+              "allowActivityInteractions": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "allowActivityReplayViewing": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "allowActivitySharing": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "allowNewFollowers": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "bio": {
                 "nullable": true,
                 "type": {
@@ -1807,6 +1968,27 @@
                   "kind": "scalar"
                 }
               },
+              "hideActivityStatistics": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "hideFollowingList": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "hideProfilePhotos": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "id": {
                 "nullable": false,
                 "type": {
@@ -1839,6 +2021,13 @@
                 "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "profileSearchVisible": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
                   "kind": "scalar"
                 }
               },
@@ -1994,6 +2183,18 @@
                 "age": {
                   "column": "age"
                 },
+                "allowActivityInteractions": {
+                  "column": "allow_activity_interactions"
+                },
+                "allowActivityReplayViewing": {
+                  "column": "allow_activity_replay_viewing"
+                },
+                "allowActivitySharing": {
+                  "column": "allow_activity_sharing"
+                },
+                "allowNewFollowers": {
+                  "column": "allow_new_followers"
+                },
                 "bio": {
                   "column": "bio"
                 },
@@ -2018,6 +2219,15 @@
                 "height": {
                   "column": "height"
                 },
+                "hideActivityStatistics": {
+                  "column": "hide_activity_statistics"
+                },
+                "hideFollowingList": {
+                  "column": "hide_following_list"
+                },
+                "hideProfilePhotos": {
+                  "column": "hide_profile_photos"
+                },
                 "id": {
                   "column": "id"
                 },
@@ -2032,6 +2242,9 @@
                 },
                 "profilePhotoBlurhash": {
                   "column": "profilePhotoBlurhash"
+                },
+                "profileSearchVisible": {
+                  "column": "profile_search_visible"
                 },
                 "sport": {
                   "column": "sport"
@@ -3047,16 +3260,16 @@
               "columns": {
                 "calories_active": {
                   "codecId": "pg/int4@1",
-                  "nativeType": "int4",
+                  "dataType": "pg/int4",
                   "nullable": true
                 },
                 "createdAt": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3064,11 +3277,11 @@
                 },
                 "date": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3076,50 +3289,50 @@
                 },
                 "description": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "distance": {
                   "codecId": "pg/float8@1",
-                  "nativeType": "float8",
+                  "dataType": "pg/float8",
                   "nullable": false
                 },
                 "duration": {
                   "codecId": "pg/int4@1",
-                  "nativeType": "int4",
+                  "dataType": "pg/int4",
                   "nullable": false
                 },
                 "elevationGain": {
                   "codecId": "pg/float8@1",
-                  "nativeType": "float8",
+                  "dataType": "pg/float8",
                   "nullable": true
                 },
                 "emotion": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "kilometresSplit": {
                   "codecId": "pg/jsonb@1",
-                  "nativeType": "jsonb",
+                  "dataType": "pg/jsonb",
                   "nullable": true
                 },
                 "location_enrichment_status": {
                   "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
                   "default": {
                     "kind": "literal",
                     "value": "queued"
                   },
-                  "nativeType": "character varying",
                   "nullable": false,
                   "typeParams": {
                     "length": 16
@@ -3127,26 +3340,26 @@
                 },
                 "location_name": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "mapPhotoUrl": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "mapPhotoUrlBlurhash": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "media_processing_status": {
                   "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
                   "default": {
                     "kind": "literal",
                     "value": "queued"
                   },
-                  "nativeType": "character varying",
                   "nullable": false,
                   "typeParams": {
                     "length": 16
@@ -3154,12 +3367,12 @@
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "route_checksum": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 64
@@ -3167,22 +3380,22 @@
                 },
                 "route_format_version": {
                   "codecId": "pg/int4@1",
-                  "nativeType": "int4",
+                  "dataType": "pg/int4",
                   "nullable": true
                 },
                 "route_point_count": {
                   "codecId": "pg/int4@1",
-                  "nativeType": "int4",
+                  "dataType": "pg/int4",
                   "nullable": true
                 },
                 "route_size_bytes": {
                   "codecId": "pg/int4@1",
-                  "nativeType": "int4",
+                  "dataType": "pg/int4",
                   "nullable": true
                 },
                 "route_storage_key": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 512
@@ -3190,7 +3403,7 @@
                 },
                 "source": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 32
@@ -3198,7 +3411,7 @@
                 },
                 "sourceActivityId": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 128
@@ -3206,22 +3419,22 @@
                 },
                 "speed": {
                   "codecId": "pg/float8@1",
-                  "nativeType": "float8",
+                  "dataType": "pg/float8",
                   "nullable": false
                 },
                 "sport": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": false
                 },
                 "steps": {
                   "codecId": "pg/int4@1",
-                  "nativeType": "int4",
+                  "dataType": "pg/int4",
                   "nullable": true
                 },
                 "time_zone": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 64
@@ -3229,12 +3442,12 @@
                 },
                 "title": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3242,16 +3455,16 @@
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "visibility": {
                   "codecId": "pg/text@1",
+                  "dataType": "pg/text",
                   "default": {
                     "kind": "literal",
                     "value": "public"
                   },
-                  "nativeType": "text",
                   "nullable": false,
                   "valueSet": {
                     "entityKind": "valueSet",
@@ -3262,17 +3475,17 @@
                 },
                 "weather_code": {
                   "codecId": "pg/int4@1",
-                  "nativeType": "int4",
+                  "dataType": "pg/int4",
                   "nullable": true
                 },
                 "weather_temperature": {
                   "codecId": "pg/float8@1",
-                  "nativeType": "float8",
+                  "dataType": "pg/float8",
                   "nullable": true
                 },
                 "weather_wind_speed": {
                   "codecId": "pg/float8@1",
-                  "nativeType": "float8",
+                  "dataType": "pg/float8",
                   "nullable": true
                 }
               },
@@ -3365,7 +3578,7 @@
               "columns": {
                 "activity_date": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3373,21 +3586,21 @@
                 },
                 "activity_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "blurhash": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "created_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3395,31 +3608,31 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "position": {
                   "codecId": "pg/int4@1",
-                  "nativeType": "int4",
+                  "dataType": "pg/int4",
                   "nullable": false
                 },
                 "thumbnail": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "url": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": false
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
@@ -3482,7 +3695,7 @@
               "columns": {
                 "archivePath": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 2048
@@ -3490,11 +3703,11 @@
                 },
                 "createdAt": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3502,12 +3715,12 @@
                 },
                 "errorMessage": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "finishedAt": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -3515,48 +3728,48 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "importedActivities": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "processedActivities": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "skippedActivities": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "startedAt": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -3564,7 +3777,7 @@
                 },
                 "status": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 32
@@ -3572,34 +3785,34 @@
                 },
                 "totalActivities": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "upload_bytes_received": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "upload_bytes_total": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "upload_updated_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -3607,7 +3820,7 @@
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
@@ -3679,7 +3892,7 @@
               "columns": {
                 "code_hash": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 128
@@ -3687,7 +3900,7 @@
                 },
                 "consumed_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -3695,11 +3908,11 @@
                 },
                 "created_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3707,7 +3920,7 @@
                 },
                 "expires_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3715,16 +3928,16 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "purpose": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 32
@@ -3732,7 +3945,7 @@
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
@@ -3792,26 +4005,26 @@
               "columns": {
                 "activityId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "authorId": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": false
                 },
                 "comment": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": false
                 },
                 "date": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3819,16 +4032,16 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
@@ -3893,21 +4106,21 @@
               "columns": {
                 "authorId": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": false
                 },
                 "commentId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "date": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -3915,21 +4128,24 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
               "foreignKeys": [
                 {
+                  "index": {
+                    "name": "CommentLike_commentId_idx"
+                  },
                   "name": "CommentLike_commentId_fkey",
                   "onDelete": "cascade",
                   "source": {
@@ -3991,15 +4207,133 @@
                 }
               ]
             },
-            "Friend": {
+            "EmailNotificationJob": {
               "columns": {
-                "createdAt": {
+                "attempts": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "available_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "error_message": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "finished_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "notification_type": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 24
+                  }
+                },
+                "source_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "started_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "status": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "default": {
+                    "kind": "literal",
+                    "value": "queued"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "status",
+                    "available_at",
+                    "created_at"
+                  ],
+                  "name": "EmailNotificationJob_status_available_at_created_at_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "notification_type",
+                    "source_id"
+                  ],
+                  "name": "EmailNotificationJob_notification_type_source_id_key"
+                }
+              ]
+            },
+            "Friend": {
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4007,26 +4341,26 @@
                 },
                 "friendId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4034,7 +4368,7 @@
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
@@ -4105,21 +4439,21 @@
               "columns": {
                 "activityId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "authorId": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": false
                 },
                 "date": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4127,21 +4461,24 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
               "foreignKeys": [
                 {
+                  "index": {
+                    "name": "Like_activityId_idx"
+                  },
                   "name": "Like_activityId_fkey",
                   "onDelete": "cascade",
                   "source": {
@@ -4207,25 +4544,25 @@
               "columns": {
                 "config": {
                   "codecId": "pg/jsonb@1",
-                  "nativeType": "jsonb",
+                  "dataType": "pg/jsonb",
                   "nullable": false
                 },
                 "created_activities": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "created_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4233,39 +4570,39 @@
                 },
                 "created_comment_likes": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "created_comments": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "created_likes": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "error_message": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "finished_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -4273,16 +4610,16 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "manifest_key": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 512
@@ -4290,16 +4627,16 @@
                 },
                 "processed_activities": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "run_id": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 64
@@ -4307,7 +4644,7 @@
                 },
                 "started_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -4315,7 +4652,7 @@
                 },
                 "status": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 32
@@ -4323,25 +4660,25 @@
                 },
                 "target_user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "total_activities": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "total_users": {
                   "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int4",
                   "nullable": false
                 }
               },
@@ -4375,11 +4712,11 @@
               "columns": {
                 "createdAt": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4387,12 +4724,12 @@
                 },
                 "errorMessage": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "finishedAt": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -4400,16 +4737,16 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "startedAt": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -4417,7 +4754,7 @@
                 },
                 "status": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 32
@@ -4425,7 +4762,7 @@
                 },
                 "storage_key": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 512
@@ -4433,7 +4770,7 @@
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
@@ -4468,31 +4805,67 @@
               "columns": {
                 "age": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
+                },
+                "allow_activity_interactions": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "allow_activity_replay_viewing": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "allow_activity_sharing": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "allow_new_followers": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
                 },
                 "bio": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "birthday": {
                   "codecId": "pg/date-string@1",
-                  "nativeType": "date",
+                  "dataType": "pg/date",
                   "nullable": true
                 },
                 "city": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "created_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4500,70 +4873,106 @@
                 },
                 "email": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "emailNotifications": {
                   "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
                   "default": {
                     "kind": "literal",
                     "value": false
                   },
-                  "nativeType": "bool",
                   "nullable": true
                 },
                 "gender": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "height": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
+                },
+                "hide_activity_statistics": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
+                "hide_following_list": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
+                "hide_profile_photos": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "language": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "name": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "profilePhoto": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "profilePhotoBlurhash": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
+                },
+                "profile_search_visible": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
                 },
                 "sport": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "surname": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -4571,17 +4980,22 @@
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 },
                 "weight": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 }
               },
               "foreignKeys": [
                 {
+                  "index": {
+                    "unique": [
+                      "user_id"
+                    ]
+                  },
                   "name": "Profile_user_id_fkey",
                   "onDelete": "cascade",
                   "source": {
@@ -4642,20 +5056,20 @@
               "columns": {
                 "cancel_at_period_end": {
                   "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
                   "default": {
                     "kind": "literal",
                     "value": false
                   },
-                  "nativeType": "bool",
                   "nullable": false
                 },
                 "created_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4663,7 +5077,7 @@
                 },
                 "expires_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -4671,16 +5085,16 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "product_id": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 128
@@ -4688,11 +5102,11 @@
                 },
                 "provider": {
                   "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
                   "default": {
                     "kind": "literal",
                     "value": "manual"
                   },
-                  "nativeType": "character varying",
                   "nullable": false,
                   "typeParams": {
                     "length": 32
@@ -4700,7 +5114,7 @@
                 },
                 "provider_subscription_id": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -4708,11 +5122,11 @@
                 },
                 "starts_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4720,11 +5134,11 @@
                 },
                 "status": {
                   "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
                   "default": {
                     "kind": "literal",
                     "value": "active"
                   },
-                  "nativeType": "character varying",
                   "nullable": false,
                   "typeParams": {
                     "length": 24
@@ -4732,11 +5146,11 @@
                 },
                 "updated_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4744,7 +5158,7 @@
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
@@ -4799,7 +5213,7 @@
               "columns": {
                 "app_build": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 32
@@ -4807,7 +5221,7 @@
                 },
                 "app_version": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 32
@@ -4815,11 +5229,11 @@
                 },
                 "created_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4827,7 +5241,7 @@
                 },
                 "device_id": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 128
@@ -4835,7 +5249,7 @@
                 },
                 "device_model": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 128
@@ -4843,7 +5257,7 @@
                 },
                 "device_name": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -4851,7 +5265,7 @@
                 },
                 "device_type": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 64
@@ -4859,16 +5273,16 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "ip_address": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 128
@@ -4876,12 +5290,12 @@
                 },
                 "last_latitude": {
                   "codecId": "pg/float8@1",
-                  "nativeType": "float8",
+                  "dataType": "pg/float8",
                   "nullable": true
                 },
                 "last_location_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -4889,16 +5303,16 @@
                 },
                 "last_longitude": {
                   "codecId": "pg/float8@1",
-                  "nativeType": "float8",
+                  "dataType": "pg/float8",
                   "nullable": true
                 },
                 "last_seen_at": {
                   "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
-                  "nativeType": "timestamptz",
                   "nullable": false,
                   "typeParams": {
                     "precision": 6
@@ -4906,7 +5320,7 @@
                 },
                 "manufacturer": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 128
@@ -4914,7 +5328,7 @@
                 },
                 "os_name": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 64
@@ -4922,7 +5336,7 @@
                 },
                 "os_version": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 64
@@ -4930,7 +5344,7 @@
                 },
                 "platform": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 64
@@ -4938,7 +5352,7 @@
                 },
                 "refresh_hash": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 128
@@ -4946,7 +5360,7 @@
                 },
                 "revoked_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -4954,7 +5368,7 @@
                 },
                 "user_agent": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 512
@@ -4962,12 +5376,15 @@
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": false
                 }
               },
               "foreignKeys": [
                 {
+                  "index": {
+                    "name": "UserSession_user_id_idx"
+                  },
                   "name": "UserSession_user_id_fkey",
                   "onDelete": "cascade",
                   "source": {
@@ -5022,7 +5439,7 @@
               "columns": {
                 "aud": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5030,7 +5447,7 @@
                 },
                 "auth_provider": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 32
@@ -5038,7 +5455,7 @@
                 },
                 "banned_until": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5046,7 +5463,7 @@
                 },
                 "confirmation_sent_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5054,7 +5471,7 @@
                 },
                 "confirmation_token": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5062,7 +5479,7 @@
                 },
                 "created_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5070,7 +5487,7 @@
                 },
                 "deleted_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5078,7 +5495,7 @@
                 },
                 "email": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": false,
                   "typeParams": {
                     "length": 255
@@ -5086,7 +5503,7 @@
                 },
                 "email_change": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5094,16 +5511,16 @@
                 },
                 "email_change_confirm_status": {
                   "codecId": "pg/int2@1",
+                  "dataType": "pg/int2",
                   "default": {
                     "kind": "literal",
                     "value": 0
                   },
-                  "nativeType": "int2",
                   "nullable": true
                 },
                 "email_change_sent_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5111,11 +5528,11 @@
                 },
                 "email_change_token_current": {
                   "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
                   "default": {
                     "kind": "literal",
                     "value": ""
                   },
-                  "nativeType": "character varying",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5123,7 +5540,7 @@
                 },
                 "email_change_token_new": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5131,7 +5548,7 @@
                 },
                 "email_confirmed_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5139,7 +5556,7 @@
                 },
                 "encrypted_password": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5147,21 +5564,21 @@
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
                   "default": {
                     "expression": "gen_random_uuid()",
                     "kind": "function"
                   },
-                  "nativeType": "uuid",
                   "nullable": false
                 },
                 "instance_id": {
                   "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
+                  "dataType": "pg/uuid",
                   "nullable": true
                 },
                 "invited_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5169,12 +5586,12 @@
                 },
                 "is_super_admin": {
                   "codecId": "pg/bool@1",
-                  "nativeType": "bool",
+                  "dataType": "pg/bool",
                   "nullable": true
                 },
                 "last_sign_in_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5182,21 +5599,21 @@
                 },
                 "phone": {
                   "codecId": "pg/text@1",
-                  "nativeType": "text",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "phone_change": {
                   "codecId": "pg/text@1",
+                  "dataType": "pg/text",
                   "default": {
                     "kind": "literal",
                     "value": ""
                   },
-                  "nativeType": "text",
                   "nullable": true
                 },
                 "phone_change_sent_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5204,11 +5621,11 @@
                 },
                 "phone_change_token": {
                   "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
                   "default": {
                     "kind": "literal",
                     "value": ""
                   },
-                  "nativeType": "character varying",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5216,7 +5633,7 @@
                 },
                 "phone_confirmed_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5224,17 +5641,17 @@
                 },
                 "raw_app_meta_data": {
                   "codecId": "pg/jsonb@1",
-                  "nativeType": "jsonb",
+                  "dataType": "pg/jsonb",
                   "nullable": true
                 },
                 "raw_user_meta_data": {
                   "codecId": "pg/jsonb@1",
-                  "nativeType": "jsonb",
+                  "dataType": "pg/jsonb",
                   "nullable": true
                 },
                 "reauthentication_sent_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5242,11 +5659,11 @@
                 },
                 "reauthentication_token": {
                   "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
                   "default": {
                     "kind": "literal",
                     "value": ""
                   },
-                  "nativeType": "character varying",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5254,7 +5671,7 @@
                 },
                 "recovery_sent_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5262,7 +5679,7 @@
                 },
                 "recovery_token": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5270,7 +5687,7 @@
                 },
                 "role": {
                   "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "dataType": "pg/varchar",
                   "nullable": true,
                   "typeParams": {
                     "length": 255
@@ -5278,7 +5695,7 @@
                 },
                 "updated_at": {
                   "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                  "dataType": "pg/timestamptz",
                   "nullable": true,
                   "typeParams": {
                     "precision": 6
@@ -5332,11 +5749,13 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "611579864d15b6ed6e4b976ac5583b78e1f9835bad2124436d5c326d13a5309c"
+    "storageHash": "3efb48b9264a2456ae47ae133573e8f8f132c2e9ec9de007412bf5cef2990a1c"
   },
   "capabilities": {
     "postgres": {
       "distinctOn": true,
+      "forKeyShare": true,
+      "forNoKeyUpdate": true,
       "jsonAgg": true,
       "lateral": true,
       "limit": true,
@@ -5347,9 +5766,14 @@
       "checkConstraint": true,
       "defaultInInsert": true,
       "enums": true,
+      "forShare": true,
+      "forUpdate": true,
       "insertOnConflictSkip": true,
       "insertOnConflictWithoutTarget": true,
       "lateral": true,
+      "lockNowait": true,
+      "lockOf": true,
+      "lockSkipLocked": true,
       "returning": true,
       "scalarList": true
     }

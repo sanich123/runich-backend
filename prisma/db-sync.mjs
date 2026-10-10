@@ -9,11 +9,6 @@ if (!databaseUrl) {
   throw new Error('DATABASE_URL is required to synchronize the database');
 }
 
-const databaseName = decodeURIComponent(new URL(databaseUrl).pathname.replace(/^\/+/, ''));
-if (!databaseName) {
-  throw new Error('DATABASE_URL must include a database name');
-}
-
 const client = new Client({ connectionString: databaseUrl });
 try {
   await client.connect();
@@ -32,8 +27,6 @@ const prisma = spawn(
     'db',
     'update',
     '--no-interactive',
-    '--confirm',
-    databaseName,
     '--db',
     databaseUrl,
     ...process.argv.slice(2),

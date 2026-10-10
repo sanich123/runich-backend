@@ -10,16 +10,18 @@ export const DEFAULT_ACTIVITY_PAGE_SIZE = 20;
 export const MAX_MAP_ROUTE_LOCATIONS = 1_500;
 
 const ACTIVITY_CARD_PROFILE_SELECT = {
+  userId: true,
   surname: true,
   name: true,
   profilePhoto: true,
   profilePhotoBlurhash: true,
-  emailNotifications: true,
+  allowActivityInteractions: true,
+  allowActivityReplayViewing: true,
+  allowActivitySharing: true,
 } as const;
 
 const ACTIVITY_FEED_PROFILE_SELECT = {
   ...ACTIVITY_CARD_PROFILE_SELECT,
-  user: { select: { email: true } },
 } as const;
 
 export const ACTIVITY_CARD_SELECT = {
@@ -32,7 +34,7 @@ export const ACTIVITY_CARD_SELECT = {
   userId: true,
   visibility: true,
   media: {
-    select: { url: true, thumbnail: true, blurhash: true },
+    select: { id: true, url: true, thumbnail: true, blurhash: true },
     orderBy: { position: 'asc' },
   },
   mapPhotoUrl: true,

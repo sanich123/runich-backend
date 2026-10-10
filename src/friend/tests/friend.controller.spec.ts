@@ -24,7 +24,8 @@ describe('FriendController', () => {
     await expect(controller.getUsersYouFollowByUserId({ id: 'u1' })).resolves.toEqual(result);
     await expect(controller.deleteFriendById({ id: 'f1' })).resolves.toEqual(result[0]);
     await expect(controller.createFrienById({ id: 'u2' }, { user: { id: 'u1' } } as never)).resolves.toEqual(result[0]);
-    await expect(controller.getFollowers({ id: 'u1' })).resolves.toEqual(result);
+    await expect(controller.getFollowers({ id: 'u1' }, { user: { id: 'u1' } } as never)).resolves.toEqual(result);
+    expect(service.getFollowers).toHaveBeenCalledWith('u1', 'u1');
   });
 
   it('propagates service errors from every friendship endpoint', async () => {
@@ -34,6 +35,6 @@ describe('FriendController', () => {
     await expect(controller.getUsersYouFollowByUserId({ id: 'u1' })).rejects.toBe(error);
     await expect(controller.deleteFriendById({ id: 'f1' })).rejects.toBe(error);
     await expect(controller.createFrienById({ id: 'u2' }, { user: { id: 'u1' } } as never)).rejects.toBe(error);
-    await expect(controller.getFollowers({ id: 'u1' })).rejects.toBe(error);
+    await expect(controller.getFollowers({ id: 'u1' }, { user: { id: 'u1' } } as never)).rejects.toBe(error);
   });
 });

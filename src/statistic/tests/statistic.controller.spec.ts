@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { BadRequestException } from '@nestjs/common';
 import { StatisticController } from '../statistic.controller';
+import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { StatisticService } from '../statistic.service';
 import { asyncMock } from 'src/tests/helpers';
 
@@ -12,6 +13,7 @@ describe('StatisticController', () => {
     getAllActivitiesStatisticsByUserId: asyncMock(),
   };
   const controller = new StatisticController(service as unknown as StatisticService);
+  const request = { user: { id: 'u1' } } as AuthenticatedRequest;
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -27,7 +29,7 @@ describe('StatisticController', () => {
     await expect(
       controller.getCurrentWeekStatistics({ id: 'u1' }, 'Mon Aug 10 2026', 'Sun Aug 16 2026', 'Europe/Moscow'),
     ).resolves.toEqual(result);
-    await expect(controller.getAllTimeStatistics({ id: 'u1' })).resolves.toEqual(result);
+    await expect(controller.getAllTimeStatistics({ id: 'u1' }, request)).resolves.toEqual(result);
     expect(service.getMonthStatisticsByYearMonth).toHaveBeenCalledWith('u1', '2025', '0', undefined);
     expect(service.getStatisticByYearAndCategory).toHaveBeenCalledWith('u1', 'Europe/Moscow');
     expect(service.getCurrentWeekStatistics).toHaveBeenCalledWith(
@@ -45,7 +47,7 @@ describe('StatisticController', () => {
     await expect(controller.getYearStatisticByYearAndCategory({ id: 'u1' })).rejects.toBe(error);
     await expect(controller.getMonthStatistics({ id: 'u1' }, '2025', '0')).rejects.toBe(error);
     await expect(controller.getCurrentWeekStatistics({ id: 'u1' }, '2026-08-10', '2026-08-16')).rejects.toBe(error);
-    await expect(controller.getAllTimeStatistics({ id: 'u1' })).rejects.toBe(error);
+    await expect(controller.getAllTimeStatistics({ id: 'u1' }, request)).rejects.toBe(error);
   });
 
   it('rejects malformed month and week date queries before calling the service', async () => {

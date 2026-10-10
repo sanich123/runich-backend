@@ -1,9 +1,12 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { LikeDto } from './like.dto';
 import { handleServiceError, isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
+import { encodeLikeCursor } from './like.pagination';
+import type { LikeCursor } from './like.pagination';
+import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 
 @Injectable()
 export class LikeService {
@@ -21,15 +24,26 @@ export class LikeService {
       if (currentUserId && !(await this.activityService.canAccessActivity(activityId, currentUserId))) {
         throw new NotFoundException('Активность не найдена');
       }
+      if (currentUserId && !(await this.activityService.canInteractWithActivity(activityId, currentUserId))) {
+        throw new ForbiddenException('Владелец активности запретил лайки и комментарии');
+      }
       const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       const authorId = currentUserId ?? '';
       const where = { authorId_activityId: { authorId, activityId } };
       try {
-        return await this.prismaService.like.upsert({
-          where,
-          update: {},
-          create: { profileId: account.id, authorId, activityId },
+        return await this.prismaService.$transaction(async (transaction) => {
+          const like = await transaction.like.create({
+            data: { profileId: account.id, authorId, activityId },
+          });
+          await transaction.emailNotificationJob.create({
+            data: {
+              notificationType: EMAIL_NOTIFICATION_TYPE.activityLike,
+              sourceId: like.id,
+              status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
+            },
+          });
+          return like;
         });
       } catch (error) {
         if (!isUniqueConstraintError(error)) throw error;
@@ -48,16 +62,24 @@ export class LikeService {
     }
   }
 
-  async getLikesByActivityId(id: string, currentUserId?: string) {
+  async getLikesByActivityId(id: string, currentUserId?: string, limit = '30', cursor?: LikeCursor) {
     try {
-      if (currentUserId && !(await this.activityService.canAccessActivity(id, currentUserId))) {
-        throw new NotFoundException('Активность не найдена');
-      }
+      const pageSize = Number(limit);
       const activity = await this.prismaService.activity.findUnique({
         where: { id },
         select: {
+          userId: true,
+          visibility: true,
+          profile: { select: { allowActivityInteractions: true } },
           likes: {
-            orderBy: { date: 'desc' },
+            ...(cursor
+              ? {
+                  where: {
+                    OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
+                  },
+                }
+              : {}),
+            orderBy: [{ date: 'desc' }, { id: 'desc' }],
             select: {
               date: true,
               authorId: true,
@@ -72,17 +94,40 @@ export class LikeService {
                   profilePhotoBlurhash: true,
                   city: true,
                   userId: true,
+                  allowNewFollowers: true,
                 },
               },
             },
+            take: pageSize + 1,
           },
         },
       });
       if (!activity) {
         if (currentUserId) throw new NotFoundException('Активность не найдена');
-        return [];
+        return { likes: [], hasMore: false, nextCursor: null, currentUserLike: null };
       }
-      return activity.likes;
+      if (currentUserId && !(await this.activityService.canAccessActivityData(activity, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
+      }
+      if (activity.userId !== currentUserId && activity.profile?.allowActivityInteractions === false) {
+        throw new NotFoundException('Список лайков недоступен');
+      }
+      const likesWithExtraItem = activity.likes;
+      const hasMore = likesWithExtraItem.length > pageSize;
+      const likes = likesWithExtraItem.slice(0, pageSize);
+      const currentUserLike =
+        currentUserId && !cursor
+          ? await this.prismaService.like.findUnique({
+              where: { authorId_activityId: { authorId: currentUserId, activityId: id } },
+              select: { id: true, authorId: true },
+            })
+          : null;
+      return {
+        likes,
+        hasMore,
+        nextCursor: hasMore && likes.length ? encodeLikeCursor(likes.at(-1)!) : null,
+        currentUserLike,
+      };
     } catch (error) {
       handleServiceError(error);
     }
@@ -90,16 +135,16 @@ export class LikeService {
 
   async getLikesLengthByActivityId(id: string, currentUserId?: string) {
     try {
-      if (currentUserId && !(await this.activityService.canAccessActivity(id, currentUserId))) {
-        throw new NotFoundException('Активность не найдена');
-      }
       const activity = await this.prismaService.activity.findUnique({
         where: { id },
-        select: { _count: { select: { likes: true } } },
+        select: { userId: true, visibility: true, _count: { select: { likes: true } } },
       });
       if (!activity) {
         if (currentUserId) throw new NotFoundException('Активность не найдена');
         return 0;
+      }
+      if (currentUserId && !(await this.activityService.canAccessActivityData(activity, currentUserId))) {
+        throw new NotFoundException('Активность не найдена');
       }
       return activity._count.likes;
     } catch (error) {

@@ -48,9 +48,9 @@ Keep commits small enough to review. Explain breaking changes in the commit body
 - Do not log secrets, passwords, bearer tokens or full request bodies.
 - Prefer Nest Logger over console.log in application code.
 - Return safe client-facing errors and retain details only in server logs.
-- Commit `prisma/contract.prisma` and generated contract artifacts together with
-  schema changes. This project intentionally starts each database from the
-  current contract instead of maintaining schema migration packages.
+- Commit `prisma/contract.prisma` and its migration package with schema changes.
+  Generated `prisma/contract.json` and `prisma/contract.d.ts` are ignored; scripts
+  emit them with `yarn db:generate`.
 
 ## Adding an endpoint
 
@@ -65,13 +65,14 @@ Keep commits small enough to review. Explain breaking changes in the commit body
 ## Database changes
 
     yarn db:generate
-    yarn prisma db update --dry-run
-    yarn db:sync
+    yarn prisma migration plan
+    yarn prisma migration check
 
-Edit `prisma/contract.prisma`, emit the contract and review the dry-run plan
-before applying it. Do not edit `contract.json` or `contract.d.ts` manually.
-Because a schema reset is part of the deployment model, destructive changes
-must be applied only to the explicitly selected disposable or reset database.
+Edit `prisma/contract.prisma`, emit the contract, review the planned migration,
+and commit its package under `migrations/`. Do not edit `contract.json` or
+`contract.d.ts` manually. The pre-release history is one initial migration;
+after launch, add migrations without rewriting the applied history. Apply schema
+changes through `db:migrate:prod`, never through API or worker startup.
 
 ## Testing and checks
 

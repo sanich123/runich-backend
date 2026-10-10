@@ -27,8 +27,15 @@ import { pipeline } from 'node:stream/promises';
 import { Transform } from 'node:stream';
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
+import { isUUID } from 'class-validator';
 import { ActivityService } from './activity.service';
-import { ActivityDto, ActivityMediaAppendDto } from './activity.dto';
+import {
+  ActivityDto,
+  ActivityMediaAppendDto,
+  ActivityMediaParamsDto,
+  WatchWorkoutBatchImportDto,
+  WatchWorkoutBatchImportResponseDto,
+} from './activity.dto';
 import {
   ActivityCardResponseDto,
   ActivityDetailsResponseDto,
@@ -48,9 +55,11 @@ import { ParamsId } from 'src/common/dto/params-validation';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiCreatedResponse,
   ApiConsumes,
   ApiOperation,
   ApiOkResponse,
+  ApiNoContentResponse,
   ApiParam,
   ApiQuery,
   ApiResponse,
@@ -66,6 +75,12 @@ import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { activity, id } from './const';
 import { parseActivityCursor, parseActivityMediaCursor } from './activity.pagination';
+
+function normalizeActivityIdsQuery(ids?: string | string[]) {
+  return (Array.isArray(ids) ? ids : [ids ?? ''])
+    .flatMap((activityId) => activityId.split(/[&,]/))
+    .map((activityId) => activityId.trim().replace(/^ids=/, ''));
+}
 
 @ApiTags(activity)
 @ApiBearerAuth('bearerAuth')
@@ -116,6 +131,18 @@ export class ActivityController {
     return this.activityService.appendActivityMedia(id, getAuthenticatedUserId(request), body.media);
   }
 
+  @Delete(`${id}/media/:mediaId`)
+  @RateLimit(RATE_LIMITS.photoDelete.limit, RATE_LIMITS.photoDelete.ttl)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Delete one photo or video from an owned activity' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiParam({ name: 'mediaId', description: 'Activity media identifier' })
+  @ApiNoContentResponse({ description: 'Activity media deleted' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteActivityMedia(@Param() { id, mediaId }: ActivityMediaParamsDto, @Req() request: RequestWithUser) {
+    await this.activityService.deleteActivityMedia(id, mediaId, getAuthenticatedUserId(request));
+  }
+
   @Get(`${id}/locations`)
   @ApiOkResponse({ type: ActivityLocationsResponseDto })
   @UseGuards(JwtAuthGuard)
@@ -142,16 +169,14 @@ export class ActivityController {
     @Query(QueryParams.ids) ids?: string | string[],
     @Req() request?: RequestWithUser,
   ) {
-    const isValidIds =
-      typeof ids === 'string'
-        ? Boolean(ids.trim())
-        : Array.isArray(ids) &&
-          ids.length > 0 &&
-          ids.every((activityId) => typeof activityId === 'string' && Boolean(activityId.trim()));
-    if (!isValidIds) {
+    const normalizedIds = normalizeActivityIdsQuery(ids);
+    if (!normalizedIds.length) {
       throw new BadRequestException('Не указаны идентификаторы активностей: ids');
     }
-    return this.activityService.getActivitiesByTheirIds(ids, request?.user.userId ?? request?.user.id);
+    if (normalizedIds.some((activityId) => !isUUID(activityId))) {
+      throw new BadRequestException('Некорректные идентификаторы активностей: ids');
+    }
+    return this.activityService.getActivitiesByTheirIds(normalizedIds, request?.user.userId ?? request?.user.id);
   }
 
   @Post('migration-strava/:id')
@@ -336,6 +361,24 @@ export class ActivityController {
   async getStravaMigrationStatus(@Param() { jobId }: ActivityMigrationJobParams, @Req() request?: RequestWithUser) {
     const currentUserId = request?.user.userId ?? request?.user.id;
     return await this.activityMigrationService.getJobForUser(jobId, currentUserId ?? '');
+  }
+
+  @Post(id + '/watch-import')
+  @ApiCreatedResponse({ type: WatchWorkoutBatchImportResponseDto })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Import completed workouts from a connected watch health store' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiBody({ type: WatchWorkoutBatchImportDto })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
+  @HttpCode(HttpStatus.CREATED)
+  async importWatchWorkouts(
+    @Body() body: WatchWorkoutBatchImportDto,
+    @Param() { id }: ParamsId,
+    @Req() request?: RequestWithUser,
+  ) {
+    const currentUserId = request?.user.userId ?? request?.user.id ?? id;
+    if (currentUserId !== id) throw new ForbiddenException('Недостаточно прав');
+    return await this.activityService.importWatchWorkouts(body.workouts, currentUserId);
   }
 
   @Post(id)

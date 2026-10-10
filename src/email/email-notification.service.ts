@@ -2,26 +2,57 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { render } from '@react-email/components';
 import { sendEmail } from 'src/common/email/nodemailer';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
-import { CommentEmailDTO, CommentLikeEmailDTO, LikeEmailDTO } from './email.dto';
+import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { NotificationEmail } from './templates';
 import { EmailType } from './templates/types';
+
+export interface EmailNotificationPayload {
+  activityId: string;
+  actorName?: string | null;
+  actorSurname?: string | null;
+  actorProfilePhoto?: string | null;
+  recipientEmail: string;
+  recipientName?: string | null;
+  recipientSurname?: string | null;
+  mapPhotoUrl?: string | null;
+  comment?: string;
+}
 
 @Injectable()
 export class EmailNotificationService {
   constructor(@Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService) {}
 
-  async sendLike(data: LikeEmailDTO & { activityUrl: string }) {
-    const html = await render(NotificationEmail({ type: EmailType.like, ...data }));
-    return sendEmail(data.recepientEmail, 'Лайк к активности', html, [], this.latencyMetrics);
+  sendLike(payload: EmailNotificationPayload) {
+    return this.send(payload, EmailType.like, 'Лайк к активности');
   }
 
-  async sendComment(data: CommentEmailDTO & { activityUrl: string }) {
-    const html = await render(NotificationEmail({ type: EmailType.comment, ...data }));
-    return sendEmail(data.recepientEmail, 'Новый комментарий к вашей активности', html, [], this.latencyMetrics);
+  sendComment(payload: EmailNotificationPayload) {
+    return this.send(payload, EmailType.comment, 'Новый комментарий к вашей активности');
   }
 
-  async sendCommentLike(data: CommentLikeEmailDTO & { activityUrl: string }) {
-    const html = await render(NotificationEmail({ type: EmailType.commentLike, ...data }));
-    return sendEmail(data.recepientEmail, 'Лайк к вашему комментарию', html, [], this.latencyMetrics);
+  sendCommentLike(payload: EmailNotificationPayload) {
+    return this.send(payload, EmailType.commentLike, 'Лайк к вашему комментарию');
+  }
+
+  private async send(payload: EmailNotificationPayload, type: EmailType, subject: string) {
+    const activityUrl = new URL(getAuthFrontendRedirectUri());
+    activityUrl.pathname = `/activity/${encodeURIComponent(payload.activityId)}`;
+    activityUrl.search = '';
+    activityUrl.hash = '';
+
+    const html = await render(
+      NotificationEmail({
+        type,
+        name: payload.actorName ?? '',
+        surname: payload.actorSurname ?? '',
+        profilePhoto: payload.actorProfilePhoto ?? '',
+        recepientName: payload.recipientName ?? '',
+        recepientSurname: payload.recipientSurname ?? '',
+        mapPhotoUrl: payload.mapPhotoUrl ?? '',
+        activityUrl: activityUrl.toString(),
+        comment: payload.comment,
+      }),
+    );
+    return sendEmail(payload.recipientEmail, subject, html, [], this.latencyMetrics);
   }
 }

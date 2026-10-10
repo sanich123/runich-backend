@@ -34,6 +34,7 @@ import {
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
+import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { parseCommentCursor } from './comment.pagination';
 import { comment, id, like, OK, BAD_REQUEST, CREATED, NO_CONTENT } from './const';
 
@@ -107,7 +108,7 @@ export class CommentController {
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(NO_CONTENT)
   async deleteCommentWithCommentId(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
-    return await this.commentService.deleteCommentByCommentId(id, request.user.id);
+    return await this.commentService.deleteCommentByCommentId(id, getAuthenticatedUserId(request));
   }
 
   @Patch(id)
@@ -124,7 +125,7 @@ export class CommentController {
     @Param() { id }: ParamsId,
     @Req() request: AuthenticatedRequest,
   ) {
-    return await this.commentService.updateCommentByCommentId(commentDto.comment, id, request.user.id);
+    return await this.commentService.updateCommentByCommentId(commentDto.comment, id, getAuthenticatedUserId(request));
   }
 
   @Post(`${id}/${like}`)
@@ -139,7 +140,7 @@ export class CommentController {
   async postCommentLikeWithCommentId(@Body() commentLikeDto: CommentLikeDto, @Req() request?: AuthenticatedRequest) {
     return await this.commentService.createCommentLikeByCommentId(
       commentLikeDto,
-      request?.user.userId ?? request?.user.id,
+      request ? getAuthenticatedUserId(request) : undefined,
     );
   }
 
@@ -152,7 +153,7 @@ export class CommentController {
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
   @HttpCode(NO_CONTENT)
   async deleteCommentLikeWithLikeId(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
-    return await this.commentService.deleteCommentLikeByLikeId(id, request.user.id);
+    return await this.commentService.deleteCommentLikeByLikeId(id, getAuthenticatedUserId(request));
   }
 
   @Get(`${id}/${like}`)

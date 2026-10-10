@@ -10,6 +10,7 @@ import { getLogLevels } from 'src/common/utils/log-levels';
 import { BackgroundWorkerModule } from './background-worker.module';
 import { LoadTestSeedService } from 'src/load-test/load-test.service';
 import { observeInstrument } from 'src/common/observe/observe.config';
+import { EmailNotificationWorkerService } from 'src/email/email-notification-worker.service';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(BackgroundWorkerModule, {
@@ -21,12 +22,14 @@ async function bootstrap() {
   const enrichmentService = app.get(ActivityEnrichmentService);
   const cleanupService = app.get(MediaCleanupService);
   const loadTestSeedService = app.get(LoadTestSeedService);
+  const emailNotificationWorkerService = app.get(EmailNotificationWorkerService);
   const stopWorker = () => {
     migrationService.requestStop();
     mediaProcessingService.requestStop();
     enrichmentService.requestStop();
     cleanupService.requestStop();
     loadTestSeedService.requestStop();
+    emailNotificationWorkerService.requestStop();
   };
 
   process.once('SIGINT', stopWorker);
@@ -39,6 +42,7 @@ async function bootstrap() {
       enrichmentService.runWorker(),
       cleanupService.runWorker(),
       ...(getAppEnvironment() === 'production' ? [] : [loadTestSeedService.runWorker()]),
+      emailNotificationWorkerService.runWorker(),
     ]);
   } finally {
     process.off('SIGINT', stopWorker);

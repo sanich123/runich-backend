@@ -46,7 +46,7 @@ describe('Runich static map style', () => {
     expect(style.sources).toEqual({
       'runich-route': expect.objectContaining({ type: 'geojson' }),
     });
-    expect(style.layers.map(({ id }) => id)).toEqual(['background', 'runich-route-casing', 'runich-route']);
+    expect(style.layers.map(({ id }) => id)).toEqual(['background', 'runich-route']);
   });
 
   it('keeps only map context needed for routes and labels', async () => {
@@ -178,27 +178,38 @@ describe('Runich static map style', () => {
     expect(layers.label_town).toBeDefined();
     expect(layers.label_village).toBeDefined();
     expect(layers.label_country).toBeUndefined();
-    expect(layers.park).toEqual(expect.objectContaining({ paint: { 'fill-color': '#B8DCA8' } }));
-    expect(layers.landcover_wood).toEqual(expect.objectContaining({ paint: { 'fill-color': '#A3D486' } }));
-    expect(layers.water).toEqual(expect.objectContaining({ paint: { 'fill-color': '#B9DDF2' } }));
-    expect(layers.waterway).toEqual(
-      expect.objectContaining({ paint: { 'line-color': '#73B8DF', 'line-opacity': 0.9 } }),
+    expect(layers.background).toEqual(expect.objectContaining({ paint: { 'background-color': '#202A33' } }));
+    expect(layers.park).toEqual(expect.objectContaining({ paint: { 'fill-color': '#1E5B4D', 'fill-opacity': 0.95 } }));
+    expect(layers.landcover_wood).toEqual(
+      expect.objectContaining({ paint: { 'fill-color': '#246B59', 'fill-opacity': 0.95 } }),
     );
-    expect(layers.highway_path).toEqual(expect.objectContaining({ paint: { 'line-color': '#D1B48A' } }));
-    expect(layers.highway_major_casing).toEqual(expect.objectContaining({ paint: { 'line-color': '#E2B36E' } }));
-    expect(layers.highway_major_inner).toEqual(expect.objectContaining({ paint: { 'line-color': '#FFF0C9' } }));
-    expect(layers.highway_major_subtle).toEqual(expect.objectContaining({ paint: { 'line-color': '#D9A45E' } }));
-    expect(layers.highway_motorway_casing).toEqual(expect.objectContaining({ paint: { 'line-color': '#D9954D' } }));
-    expect(layers.highway_motorway_inner).toEqual(expect.objectContaining({ paint: { 'line-color': '#FFE5A3' } }));
-    expect(layers.highway_motorway_subtle).toEqual(expect.objectContaining({ paint: { 'line-color': '#CC8F4C' } }));
+    expect(layers.water).toEqual(expect.objectContaining({ paint: { 'fill-color': '#293C4A', 'fill-opacity': 0.95 } }));
+    expect(layers.waterway).toEqual(
+      expect.objectContaining({ paint: { 'line-color': '#466A76', 'line-opacity': 0.85 } }),
+    );
+    expect(layers.landuse_residential).toEqual(
+      expect.objectContaining({ paint: { 'fill-color': '#303B46', 'fill-opacity': 0.95 } }),
+    );
+    expect(layers.highway_path).toEqual(expect.objectContaining({ paint: { 'line-color': '#61736F' } }));
+    expect(layers.highway_major_casing).toEqual(expect.objectContaining({ paint: { 'line-color': '#1D2831' } }));
+    expect(layers.highway_major_inner).toEqual(expect.objectContaining({ paint: { 'line-color': '#66737D' } }));
+    expect(layers.highway_major_subtle).toEqual(expect.objectContaining({ paint: { 'line-color': '#46545F' } }));
+    expect(layers.highway_motorway_casing).toEqual(expect.objectContaining({ paint: { 'line-color': '#1D2831' } }));
+    expect(layers.highway_motorway_inner).toEqual(expect.objectContaining({ paint: { 'line-color': '#75838C' } }));
+    expect(layers.highway_motorway_subtle).toEqual(expect.objectContaining({ paint: { 'line-color': '#4E5B65' } }));
+    expect(layers['highway-name-major']).toEqual(
+      expect.objectContaining({
+        paint: { 'text-color': '#B8C2C9', 'text-halo-color': '#202A33', 'text-halo-width': 1 },
+      }),
+    );
     expect(layers['runich-landcover-grass']).toEqual(
-      expect.objectContaining({ paint: { 'fill-color': '#DDEDBA', 'fill-opacity': 0.7 } }),
+      expect.objectContaining({ paint: { 'fill-color': '#2A7059', 'fill-opacity': 0.85 } }),
     );
     expect(layers['runich-landcover-wetland']).toEqual(
-      expect.objectContaining({ paint: { 'fill-color': '#C9E0C2', 'fill-opacity': 0.75 } }),
+      expect.objectContaining({ paint: { 'fill-color': '#2E625B', 'fill-opacity': 0.85 } }),
     );
     expect(layers['runich-landuse-cemetery']).toEqual(
-      expect.objectContaining({ paint: { 'fill-color': '#D5E6C8', 'fill-opacity': 0.8 } }),
+      expect.objectContaining({ paint: { 'fill-color': '#3B6A58', 'fill-opacity': 0.85 } }),
     );
     expect(style.sources).toEqual({
       openmaptiles: { type: 'vector', url: 'https://tiles.example/planet' },
@@ -208,16 +219,10 @@ describe('Runich static map style', () => {
       expect.objectContaining({
         type: 'line',
         source: 'runich-route',
-        paint: expect.objectContaining({ 'line-width': 5, 'line-blur': 0.1 }),
+        paint: expect.objectContaining({ 'line-color': '#EA5B22', 'line-width': 6, 'line-blur': 0.1 }),
       }),
     );
-    expect(layers['runich-route-casing']).toEqual(
-      expect.objectContaining({
-        type: 'line',
-        source: 'runich-route',
-        paint: expect.objectContaining({ 'line-width': 8, 'line-blur': 0.2 }),
-      }),
-    );
+    expect(layers['runich-route-casing']).toBeUndefined();
     expect(style.sources['runich-route']).toEqual(
       expect.objectContaining({ type: 'geojson', data: expect.objectContaining({ type: 'Feature' }) }),
     );

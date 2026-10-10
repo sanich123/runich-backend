@@ -54,8 +54,9 @@ Start the background worker in a second terminal:
 `yarn dev` emits the Prisma 8 contract and synchronizes the database with the
 current contract before starting the development server. To update only the
 database, run `yarn db:sync`. Prisma 8 uses `prisma/contract.prisma` as the
-source of truth; the generated `contract.json` and `contract.d.ts` are runtime
-artifacts.
+source of truth; `contract.json` and `contract.d.ts` are generated runtime
+artifacts and are ignored by Git. Scripts that need them emit them with
+`yarn db:generate`.
 
 The API is available at http://localhost:3000; Swagger is at http://localhost:3000/api.
 Liveness is available at `/health/live`, and Railway readiness checks should use
@@ -217,12 +218,18 @@ regular media worker does not download the same 25 photos 10,000 times. This
 test measures the feed/database path; media blurhash processing should be
 tested as a separate workload.
 
-### Railway stage
+### Timeweb stage
 
-Railway stage uses a separate PostgreSQL service and the same application
-contract as production. Set `DATABASE_URL` in the API and worker services to a
-Railway reference such as `${{Postgres.DATABASE_URL}}`. Set the same S3
-variables in both services, using the stage-only Timeweb bucket:
+The `stage` branch deploys to the Timeweb server with a colocated PostgreSQL
+container. `.github/workflows/deploy-stage-timeweb.yml` builds an immutable
+image for the exact pushed commit, runs the checked-in Prisma migration, and
+checks API, worker and HTTPS readiness. It publishes the image for production
+only after those checks pass. The database and Let's Encrypt state live in
+persistent Docker volumes. Nginx serves
+`https://stage.runich-app.ru`; Certbot renews its certificate automatically.
+Incoming TCP ports 80 and 443 must be available on the server.
+
+Stage uses the dedicated S3 bucket and these non-secret settings:
 
     APP_ENV=stage
     S3_ENDPOINT=https://s3.twcstorage.ru
@@ -230,8 +237,11 @@ variables in both services, using the stage-only Timeweb bucket:
     S3_BUCKET=runich-stage
     S3_PUBLIC_URL=https://s3.twcstorage.ru/runich-stage
 
-Keep the S3 access key and secret in Railway variables. They are not committed
-to `.env.example` or copied from the local `.env` file.
+The server `.env` contains Compose settings and a local `DATABASE_URL_DOCKER`
+pointing to the Compose `db` service. The separate `app.env` contains Railway
+stage application credentials. Keep both files on the server only with mode `0600`; never commit them. GitHub
+Actions deploy credentials belong to the `stage` environment; its SSH key must
+be scoped to the stage deployment account.
 
 Production on Timeweb uses the same endpoint and region with:
 
@@ -294,8 +304,10 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 ## Database and seed data
 
 The Prisma 8 contract is in `prisma/contract.prisma`. Schema changes are
-versioned under `migrations/`; the baseline records the current schema without
-being replayed on a database already signed at that contract. For a schema
+versioned under `migrations/`. The pre-release graph contains one initial
+migration, which creates the full schema in a clean database. Existing Stage
+and Production pre-release schemas must be reset once before applying it. After
+launch, add migrations without rewriting the applied history. For a schema
 change, emit the contract, plan and inspect a migration, then commit the
 contract and migration together. Production applies migrations once in the
 Timeweb deployment workflow. Keep `yarn db:sync` for local/bootstrap use only;

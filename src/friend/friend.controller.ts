@@ -5,7 +5,7 @@ import { ParamsId } from 'src/common/dto/params-validation';
 import { FriendDto } from './friend.dto';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
+import { getAuthenticatedUserId, type AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { friend, id, OK, BAD_REQUEST, NO_CONTENT } from './const';
 
 @ApiTags(friend)
@@ -21,8 +21,11 @@ export class FriendController {
   @ApiParam({ name: 'id', description: 'User identifier' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getUsersYouFollowByUserId(@Param() { id }: ParamsId) {
-    return await this.friendService.getUsersYouFollowByUserId(id);
+  async getUsersYouFollowByUserId(@Param() { id }: ParamsId, @Req() request?: AuthenticatedRequest) {
+    return await this.friendService.getUsersYouFollowByUserId(
+      id,
+      request ? getAuthenticatedUserId(request) : undefined,
+    );
   }
 
   @Delete(id)
@@ -57,7 +60,7 @@ export class FriendController {
   @ApiParam({ name: 'id', description: 'User identifier' })
   @ApiResponse({ status: OK, description: 'Success' })
   @ApiResponse({ status: BAD_REQUEST, description: 'Bad Request' })
-  async getFollowers(@Param() { id }: ParamsId) {
-    return await this.friendService.getFollowers(id);
+  async getFollowers(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
+    return await this.friendService.getFollowers(id, getAuthenticatedUserId(request));
   }
 }

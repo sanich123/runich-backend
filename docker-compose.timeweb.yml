@@ -8,18 +8,13 @@ services:
     command: ['yarn', 'db:migrate:prod']
     environment:
       TZ: UTC
+      APP_ENV: production
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}
-    volumes:
-      - .:/app
-      - /app/node_modules
 
   nestjs_app:
     depends_on:
       db_migrate:
         condition: service_completed_successfully
-    build:
-      context: .
-      dockerfile: Dockerfile
     image: ${BACKEND_IMAGE:-runich-backend:local}
     restart: always
     # xvfb-run waits for Xvfb's SIGUSR1; it must run below a real init process,
@@ -35,6 +30,7 @@ services:
     command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'start:prod']
     environment:
       TZ: UTC
+      APP_ENV: production
       RUNICH_PROCESS: api
       OBSERVE_SERVICE_VERSION: ${BACKEND_IMAGE:-local}
       LOG_FILE_PATH: /app/logs.log
@@ -42,16 +38,18 @@ services:
     ports:
       - '127.0.0.1:3000:3000'
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./logs.log:/app/logs.log
+    healthcheck:
+      test: ['CMD-SHELL', 'curl --fail --silent --max-time 5 http://127.0.0.1:3000/health/ready >/dev/null']
+      interval: 10s
+      timeout: 6s
+      retries: 12
+      start_period: 30s
 
   background_worker:
     depends_on:
       db_migrate:
         condition: service_completed_successfully
-    build:
-      context: .
-      dockerfile: Dockerfile
     image: ${BACKEND_IMAGE:-runich-backend:local}
     restart: always
     init: true
@@ -66,6 +64,42 @@ services:
     command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'worker:prod']
     environment:
       TZ: UTC
+      APP_ENV: production
       RUNICH_PROCESS: worker
       OBSERVE_SERVICE_VERSION: ${BACKEND_IMAGE:-local}
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}
+
+  grafana_alloy:
+    image: grafana/alloy:v1.20.1
+    restart: always
+    user: "0:0"
+    command:
+      - run
+      - --server.http.listen-addr=127.0.0.1:12345
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
+      - /etc/alloy/config.alloy
+    environment:
+      RUNICH_ENV: production
+      GRAFANA_LOKI_TOKEN: ${GRAFANA_LOKI_TOKEN:?GRAFANA_LOKI_TOKEN must be set in .env}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./deploy/grafana/config.alloy:/etc/alloy/config.alloy:ro
+      - grafana_alloy_data:/var/lib/alloy/data
+
+volumes:
+  grafana_alloy_data:

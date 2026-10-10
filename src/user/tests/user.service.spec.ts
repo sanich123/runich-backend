@@ -41,6 +41,23 @@ describe('UserService', () => {
     });
   });
 
+  it('persists whether other users can follow the profile', async () => {
+    const prisma = createPrismaMock();
+    const service = new UserService(prisma as never);
+    prisma.profile.upsert.mockResolvedValue({ id: 'profile-1', userId: 'user-1', allowNewFollowers: false });
+
+    await expect(service.updateProfileByUserId('user-1', 'user-1', { allowNewFollowers: false })).resolves.toEqual({
+      id: 'profile-1',
+      userId: 'user-1',
+      allowNewFollowers: false,
+    });
+    expect(prisma.profile.upsert).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      update: { allowNewFollowers: false, updatedAt: expect.any(Date) },
+      create: { allowNewFollowers: false, updatedAt: expect.any(Date), userId: 'user-1' },
+    });
+  });
+
   it('accepts a profile id when it belongs to the authenticated user', async () => {
     const prisma = createPrismaMock();
     const service = new UserService(prisma as never);

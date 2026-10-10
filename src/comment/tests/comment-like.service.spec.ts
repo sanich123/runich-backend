@@ -1,38 +1,41 @@
 import { jest } from '@jest/globals';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { asyncMock } from 'src/tests/helpers';
+import { asyncMock, transactionMock } from 'src/tests/helpers';
 
 import { CommentLikeService } from '../comment-like.service';
 
 describe('CommentLikeService', () => {
-  const prisma = {
+  const prismaBase = {
     commentLike: {
-      upsert: asyncMock(),
+      create: asyncMock(),
       delete: asyncMock(),
       findUnique: asyncMock(),
       findMany: asyncMock(),
     },
+    emailNotificationJob: { create: asyncMock() },
   };
+  const prisma = Object.assign(prismaBase, { $transaction: transactionMock(prismaBase) });
   const service = new CommentLikeService(prisma as unknown as PrismaService);
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('upserts a like and returns the existing like on a unique conflict', async () => {
+  it('creates a like and returns the existing like on a unique conflict', async () => {
     const like = { id: 'like-1' };
-    prisma.commentLike.upsert.mockResolvedValue(like);
+    prisma.commentLike.create.mockResolvedValue(like);
 
     await expect(service.create({ profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' })).resolves.toBe(
       like,
     );
-    expect(prisma.commentLike.upsert).toHaveBeenCalledWith({
-      where: { authorId_commentId: { authorId: 'user-1', commentId: 'comment-1' } },
-      update: {},
-      create: { profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' },
+    expect(prisma.commentLike.create).toHaveBeenCalledWith({
+      data: { profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' },
+    });
+    expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
+      data: { notificationType: 'comment-like', sourceId: 'like-1', status: 'queued' },
     });
 
-    prisma.commentLike.upsert.mockRejectedValue({ code: 'P2002' });
+    prisma.commentLike.create.mockRejectedValue({ code: 'P2002' });
     prisma.commentLike.findUnique.mockResolvedValue(like);
 
     await expect(service.create({ profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' })).resolves.toBe(
@@ -40,9 +43,9 @@ describe('CommentLikeService', () => {
     );
   });
 
-  it('rethrows non-unique upsert errors', async () => {
+  it('rethrows non-unique create errors', async () => {
     const error = new Error('database unavailable');
-    prisma.commentLike.upsert.mockRejectedValue(error);
+    prisma.commentLike.create.mockRejectedValue(error);
 
     await expect(service.create({ profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' })).rejects.toBe(
       error,
