@@ -2,7 +2,7 @@ export const STATIC_MAP_WIDTH = 896;
 export const STATIC_MAP_HEIGHT = 538;
 export const MAX_STATIC_MAP_LOCATIONS = 500;
 export const STATIC_MAP_ROUTE_WIDTH = 6;
-export const STATIC_MAP_ROUTE_COLOR = '#F26422';
+export const STATIC_MAP_ROUTE_COLOR = '#EA5B22';
 export const STATIC_MAP_SIMPLIFICATION_TOLERANCE_METERS = 2;
 // MapLibre vector sources use a 512px world at zoom 0. The viewport fit must
 // use the same world scale as the native renderer, otherwise every map is

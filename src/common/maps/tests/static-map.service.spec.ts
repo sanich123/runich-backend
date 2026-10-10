@@ -60,7 +60,7 @@ describe('StaticMapService', () => {
     });
 
     expect(result?.url).toContain('access_token=test-token');
-    expect(result?.url).toContain('path-6+F66767-0.8');
+    expect(result?.url).toContain('path-6+EA5B22-0.8');
     expect(storage.uploadObject).not.toHaveBeenCalled();
   });
 
@@ -75,6 +75,7 @@ describe('StaticMapService', () => {
   });
 
   it('returns null when both MapLibre and Mapbox are unavailable', async () => {
+    delete process.env.MAPBOX_ACCESS_TOKEN;
     renderRunichVectorMap.mockRejectedValue(new Error('vector renderer unavailable'));
 
     await expect(

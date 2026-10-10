@@ -119,80 +119,106 @@ function isRequiredLayer(layer: MapStyleLayer) {
 }
 
 function enhanceMapLayer(layer: MapStyleLayer): MapStyleLayer {
+  if (layer.id === 'background') {
+    return {
+      ...layer,
+      paint: { ...layer.paint, 'background-color': '#202A33' },
+    };
+  }
+
   if (layer.id === 'park') {
     return {
       ...layer,
-      paint: { ...layer.paint, 'fill-color': '#B8DCA8' },
+      paint: { ...layer.paint, 'fill-color': '#1E5B4D', 'fill-opacity': 0.95 },
     };
   }
 
   if (layer.id === 'landcover_wood') {
     return {
       ...layer,
-      paint: { ...layer.paint, 'fill-color': '#A3D486' },
+      paint: { ...layer.paint, 'fill-color': '#246B59', 'fill-opacity': 0.95 },
     };
   }
 
   if (layer.id === 'water') {
     return {
       ...layer,
-      paint: { ...layer.paint, 'fill-color': '#B9DDF2' },
+      paint: { ...layer.paint, 'fill-color': '#293C4A', 'fill-opacity': 0.95 },
     };
   }
 
   if (layer.id === 'waterway') {
     return {
       ...layer,
-      paint: { ...layer.paint, 'line-color': '#73B8DF', 'line-opacity': 0.9 },
+      paint: { ...layer.paint, 'line-color': '#466A76', 'line-opacity': 0.85 },
+    };
+  }
+
+  if (layer.id === 'landuse_residential') {
+    return {
+      ...layer,
+      paint: { ...layer.paint, 'fill-color': '#303B46', 'fill-opacity': 0.95 },
+    };
+  }
+
+  if (layer.id === 'boundary_2' || layer.id === 'boundary_3') {
+    return {
+      ...layer,
+      paint: { ...layer.paint, 'line-color': '#56636E', 'line-opacity': 0.65 },
+    };
+  }
+
+  if (layer.type === 'symbol') {
+    return {
+      ...layer,
+      paint: {
+        ...layer.paint,
+        'text-color': '#B8C2C9',
+        'text-halo-color': '#202A33',
+        'text-halo-width': 1,
+      },
+    };
+  }
+
+  if (layer.id === 'highway_major_casing' || layer.id === 'highway_motorway_casing') {
+    return {
+      ...layer,
+      paint: { ...layer.paint, 'line-color': '#1D2831' },
     };
   }
 
   if (layer.id === 'highway_path') {
     return {
       ...layer,
-      paint: { ...layer.paint, 'line-color': '#D1B48A' },
-    };
-  }
-
-  if (layer.id === 'highway_major_casing') {
-    return {
-      ...layer,
-      paint: { ...layer.paint, 'line-color': '#E2B36E' },
+      paint: { ...layer.paint, 'line-color': '#61736F' },
     };
   }
 
   if (layer.id === 'highway_major_inner') {
     return {
       ...layer,
-      paint: { ...layer.paint, 'line-color': '#FFF0C9' },
+      paint: { ...layer.paint, 'line-color': '#66737D' },
     };
   }
 
   if (layer.id === 'highway_major_subtle') {
     return {
       ...layer,
-      paint: { ...layer.paint, 'line-color': '#D9A45E' },
-    };
-  }
-
-  if (layer.id === 'highway_motorway_casing') {
-    return {
-      ...layer,
-      paint: { ...layer.paint, 'line-color': '#D9954D' },
+      paint: { ...layer.paint, 'line-color': '#46545F' },
     };
   }
 
   if (layer.id === 'highway_motorway_inner') {
     return {
       ...layer,
-      paint: { ...layer.paint, 'line-color': '#FFE5A3' },
+      paint: { ...layer.paint, 'line-color': '#75838C' },
     };
   }
 
   if (layer.id === 'highway_motorway_subtle') {
     return {
       ...layer,
-      paint: { ...layer.paint, 'line-color': '#CC8F4C' },
+      paint: { ...layer.paint, 'line-color': '#4E5B65' },
     };
   }
 
@@ -214,7 +240,7 @@ function insertAdditionalNaturalLayers(layers: MapStyleLayer[], source: string |
       'source-layer': 'landcover',
       minzoom: 8,
       filter: ['all', polygonFilter(), ['==', ['get', 'class'], 'grass']],
-      paint: { 'fill-color': '#DDEDBA', 'fill-opacity': 0.7 },
+      paint: { 'fill-color': '#2A7059', 'fill-opacity': 0.85 },
     },
     {
       id: 'runich-landcover-wetland',
@@ -223,7 +249,7 @@ function insertAdditionalNaturalLayers(layers: MapStyleLayer[], source: string |
       'source-layer': 'landcover',
       minzoom: 10,
       filter: ['all', polygonFilter(), ['==', ['get', 'class'], 'wetland']],
-      paint: { 'fill-color': '#C9E0C2', 'fill-opacity': 0.75 },
+      paint: { 'fill-color': '#2E625B', 'fill-opacity': 0.85 },
     },
     {
       id: 'runich-landuse-cemetery',
@@ -231,7 +257,7 @@ function insertAdditionalNaturalLayers(layers: MapStyleLayer[], source: string |
       source,
       'source-layer': 'landuse',
       filter: ['all', polygonFilter(), ['==', ['get', 'class'], 'cemetery']],
-      paint: { 'fill-color': '#D5E6C8', 'fill-opacity': 0.8 },
+      paint: { 'fill-color': '#3B6A58', 'fill-opacity': 0.85 },
     },
   ];
   const firstRoadLayerIndex = layers.findIndex((layer) => layer['source-layer'] === 'transportation');
