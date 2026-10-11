@@ -86,7 +86,7 @@
     "@nestjs/schematics": "12.0.6",
     "@nestjs/testing": "12.1.2",
     "@prisma/management-api-sdk": "^1.82.0",
-    "@swc/core": "^1.16.13",
+    "@swc/core": "^1.16.18",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/jest": "30.0.0",
