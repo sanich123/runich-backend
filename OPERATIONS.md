@@ -201,7 +201,7 @@ Logs:
 `environment="production"`. Для фонового worker используйте
 `service="background_worker"`.
 
-### Проверка Yandex SMTP
+### Проверка SMTP
 
 Проверка ниже устанавливает TCP/TLS-соединение и выполняет SMTP-auth, но не
 отправляет письмо:
@@ -225,6 +225,12 @@ docker compose -f docker-compose.timeweb.yml exec -T nestjs_app node --input-typ
 '
 ```
 
+Для проверки Mail.ru SMTP используйте те же параметры и команду, заменив
+провайдера на `smtp.mail.ru`, а переменные авторизации на
+`MAILRU_SMTP_USER` и `MAILRU_SMTP_PASSWORD`. Mail.ru использует порт 465 с
+TLS. В Mail.ru должен быть создан пароль внешнего приложения и разрешён доступ
+к почте по IMAP, POP и SMTP.
+
 Для проверки фактической доставки задайте адрес явно в текущей shell-сессии;
 команда ниже отправляет одно нейтральное тестовое письмо и не печатает пароль:
 
@@ -240,6 +246,11 @@ docker compose -f docker-compose.timeweb.yml exec -T -e TEST_EMAIL="$TEST_EMAIL"
   transporter.close();
 '
 ```
+
+Основная отправка использует Yandex. При сетевой ошибке или временном SMTP
+ответе API и worker пробуют Mail.ru, если заданы обе переменные
+`MAILRU_SMTP_USER` и `MAILRU_SMTP_PASSWORD`. Скрипт deployment-уведомлений
+использует тот же порядок.
 
 После успешных readiness-проверок Stage и Production вызывают
 `scripts/send-deployment-success-email.mjs` внутри контейнера `nestjs_app` на

@@ -29,6 +29,8 @@ Create a local, ignored .env file:
     APP_ENV=local
     YANDEX_SMTP_USER=Runich.app@ya.ru
     YANDEX_SMTP_PASSWORD=your-yandex-mail-application-password
+    MAILRU_SMTP_USER=runich-app@mail.ru
+    MAILRU_SMTP_PASSWORD=your-mailru-external-application-password
     RUNICH_PROCESS=api
     S3_ENDPOINT=https://s3.twcstorage.ru
     S3_REGION=ru-1
@@ -123,6 +125,8 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | APP_ENV                      | Application environment: local, stage or production                                      |
 | YANDEX_SMTP_USER             | Full Yandex mailbox address used as the sender                                           |
 | YANDEX_SMTP_PASSWORD         | Yandex application password for Mail                                                     |
+| MAILRU_SMTP_USER              | Optional full Mail.ru mailbox address used for SMTP fallback                            |
+| MAILRU_SMTP_PASSWORD          | Optional Mail.ru password for an external application                                   |
 | MAPBOX_ACCESS_TOKEN          | Mapbox Static Images API access token                                                    |
 | S3_ENDPOINT                  | S3-compatible endpoint, defaults to `https://s3.twcstorage.ru`                           |
 | S3_REGION                    | S3 region, defaults to `ru-1`                                                            |
@@ -144,11 +148,20 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | LOAD_TEST_SEED_TOKEN         | Required only to enqueue the protected stage/local load-test job                         |
 | LOAD_TEST_ASSET_MANIFEST_KEY | Optional S3 key of the prepared load-test manifest                                       |
 
-Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. The
-`YANDEX_SMTP_USER` value is the full mailbox address (`Runich.app@ya.ru` in
-the current account), and `YANDEX_SMTP_PASSWORD` must be an application
-password created for Mail. The regular Yandex account password and Yandex ID
-OAuth credentials are not used for SMTP.
+Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. If Yandex
+has a network failure or returns a temporary SMTP error, and both Mail.ru
+variables are configured, the backend retries through `smtp.mail.ru:465` with
+TLS. Mail.ru is used as the sender for that attempt. Permanent SMTP errors
+such as invalid credentials or a rejected recipient do not trigger fallback.
+If a connection drops after the SMTP server accepted a message but before it
+confirmed delivery, a fallback attempt can result in a duplicate email.
+
+`YANDEX_SMTP_USER` and `MAILRU_SMTP_USER` are full mailbox addresses. Their
+password variables must contain provider-specific application passwords, not
+the regular account passwords. For Mail.ru, create a password for an external
+application and allow access to mail through IMAP, POP and SMTP in the Mail.ru
+security settings. Fallback is enabled only when both Mail.ru variables are
+set; a partial configuration is reported when fallback is needed.
 
 For the production OAuth configuration, register and use these exact callback
 URLs in both provider dashboards:
