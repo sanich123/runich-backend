@@ -167,7 +167,9 @@ jobs:
 
           "${COMPOSE[@]}" exec -T \
             --env DEPLOY_SHA --env DEPLOY_RUN_URL \
-            nestjs_app node scripts/send-deployment-success-email.mjs
+            nestjs_app xvfb-run --auto-servernum \
+            --server-args '-screen 0 1280x1024x24' \
+            node scripts/send-deployment-success-email.mjs
 
           # The stage host has limited disk space. Keep active containers and
           # all named volumes (PostgreSQL and Let's Encrypt), but remove old

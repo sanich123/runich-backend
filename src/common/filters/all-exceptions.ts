@@ -32,8 +32,8 @@ const translatedMessages: Record<string, string> = {
   'Internal server error': 'Внутренняя ошибка сервера',
 };
 
-function translateMessage(message: string, statusCode: number) {
-  return translatedMessages[message] ?? defaultMessages[statusCode] ?? message;
+function translateMessage(message: string) {
+  return translatedMessages[message] ?? message;
 }
 
 function getHttpExceptionMessage(exception: HttpException): string | string[] {
@@ -42,12 +42,16 @@ function getHttpExceptionMessage(exception: HttpException): string | string[] {
 
   if (Array.isArray(responseMessage)) {
     return responseMessage.map((message) =>
-      typeof message === 'string' ? translateMessage(message, exception.getStatus()) : 'Некорректное значение',
+      typeof message === 'string' ? translateMessage(message) : 'Некорректное значение',
     );
   }
 
-  if (typeof responseMessage === 'string') return translateMessage(responseMessage, exception.getStatus());
-  return translateMessage(exception.message, exception.getStatus());
+  if (typeof responseMessage === 'string') return translateMessage(responseMessage);
+
+  const message = translateMessage(exception.message);
+  return message === exception.message
+    ? (defaultMessages[exception.getStatus()] ?? defaultMessages[HttpStatus.INTERNAL_SERVER_ERROR])
+    : message;
 }
 
 function getUnknownExceptionStatus(exception: unknown) {
@@ -79,6 +83,10 @@ function isCreateActivityRequest(request: Request) {
   return request.method === 'POST' && /^\/activity\/[^/]+\/?$/.test(path);
 }
 
+function getRequestPath(requestUrl: string) {
+  return requestUrl.split('?')[0];
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -89,6 +97,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const { httpAdapter } = this.httpAdapterHost;
 
     const ctx = host.switchToHttp();
+    const request = ctx.getRequest<Request>();
     let message: string | string[], statusCode: number;
 
     if (exception instanceof HttpException) {
@@ -103,10 +112,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
       statusCode,
       date: new Date().toISOString(),
-      path: httpAdapter.getRequestUrl(ctx.getRequest()),
+      path: getRequestPath(httpAdapter.getRequestUrl(request)),
     };
     const errorDetails = exception instanceof Error ? exception.stack : String(exception);
-    const request = ctx.getRequest<Request>();
     const activityRequestDetails =
       isCreateActivityRequest(request) && statusCode >= HttpStatus.BAD_REQUEST
         ? `; Ошибка создания активности: userId=${typeof request.params?.id === 'string' ? request.params.id : 'unknown'}`
