@@ -256,8 +256,11 @@ docker compose -f docker-compose.timeweb.yml exec -T -e TEST_EMAIL="$TEST_EMAIL"
 `scripts/send-deployment-success-email.mjs` внутри контейнера `nestjs_app` на
 соответствующем сервере. Скрипт использует SMTP-переменные из Stage `app.env` и
 Production `.env` и отправляет письмо на `aovoronin.piano@gmail.com` с названием
-среды, коротким SHA коммита и ссылкой на запуск деплоя. При ошибке SMTP deploy
-workflow завершится ошибкой; до успешных readiness-проверок письмо не отправляется.
+среды, коротким SHA коммита, ссылкой на запуск деплоя и встроенной PNG-картой
+фиксированного тестового маршрута из 150 точек. Маршрут рендерится штатным
+MapLibre-рендерером по vector map tiles. При ошибке генерации карты или отправки
+SMTP deploy workflow завершится ошибкой; до успешных readiness-проверок письмо
+не отправляется.
 
 ## Фильтрация логов
 

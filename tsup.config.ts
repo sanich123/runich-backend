@@ -6,6 +6,7 @@ export default {
   entry: {
     main: 'src/main.ts',
     'background-worker': 'src/app/background-worker.ts',
+    'send-deployment-success-email': 'scripts/send-deployment-success-email.ts',
   },
   format: ['esm'],
   target: 'node26',
@@ -31,6 +32,7 @@ export default {
     '@ardentcode/sports-lib',
     '@aws-sdk/client-s3',
     '@mapbox/polyline',
+    '@maplibre/maplibre-gl-native',
     '@nestjs/common',
     '@nestjs/core',
     '@nestjs/jwt',
@@ -60,6 +62,7 @@ export default {
     'react-dom',
     'reflect-metadata',
     'rxjs',
+    'sharp',
     'tcx-js',
     'uuid',
     'xmldom-qsa',
