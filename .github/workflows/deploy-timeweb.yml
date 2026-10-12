@@ -195,4 +195,4 @@ jobs:
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd /opt/runich-backend/project && DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' docker compose -f docker-compose.timeweb.yml exec -T --env DEPLOY_SHA --env DEPLOY_RUN_URL nestjs_app node scripts/send-deployment-success-email.mjs"
+            "cd /opt/runich-backend/project && DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' docker compose -f docker-compose.timeweb.yml exec -T --env DEPLOY_SHA --env DEPLOY_RUN_URL nestjs_app xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' node scripts/send-deployment-success-email.mjs"
