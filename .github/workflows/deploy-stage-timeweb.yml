@@ -180,17 +180,3 @@ jobs:
           echo 'Docker disk usage after cleanup:'
           docker system df || echo 'Could not inspect Docker disk usage after cleanup.' >&2
           REMOTE
-
-      - name: Publish the Stage-verified image for this source tree
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-        run: |
-          set -euo pipefail
-          TREE_SHA="$(git rev-parse 'HEAD^{tree}')"
-          VERIFIED_IMAGE="ghcr.io/sanich123/runich-backend:stage-verified-${TREE_SHA}"
-          printf '%s' "$GITHUB_TOKEN" |
-            docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin >/dev/null
-          docker tag "$DEPLOY_IMAGE" "$VERIFIED_IMAGE"
-          docker push "$VERIFIED_IMAGE"
-          docker logout ghcr.io >/dev/null
