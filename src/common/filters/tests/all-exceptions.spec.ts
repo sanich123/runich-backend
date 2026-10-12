@@ -55,7 +55,7 @@ describe('AllExceptionsFilter', () => {
     );
     expect(arrayContext.reply).toHaveBeenCalledWith(
       arrayContext.response,
-      expect.objectContaining({ message: ['Некорректный запрос', 'Некорректное значение', 'Некорректный запрос'] }),
+      expect.objectContaining({ message: ['Некорректный запрос', 'Некорректное значение', 'custom'] }),
       400,
     );
 
