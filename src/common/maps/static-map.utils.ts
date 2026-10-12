@@ -205,12 +205,9 @@ function normalizeZoomPrecision(zoom: number) {
 
 export function createAttributionOverlay() {
   const fontSize = 11;
-  const boxWidth = Math.max(150, STATIC_MAP_ATTRIBUTION.length * 6 + 16);
-  const boxHeight = 19;
   return Buffer.from(
     `<svg width="${STATIC_MAP_WIDTH}" height="${STATIC_MAP_HEIGHT}" xmlns="http://www.w3.org/2000/svg">` +
-      `<rect x="${STATIC_MAP_WIDTH - boxWidth - 6}" y="${STATIC_MAP_HEIGHT - boxHeight - 6}" width="${boxWidth}" height="${boxHeight}" rx="3" fill="#FFFFFFCC"/>` +
-      `<text x="${STATIC_MAP_WIDTH - 14}" y="${STATIC_MAP_HEIGHT - 13}" text-anchor="end" font-family="Arial, sans-serif" font-size="${fontSize}" fill="#222">${escapeXml(STATIC_MAP_ATTRIBUTION)}</text>` +
+      `<text x="${STATIC_MAP_WIDTH - 14}" y="${STATIC_MAP_HEIGHT - 13}" text-anchor="end" font-family="Arial, sans-serif" font-size="${fontSize}" fill="#fff" stroke="#18212b" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke">${escapeXml(STATIC_MAP_ATTRIBUTION)}</text>` +
       '</svg>',
   );
 }
