@@ -1,3 +1,2 @@
 export const SLOW_REQUEST_THRESHOLD_MS = 300;
 export const MAX_SAMPLES_PER_METRIC = 1_000;
-export const REPORT_INTERVAL_MS = 60_000;
