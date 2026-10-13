@@ -18,7 +18,6 @@ describe('LatencyMetricsService', () => {
       p95: 95,
       p99: 99,
     });
-    service.onModuleDestroy();
   });
 
   it('keeps separate metrics for database and external calls', () => {
@@ -33,7 +32,6 @@ describe('LatencyMetricsService', () => {
         expect.objectContaining({ category: 'external', name: 's3.putObject', p50: 34 }),
       ]),
     );
-    service.onModuleDestroy();
   });
 
   it('ignores invalid durations and returns null for an unknown metric', () => {
@@ -43,7 +41,6 @@ describe('LatencyMetricsService', () => {
     service.observeHttp('GET /invalid', -1);
 
     expect(service.getSnapshot('http', 'GET /invalid')).toBeNull();
-    service.onModuleDestroy();
   });
 
   it('keeps only the most recent thousand samples', () => {
@@ -54,20 +51,21 @@ describe('LatencyMetricsService', () => {
     }
 
     expect(service.getSnapshot('db', 'bounded')).toMatchObject({ count: 1_000, p50: 500, p95: 950, p99: 990 });
-    service.onModuleDestroy();
   });
 
-  it('logs a report only when metrics exist', () => {
-    const service = new LatencyMetricsService();
+  it('does not emit periodic latency reports', () => {
+    jest.useFakeTimers();
     const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
-    service['logReport']();
-    expect(log).not.toHaveBeenCalled();
+    try {
+      const service = new LatencyMetricsService();
+      service.observeHttp('GET /health', 320);
+      jest.advanceTimersByTime(10 * 60 * 1_000);
 
-    service.observeHttp('GET /health', 320);
-    service['logReport']();
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('http.GET /health count=1'));
-
-    service.onModuleDestroy();
+      expect(log).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+      jest.useRealTimers();
+    }
   });
 });
