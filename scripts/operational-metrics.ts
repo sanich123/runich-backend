@@ -69,7 +69,7 @@ SELECT
   (SELECT COUNT(*) FILTER (WHERE "created_at" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Activity") AS activities_24h,
   (SELECT COUNT(*) FILTER (WHERE "date" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Comment") AS comments_24h,
   (SELECT COUNT(*) FILTER (WHERE "date" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Like") AS likes_24h,
-  (SELECT COUNT(*) FILTER (WHERE "created_at" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Friend") AS follows_24h,
+  (SELECT COUNT(*) FILTER (WHERE "createdAt" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Friend") AS follows_24h,
   (SELECT COUNT(*) FILTER (WHERE "media_processing_status" = 'queued') FROM "Activity") AS media_queued,
   (SELECT COUNT(*) FILTER (WHERE "location_enrichment_status" = 'queued') FROM "Activity") AS enrichment_queued,
   (SELECT COUNT(*) FILTER (WHERE "status" = 'queued') FROM "ActivityMigrationJob") AS imports_queued,
