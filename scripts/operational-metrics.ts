@@ -56,7 +56,7 @@ type OperationalMetricsRow = Record<
   string | number
 >;
 
-const OPERATIONAL_METRICS_QUERY = `
+export const OPERATIONAL_METRICS_QUERY = `
 SELECT
   (SELECT COUNT(*) FILTER (WHERE "deleted_at" IS NULL) FROM "Users") AS users_total,
   (SELECT COUNT(*) FILTER (WHERE "deleted_at" IS NULL AND "created_at" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Users") AS users_new_24h,
@@ -66,7 +66,7 @@ SELECT
     FROM "UserSession" sessions JOIN "Users" users ON users."id" = sessions."user_id" WHERE users."deleted_at" IS NULL) AS users_active_7d,
   (SELECT COUNT(*) FROM "Profile") AS profiles_total,
   (SELECT COUNT(*) FROM "Activity") AS activities_total,
-  (SELECT COUNT(*) FILTER (WHERE "created_at" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Activity") AS activities_24h,
+  (SELECT COUNT(*) FILTER (WHERE "createdAt" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Activity") AS activities_24h,
   (SELECT COUNT(*) FILTER (WHERE "date" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Comment") AS comments_24h,
   (SELECT COUNT(*) FILTER (WHERE "date" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Like") AS likes_24h,
   (SELECT COUNT(*) FILTER (WHERE "createdAt" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "Friend") AS follows_24h,
@@ -76,8 +76,8 @@ SELECT
   (SELECT COUNT(*) FILTER (WHERE "status" = 'processing') FROM "ActivityMigrationJob") AS imports_processing,
   (SELECT COUNT(*) FILTER (WHERE "status" = 'queued' AND "available_at" <= CURRENT_TIMESTAMP) FROM "EmailNotificationJob") AS emails_queued,
   (SELECT COUNT(*) FILTER (WHERE "status" = 'processing') FROM "EmailNotificationJob") AS emails_processing,
-  (SELECT COUNT(*) FILTER (WHERE "status" = 'failed' AND "finished_at" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "ActivityMigrationJob")
-    + (SELECT COUNT(*) FILTER (WHERE "status" = 'failed' AND "finished_at" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "MediaCleanupJob")
+  (SELECT COUNT(*) FILTER (WHERE "status" = 'failed' AND "finishedAt" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "ActivityMigrationJob")
+    + (SELECT COUNT(*) FILTER (WHERE "status" = 'failed' AND "finishedAt" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "MediaCleanupJob")
     + (SELECT COUNT(*) FILTER (WHERE "status" = 'failed' AND "finished_at" >= CURRENT_TIMESTAMP - INTERVAL '24 hours') FROM "EmailNotificationJob") AS failed_jobs_24h,
   pg_database_size(current_database()) AS database_size_bytes,
   COALESCE((SELECT numbackends FROM pg_stat_database WHERE datname = current_database()), 0) AS database_connections,
