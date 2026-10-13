@@ -1,4 +1,9 @@
-import { formatOperationalMetricsText, getOperationalMetricRows, type OperationalMetrics } from './operational-metrics';
+import {
+  formatOperationalMetricsText,
+  getOperationalMetricRows,
+  OPERATIONAL_METRICS_QUERY,
+  type OperationalMetrics,
+} from './operational-metrics';
 
 const metrics: OperationalMetrics = {
   capturedAt: '2026-10-13T06:00:00.000Z',
@@ -29,5 +34,22 @@ describe('operational metrics formatting', () => {
     );
     expect(text).toContain('Active users: 614/24h, 2 180/7d');
     expect(text).not.toMatch(/@|[0-9a-f]{8}-[0-9a-f-]{27}/i);
+  });
+});
+
+describe('operational metrics query', () => {
+  it('uses the actual mixed-case Prisma column names', () => {
+    expect(OPERATIONAL_METRICS_QUERY).toContain('FROM "Activity") AS activities_24h');
+    expect(OPERATIONAL_METRICS_QUERY).toContain('"createdAt" >= CURRENT_TIMESTAMP - INTERVAL \'24 hours\'');
+    expect(OPERATIONAL_METRICS_QUERY).toContain('"finishedAt" >= CURRENT_TIMESTAMP - INTERVAL \'24 hours\'');
+    expect(OPERATIONAL_METRICS_QUERY).not.toContain(
+      'WHERE "created_at" >= CURRENT_TIMESTAMP - INTERVAL \'24 hours\') FROM "Activity"',
+    );
+    expect(OPERATIONAL_METRICS_QUERY).not.toContain(
+      'WHERE "status" = \'failed\' AND "finished_at" >= CURRENT_TIMESTAMP - INTERVAL \'24 hours\') FROM "ActivityMigrationJob"',
+    );
+    expect(OPERATIONAL_METRICS_QUERY).not.toContain(
+      'WHERE "status" = \'failed\' AND "finished_at" >= CURRENT_TIMESTAMP - INTERVAL \'24 hours\') FROM "MediaCleanupJob"',
+    );
   });
 });
