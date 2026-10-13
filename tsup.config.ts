@@ -7,6 +7,7 @@ export default {
     main: 'src/main.ts',
     'background-worker': 'src/app/background-worker.ts',
     'send-deployment-success-email': 'scripts/send-deployment-success-email.ts',
+    'send-daily-metrics-email': 'scripts/send-daily-metrics-email.ts',
   },
   format: ['esm'],
   target: 'node26',
