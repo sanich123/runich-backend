@@ -11,7 +11,7 @@ yarn test:ci
 yarn test:cov
 
 # 5. PostgreSQL integration/e2e-тесты
-yarn db:up
+yarn db:up:check
 yarn test:integration
 
 # 6. Остановка локальной БД после успешного прохождения всех тестов
