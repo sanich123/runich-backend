@@ -8330,12 +8330,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv@npm:^18.0.7":
-  version: 18.0.7
-  resolution: "dotenv@npm:18.0.7"
+"dotenv@npm:^18.0.8":
+  version: 18.0.8
+  resolution: "dotenv@npm:18.0.8"
   bin:
     dotenv: dist/index.cjs
-  checksum: 10c0/bda2efbfa3194eec5ae592308db16285a3e163b505282a052ec9e10538be1c6a526f0437b431e78183e9bd367db0ad7c446d0180ab62310bc0a384787bec8894
+  checksum: 10c0/88a6a81afe58aaad7f9ae5d97422731c6e7b9efa4db752ea5add7fb6035f5866ce6e10a76fb7ad2d7f606bdf0afc9507ffd7e04d86d9b347b38d4614a3a0c2ac
   languageName: node
   linkType: hard
 
@@ -13998,7 +13998,7 @@ __metadata:
     class-validator: "npm:^0.15.1"
     csv-parse: "npm:^7.0.3"
     depcheck: "npm:^1.4.7"
-    dotenv: "npm:^18.0.7"
+    dotenv: "npm:^18.0.8"
     eslint: "npm:^10.12.0"
     express: "npm:^5.3.0"
     globals: "npm:^17.13.0"
@@ -14021,7 +14021,7 @@ __metadata:
     sharp: "npm:^0.35.5"
     supertest: "npm:^7.3.1"
     tcx-js: "npm:^1.0.1"
-    temporal-polyfill: "npm:^1.0.5"
+    temporal-polyfill: "npm:^1.0.6"
     ts-jest: "npm:^29.4.14"
     ts-loader: "npm:^9.6.2"
     ts-prune: "npm:^0.10.3"
@@ -15073,13 +15073,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"temporal-polyfill@npm:^1.0.5":
-  version: 1.0.5
-  resolution: "temporal-polyfill@npm:1.0.5"
+"temporal-polyfill@npm:^1.0.6":
+  version: 1.0.6
+  resolution: "temporal-polyfill@npm:1.0.6"
   dependencies:
     temporal-spec: "npm:1.0.1"
     temporal-utils: "npm:1.0.3"
-  checksum: 10c0/88928e40e60d0da0c998af2b8da09768ee2c8784fec7526317fde83f55eb69926209a6bbc4360792cac7ace7371949718bc1f12edac1df0fe42eba5d55a43451
+  checksum: 10c0/f67f3d0edf62335cc572f7680cfc9f3da6b9124fbcbc22fd016d17fcedb64ac8c7ce26886474c1ecc549a1e5fe0bc167988da5c59d51d88956a5a7e7195fb2b1
   languageName: node
   linkType: hard
 

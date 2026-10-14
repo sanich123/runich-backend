@@ -61,7 +61,7 @@
     "class-transformer": "0.5.1",
     "class-validator": "^0.15.1",
     "csv-parse": "^7.0.3",
-    "dotenv": "^18.0.7",
+    "dotenv": "^18.0.8",
     "express": "^5.3.0",
     "multer": "^2.4.0",
     "nodemailer": "^10.1.1",
@@ -75,7 +75,7 @@
     "rxjs": "^7.8.2",
     "sharp": "^0.35.5",
     "tcx-js": "^1.0.1",
-    "temporal-polyfill": "^1.0.5",
+    "temporal-polyfill": "^1.0.6",
     "uuid": "^14.0.3",
     "xmldom-qsa": "^1.1.3"
   },
