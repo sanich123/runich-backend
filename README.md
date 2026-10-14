@@ -125,8 +125,8 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | APP_ENV                      | Application environment: local, stage or production                                      |
 | YANDEX_SMTP_USER             | Full Yandex mailbox address used as the sender                                           |
 | YANDEX_SMTP_PASSWORD         | Yandex application password for Mail                                                     |
-| MAILRU_SMTP_USER              | Optional full Mail.ru mailbox address used for SMTP fallback                            |
-| MAILRU_SMTP_PASSWORD          | Optional Mail.ru password for an external application                                   |
+| MAILRU_SMTP_USER             | Optional full Mail.ru mailbox address used for SMTP fallback                             |
+| MAILRU_SMTP_PASSWORD         | Optional Mail.ru password for an external application                                    |
 | MAPBOX_ACCESS_TOKEN          | Mapbox Static Images API access token                                                    |
 | S3_ENDPOINT                  | S3-compatible endpoint, defaults to `https://s3.twcstorage.ru`                           |
 | S3_REGION                    | S3 region, defaults to `ru-1`                                                            |
@@ -163,16 +163,26 @@ application and allow access to mail through IMAP, POP and SMTP in the Mail.ru
 security settings. Fallback is enabled only when both Mail.ru variables are
 set; a partial configuration is reported when fallback is needed.
 
-For the production OAuth configuration, register and use these exact callback
-URLs in both provider dashboards:
+OAuth provider callback URLs and the final frontend URL are
+environment-specific:
 
-    YANDEX_REDIRECT_URI=https://api.runich-app.ru/auth/yandex/callback
-    VK_REDIRECT_URI=https://api.runich-app.ru/auth/vk/callback
+| Environment | `YANDEX_REDIRECT_URI` and `VK_REDIRECT_URI`            | `AUTH_FRONTEND_REDIRECT_URI`                       |
+| ----------- | ------------------------------------------------------ | -------------------------------------------------- |
+| local       | `http://localhost:3000/auth/{provider}/callback`       | `http://localhost:5173/login-from-url`             |
+| stage       | `https://stage.runich-app.ru/auth/{provider}/callback` | `https://stage--runich.netlify.app/login-from-url` |
+| production  | `https://api.runich-app.ru/auth/{provider}/callback`   | `https://runich.netlify.app/login-from-url`        |
 
-`AUTH_FRONTEND_REDIRECT_URI` is the post-login redirect used by both OAuth and
-email links. It must point to the frontend belonging to the current
-environment, for example `https://runich.netlify.app/login-from-url` in
-production or `https://stage--runich.netlify.app/login-from-url` in stage.
+Replace `{provider}` with `yandex` or `vk` when registering the callback in
+the corresponding provider dashboard. The provider callback is always an API
+URL; `AUTH_FRONTEND_REDIRECT_URI` is always the frontend route
+`/login-from-url`. After a successful OAuth callback, or when an OAuth error is
+returned, the backend redirects there with query parameters. Email login and
+confirmation links use the same route with a one-time `code` parameter.
+
+`AUTH_FRONTEND_REDIRECT_URI` has priority over the default selected by
+`APP_ENV`. Keep an explicit override aligned with the environment being tested;
+otherwise a local backend can unexpectedly send login links to stage or
+production.
 
 Stage uses its own S3 bucket (`runich-stage`) and production uses
 `runich-production`. Photo writes are enabled in both environments. Mock data

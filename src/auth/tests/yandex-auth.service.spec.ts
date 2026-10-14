@@ -68,6 +68,19 @@ describe('YandexAuthService', () => {
     expect(response.redirect).toHaveBeenCalledWith('https://app.example/login-from-url?oauthError=missing_code');
   });
 
+  it('preserves existing frontend URL parameters when redirecting an error', async () => {
+    process.env.AUTH_FRONTEND_REDIRECT_URI = 'https://app.example/login-from-url?source=email#callback';
+    const response = responseMock();
+
+    await service.callback('', 'access_denied', response as never);
+
+    const redirect = new URL(String(response.redirect.mock.calls[0]?.[0]));
+    expect(redirect.origin + redirect.pathname).toBe('https://app.example/login-from-url');
+    expect(redirect.searchParams.get('source')).toBe('email');
+    expect(redirect.searchParams.get('oauthError')).toBe('access_denied');
+    expect(redirect.hash).toBe('#callback');
+  });
+
   it('rejects token and user profile provider errors', async () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('bad token', { status: 400 }));
     await expect(service.callback('code', '', responseMock() as never)).rejects.toBeInstanceOf(UnauthorizedException);
