@@ -77,6 +77,16 @@ export class UserDto {
   @IsOptional()
   emailNotifications?: boolean | null;
 
+  @ApiPropertyOptional({ type: Boolean, description: 'Enable push notifications' })
+  @IsBoolean()
+  @IsOptional()
+  pushNotifications?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Enable notifications in the in-app notification center' })
+  @IsBoolean()
+  @IsOptional()
+  inAppNotifications?: boolean;
+
   @ApiPropertyOptional({ type: Boolean, description: 'Allow this profile to appear in user search' })
   @IsBoolean()
   @IsOptional()

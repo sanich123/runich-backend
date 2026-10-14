@@ -1,0 +1,728 @@
+[
+  {
+    "id": "table.Notification",
+    "label": "Create table \"Notification\"",
+    "summary": "Creates table \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Notification\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Notification\"",
+        "sql": "CREATE TABLE \"public\".\"Notification\" (\n  \"actor_name\" text,\n  \"actor_profile_photo\" text,\n  \"actor_surname\" text,\n  \"actor_user_id\" uuid,\n  \"content\" text,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"read_at\" timestamptz(6),\n  \"recipient_user_id\" uuid NOT NULL,\n  \"related_id\" uuid,\n  \"source_id\" uuid NOT NULL,\n  \"target_id\" uuid NOT NULL,\n  \"target_type\" character varying(32) NOT NULL,\n  \"type\" character varying(64) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Notification\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.PushDeviceToken",
+    "label": "Create table \"PushDeviceToken\"",
+    "summary": "Creates table \"PushDeviceToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "PushDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"PushDeviceToken\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushDeviceToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"PushDeviceToken\"",
+        "sql": "CREATE TABLE \"public\".\"PushDeviceToken\" (\n  \"active\" bool DEFAULT true NOT NULL,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"device_id\" character varying(128) NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"platform\" character varying(32) NOT NULL,\n  \"token\" character varying(512) NOT NULL,\n  \"updated_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"user_id\" uuid NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"PushDeviceToken\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushDeviceToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.PushNotificationJob",
+    "label": "Create table \"PushNotificationJob\"",
+    "summary": "Creates table \"PushNotificationJob\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "PushNotificationJob"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"PushNotificationJob\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushNotificationJob\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"PushNotificationJob\"",
+        "sql": "CREATE TABLE \"public\".\"PushNotificationJob\" (\n  \"attempts\" int4 DEFAULT 0 NOT NULL,\n  \"available_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"error_message\" text,\n  \"finished_at\" timestamptz(6),\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"notification_id\" uuid NOT NULL,\n  \"started_at\" timestamptz(6),\n  \"status\" character varying(16) DEFAULT 'queued' NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"PushNotificationJob\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushNotificationJob\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Notification.Notification_recipient_type_source_key",
+    "label": "Add unique constraint on \"Notification\" (recipient_user_id, type, source_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Notification_recipient_type_source_key",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Notification_recipient_type_source_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Notification_recipient_type_source_key",
+          "public",
+          "\"public\".\"Notification\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Notification_recipient_type_source_key\"",
+        "sql": "ALTER TABLE \"public\".\"Notification\" ADD CONSTRAINT \"Notification_recipient_type_source_key\" UNIQUE (\"recipient_user_id\", \"type\", \"source_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Notification_recipient_type_source_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Notification_recipient_type_source_key",
+          "public",
+          "\"public\".\"Notification\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.PushDeviceToken.PushDeviceToken_device_id_key",
+    "label": "Add unique constraint on \"PushDeviceToken\" (device_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "PushDeviceToken_device_id_key",
+        "table": "PushDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"PushDeviceToken_device_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushDeviceToken_device_id_key",
+          "public",
+          "\"public\".\"PushDeviceToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"PushDeviceToken_device_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"PushDeviceToken\" ADD CONSTRAINT \"PushDeviceToken_device_id_key\" UNIQUE (\"device_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"PushDeviceToken_device_id_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushDeviceToken_device_id_key",
+          "public",
+          "\"public\".\"PushDeviceToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.PushDeviceToken.PushDeviceToken_token_key",
+    "label": "Add unique constraint on \"PushDeviceToken\" (token)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "PushDeviceToken_token_key",
+        "table": "PushDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"PushDeviceToken_token_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushDeviceToken_token_key",
+          "public",
+          "\"public\".\"PushDeviceToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"PushDeviceToken_token_key\"",
+        "sql": "ALTER TABLE \"public\".\"PushDeviceToken\" ADD CONSTRAINT \"PushDeviceToken_token_key\" UNIQUE (\"token\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"PushDeviceToken_token_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushDeviceToken_token_key",
+          "public",
+          "\"public\".\"PushDeviceToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.PushNotificationJob.PushNotificationJob_notification_id_key",
+    "label": "Add unique constraint on \"PushNotificationJob\" (notification_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "PushNotificationJob_notification_id_key",
+        "table": "PushNotificationJob"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"PushNotificationJob_notification_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushNotificationJob_notification_id_key",
+          "public",
+          "\"public\".\"PushNotificationJob\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"PushNotificationJob_notification_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"PushNotificationJob\" ADD CONSTRAINT \"PushNotificationJob_notification_id_key\" UNIQUE (\"notification_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"PushNotificationJob_notification_id_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushNotificationJob_notification_id_key",
+          "public",
+          "\"public\".\"PushNotificationJob\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Notification.Notification_actor_user_id_idx_c46ca325",
+    "label": "Create index \"Notification_actor_user_id_idx_c46ca325\" on \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Notification_actor_user_id_idx_c46ca325",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Notification_actor_user_id_idx_c46ca325\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_actor_user_id_idx_c46ca325\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Notification_actor_user_id_idx_c46ca325\"",
+        "sql": "CREATE INDEX \"Notification_actor_user_id_idx_c46ca325\" ON \"public\".\"Notification\" (\"actor_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Notification_actor_user_id_idx_c46ca325\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_actor_user_id_idx_c46ca325\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Notification.Notification_recipient_createdAt_id_idx",
+    "label": "Create index \"Notification_recipient_createdAt_id_idx\" on \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Notification_recipient_createdAt_id_idx",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Notification_recipient_createdAt_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_recipient_createdAt_id_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Notification_recipient_createdAt_id_idx\"",
+        "sql": "CREATE INDEX \"Notification_recipient_createdAt_id_idx\" ON \"public\".\"Notification\" (\"recipient_user_id\", \"created_at\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Notification_recipient_createdAt_id_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_recipient_createdAt_id_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Notification.Notification_recipient_readAt_idx",
+    "label": "Create index \"Notification_recipient_readAt_idx\" on \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Notification_recipient_readAt_idx",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Notification_recipient_readAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_recipient_readAt_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Notification_recipient_readAt_idx\"",
+        "sql": "CREATE INDEX \"Notification_recipient_readAt_idx\" ON \"public\".\"Notification\" (\"recipient_user_id\", \"read_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Notification_recipient_readAt_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_recipient_readAt_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Notification.Notification_recipient_user_id_idx_86720e87",
+    "label": "Create index \"Notification_recipient_user_id_idx_86720e87\" on \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Notification_recipient_user_id_idx_86720e87",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Notification_recipient_user_id_idx_86720e87\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_recipient_user_id_idx_86720e87\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Notification_recipient_user_id_idx_86720e87\"",
+        "sql": "CREATE INDEX \"Notification_recipient_user_id_idx_86720e87\" ON \"public\".\"Notification\" (\"recipient_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Notification_recipient_user_id_idx_86720e87\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_recipient_user_id_idx_86720e87\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.PushDeviceToken.PushDeviceToken_user_active_idx",
+    "label": "Create index \"PushDeviceToken_user_active_idx\" on \"PushDeviceToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "PushDeviceToken_user_active_idx",
+        "table": "PushDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"PushDeviceToken_user_active_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushDeviceToken_user_active_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"PushDeviceToken_user_active_idx\"",
+        "sql": "CREATE INDEX \"PushDeviceToken_user_active_idx\" ON \"public\".\"PushDeviceToken\" (\"user_id\", \"active\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"PushDeviceToken_user_active_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushDeviceToken_user_active_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.PushDeviceToken.PushDeviceToken_user_id_idx_6c952402",
+    "label": "Create index \"PushDeviceToken_user_id_idx_6c952402\" on \"PushDeviceToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "PushDeviceToken_user_id_idx_6c952402",
+        "table": "PushDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"PushDeviceToken_user_id_idx_6c952402\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushDeviceToken_user_id_idx_6c952402\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"PushDeviceToken_user_id_idx_6c952402\"",
+        "sql": "CREATE INDEX \"PushDeviceToken_user_id_idx_6c952402\" ON \"public\".\"PushDeviceToken\" (\"user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"PushDeviceToken_user_id_idx_6c952402\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushDeviceToken_user_id_idx_6c952402\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.PushNotificationJob.PushNotificationJob_status_available_at_created_at_idx",
+    "label": "Create index \"PushNotificationJob_status_available_at_created_at_idx\" on \"PushNotificationJob\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "PushNotificationJob_status_available_at_created_at_idx",
+        "table": "PushNotificationJob"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"PushNotificationJob_status_available_at_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushNotificationJob_status_available_at_created_at_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"PushNotificationJob_status_available_at_created_at_idx\"",
+        "sql": "CREATE INDEX \"PushNotificationJob_status_available_at_created_at_idx\" ON \"public\".\"PushNotificationJob\" (\"status\", \"available_at\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"PushNotificationJob_status_available_at_created_at_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"PushNotificationJob_status_available_at_created_at_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Notification.Notification_recipient_user_id_fkey",
+    "label": "Add foreign key \"Notification_recipient_user_id_fkey\" on \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Notification_recipient_user_id_fkey",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Notification_recipient_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Notification_recipient_user_id_fkey",
+          "public",
+          "\"public\".\"Notification\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Notification_recipient_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Notification\"\nADD CONSTRAINT \"Notification_recipient_user_id_fkey\"\nFOREIGN KEY (\"recipient_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Notification_recipient_user_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Notification_recipient_user_id_fkey",
+          "public",
+          "\"public\".\"Notification\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Notification.Notification_actor_user_id_fkey",
+    "label": "Add foreign key \"Notification_actor_user_id_fkey\" on \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Notification_actor_user_id_fkey",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Notification_actor_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Notification_actor_user_id_fkey",
+          "public",
+          "\"public\".\"Notification\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Notification_actor_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Notification\"\nADD CONSTRAINT \"Notification_actor_user_id_fkey\"\nFOREIGN KEY (\"actor_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Notification_actor_user_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Notification_actor_user_id_fkey",
+          "public",
+          "\"public\".\"Notification\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.PushDeviceToken.PushDeviceToken_user_id_fkey",
+    "label": "Add foreign key \"PushDeviceToken_user_id_fkey\" on \"PushDeviceToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "PushDeviceToken_user_id_fkey",
+        "table": "PushDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"PushDeviceToken_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushDeviceToken_user_id_fkey",
+          "public",
+          "\"public\".\"PushDeviceToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"PushDeviceToken_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"PushDeviceToken\"\nADD CONSTRAINT \"PushDeviceToken_user_id_fkey\"\nFOREIGN KEY (\"user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"PushDeviceToken_user_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushDeviceToken_user_id_fkey",
+          "public",
+          "\"public\".\"PushDeviceToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.PushNotificationJob.PushNotificationJob_notification_id_fkey",
+    "label": "Add foreign key \"PushNotificationJob_notification_id_fkey\" on \"PushNotificationJob\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "PushNotificationJob_notification_id_fkey",
+        "table": "PushNotificationJob"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"PushNotificationJob_notification_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushNotificationJob_notification_id_fkey",
+          "public",
+          "\"public\".\"PushNotificationJob\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"PushNotificationJob_notification_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"PushNotificationJob\"\nADD CONSTRAINT \"PushNotificationJob_notification_id_fkey\"\nFOREIGN KEY (\"notification_id\")\nREFERENCES \"public\".\"Notification\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"PushNotificationJob_notification_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "PushNotificationJob_notification_id_fkey",
+          "public",
+          "\"public\".\"PushNotificationJob\""
+        ]
+      }
+    ]
+  }
+]

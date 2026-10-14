@@ -6,8 +6,12 @@ import { asyncMock, expectInternalServerError, transactionMock } from 'src/tests
 function createPrismaMock() {
   const prisma = {
     activity: { findUnique: asyncMock() },
+    profile: { findUnique: asyncMock() },
     like: { create: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
     emailNotificationJob: { create: asyncMock() },
+    notification: { create: asyncMock() },
+    pushDeviceToken: { findFirst: asyncMock() },
+    pushNotificationJob: { create: asyncMock() },
   };
   return Object.assign(prisma, { $transaction: transactionMock(prisma) });
 }
@@ -29,7 +33,11 @@ describe('LikeService', () => {
       nextCursor: null,
       currentUserLike: null,
     });
-    const listQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
+    const likesCall = (prisma.activity.findUnique.mock.calls as unknown[][]).find((call) => {
+      const select = (call[0] as { select?: Record<string, unknown> } | undefined)?.select;
+      return Boolean(select?.likes);
+    });
+    const listQuery = (likesCall?.[0] ?? {}) as {
       select?: { likes?: { select?: Record<string, unknown>; include?: unknown; take?: number; orderBy?: unknown } };
       include?: unknown;
     };
@@ -53,9 +61,7 @@ describe('LikeService', () => {
     expect(prisma.like.create).toHaveBeenCalledWith({
       data: { profileId: 'profile-1', authorId: '', activityId: 'activity-1' },
     });
-    expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
-      data: { notificationType: 'activity-like', sourceId: 'like-1', status: 'queued' },
-    });
+    expect(prisma.emailNotificationJob.create).not.toHaveBeenCalled();
   });
 
   it('returns an existing like only for a unique-constraint race', async () => {
@@ -69,6 +75,46 @@ describe('LikeService', () => {
     await expect(service.addLike({ activityId: 'activity-1' })).resolves.toEqual({ id: 'like-1' });
     expect(prisma.like.findUnique).toHaveBeenCalledTimes(1);
     expect(prisma.emailNotificationJob.create).not.toHaveBeenCalled();
+  });
+
+  it('creates an in-app notification for another user when an activity is liked', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1', name: 'Alice' }) };
+    const service = new LikeService(
+      prisma as never,
+      account as never,
+      {
+        canAccessActivity: asyncMock().mockResolvedValue(true),
+        canInteractWithActivity: asyncMock().mockResolvedValue(true),
+      } as never,
+    );
+    prisma.like.create.mockResolvedValue({ id: 'like-1' });
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1' });
+    prisma.profile.findUnique.mockResolvedValue({
+      emailNotifications: true,
+      inAppNotifications: true,
+      pushNotifications: false,
+      user: { email: 'owner@example.com' },
+    });
+
+    await service.addLike({ activityId: 'activity-1' }, 'actor-1');
+
+    expect(prisma.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        recipientUserId: 'owner-1',
+        actorUserId: 'actor-1',
+        type: 'activity-like',
+        inApp: true,
+        sourceId: 'like-1',
+        targetType: 'activity',
+        targetId: 'activity-1',
+        actorName: 'Alice',
+      }),
+      select: { id: true },
+    });
+    expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
+      data: { notificationType: 'activity-like', sourceId: 'like-1', status: 'queued' },
+    });
   });
 
   it('returns only the likes count for an accessible activity', async () => {

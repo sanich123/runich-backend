@@ -6,6 +6,11 @@ import { CommentLikeService } from '../comment-like.service';
 
 describe('CommentLikeService', () => {
   const prismaBase = {
+    comment: { findUnique: asyncMock() },
+    profile: { findUnique: asyncMock() },
+    notification: { create: asyncMock() },
+    pushDeviceToken: { findFirst: asyncMock() },
+    pushNotificationJob: { create: asyncMock() },
     commentLike: {
       create: asyncMock(),
       delete: asyncMock(),
@@ -24,6 +29,15 @@ describe('CommentLikeService', () => {
   it('creates a like and returns the existing like on a unique conflict', async () => {
     const like = { id: 'like-1' };
     prisma.commentLike.create.mockResolvedValue(like);
+    prisma.comment.findUnique.mockResolvedValue({ authorId: 'owner-1', comment: 'Nice run', activityId: 'activity-1' });
+    prisma.profile.findUnique
+      .mockResolvedValueOnce({ name: 'Alice', surname: 'Runner', profilePhoto: 'avatar.jpg' })
+      .mockResolvedValueOnce({
+        emailNotifications: true,
+        inAppNotifications: true,
+        pushNotifications: false,
+        user: { email: 'owner@example.com' },
+      });
 
     await expect(service.create({ profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' })).resolves.toBe(
       like,
@@ -50,6 +64,43 @@ describe('CommentLikeService', () => {
     await expect(service.create({ profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' })).rejects.toBe(
       error,
     );
+  });
+
+  it('creates an in-app notification for the author of a liked comment', async () => {
+    prisma.commentLike.create.mockResolvedValue({ id: 'comment-like-1' });
+    prisma.comment.findUnique.mockResolvedValue({
+      authorId: 'comment-owner',
+      comment: 'Good pace!',
+      activityId: 'activity-1',
+    });
+    prisma.profile.findUnique
+      .mockResolvedValueOnce({ name: 'Alice', surname: 'Runner', profilePhoto: 'avatar.jpg' })
+      .mockResolvedValueOnce({
+        emailNotifications: false,
+        inAppNotifications: true,
+        pushNotifications: false,
+        user: { email: 'owner@example.com' },
+      });
+
+    await service.create({ profileId: 'profile-1', authorId: 'actor-1', commentId: 'comment-1' });
+
+    expect(prisma.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        recipientUserId: 'comment-owner',
+        actorUserId: 'actor-1',
+        type: 'comment-like',
+        sourceId: 'comment-like-1',
+        targetType: 'activity',
+        targetId: 'activity-1',
+        relatedId: 'comment-1',
+        content: 'Good pace!',
+        actorName: 'Alice',
+        actorSurname: 'Runner',
+        actorProfilePhoto: 'avatar.jpg',
+        inApp: true,
+      }),
+      select: { id: true },
+    });
   });
 
   it('deletes a like with and without author ownership', async () => {

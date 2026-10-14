@@ -17,6 +17,7 @@ import { StorageModule } from 'src/storage/storage.module';
 import { SubscriptionModule } from 'src/subscription/subscription.module';
 import { LoadTestModule } from 'src/load-test/load-test.module';
 import { observeImports } from 'src/common/observe/observe.config';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { observeImports } from 'src/common/observe/observe.config';
     LikeModule,
     StatisticModule,
     EmailModule,
+    NotificationModule,
     AuthModule,
     HealthModule,
     StorageModule,

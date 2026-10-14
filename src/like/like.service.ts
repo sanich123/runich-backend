@@ -6,7 +6,9 @@ import { AccountService } from 'src/account/account.service';
 import { ActivityService } from 'src/activity/activity.service';
 import { encodeLikeCursor } from './like.pagination';
 import type { LikeCursor } from './like.pagination';
-import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
+import { EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
+import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
+import { createNotificationEvent } from 'src/notification/notification-event';
 
 @Injectable()
 export class LikeService {
@@ -36,13 +38,24 @@ export class LikeService {
           const like = await transaction.like.create({
             data: { profileId: account.id, authorId, activityId },
           });
-          await transaction.emailNotificationJob.create({
-            data: {
-              notificationType: EMAIL_NOTIFICATION_TYPE.activityLike,
-              sourceId: like.id,
-              status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
-            },
+          const activity = await transaction.activity.findUnique({
+            where: { id: activityId },
+            select: { userId: true },
           });
+          if (activity) {
+            await createNotificationEvent(transaction, {
+              recipientUserId: activity.userId,
+              actorUserId: currentUserId ? authorId : null,
+              type: NOTIFICATION_TYPE.activityLike,
+              emailNotificationType: EMAIL_NOTIFICATION_TYPE.activityLike,
+              sourceId: like.id,
+              targetType: 'activity',
+              targetId: activityId,
+              actorName: account.name,
+              actorSurname: account.surname,
+              actorProfilePhoto: account.profilePhoto,
+            });
+          }
           return like;
         });
       } catch (error) {

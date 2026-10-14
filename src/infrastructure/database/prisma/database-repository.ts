@@ -41,6 +41,9 @@ type ModelName =
   | 'Subscription'
   | 'MediaCleanupJob'
   | 'EmailNotificationJob'
+  | 'Notification'
+  | 'PushDeviceToken'
+  | 'PushNotificationJob'
   | 'LoadTestSeedJob'
   | 'Friend'
   | 'Comment'
@@ -56,6 +59,9 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
     profile: 'Profile',
     userSessions: 'UserSession',
     subscriptions: 'Subscription',
+    receivedNotifications: 'Notification',
+    sentNotifications: 'Notification',
+    pushDeviceTokens: 'PushDeviceToken',
   },
   Profile: {
     activities: 'Activity',
@@ -79,6 +85,9 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
   EmailNotificationJob: {},
   LoadTestSeedJob: {},
   UserSession: { user: 'User' },
+  Notification: { recipient: 'User', actor: 'User', pushJob: 'PushNotificationJob' },
+  PushDeviceToken: { user: 'User' },
+  PushNotificationJob: { notification: 'Notification' },
 };
 
 const dateFields: Record<ModelName, ReadonlySet<string>> = {
@@ -111,6 +120,9 @@ const dateFields: Record<ModelName, ReadonlySet<string>> = {
   EmailNotificationJob: new Set(['availableAt', 'createdAt', 'startedAt', 'finishedAt']),
   LoadTestSeedJob: new Set(['createdAt', 'startedAt', 'finishedAt']),
   UserSession: new Set(['lastSeenAt', 'lastLocationAt', 'createdAt', 'revokedAt']),
+  Notification: new Set(['createdAt', 'readAt']),
+  PushDeviceToken: new Set(['createdAt', 'updatedAt']),
+  PushNotificationJob: new Set(['availableAt', 'createdAt', 'startedAt', 'finishedAt']),
 };
 
 function normalizeInput(model: ModelName, value: unknown): unknown {
@@ -510,6 +522,9 @@ export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics
     subscription: new ModelRepository(client, 'Subscription', latencyMetrics),
     mediaCleanupJob: new ModelRepository(client, 'MediaCleanupJob', latencyMetrics),
     emailNotificationJob: new ModelRepository(client, 'EmailNotificationJob', latencyMetrics),
+    notification: new ModelRepository(client, 'Notification', latencyMetrics),
+    pushDeviceToken: new ModelRepository(client, 'PushDeviceToken', latencyMetrics),
+    pushNotificationJob: new ModelRepository(client, 'PushNotificationJob', latencyMetrics),
     loadTestSeedJob: new ModelRepository(client, 'LoadTestSeedJob', latencyMetrics),
     friend: new ModelRepository(client, 'Friend', latencyMetrics),
     comment: new ModelRepository(client, 'Comment', latencyMetrics),

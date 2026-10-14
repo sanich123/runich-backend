@@ -14,7 +14,11 @@ function createPrismaMock() {
       findUnique: asyncMock(),
     },
     commentLike: { create: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
+    profile: { findUnique: asyncMock() },
     emailNotificationJob: { create: asyncMock() },
+    notification: { create: asyncMock() },
+    pushDeviceToken: { findFirst: asyncMock() },
+    pushNotificationJob: { create: asyncMock() },
   };
   return Object.assign(prisma, { $transaction: transactionMock(prisma) });
 }
@@ -48,6 +52,13 @@ describe('CommentService', () => {
       nextCursor: null,
     });
     await expect(service.getCommentsLengthbyActivityId('activity-1')).resolves.toBe(2);
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'comment-owner' });
+    prisma.profile.findUnique.mockResolvedValue({
+      emailNotifications: true,
+      inAppNotifications: true,
+      pushNotifications: false,
+      user: { email: 'owner@example.com' },
+    });
     await expect(service.createCommentByActivityId({ comment: 'Hello' }, 'activity-1')).resolves.toBeUndefined();
     expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
       data: { notificationType: 'comment', sourceId: 'comment-1', status: 'queued' },
@@ -105,6 +116,41 @@ describe('CommentService', () => {
         },
       }),
     );
+  });
+
+  it('creates an in-app notification when a user comments on another user activity', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1', name: 'Alice' }) };
+    const activityService = {
+      canAccessActivity: asyncMock().mockResolvedValue(true),
+      canInteractWithActivity: asyncMock().mockResolvedValue(true),
+    };
+    const service = new CommentService(prisma as never, account as never, activityService as never);
+    prisma.comment.create.mockResolvedValue({ id: 'comment-1' });
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1' });
+    prisma.profile.findUnique.mockResolvedValue({
+      emailNotifications: false,
+      inAppNotifications: true,
+      pushNotifications: false,
+      user: { email: 'owner@example.com' },
+    });
+
+    await service.createCommentByActivityId({ comment: 'Nice run' }, 'activity-1', 'actor-1');
+
+    expect(prisma.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        recipientUserId: 'owner-1',
+        actorUserId: 'actor-1',
+        type: 'comment',
+        sourceId: 'comment-1',
+        targetType: 'activity',
+        targetId: 'activity-1',
+        relatedId: 'comment-1',
+        content: 'Nice run',
+        inApp: true,
+      }),
+      select: { id: true },
+    });
   });
 
   it('selects comment fields and profile data without loading comment likes', async () => {
