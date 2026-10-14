@@ -29,7 +29,9 @@ export class YandexAuthService {
   async callback(code: string, error: string, response: Response) {
     const frontendUrl = getAuthFrontendRedirectUri();
     if (error || !code) {
-      return response.redirect(`${frontendUrl}?oauthError=${encodeURIComponent(error || 'missing_code')}`);
+      const redirect = new URL(frontendUrl);
+      redirect.searchParams.set('oauthError', error || 'missing_code');
+      return response.redirect(redirect.toString());
     }
 
     const tokenResponse = await fetch('https://oauth.yandex.ru/token', {
