@@ -1,0 +1,44 @@
+[
+  {
+    "id": "column.public.Activity.is_favorite",
+    "label": "Add column \"is_favorite\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "is_favorite",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"is_favorite\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "is_favorite"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"is_favorite\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"is_favorite\" bool DEFAULT false NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"is_favorite\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "is_favorite"
+        ]
+      }
+    ]
+  }
+]

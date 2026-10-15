@@ -22,7 +22,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'c35a1aa809596e62b1552e7ef1f5d90e6c96adef3b7aeff8b6b50e4932592625'>;
+  StorageHashBase<'c9efdd1f550ef1cde3ebb501c4bd10478338a49e1b832e99d6115b69f1ac4030'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -247,6 +247,7 @@ export type FieldOutputTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly isFavorite: CodecTypes['pg/bool@1']['output'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly locationEnrichmentStatus: Varchar<16>;
       readonly locationName: CodecTypes['pg/text@1']['output'] | null;
@@ -536,6 +537,7 @@ export type FieldInputTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly isFavorite: CodecTypes['pg/bool@1']['input'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly locationEnrichmentStatus: CodecTypes['sql/varchar@1']['input'];
       readonly locationName: CodecTypes['pg/text@1']['input'] | null;
@@ -825,6 +827,7 @@ export type StorageColumnTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly is_favorite: CodecTypes['pg/bool@1']['output'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly location_enrichment_status: Varchar<16>;
       readonly location_name: CodecTypes['pg/text@1']['output'] | null;
@@ -1114,6 +1117,7 @@ export type StorageColumnInputTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly is_favorite: CodecTypes['pg/bool@1']['input'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly location_enrichment_status: CodecTypes['sql/varchar@1']['input'];
       readonly location_name: CodecTypes['pg/text@1']['input'] | null;
@@ -1403,6 +1407,7 @@ export namespace Models {
     elevationGain: CodecTypes['pg/float8@1']['output'] | null;
     emotion: CodecTypes['pg/text@1']['output'] | null;
     id: CodecTypes['pg/uuid@1']['output'];
+    isFavorite: CodecTypes['pg/bool@1']['output'];
     kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
     locationEnrichmentStatus: Varchar<16>;
     locationName: CodecTypes['pg/text@1']['output'] | null;
@@ -1859,6 +1864,16 @@ type ContractBase = Omit<
                   readonly default: {
                     readonly kind: 'function';
                     readonly expression: 'gen_random_uuid()';
+                  };
+                  readonly many: false;
+                };
+                readonly is_favorite: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
                   };
                   readonly many: false;
                 };
@@ -4494,6 +4509,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
+              readonly isFavorite: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
               readonly kilometresSplit: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
@@ -4693,6 +4712,7 @@ type ContractBase = Omit<
                 readonly elevationGain: { readonly column: 'elevationGain' };
                 readonly emotion: { readonly column: 'emotion' };
                 readonly id: { readonly column: 'id' };
+                readonly isFavorite: { readonly column: 'is_favorite' };
                 readonly kilometresSplit: { readonly column: 'kilometresSplit' };
                 readonly locationEnrichmentStatus: {
                   readonly column: 'location_enrichment_status';

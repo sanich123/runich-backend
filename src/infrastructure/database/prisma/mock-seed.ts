@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- seed repository payloads remain dynamic at this boundary. */
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import type { DatabaseRepositories } from './database-repository';
 import { MOCK_EMAIL_PREFIX, MOCK_SEED_VERSION, MOCK_USER_COUNT } from './mock-seed.constants';
+import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
 import { seedMockActivities } from './mock-seed-activities';
 import { getMockActivityPhotoUrls, loadMockActivityTemplates } from './mock-seed-assets';
 import { seedMockFollows } from './mock-seed-follows';
@@ -26,7 +28,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
     select: {
       id: true,
       email: true,
-      profile: { select: { bio: true } },
+      profile: { select: { bio: true, name: true, surname: true, profilePhoto: true } },
       _count: { select: { activities: true } },
     },
   });
@@ -78,9 +80,16 @@ export async function seedMockData(prisma: DatabaseRepositories) {
         );
       });
 
-    if (isCompleteForVersion(seedVersion)) return;
+    if (isCompleteForVersion(seedVersion)) {
+      const notificationTotal = await seedMockNotifications(prisma, target.id, existingMocks);
+      if (notificationTotal) logger.log(`Created ${notificationTotal} mock test notifications`);
+      return;
+    }
   }
   if (existingMocks.length > 0) {
+    await prisma.notification.deleteMany({
+      where: { recipientUserId: target.id, actorUserId: { in: existingMocks.map((mock: any) => mock.id) } },
+    });
     await prisma.user.deleteMany({ where: { email: { startsWith: MOCK_EMAIL_PREFIX } } });
   }
 
@@ -141,6 +150,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
 
   const activityStats = await seedMockActivities(prisma, mockUsers, allUsers, activityTemplates, activityPhotoUrls);
   const friendCount = await seedMockFollows(prisma, allUsers);
+  const testNotificationTotal = await seedMockNotifications(prisma, target.id, mockUsers);
 
   await prisma.profile.updateMany({
     where: { userId: { in: mockUsers.map((user) => user.id) } },
@@ -149,6 +159,64 @@ export async function seedMockData(prisma: DatabaseRepositories) {
 
   logger.log(
     `Created ${mockUsers.length} users, ${activityStats.activityTotal} activities, ${activityStats.commentTotal} comments, ` +
-      `${activityStats.activityLikeTotal} activity likes, ${activityStats.commentLikeTotal} comment likes and ${friendCount} follows`,
+      `${activityStats.activityLikeTotal} activity likes, ${activityStats.commentLikeTotal} comment likes, ` +
+      `${friendCount} follows and ${testNotificationTotal} test notifications`,
   );
+}
+
+async function seedMockNotifications(prisma: DatabaseRepositories, targetUserId: string, mockUsers: MockUser[]) {
+  const targetActivity = await prisma.activity.findFirst({
+    where: { userId: targetUserId },
+    orderBy: [{ date: 'desc' }, { id: 'desc' }],
+    select: { id: true },
+  });
+  if (!targetActivity || mockUsers.length < 3) return 0;
+
+  const notifications = [
+    { type: NOTIFICATION_TYPE.activityLike, actor: mockUsers[0], content: null },
+    { type: NOTIFICATION_TYPE.comment, actor: mockUsers[1], content: 'Классная тренировка! Так держать.' },
+    { type: NOTIFICATION_TYPE.commentLike, actor: mockUsers[2], content: 'Ваш комментарий понравился.' },
+  ];
+  const actorIds = notifications.map(({ actor }) => actor.id);
+  const existing = await prisma.notification.findMany({
+    where: {
+      recipientUserId: targetUserId,
+      actorUserId: { in: actorIds },
+      type: { in: notifications.map(({ type }) => type) },
+    },
+    select: { type: true, actorUserId: true },
+  });
+  if (
+    notifications.every(({ type, actor }) =>
+      existing.some((notification: any) => notification.type === type && notification.actorUserId === actor.id),
+    )
+  ) {
+    return 0;
+  }
+
+  await prisma.notification.deleteMany({
+    where: {
+      recipientUserId: targetUserId,
+      actorUserId: { in: actorIds },
+      type: { in: notifications.map(({ type }) => type) },
+    },
+  });
+  const createdAt = Date.now();
+  await prisma.notification.createMany({
+    data: notifications.map(({ type, actor, content }, index) => ({
+      recipientUserId: targetUserId,
+      actorUserId: actor.id,
+      type,
+      sourceId: randomUUID(),
+      targetType: 'activity',
+      targetId: targetActivity.id,
+      actorName: actor.profile?.name,
+      actorSurname: actor.profile?.surname,
+      actorProfilePhoto: actor.profile?.profilePhoto,
+      content,
+      inApp: true,
+      createdAt: new Date(createdAt - (index + 1) * 15 * 60_000),
+    })),
+  });
+  return notifications.length;
 }

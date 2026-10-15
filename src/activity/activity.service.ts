@@ -22,6 +22,7 @@ import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.co
 import {
   ACTIVITY_CARD_SELECT,
   ACTIVITY_DETAILS_SELECT,
+  ACTIVITY_FAVORITE_ERROR_MESSAGES,
   DEFAULT_ACTIVITY_PAGE_SIZE,
   MAX_MAP_ROUTE_LOCATIONS,
 } from './const';
@@ -679,6 +680,56 @@ export class ActivityService {
     }
   }
 
+  async getFavoriteActivities(
+    currentUserId: string,
+    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
+    cursor?: ActivityCursor,
+  ) {
+    try {
+      const activitiesWithExtraItem = await this.prisma.activity.findMany({
+        where: {
+          userId: currentUserId,
+          isFavorite: true,
+          ...(cursor
+            ? {
+                OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
+              }
+            : {}),
+        },
+        orderBy: [{ date: 'desc' }, { id: 'desc' }],
+        take: Number(take) + 1,
+        select: ACTIVITY_CARD_SELECT,
+      });
+      const hasMore = activitiesWithExtraItem.length > Number(take);
+      const activities = activitiesWithExtraItem
+        .slice(0, Number(take))
+        .map((activity: Record<string, unknown>) => normalizeActivityCard(activity as Record<string, unknown>));
+      return {
+        activities,
+        hasMore,
+        nextCursor: hasMore && activities.length ? encodeActivityCursor(activities.at(-1)!) : null,
+        isLastPage: !hasMore,
+      };
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }
+
+  async setActivityFavorite(id: string, currentUserId: string, isFavorite: boolean) {
+    try {
+      const activity = await this.prisma.activity.findUnique({ where: { id }, select: { userId: true } });
+      if (!activity) throw new NotFoundException(ACTIVITY_FAVORITE_ERROR_MESSAGES.notFound);
+      if (activity.userId !== currentUserId) throw new ForbiddenException(ACTIVITY_FAVORITE_ERROR_MESSAGES.forbidden);
+      return await this.prisma.activity.update({
+        where: { id },
+        data: { isFavorite },
+        select: { id: true, isFavorite: true },
+      });
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }
+
   async getActivitesByUserId(
     id: string,
     take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
@@ -765,6 +816,7 @@ export class ActivityService {
           a."id",
           a."user_id" AS "userId",
           a."visibility",
+          a."is_favorite" AS "isFavorite",
           COALESCE(
             (
               SELECT json_agg(

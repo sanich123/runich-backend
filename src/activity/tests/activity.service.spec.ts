@@ -1,7 +1,8 @@
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ActivityService } from '../activity.service';
 import { MAX_MAP_ROUTE_LOCATIONS } from '../const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
-import { parseActivityMediaCursor } from '../activity.pagination';
+import { encodeActivityCursor, parseActivityCursor, parseActivityMediaCursor } from '../activity.pagination';
 import { jest } from '@jest/globals';
 
 const activityDto = {
@@ -782,6 +783,76 @@ describe('ActivityService', () => {
     });
   });
 
+  it('returns favorite activities with a stable cursor and owner filter', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    const newestDate = new Date('2026-08-12T23:15:00.000Z');
+    const olderDate = new Date('2026-08-12T22:15:00.000Z');
+    prisma.activity.findMany.mockResolvedValueOnce([
+      { id: 'favorite-2', date: newestDate, isFavorite: true },
+      { id: 'favorite-1', date: olderDate, isFavorite: true },
+    ]);
+    prisma.activity.findMany.mockResolvedValueOnce([{ id: 'favorite-1', date: olderDate, isFavorite: true }]);
+
+    const firstPage = await service.getFavoriteActivities('user-1', '1');
+
+    expect(firstPage).toMatchObject({ activities: [{ id: 'favorite-2', isFavorite: true }], hasMore: true });
+    expect(firstPage?.nextCursor).toBe(encodeActivityCursor({ date: newestDate, id: 'favorite-2' }));
+    expect(prisma.activity.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: { userId: 'user-1', isFavorite: true },
+        orderBy: [{ date: 'desc' }, { id: 'desc' }],
+        take: 2,
+        select: expect.objectContaining({ isFavorite: true }),
+      }),
+    );
+
+    const cursor = parseActivityCursor(firstPage!.nextCursor!);
+    await expect(service.getFavoriteActivities('user-1', '1', cursor)).resolves.toMatchObject({
+      activities: [{ id: 'favorite-1', isFavorite: true }],
+      hasMore: false,
+      nextCursor: null,
+      isLastPage: true,
+    });
+    expect(prisma.activity.findMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: {
+          userId: 'user-1',
+          isFavorite: true,
+          OR: [{ date: { lt: newestDate } }, { date: newestDate, id: { lt: 'favorite-2' } }],
+        },
+        take: 2,
+      }),
+    );
+  });
+
+  it('allows only the activity owner to update the favorite state', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1' });
+    prisma.activity.update.mockResolvedValue({ id: 'activity-1', isFavorite: true });
+
+    await expect(service.setActivityFavorite('activity-1', 'owner-1', true)).resolves.toEqual({
+      id: 'activity-1',
+      isFavorite: true,
+    });
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1' },
+      data: { isFavorite: true },
+      select: { id: true, isFavorite: true },
+    });
+
+    await expect(service.setActivityFavorite('activity-1', 'another-user', true)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    prisma.activity.findUnique.mockResolvedValue(null);
+    await expect(service.setActivityFavorite('missing-activity', 'owner-1', true)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
   it('uses a compact select for activity list responses', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
@@ -801,6 +872,7 @@ describe('ActivityService', () => {
         expect.objectContaining({
           id: true,
           userId: true,
+          isFavorite: true,
           title: true,
           media: expect.any(Object),
           mapPhotoUrl: true,
@@ -818,6 +890,7 @@ describe('ActivityService', () => {
 
     const [feedTemplate] = prisma.$queryRaw.mock.calls.at(-1) as unknown as [TemplateStringsArray];
     expect(Array.from(feedTemplate).join('')).toContain('a."emotion"');
+    expect(Array.from(feedTemplate).join('')).toContain('a."is_favorite" AS "isFavorite"');
 
     await service.getActivityByActivityId('activity-1');
     const detailQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {

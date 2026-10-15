@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { encodeActivityCursor } from '../activity.pagination';
 import { ActivityController } from '../activity.controller';
 import { ActivityService } from '../activity.service';
 import { AccountService } from 'src/account/account.service';
@@ -18,6 +19,8 @@ describe('ActivityController', () => {
     updateActivity: asyncMock(),
     getActivitesByUserId: asyncMock(),
     getAllActivitiesWithFriends: asyncMock(),
+    getFavoriteActivities: asyncMock(),
+    setActivityFavorite: asyncMock(),
     getActivityByActivityId: asyncMock(),
     deleteActivityById: asyncMock(),
   };
@@ -75,6 +78,39 @@ describe('ActivityController', () => {
     });
     await expect(controller.getActivityByActivityId({ id: 'a1' })).resolves.toEqual(result);
     await expect(controller.deleteActivityById({ id: 'a1' })).resolves.toEqual(result);
+  });
+
+  it('passes authenticated user and cursor pagination to the favorites service', async () => {
+    const date = new Date('2026-08-12T23:15:00.000Z');
+    const cursor = encodeActivityCursor({ date, id: 'activity-cursor' });
+    const page = { activities: [], hasMore: false, nextCursor: null };
+    activityService.getFavoriteActivities.mockResolvedValue(page);
+
+    await expect(controller.getFavoriteActivities({ user: { id: 'user-1' } } as never, cursor, '7')).resolves.toEqual(
+      page,
+    );
+    expect(activityService.getFavoriteActivities).toHaveBeenCalledWith('user-1', '7', {
+      date,
+      id: 'activity-cursor',
+    });
+
+    await expect(
+      controller.getFavoriteActivities({ user: { id: 'user-1' } } as never, undefined, '0'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      controller.getFavoriteActivities({ user: { id: 'user-1' } } as never, 'invalid-cursor', '7'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(activityService.getFavoriteActivities).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates favorite state for the authenticated activity owner', async () => {
+    const result = { id: 'activity-1', isFavorite: true };
+    activityService.setActivityFavorite.mockResolvedValue(result);
+
+    await expect(
+      controller.setActivityFavorite({ isFavorite: true }, { id: 'activity-1' }, { user: { id: 'owner-1' } } as never),
+    ).resolves.toEqual(result);
+    expect(activityService.setActivityFavorite).toHaveBeenCalledWith('activity-1', 'owner-1', true);
   });
 
   it('rejects migration requests without an archive or account', async () => {
@@ -143,6 +179,10 @@ describe('ActivityController', () => {
     ).rejects.toBe(error);
     await expect(controller.getActivitiesByUserId({ id: 'u1' }, undefined, '10')).rejects.toBe(error);
     await expect(controller.getAllActivitiesWithFriends({ id: 'u1' }, undefined, '10')).rejects.toBe(error);
+    await expect(controller.getFavoriteActivities({ user: { id: 'u1' } } as never)).rejects.toBe(error);
+    await expect(
+      controller.setActivityFavorite({ isFavorite: true }, { id: 'a1' }, { user: { id: 'u1' } } as never),
+    ).rejects.toBe(error);
     await expect(controller.getActivityByActivityId({ id: 'a1' })).rejects.toBe(error);
     await expect(controller.deleteActivityById({ id: 'a1' })).rejects.toBe(error);
   });

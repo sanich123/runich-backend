@@ -171,6 +171,13 @@
                   "kind": "scalar"
                 }
               },
+              "isFavorite": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "kilometresSplit": {
                 "nullable": true,
                 "type": {
@@ -484,6 +491,9 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "isFavorite": {
+                  "column": "is_favorite"
                 },
                 "kilometresSplit": {
                   "column": "kilometresSplit"
@@ -3876,6 +3886,15 @@
                   },
                   "nullable": false
                 },
+                "is_favorite": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
                 "kilometresSplit": {
                   "codecId": "pg/jsonb@1",
                   "dataType": "pg/jsonb",
@@ -6787,7 +6806,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "c35a1aa809596e62b1552e7ef1f5d90e6c96adef3b7aeff8b6b50e4932592625"
+    "storageHash": "c9efdd1f550ef1cde3ebb501c4bd10478338a49e1b832e99d6115b69f1ac4030"
   },
   "capabilities": {
     "postgres": {

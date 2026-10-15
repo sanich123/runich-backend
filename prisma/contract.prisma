@@ -132,6 +132,7 @@ model Activity {
   caloriesActive      Int?                @map("calories_active")
   locationEnrichmentStatus VarChar(16)    @default("queued") @map("location_enrichment_status")
   visibility          ActivityVisibility   @default(public)
+  isFavorite          Boolean              @default(false) @map("is_favorite")
   mapPhotoUrlBlurhash String?
   profileId           Uuid
   source              VarChar(32)?
