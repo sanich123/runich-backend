@@ -1,0 +1,86 @@
+[
+  {
+    "id": "column.public.Notification.in_app",
+    "label": "Add column \"in_app\" to \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "in_app",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"in_app\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Notification",
+          "in_app"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"in_app\"",
+        "sql": "ALTER TABLE \"public\".\"Notification\" ADD COLUMN \"in_app\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"in_app\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Notification",
+          "in_app"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Profile.push_notifications",
+    "label": "Add column \"push_notifications\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "push_notifications",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"push_notifications\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "push_notifications"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"push_notifications\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"push_notifications\" bool DEFAULT false NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"push_notifications\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "push_notifications"
+        ]
+      }
+    ]
+  }
+]

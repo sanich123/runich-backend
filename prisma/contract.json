@@ -48,8 +48,20 @@
       "model": "MediaCleanupJob",
       "namespace": "public"
     },
+    "Notification": {
+      "model": "Notification",
+      "namespace": "public"
+    },
     "Profile": {
       "model": "Profile",
+      "namespace": "public"
+    },
+    "PushDeviceToken": {
+      "model": "PushDeviceToken",
+      "namespace": "public"
+    },
+    "PushNotificationJob": {
+      "model": "PushNotificationJob",
       "namespace": "public"
     },
     "Subscriptions": {
@@ -1872,6 +1884,228 @@
               "table": "MediaCleanupJob"
             }
           },
+          "Notification": {
+            "fields": {
+              "actorName": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "actorProfilePhoto": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "actorSurname": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "actorUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "content": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "inApp": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "readAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "recipientUserId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "relatedId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "sourceId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "targetId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "targetType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 32
+                  }
+                }
+              },
+              "type": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 64
+                  }
+                }
+              }
+            },
+            "relations": {
+              "actor": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "actorUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "pushJob": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "notificationId"
+                  ]
+                },
+                "to": {
+                  "model": "PushNotificationJob",
+                  "namespace": "public"
+                }
+              },
+              "recipient": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "recipientUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "actorName": {
+                  "column": "actor_name"
+                },
+                "actorProfilePhoto": {
+                  "column": "actor_profile_photo"
+                },
+                "actorSurname": {
+                  "column": "actor_surname"
+                },
+                "actorUserId": {
+                  "column": "actor_user_id"
+                },
+                "content": {
+                  "column": "content"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "inApp": {
+                  "column": "in_app"
+                },
+                "readAt": {
+                  "column": "read_at"
+                },
+                "recipientUserId": {
+                  "column": "recipient_user_id"
+                },
+                "relatedId": {
+                  "column": "related_id"
+                },
+                "sourceId": {
+                  "column": "source_id"
+                },
+                "targetId": {
+                  "column": "target_id"
+                },
+                "targetType": {
+                  "column": "target_type"
+                },
+                "type": {
+                  "column": "type"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Notification"
+            }
+          },
           "Profile": {
             "fields": {
               "age": {
@@ -1996,6 +2230,13 @@
                   "kind": "scalar"
                 }
               },
+              "inAppNotifications": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "language": {
                 "nullable": true,
                 "type": {
@@ -2025,6 +2266,13 @@
                 }
               },
               "profileSearchVisible": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "pushNotifications": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/bool@1",
@@ -2231,6 +2479,9 @@
                 "id": {
                   "column": "id"
                 },
+                "inAppNotifications": {
+                  "column": "in_app_notifications"
+                },
                 "language": {
                   "column": "language"
                 },
@@ -2245,6 +2496,9 @@
                 },
                 "profileSearchVisible": {
                   "column": "profile_search_visible"
+                },
+                "pushNotifications": {
+                  "column": "push_notifications"
                 },
                 "sport": {
                   "column": "sport"
@@ -2264,6 +2518,262 @@
               },
               "namespaceId": "public",
               "table": "Profile"
+            }
+          },
+          "PushDeviceToken": {
+            "fields": {
+              "active": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "deviceId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 128
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "platform": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 32
+                  }
+                }
+              },
+              "token": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 512
+                  }
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "active": {
+                  "column": "active"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "deviceId": {
+                  "column": "device_id"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "platform": {
+                  "column": "platform"
+                },
+                "token": {
+                  "column": "token"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                },
+                "userId": {
+                  "column": "user_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "PushDeviceToken"
+            }
+          },
+          "PushNotificationJob": {
+            "fields": {
+              "attempts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "availableAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "errorMessage": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "finishedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "notificationId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "startedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              }
+            },
+            "relations": {
+              "notification": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "notificationId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Notification",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "attempts": {
+                  "column": "attempts"
+                },
+                "availableAt": {
+                  "column": "available_at"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "errorMessage": {
+                  "column": "error_message"
+                },
+                "finishedAt": {
+                  "column": "finished_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "notificationId": {
+                  "column": "notification_id"
+                },
+                "startedAt": {
+                  "column": "started_at"
+                },
+                "status": {
+                  "column": "status"
+                }
+              },
+              "namespaceId": "public",
+              "table": "PushNotificationJob"
             }
           },
           "Subscription": {
@@ -2811,6 +3321,51 @@
                 },
                 "to": {
                   "model": "Profile",
+                  "namespace": "public"
+                }
+              },
+              "pushDeviceTokens": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "PushDeviceToken",
+                  "namespace": "public"
+                }
+              },
+              "receivedNotifications": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "recipientUserId"
+                  ]
+                },
+                "to": {
+                  "model": "Notification",
+                  "namespace": "public"
+                }
+              },
+              "sentNotifications": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "actorUserId"
+                  ]
+                },
+                "to": {
+                  "model": "Notification",
                   "namespace": "public"
                 }
               },
@@ -4801,6 +5356,203 @@
               },
               "uniques": []
             },
+            "Notification": {
+              "columns": {
+                "actor_name": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "actor_profile_photo": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "actor_surname": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "actor_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "content": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "in_app": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "read_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "recipient_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "related_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "source_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "target_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "target_type": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 32
+                  }
+                },
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 64
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "Notification_recipient_user_id_idx_86720e87"
+                  },
+                  "name": "Notification_recipient_user_id_fkey",
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "recipient_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Notification"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "Notification_actor_user_id_idx_c46ca325"
+                  },
+                  "name": "Notification_actor_user_id_fkey",
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "actor_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Notification"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "actor_user_id"
+                  ],
+                  "name": "Notification_actor_user_id_idx_c46ca325",
+                  "prefix": "Notification_actor_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "recipient_user_id",
+                    "created_at",
+                    "id"
+                  ],
+                  "name": "Notification_recipient_createdAt_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "recipient_user_id",
+                    "read_at"
+                  ],
+                  "name": "Notification_recipient_readAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "recipient_user_id"
+                  ],
+                  "name": "Notification_recipient_user_id_idx_86720e87",
+                  "prefix": "Notification_recipient_user_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "recipient_user_id",
+                    "type",
+                    "source_id"
+                  ],
+                  "name": "Notification_recipient_type_source_key"
+                }
+              ]
+            },
             "Profile": {
               "columns": {
                 "age": {
@@ -4931,6 +5683,15 @@
                   },
                   "nullable": false
                 },
+                "in_app_notifications": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
                 "language": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -4957,6 +5718,15 @@
                   "default": {
                     "kind": "literal",
                     "value": true
+                  },
+                  "nullable": false
+                },
+                "push_notifications": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
                   },
                   "nullable": false
                 },
@@ -5049,6 +5819,274 @@
                     "user_id"
                   ],
                   "name": "Profile_user_id_key"
+                }
+              ]
+            },
+            "PushDeviceToken": {
+              "columns": {
+                "active": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "device_id": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 128
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "platform": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 32
+                  }
+                },
+                "token": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 512
+                  }
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "PushDeviceToken_user_id_idx_6c952402"
+                  },
+                  "name": "PushDeviceToken_user_id_fkey",
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "PushDeviceToken"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "user_id",
+                    "active"
+                  ],
+                  "name": "PushDeviceToken_user_active_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "user_id"
+                  ],
+                  "name": "PushDeviceToken_user_id_idx_6c952402",
+                  "prefix": "PushDeviceToken_user_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "device_id"
+                  ],
+                  "name": "PushDeviceToken_device_id_key"
+                },
+                {
+                  "columns": [
+                    "token"
+                  ],
+                  "name": "PushDeviceToken_token_key"
+                }
+              ]
+            },
+            "PushNotificationJob": {
+              "columns": {
+                "attempts": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "available_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "error_message": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "finished_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "notification_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "started_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "status": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "default": {
+                    "kind": "literal",
+                    "value": "queued"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "unique": [
+                      "notification_id"
+                    ]
+                  },
+                  "name": "PushNotificationJob_notification_id_fkey",
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "notification_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "PushNotificationJob"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Notification"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "status",
+                    "available_at",
+                    "created_at"
+                  ],
+                  "name": "PushNotificationJob_status_available_at_created_at_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "notification_id"
+                  ],
+                  "name": "PushNotificationJob_notification_id_key"
                 }
               ]
             },
@@ -5749,7 +6787,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "3efb48b9264a2456ae47ae133573e8f8f132c2e9ec9de007412bf5cef2990a1c"
+    "storageHash": "c35a1aa809596e62b1552e7ef1f5d90e6c96adef3b7aeff8b6b50e4932592625"
   },
   "capabilities": {
     "postgres": {

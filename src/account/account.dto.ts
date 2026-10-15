@@ -37,6 +37,10 @@ export class ProfileDto {
   profilePhotoBlurhash?: string | null;
   @ApiPropertyOptional({ type: Boolean, description: 'Email notifications enabled' })
   emailNotifications?: boolean | null;
+  @ApiPropertyOptional({ type: Boolean, description: 'Push notifications enabled' })
+  pushNotifications?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'In-app notifications enabled' })
+  inAppNotifications?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Allow this profile to appear in user search' })
   profileSearchVisible?: boolean;
   @ApiPropertyOptional({

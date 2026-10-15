@@ -8,7 +8,9 @@ import { CommentLikeService } from './comment-like.service';
 import { encodeCommentCursor } from './comment.pagination';
 import type { CommentCursor } from './comment.pagination';
 import { COMMENT_PROFILE_SELECT } from './const';
-import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
+import { EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
+import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
+import { createNotificationEvent } from 'src/notification/notification-event';
 
 @Injectable()
 export class CommentService {
@@ -129,13 +131,23 @@ export class CommentService {
             comment,
           },
         });
-        await transaction.emailNotificationJob.create({
-          data: {
-            notificationType: EMAIL_NOTIFICATION_TYPE.comment,
+        const activity = await transaction.activity.findUnique({ where: { id }, select: { userId: true } });
+        if (activity) {
+          await createNotificationEvent(transaction, {
+            recipientUserId: activity.userId,
+            actorUserId: currentUserId ?? null,
+            type: NOTIFICATION_TYPE.comment,
+            emailNotificationType: EMAIL_NOTIFICATION_TYPE.comment,
             sourceId: createdComment.id,
-            status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
-          },
-        });
+            targetType: 'activity',
+            targetId: id,
+            relatedId: createdComment.id,
+            actorName: account.name,
+            actorSurname: account.surname,
+            actorProfilePhoto: account.profilePhoto,
+            content: comment,
+          });
+        }
       });
     } catch (error) {
       handleServiceError(error);

@@ -83,6 +83,8 @@ describe('request DTO validation', () => {
       height: '180',
       age: '30',
       emailNotifications: false,
+      pushNotifications: false,
+      inAppNotifications: false,
       email,
       language: 'en',
     });
@@ -90,6 +92,8 @@ describe('request DTO validation', () => {
     await expectInvalid(UserDto, { birthday: '02.01.1990' });
     await expectInvalid(UserDto, { email: 'bad' });
     await expectInvalid(UserDto, { emailNotifications: 'false' });
+    await expectInvalid(UserDto, { pushNotifications: 'false' });
+    await expectInvalid(UserDto, { inAppNotifications: 'false' });
     await expectInvalid(UserDto, { weight: 65 });
     await expectInvalid(UserDto, { weight: '201' });
     await expectInvalid(UserDto, { height: '231' });

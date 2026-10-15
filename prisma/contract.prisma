@@ -41,6 +41,9 @@ model User {
   profile                  Profile?
   userSessions             UserSession[]
   subscriptions            Subscription[]
+  receivedNotifications    Notification[]      @relation("NotificationRecipient")
+  sentNotifications       Notification[]      @relation("NotificationActor")
+  pushDeviceTokens        PushDeviceToken[]
 
   @@unique([email], map: "Users_email_key")
   @@unique([phone], map: "Users_phone_key")
@@ -67,6 +70,8 @@ model Profile {
   email                 String?
   language              String?
   emailNotifications    Boolean?               @default(false)
+  pushNotifications     Boolean                 @default(false) @map("push_notifications")
+  inAppNotifications    Boolean                 @default(true) @map("in_app_notifications")
   profilePhotoBlurhash  String?
   profileSearchVisible Boolean                @default(true) @map("profile_search_visible")
   allowActivityInteractions Boolean           @default(true) @map("allow_activity_interactions")
@@ -334,6 +339,63 @@ model EmailNotificationJob {
   @@unique([notificationType, sourceId], map: "EmailNotificationJob_notification_type_source_id_key")
   @@index([status, availableAt, createdAt], map: "EmailNotificationJob_status_available_at_created_at_idx")
   @@map("EmailNotificationJob")
+}
+
+model Notification {
+  id               Uuid                  @id @default(sql`gen_random_uuid()`)
+  recipientUserId  Uuid                  @map("recipient_user_id")
+  actorUserId      Uuid?                 @map("actor_user_id")
+  type             VarChar(64)
+  sourceId         Uuid                  @map("source_id")
+  targetType       VarChar(32)           @map("target_type")
+  targetId         Uuid                  @map("target_id")
+  relatedId        Uuid?                 @map("related_id")
+  actorName        String?               @map("actor_name")
+  actorSurname     String?               @map("actor_surname")
+  actorProfilePhoto String?              @map("actor_profile_photo")
+  content          String?
+  inApp            Boolean               @default(true) @map("in_app")
+  createdAt        TimestamptzString(6)  @default(now()) @map("created_at")
+  readAt           TimestamptzString(6)? @map("read_at")
+  recipient        User                  @relation("NotificationRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade, map: "Notification_recipient_user_id_fkey")
+  actor            User?                 @relation("NotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull, map: "Notification_actor_user_id_fkey")
+  pushJob          PushNotificationJob?
+
+  @@unique([recipientUserId, type, sourceId], map: "Notification_recipient_type_source_key")
+  @@index([recipientUserId, createdAt, id], map: "Notification_recipient_createdAt_id_idx")
+  @@index([recipientUserId, readAt], map: "Notification_recipient_readAt_idx")
+  @@map("Notification")
+}
+
+model PushDeviceToken {
+  id        Uuid                 @id @default(sql`gen_random_uuid()`)
+  userId    Uuid                 @map("user_id")
+  deviceId  VarChar(128)         @unique(map: "PushDeviceToken_device_id_key") @map("device_id")
+  token     VarChar(512)         @unique(map: "PushDeviceToken_token_key")
+  platform  VarChar(32)
+  active    Boolean              @default(true)
+  createdAt TimestamptzString(6) @default(now()) @map("created_at")
+  updatedAt TimestamptzString(6) @default(now()) @map("updated_at")
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade, map: "PushDeviceToken_user_id_fkey")
+
+  @@index([userId, active], map: "PushDeviceToken_user_active_idx")
+  @@map("PushDeviceToken")
+}
+
+model PushNotificationJob {
+  id             Uuid                  @id @default(sql`gen_random_uuid()`)
+  notificationId Uuid                  @unique(map: "PushNotificationJob_notification_id_key") @map("notification_id")
+  status         VarChar(16)           @default("queued")
+  attempts       Int                   @default(0)
+  availableAt    TimestamptzString(6)  @default(now()) @map("available_at")
+  errorMessage   String?               @map("error_message")
+  createdAt      TimestamptzString(6)  @default(now()) @map("created_at")
+  startedAt      TimestamptzString(6)? @map("started_at")
+  finishedAt     TimestamptzString(6)? @map("finished_at")
+  notification   Notification          @relation(fields: [notificationId], references: [id], onDelete: Cascade, map: "PushNotificationJob_notification_id_fkey")
+
+  @@index([status, availableAt, createdAt], map: "PushNotificationJob_status_available_at_created_at_idx")
+  @@map("PushNotificationJob")
 }
 
 model UserSession {

@@ -8,6 +8,7 @@ import { StorageModule } from 'src/storage/storage.module';
 import { LoadTestModule } from 'src/load-test/load-test.module';
 import { observeImports } from 'src/common/observe/observe.config';
 import { EmailNotificationModule } from 'src/email/email-notification.module';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { EmailNotificationModule } from 'src/email/email-notification.module';
     ActivityModule,
     LoadTestModule,
     EmailNotificationModule,
+    NotificationModule,
   ],
   providers: [ActivityMediaProcessingService, ActivityEnrichmentService],
 })

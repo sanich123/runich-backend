@@ -1,0 +1,44 @@
+[
+  {
+    "id": "column.public.Profile.in_app_notifications",
+    "label": "Add column \"in_app_notifications\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "in_app_notifications",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"in_app_notifications\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "in_app_notifications"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"in_app_notifications\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"in_app_notifications\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"in_app_notifications\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "in_app_notifications"
+        ]
+      }
+    ]
+  }
+]
