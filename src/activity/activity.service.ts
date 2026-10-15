@@ -245,26 +245,46 @@ export class ActivityService {
       );
     });
 
-    const existingActivities = uniqueWorkouts.length
-      ? await this.prisma.activity.findMany({
-          where: {
-            userId,
-            OR: uniqueWorkouts.map(({ source, sourceActivityId }) => ({ source, sourceActivityId })),
-          },
-          select: { source: true, sourceActivityId: true },
-        })
-      : [];
-    const existingKeys = new Set(
-      existingActivities.map(
-        ({ source, sourceActivityId }: { source: string | null; sourceActivityId: string | null }) =>
-          `${source}\u0000${sourceActivityId}`,
-      ),
+    type ExistingWatchWorkoutActivity = {
+      id: string;
+      source: string | null;
+      sourceActivityId: string | null;
+      profileId: string;
+      routeStorageKey: string | null;
+      mapPhotoUrl: string | null;
+    };
+    const existingActivities = (
+      uniqueWorkouts.length
+        ? await this.prisma.activity.findMany({
+            where: {
+              userId,
+              OR: uniqueWorkouts.map(({ source, sourceActivityId }) => ({ source, sourceActivityId })),
+            },
+            select: {
+              id: true,
+              source: true,
+              sourceActivityId: true,
+              profileId: true,
+              routeStorageKey: true,
+              mapPhotoUrl: true,
+            },
+          })
+        : []
+    ) as ExistingWatchWorkoutActivity[];
+    const existingActivitiesBySource = new Map<string, ExistingWatchWorkoutActivity>(
+      existingActivities.map((activity) => [`${activity.source}\u0000${activity.sourceActivityId}`, activity] as const),
     );
     const activities: unknown[] = [];
 
     for (const workout of uniqueWorkouts) {
       const key = `${workout.source}\u0000${workout.sourceActivityId}`;
-      if (existingKeys.has(key)) continue;
+      const existingActivity = existingActivitiesBySource.get(key);
+      if (existingActivity) {
+        if (existingActivity.id) {
+          activities.push(await this.syncExistingWatchWorkout(workout, existingActivity, userId));
+        }
+        continue;
+      }
       activities.push(await this.createActivity(workout, userId));
     }
 
@@ -273,6 +293,94 @@ export class ActivityService {
       skipped: workouts.length - activities.length,
       activities,
     };
+  }
+
+  private async syncExistingWatchWorkout(
+    workout: WatchWorkoutImportDto,
+    existingActivity: {
+      id: string;
+      profileId: string;
+      routeStorageKey: string | null;
+      mapPhotoUrl: string | null;
+    },
+    userId: string,
+  ) {
+    let uploadedRouteKey: string | undefined;
+    let uploadedMapKey: string | undefined;
+    let preparedData: Record<string, unknown> = {};
+    let updatedActivity: unknown;
+
+    try {
+      if (workout.locations?.length) {
+        const prepared = await this.prepareActivityRoute({
+          ...workout,
+          // Use a fresh storage namespace so route and map caches cannot serve an older sync.
+          id: randomUUID(),
+          userId,
+          profileId: existingActivity.profileId,
+        });
+        preparedData = prepared.data as unknown as Record<string, unknown>;
+        uploadedRouteKey = prepared.routeKey;
+        uploadedMapKey = prepared.mapKey;
+      }
+
+      const updateData: Record<string, unknown> = {
+        date: workout.date,
+        sport: workout.sport,
+        duration: workout.duration,
+        distance: workout.distance,
+        speed: workout.speed,
+      };
+      if (workout.timeZone !== undefined) updateData.timeZone = workout.timeZone;
+      if (workout.steps !== undefined) updateData.steps = workout.steps;
+      if (workout.title?.trim()) updateData.title = workout.title.trim();
+      if (workout.kilometresSplit !== undefined) updateData.kilometresSplit = workout.kilometresSplit;
+      if (preparedData.elevationGain !== undefined) updateData.elevationGain = preparedData.elevationGain;
+
+      if (uploadedRouteKey) {
+        updateData.routeStorageKey = preparedData.routeStorageKey;
+        updateData.routeFormatVersion = preparedData.routeFormatVersion;
+        updateData.routePointCount = preparedData.routePointCount;
+        updateData.routeSizeBytes = preparedData.routeSizeBytes;
+        updateData.routeChecksum = preparedData.routeChecksum;
+        updateData.mediaProcessingStatus = ACTIVITY_MEDIA_PROCESSING_STATUS.queued;
+        updateData.mapPhotoUrlBlurhash = null;
+        updateData.locationName = null;
+        updateData.weatherTemperature = null;
+        updateData.weatherWindSpeed = null;
+        updateData.weatherCode = null;
+        updateData.locationEnrichmentStatus = ACTIVITY_ENRICHMENT_STATUS.queued;
+        if ('mapPhotoUrl' in preparedData) updateData.mapPhotoUrl = preparedData.mapPhotoUrl;
+      }
+
+      updatedActivity = await this.prisma.activity.update({
+        where: { id: existingActivity.id },
+        data: updateData as never,
+      });
+    } catch (error) {
+      await Promise.all([this.deleteUploadedRoute(uploadedRouteKey), this.deleteUploadedRoute(uploadedMapKey)]);
+      handleServiceError(error);
+    }
+
+    if (uploadedRouteKey && this.mediaCleanupService) {
+      const oldKeys = this.getActivityStorageKeys(userId, {
+        routeStorageKey: existingActivity.routeStorageKey,
+        mapPhotoUrl: existingActivity.mapPhotoUrl,
+        media: [],
+      });
+      const newKeys = new Set([uploadedRouteKey, uploadedMapKey].filter((key): key is string => Boolean(key)));
+      try {
+        await Promise.all(
+          oldKeys
+            .filter((key) => !newKeys.has(key))
+            .map((storageKey) => this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey)),
+        );
+      } catch (error) {
+        this.logger.error('Не удалось поставить старые файлы активности в очередь удаления', error);
+      }
+    }
+
+    return omitMediaProcessingStatus(updatedActivity);
   }
 
   async createActivitiesFromMigrationArchive(
