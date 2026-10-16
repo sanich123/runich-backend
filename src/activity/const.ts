@@ -2,6 +2,18 @@ import { PATHS } from 'src/common/constants';
 
 export const { activity, id } = PATHS;
 
+export const ACTIVITY_FAVORITES_ROUTE = 'favorites';
+export const ACTIVITY_FAVORITE_ROUTE = `${id}/favorite`;
+export const ACTIVITY_FAVORITE_API_COPY = {
+  listSummary: 'Get the current user favorite activities',
+  updateSummary: 'Set favorite state for an activity owned by the current user',
+  updateDescription: 'Favorite state updated',
+} as const;
+export const ACTIVITY_FAVORITE_ERROR_MESSAGES = {
+  notFound: 'Активность не найдена',
+  forbidden: 'Недостаточно прав',
+} as const;
+
 export const DEFAULT_ACTIVITY_PAGE_SIZE = 20;
 
 // The map needs the shape of the route, not every recorded GPS sample. Keep
@@ -33,6 +45,7 @@ export const ACTIVITY_CARD_SELECT = {
   id: true,
   userId: true,
   visibility: true,
+  isFavorite: true,
   media: {
     select: { id: true, url: true, thumbnail: true, blurhash: true },
     orderBy: { position: 'asc' },

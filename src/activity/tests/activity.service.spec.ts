@@ -1,7 +1,8 @@
+import { ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import { ActivityService } from '../activity.service';
 import { MAX_MAP_ROUTE_LOCATIONS } from '../const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
-import { parseActivityMediaCursor } from '../activity.pagination';
+import { encodeActivityCursor, parseActivityCursor, parseActivityMediaCursor } from '../activity.pagination';
 import { jest } from '@jest/globals';
 
 const activityDto = {
@@ -531,6 +532,230 @@ describe('ActivityService', () => {
     expect(prisma.activity.create).toHaveBeenCalledTimes(1);
   });
 
+  it('refreshes an existing watch workout and replaces its route without changing its activity id', async () => {
+    const prisma = createPrismaMock();
+    const routeStorageKey = 'user-1/activities/new-route-id/locations/locations-v1.json.gz';
+    const mapStorageKey = 'user-1/activities/new-route-id/map.webp';
+    const previousRouteKey = 'user-1/activities/old-route-id/locations/locations-v1.json.gz';
+    const previousMapKey = 'user-1/activities/old-route-id/map.webp';
+    const storage = {
+      uploadActivityRoute: asyncMock().mockResolvedValue({
+        key: routeStorageKey,
+        formatVersion: 1,
+        pointCount: 2,
+        sizeBytes: 123,
+        checksum: 'b'.repeat(64),
+      }),
+      getOwnedKey: jest.fn().mockReturnValue(previousMapKey),
+    };
+    const cleanup = { enqueueObjectCleanup: asyncMock() };
+    const staticMap = {
+      generateActivityMap: asyncMock().mockResolvedValue({
+        key: mapStorageKey,
+        url: 'https://cdn.example.com/user-1/activities/new-route-id/map.webp',
+      }),
+    };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      cleanup as never,
+      staticMap as never,
+    );
+    const previousActivity = {
+      id: 'activity-existing',
+      source: 'health-connect',
+      sourceActivityId: 'record-1',
+      profileId: 'profile-1',
+      routeStorageKey: previousRouteKey,
+      mapPhotoUrl: 'https://cdn.example.com/user-1/activities/old-route-id/map.webp',
+    };
+    prisma.activity.findMany.mockResolvedValue([previousActivity]);
+    prisma.activity.update.mockResolvedValue({ id: 'activity-existing', mediaProcessingStatus: 'queued' });
+    const locations = [
+      { timestamp: 1, coords: { latitude: 55.75, longitude: 37.61 } },
+      { timestamp: 2, coords: { latitude: 55.76, longitude: 37.62 } },
+    ];
+
+    await expect(
+      service.importWatchWorkouts(
+        [
+          {
+            ...activityDto,
+            date: '2026-10-15T12:00:00.000Z',
+            timeZone: 'Europe/Moscow',
+            duration: 120,
+            distance: 1_200,
+            speed: 10,
+            steps: 900,
+            title: 'Updated workout title',
+            source: 'health-connect',
+            sourceActivityId: 'record-1',
+            locations,
+          },
+        ],
+        'user-1',
+      ),
+    ).resolves.toEqual({
+      imported: 1,
+      skipped: 0,
+      activities: [{ id: 'activity-existing' }],
+    });
+
+    expect(storage.uploadActivityRoute).toHaveBeenCalledWith(
+      'user-1',
+      expect.not.stringMatching('activity-existing'),
+      locations,
+    );
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-existing' },
+      data: expect.objectContaining({
+        date: '2026-10-15T12:00:00.000Z',
+        duration: 120,
+        distance: 1_200,
+        steps: 900,
+        title: 'Updated workout title',
+        routeStorageKey,
+        routePointCount: 2,
+        routeChecksum: 'b'.repeat(64),
+        mapPhotoUrl: 'https://cdn.example.com/user-1/activities/new-route-id/map.webp',
+      }),
+    });
+    const updateCalls = prisma.activity.update.mock.calls as unknown as Array<[{ data: Record<string, unknown> }]>;
+    const updateData = updateCalls[0]?.[0].data;
+    expect(updateData).not.toHaveProperty('visibility');
+    expect(updateData).not.toHaveProperty('description');
+    expect(updateData).not.toHaveProperty('locations');
+    expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith('user-1', previousRouteKey);
+    expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith('user-1', previousMapKey);
+  });
+
+  it('refreshes watch workout metrics while preserving its stored route when Health Connect returns no points', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findMany.mockResolvedValue([
+      {
+        id: 'activity-existing',
+        source: 'health-connect',
+        sourceActivityId: 'record-1',
+        profileId: 'profile-1',
+        routeStorageKey: 'user-1/activities/old-route/locations/locations-v1.json.gz',
+        mapPhotoUrl: 'https://cdn.example.com/user-1/activities/old-route/map.webp',
+      },
+    ]);
+    prisma.activity.update.mockResolvedValue({ id: 'activity-existing' });
+
+    await expect(
+      service.importWatchWorkouts(
+        [
+          {
+            ...activityDto,
+            date: '2026-10-15T12:00:00.000Z',
+            duration: 130,
+            distance: 1_300,
+            speed: 10,
+            source: 'health-connect',
+            sourceActivityId: 'record-1',
+            locations: [],
+          },
+        ],
+        'user-1',
+      ),
+    ).resolves.toMatchObject({ imported: 1, skipped: 0 });
+
+    const updateCalls = prisma.activity.update.mock.calls as unknown as Array<[{ data: Record<string, unknown> }]>;
+    const updateData = updateCalls[0]?.[0].data;
+    expect(updateData).toEqual(
+      expect.objectContaining({ date: '2026-10-15T12:00:00.000Z', duration: 130, distance: 1_300, speed: 10 }),
+    );
+    expect(updateData).not.toHaveProperty('routeStorageKey');
+    expect(updateData).not.toHaveProperty('routePointCount');
+    expect(updateData).not.toHaveProperty('mapPhotoUrl');
+  });
+
+  it('deletes the newly uploaded route when refreshing an existing workout fails', async () => {
+    const prisma = createPrismaMock();
+    const routeKey = 'user-1/activities/new-route/locations/locations-v1.json.gz';
+    const storage = {
+      uploadActivityRoute: asyncMock().mockResolvedValue({ key: routeKey, formatVersion: 1, pointCount: 1 }),
+      deleteObjectByKey: asyncMock(),
+    };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    prisma.activity.findMany.mockResolvedValue([
+      {
+        id: 'activity-existing',
+        source: 'health-connect',
+        sourceActivityId: 'record-1',
+        profileId: 'profile-1',
+        routeStorageKey: null,
+        mapPhotoUrl: null,
+      },
+    ]);
+    prisma.activity.update.mockRejectedValue(new Error('database unavailable'));
+
+    await expectInternalServerError(
+      service.importWatchWorkouts(
+        [
+          {
+            ...activityDto,
+            date: '2026-10-15T12:00:00.000Z',
+            source: 'health-connect',
+            sourceActivityId: 'record-1',
+            locations: [{ coords: { latitude: 55.75, longitude: 37.61 } }],
+          },
+        ],
+        'user-1',
+      ),
+    );
+
+    expect(storage.deleteObjectByKey).toHaveBeenCalledWith(routeKey);
+  });
+
+  it('keeps a watch workout update successful when old route cleanup cannot be queued', async () => {
+    const prisma = createPrismaMock();
+    const routeKey = 'user-1/activities/new-route/locations/locations-v1.json.gz';
+    const oldRouteKey = 'user-1/activities/old-route/locations/locations-v1.json.gz';
+    const storage = {
+      uploadActivityRoute: asyncMock().mockResolvedValue({ key: routeKey, formatVersion: 1, pointCount: 1 }),
+    };
+    const cleanup = { enqueueObjectCleanup: asyncMock().mockRejectedValue(new Error('queue unavailable')) };
+    const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, cleanup as never);
+    prisma.activity.findMany.mockResolvedValue([
+      {
+        id: 'activity-existing',
+        source: 'health-connect',
+        sourceActivityId: 'record-1',
+        profileId: 'profile-1',
+        routeStorageKey: oldRouteKey,
+        mapPhotoUrl: null,
+      },
+    ]);
+    prisma.activity.update.mockResolvedValue({ id: 'activity-existing' });
+
+    await expect(
+      service.importWatchWorkouts(
+        [
+          {
+            ...activityDto,
+            date: '2026-10-15T12:00:00.000Z',
+            source: 'health-connect',
+            sourceActivityId: 'record-1',
+            locations: [{ coords: { latitude: 55.75, longitude: 37.61 } }],
+          },
+        ],
+        'user-1',
+      ),
+    ).resolves.toMatchObject({ imported: 1, skipped: 0 });
+
+    expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith('user-1', oldRouteKey);
+    expect(logError).toHaveBeenCalledWith(
+      'Не удалось поставить старые файлы активности в очередь удаления',
+      expect.any(Error),
+    );
+  });
+
   it('uses Strava elevation gain from the migration CSV for imported routes', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
@@ -782,6 +1007,76 @@ describe('ActivityService', () => {
     });
   });
 
+  it('returns favorite activities with a stable cursor and owner filter', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    const newestDate = new Date('2026-08-12T23:15:00.000Z');
+    const olderDate = new Date('2026-08-12T22:15:00.000Z');
+    prisma.activity.findMany.mockResolvedValueOnce([
+      { id: 'favorite-2', date: newestDate, isFavorite: true },
+      { id: 'favorite-1', date: olderDate, isFavorite: true },
+    ]);
+    prisma.activity.findMany.mockResolvedValueOnce([{ id: 'favorite-1', date: olderDate, isFavorite: true }]);
+
+    const firstPage = await service.getFavoriteActivities('user-1', '1');
+
+    expect(firstPage).toMatchObject({ activities: [{ id: 'favorite-2', isFavorite: true }], hasMore: true });
+    expect(firstPage?.nextCursor).toBe(encodeActivityCursor({ date: newestDate, id: 'favorite-2' }));
+    expect(prisma.activity.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: { userId: 'user-1', isFavorite: true },
+        orderBy: [{ date: 'desc' }, { id: 'desc' }],
+        take: 2,
+        select: expect.objectContaining({ isFavorite: true }),
+      }),
+    );
+
+    const cursor = parseActivityCursor(firstPage!.nextCursor!);
+    await expect(service.getFavoriteActivities('user-1', '1', cursor)).resolves.toMatchObject({
+      activities: [{ id: 'favorite-1', isFavorite: true }],
+      hasMore: false,
+      nextCursor: null,
+      isLastPage: true,
+    });
+    expect(prisma.activity.findMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: {
+          userId: 'user-1',
+          isFavorite: true,
+          OR: [{ date: { lt: newestDate } }, { date: newestDate, id: { lt: 'favorite-2' } }],
+        },
+        take: 2,
+      }),
+    );
+  });
+
+  it('allows only the activity owner to update the favorite state', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1' });
+    prisma.activity.update.mockResolvedValue({ id: 'activity-1', isFavorite: true });
+
+    await expect(service.setActivityFavorite('activity-1', 'owner-1', true)).resolves.toEqual({
+      id: 'activity-1',
+      isFavorite: true,
+    });
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1' },
+      data: { isFavorite: true },
+      select: { id: true, isFavorite: true },
+    });
+
+    await expect(service.setActivityFavorite('activity-1', 'another-user', true)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    prisma.activity.findUnique.mockResolvedValue(null);
+    await expect(service.setActivityFavorite('missing-activity', 'owner-1', true)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
   it('uses a compact select for activity list responses', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
@@ -801,6 +1096,7 @@ describe('ActivityService', () => {
         expect.objectContaining({
           id: true,
           userId: true,
+          isFavorite: true,
           title: true,
           media: expect.any(Object),
           mapPhotoUrl: true,
@@ -818,6 +1114,7 @@ describe('ActivityService', () => {
 
     const [feedTemplate] = prisma.$queryRaw.mock.calls.at(-1) as unknown as [TemplateStringsArray];
     expect(Array.from(feedTemplate).join('')).toContain('a."emotion"');
+    expect(Array.from(feedTemplate).join('')).toContain('a."is_favorite" AS "isFavorite"');
 
     await service.getActivityByActivityId('activity-1');
     const detailQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {

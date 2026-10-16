@@ -588,6 +588,12 @@ export class WatchWorkoutBatchImportResponseDto {
   activities: ActivityResponseDto[];
 }
 
+export class SetActivityFavoriteDto {
+  @ApiProperty({ type: Boolean })
+  @IsBoolean()
+  isFavorite: boolean;
+}
+
 export class ActivityCardResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   title?: string | null;
@@ -606,6 +612,9 @@ export class ActivityCardResponseDto {
 
   @ApiProperty({ type: String, format: 'uuid' })
   userId: string;
+
+  @ApiProperty({ type: Boolean })
+  isFavorite: boolean;
 
   @ApiProperty({ enum: ACTIVITY_VISIBILITY })
   visibility: ActivityVisibility;
@@ -668,4 +677,3 @@ export class ActivityListResponseDto {
   @ApiPropertyOptional({ type: Boolean, deprecated: true })
   isLastPage?: boolean;
 }
-

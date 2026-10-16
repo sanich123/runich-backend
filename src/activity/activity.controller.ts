@@ -33,6 +33,7 @@ import {
   ActivityDto,
   ActivityMediaAppendDto,
   ActivityMediaParamsDto,
+  SetActivityFavoriteDto,
   WatchWorkoutBatchImportDto,
   WatchWorkoutBatchImportResponseDto,
 } from './activity.dto';
@@ -73,7 +74,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
-import { activity, id } from './const';
+import { ACTIVITY_FAVORITE_API_COPY, ACTIVITY_FAVORITE_ROUTE, ACTIVITY_FAVORITES_ROUTE, activity, id } from './const';
 import { parseActivityCursor, parseActivityMediaCursor } from './activity.pagination';
 
 function normalizeActivityIdsQuery(ids?: string | string[]) {
@@ -406,6 +407,38 @@ export class ActivityController {
   @HttpCode(HttpStatus.CREATED)
   async patchActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
     return await this.activityService.updateActivity(activity, id, request?.user.userId ?? request?.user.id ?? id);
+  }
+
+  @Get(ACTIVITY_FAVORITES_ROUTE)
+  @ApiOkResponse({ type: ActivityListResponseDto })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: ACTIVITY_FAVORITE_API_COPY.listSummary })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
+  @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
+  async getFavoriteActivities(
+    @Req() request: RequestWithUser,
+    @Query(QueryParams.cursor) cursor?: string,
+    @Query(QueryParams.take) take?: string,
+  ) {
+    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    return await this.activityService.getFavoriteActivities(
+      getAuthenticatedUserId(request),
+      validatedTake,
+      parseActivityCursor(cursor),
+    );
+  }
+
+  @Patch(ACTIVITY_FAVORITE_ROUTE)
+  @ApiOkResponse({ description: ACTIVITY_FAVORITE_API_COPY.updateDescription })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: ACTIVITY_FAVORITE_API_COPY.updateSummary })
+  @ApiBody({ type: SetActivityFavoriteDto })
+  async setActivityFavorite(
+    @Body() body: SetActivityFavoriteDto,
+    @Param() { id }: ParamsId,
+    @Req() request: RequestWithUser,
+  ) {
+    return await this.activityService.setActivityFavorite(id, getAuthenticatedUserId(request), body.isFavorite);
   }
 
   @Get(id)
