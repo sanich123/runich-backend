@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 
 export class ProfileDto {
   @ApiPropertyOptional({ type: String, description: 'Id value (optional)' })
@@ -63,6 +63,19 @@ export class ProfileDto {
   @ApiPropertyOptional({ type: String, description: 'Email value (optional)' })
   email?: string | null;
 }
+
+export class PublicProfileDto extends OmitType(ProfileDto, [
+  'birthday',
+  'gender',
+  'height',
+  'age',
+  'weight',
+  'emailNotifications',
+  'pushNotifications',
+  'inAppNotifications',
+  'profileSearchVisible',
+  'email',
+] as const) {}
 
 export class ProfilePaginationResponseDto {
   @ApiProperty({ type: [ProfileDto] })

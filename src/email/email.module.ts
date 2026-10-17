@@ -10,5 +10,6 @@ import { StorageModule } from 'src/storage/storage.module';
   imports: [PrismaModule, StorageModule, PassportModule.register({ defaultStrategy: 'jwt' })],
   controllers: [EmailController],
   providers: [EmailService, ThrottlerGuard],
+  exports: [EmailService],
 })
 export class EmailModule {}

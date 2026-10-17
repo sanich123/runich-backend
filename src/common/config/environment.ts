@@ -1,5 +1,37 @@
 type AppEnvironment = 'local' | 'stage' | 'production';
 
+export interface ApiStartupConfiguration {
+  databaseUrl: string;
+  jwtSecret: string;
+  port: number;
+}
+
+function requireEnvironmentValue(name: string) {
+  const value = process.env[name];
+  if (!value?.trim()) throw new Error(`Обязательная переменная окружения ${name} не задана`);
+  return value;
+}
+
+export function getJwtSecret() {
+  return requireEnvironmentValue('JWT_SECRET');
+}
+
+export function getDatabaseUrl() {
+  return process.env.DATABASE_URL;
+}
+
+export function getHttpPort() {
+  return Number(process.env.PORT) || 3000;
+}
+
+export function loadApiStartupConfiguration(): ApiStartupConfiguration {
+  return {
+    databaseUrl: requireEnvironmentValue('DATABASE_URL'),
+    jwtSecret: getJwtSecret(),
+    port: getHttpPort(),
+  };
+}
+
 const LOCAL_CORS_ORIGINS = [
   /^https?:\/\/localhost(?::\d+)?$/,
   /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,

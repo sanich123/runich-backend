@@ -10,3 +10,25 @@ export const PROFILE_SEARCH_SELECT = {
   profilePhotoBlurhash: true,
   allowNewFollowers: true,
 } as const;
+
+export const PUBLIC_USER_PROFILE_SELECT = {
+  id: true,
+  userId: true,
+  createdAt: true,
+  name: true,
+  bio: true,
+  city: true,
+  profilePhoto: true,
+  sport: true,
+  surname: true,
+  updatedAt: true,
+  language: true,
+  profilePhotoBlurhash: true,
+  allowActivityInteractions: true,
+  allowActivityReplayViewing: true,
+  allowActivitySharing: true,
+  hideActivityStatistics: true,
+  hideFollowingList: true,
+  hideProfilePhotos: true,
+  allowNewFollowers: true,
+} as const;
