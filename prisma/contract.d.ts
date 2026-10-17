@@ -22,7 +22,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'c9efdd1f550ef1cde3ebb501c4bd10478338a49e1b832e99d6115b69f1ac4030'>;
+  StorageHashBase<'4a7533f74a85a4a774efb21479e03e0250dea3876362f967dda107be66b5b0ae'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -238,6 +238,7 @@ type DefaultLiteralValue<CodecId extends string, Encoded> = CodecId extends keyo
 export type FieldOutputTypes = {
   readonly public: {
     readonly Activity: {
+      readonly averageHeartRate: CodecTypes['pg/int4@1']['output'] | null;
       readonly caloriesActive: CodecTypes['pg/int4@1']['output'] | null;
       readonly createdAt: TimestamptzString<6>;
       readonly date: TimestamptzString<6>;
@@ -246,6 +247,7 @@ export type FieldOutputTypes = {
       readonly duration: CodecTypes['pg/int4@1']['output'];
       readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
+      readonly heartRateSamples: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly isFavorite: CodecTypes['pg/bool@1']['output'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
@@ -253,7 +255,9 @@ export type FieldOutputTypes = {
       readonly locationName: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
+      readonly maxHeartRate: CodecTypes['pg/int4@1']['output'] | null;
       readonly mediaProcessingStatus: Varchar<16>;
+      readonly minHeartRate: CodecTypes['pg/int4@1']['output'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
       readonly routeChecksum: Varchar<64> | null;
       readonly routeFormatVersion: CodecTypes['pg/int4@1']['output'] | null;
@@ -528,6 +532,7 @@ export type FieldOutputTypes = {
 export type FieldInputTypes = {
   readonly public: {
     readonly Activity: {
+      readonly averageHeartRate: CodecTypes['pg/int4@1']['input'] | null;
       readonly caloriesActive: CodecTypes['pg/int4@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly date: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -536,6 +541,7 @@ export type FieldInputTypes = {
       readonly duration: CodecTypes['pg/int4@1']['input'];
       readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
+      readonly heartRateSamples: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly isFavorite: CodecTypes['pg/bool@1']['input'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
@@ -543,7 +549,9 @@ export type FieldInputTypes = {
       readonly locationName: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
+      readonly maxHeartRate: CodecTypes['pg/int4@1']['input'] | null;
       readonly mediaProcessingStatus: CodecTypes['sql/varchar@1']['input'];
+      readonly minHeartRate: CodecTypes['pg/int4@1']['input'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
       readonly routeChecksum: CodecTypes['sql/varchar@1']['input'] | null;
       readonly routeFormatVersion: CodecTypes['pg/int4@1']['input'] | null;
@@ -818,6 +826,7 @@ export type FieldInputTypes = {
 export type StorageColumnTypes = {
   readonly public: {
     readonly Activity: {
+      readonly average_heart_rate: CodecTypes['pg/int4@1']['output'] | null;
       readonly calories_active: CodecTypes['pg/int4@1']['output'] | null;
       readonly createdAt: TimestamptzString<6>;
       readonly date: TimestamptzString<6>;
@@ -826,6 +835,7 @@ export type StorageColumnTypes = {
       readonly duration: CodecTypes['pg/int4@1']['output'];
       readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
+      readonly heart_rate_samples: CodecTypes['pg/jsonb@1']['output'] | null;
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly is_favorite: CodecTypes['pg/bool@1']['output'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
@@ -833,7 +843,9 @@ export type StorageColumnTypes = {
       readonly location_name: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
+      readonly max_heart_rate: CodecTypes['pg/int4@1']['output'] | null;
       readonly media_processing_status: Varchar<16>;
+      readonly min_heart_rate: CodecTypes['pg/int4@1']['output'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
       readonly route_checksum: Varchar<64> | null;
       readonly route_format_version: CodecTypes['pg/int4@1']['output'] | null;
@@ -1108,6 +1120,7 @@ export type StorageColumnTypes = {
 export type StorageColumnInputTypes = {
   readonly public: {
     readonly Activity: {
+      readonly average_heart_rate: CodecTypes['pg/int4@1']['input'] | null;
       readonly calories_active: CodecTypes['pg/int4@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly date: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -1116,6 +1129,7 @@ export type StorageColumnInputTypes = {
       readonly duration: CodecTypes['pg/int4@1']['input'];
       readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
+      readonly heart_rate_samples: CodecTypes['pg/jsonb@1']['input'] | null;
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly is_favorite: CodecTypes['pg/bool@1']['input'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
@@ -1123,7 +1137,9 @@ export type StorageColumnInputTypes = {
       readonly location_name: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['input'] | null;
+      readonly max_heart_rate: CodecTypes['pg/int4@1']['input'] | null;
       readonly media_processing_status: CodecTypes['sql/varchar@1']['input'];
+      readonly min_heart_rate: CodecTypes['pg/int4@1']['input'] | null;
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
       readonly route_checksum: CodecTypes['sql/varchar@1']['input'] | null;
       readonly route_format_version: CodecTypes['pg/int4@1']['input'] | null;
@@ -1398,6 +1414,7 @@ export type StorageColumnInputTypes = {
 
 export namespace Models {
   export type public_Activity = {
+    averageHeartRate: CodecTypes['pg/int4@1']['output'] | null;
     caloriesActive: CodecTypes['pg/int4@1']['output'] | null;
     createdAt: TimestamptzString<6>;
     date: TimestamptzString<6>;
@@ -1406,6 +1423,7 @@ export namespace Models {
     duration: CodecTypes['pg/int4@1']['output'];
     elevationGain: CodecTypes['pg/float8@1']['output'] | null;
     emotion: CodecTypes['pg/text@1']['output'] | null;
+    heartRateSamples: CodecTypes['pg/jsonb@1']['output'] | null;
     id: CodecTypes['pg/uuid@1']['output'];
     isFavorite: CodecTypes['pg/bool@1']['output'];
     kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
@@ -1413,7 +1431,9 @@ export namespace Models {
     locationName: CodecTypes['pg/text@1']['output'] | null;
     mapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
     mapPhotoUrlBlurhash: CodecTypes['pg/text@1']['output'] | null;
+    maxHeartRate: CodecTypes['pg/int4@1']['output'] | null;
     mediaProcessingStatus: Varchar<16>;
+    minHeartRate: CodecTypes['pg/int4@1']['output'] | null;
     profileId: CodecTypes['pg/uuid@1']['output'];
     routeChecksum: Varchar<64> | null;
     routeFormatVersion: CodecTypes['pg/int4@1']['output'] | null;
@@ -1805,6 +1825,12 @@ type ContractBase = Omit<
           readonly table: {
             readonly Activity: {
               columns: {
+                readonly average_heart_rate: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly calories_active: {
                   readonly dataType: 'pg/int4';
                   readonly codecId: 'pg/int4@1';
@@ -1854,6 +1880,12 @@ type ContractBase = Omit<
                 readonly emotion: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly heart_rate_samples: {
+                  readonly dataType: 'pg/jsonb';
+                  readonly codecId: 'pg/jsonb@1';
                   readonly nullable: true;
                   readonly many: false;
                 };
@@ -1912,6 +1944,12 @@ type ContractBase = Omit<
                   readonly nullable: true;
                   readonly many: false;
                 };
+                readonly max_heart_rate: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly media_processing_status: {
                   readonly dataType: 'pg/varchar';
                   readonly codecId: 'sql/varchar@1';
@@ -1921,6 +1959,12 @@ type ContractBase = Omit<
                     readonly value: DefaultLiteralValue<'sql/varchar@1', 'queued'>;
                   };
                   readonly typeParams: { readonly length: 16 };
+                  readonly many: false;
+                };
+                readonly min_heart_rate: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
                   readonly many: false;
                 };
                 readonly profileId: {
@@ -4465,6 +4509,10 @@ type ContractBase = Omit<
         readonly models: {
           readonly Activity: {
             readonly fields: {
+              readonly averageHeartRate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
               readonly caloriesActive: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
@@ -4505,6 +4553,10 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly heartRateSamples: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+              };
               readonly id: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
@@ -4537,6 +4589,10 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly maxHeartRate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
               readonly mediaProcessingStatus: {
                 readonly nullable: false;
                 readonly type: {
@@ -4544,6 +4600,10 @@ type ContractBase = Omit<
                   readonly codecId: 'sql/varchar@1';
                   readonly typeParams: { readonly length: 16 };
                 };
+              };
+              readonly minHeartRate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
               readonly profileId: {
                 readonly nullable: false;
@@ -4703,6 +4763,7 @@ type ContractBase = Omit<
               readonly table: 'Activity';
               readonly namespaceId: 'public';
               readonly fields: {
+                readonly averageHeartRate: { readonly column: 'average_heart_rate' };
                 readonly caloriesActive: { readonly column: 'calories_active' };
                 readonly createdAt: { readonly column: 'createdAt' };
                 readonly date: { readonly column: 'date' };
@@ -4711,6 +4772,7 @@ type ContractBase = Omit<
                 readonly duration: { readonly column: 'duration' };
                 readonly elevationGain: { readonly column: 'elevationGain' };
                 readonly emotion: { readonly column: 'emotion' };
+                readonly heartRateSamples: { readonly column: 'heart_rate_samples' };
                 readonly id: { readonly column: 'id' };
                 readonly isFavorite: { readonly column: 'is_favorite' };
                 readonly kilometresSplit: { readonly column: 'kilometresSplit' };
@@ -4720,7 +4782,9 @@ type ContractBase = Omit<
                 readonly locationName: { readonly column: 'location_name' };
                 readonly mapPhotoUrl: { readonly column: 'mapPhotoUrl' };
                 readonly mapPhotoUrlBlurhash: { readonly column: 'mapPhotoUrlBlurhash' };
+                readonly maxHeartRate: { readonly column: 'max_heart_rate' };
                 readonly mediaProcessingStatus: { readonly column: 'media_processing_status' };
+                readonly minHeartRate: { readonly column: 'min_heart_rate' };
                 readonly profileId: { readonly column: 'profileId' };
                 readonly routeChecksum: { readonly column: 'route_checksum' };
                 readonly routeFormatVersion: { readonly column: 'route_format_version' };

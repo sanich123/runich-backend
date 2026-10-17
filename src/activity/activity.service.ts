@@ -27,6 +27,7 @@ import {
   getElevationGainFromKilometreSplits,
   getElevationGainFromLocations,
   normalizeActivityDetails,
+  omitActivityHeartRateSamples,
   omitMediaProcessingStatus,
 } from './utils';
 import type { MigratedActivity } from './type';
@@ -37,6 +38,7 @@ import { ACTIVITY_VISIBILITY } from './activity-visibility';
 import { calculateActiveCalories } from './activity-calories';
 import { StaticMapService } from 'src/common/maps/static-map.service';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import { getHeartRateStatistics } from './heart-rate.utils';
 
 @Injectable()
 export class ActivityService {
@@ -145,6 +147,9 @@ export class ActivityService {
 
       const mapPhotoUrlBlurhash = null;
       const activityFields = { ...activityDto };
+      const heartRateSamples = (
+        activityDto as ActivityDto & { heartRateSamples?: { timestamp: number; beatsPerMinute: number }[] }
+      ).heartRateSamples;
       delete activityFields.locations;
       delete activityFields.media;
       activityFields.visibility = activityDto.visibility ?? ACTIVITY_VISIBILITY.public;
@@ -155,6 +160,7 @@ export class ActivityService {
         userId: id,
         profileId: `${account?.id}`,
         ...activityFields,
+        ...(heartRateSamples?.length ? getHeartRateStatistics(heartRateSamples) : {}),
         description,
         elevationGain: activityDto.locations?.length
           ? getElevationGainFromLocations(activityDto.locations)
@@ -191,7 +197,7 @@ export class ActivityService {
       );
 
       const mediaRows = this.getActivityMediaRows(activityId, id, data.date ?? new Date(), media);
-      return omitMediaProcessingStatus(await this.persistenceService.create(data, mediaRows));
+      return omitActivityHeartRateSamples(await this.persistenceService.create(data, mediaRows));
     } catch (error) {
       await this.deleteUploadedRoute(uploadedRouteKey);
       await this.deleteUploadedRoute(uploadedMapKey);
@@ -297,6 +303,10 @@ export class ActivityService {
       };
       if (workout.timeZone !== undefined) updateData.timeZone = workout.timeZone;
       if (workout.steps !== undefined) updateData.steps = workout.steps;
+      if (workout.heartRateSamples !== undefined) {
+        updateData.heartRateSamples = workout.heartRateSamples;
+        Object.assign(updateData, getHeartRateStatistics(workout.heartRateSamples));
+      }
       if (workout.title?.trim()) updateData.title = workout.title.trim();
       if (workout.kilometresSplit !== undefined) updateData.kilometresSplit = workout.kilometresSplit;
       if (preparedData.elevationGain !== undefined) updateData.elevationGain = preparedData.elevationGain;
@@ -344,7 +354,7 @@ export class ActivityService {
       }
     }
 
-    return omitMediaProcessingStatus(updatedActivity);
+    return omitActivityHeartRateSamples(updatedActivity);
   }
 
   async createActivitiesFromMigrationArchive(

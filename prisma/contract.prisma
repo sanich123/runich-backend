@@ -138,6 +138,10 @@ model Activity {
   source              VarChar(32)?
   sourceActivityId    VarChar(128)?
   steps               Int?
+  heartRateSamples    Jsonb?               @map("heart_rate_samples")
+  averageHeartRate    Int?                 @map("average_heart_rate")
+  minHeartRate        Int?                 @map("min_heart_rate")
+  maxHeartRate        Int?                 @map("max_heart_rate")
   comments            Comment[]
   likes               Like[]
   media               ActivityMedia[]

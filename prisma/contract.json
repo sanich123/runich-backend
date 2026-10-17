@@ -102,6 +102,13 @@
         "models": {
           "Activity": {
             "fields": {
+              "averageHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "caloriesActive": {
                 "nullable": true,
                 "type": {
@@ -164,6 +171,13 @@
                   "kind": "scalar"
                 }
               },
+              "heartRateSamples": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/jsonb@1",
+                  "kind": "scalar"
+                }
+              },
               "id": {
                 "nullable": false,
                 "type": {
@@ -216,6 +230,13 @@
                   "kind": "scalar"
                 }
               },
+              "maxHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "mediaProcessingStatus": {
                 "nullable": false,
                 "type": {
@@ -224,6 +245,13 @@
                   "typeParams": {
                     "length": 16
                   }
+                }
+              },
+              "minHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
                 }
               },
               "profileId": {
@@ -465,6 +493,9 @@
             },
             "storage": {
               "fields": {
+                "averageHeartRate": {
+                  "column": "average_heart_rate"
+                },
                 "caloriesActive": {
                   "column": "calories_active"
                 },
@@ -489,6 +520,9 @@
                 "emotion": {
                   "column": "emotion"
                 },
+                "heartRateSamples": {
+                  "column": "heart_rate_samples"
+                },
                 "id": {
                   "column": "id"
                 },
@@ -510,8 +544,14 @@
                 "mapPhotoUrlBlurhash": {
                   "column": "mapPhotoUrlBlurhash"
                 },
+                "maxHeartRate": {
+                  "column": "max_heart_rate"
+                },
                 "mediaProcessingStatus": {
                   "column": "media_processing_status"
+                },
+                "minHeartRate": {
+                  "column": "min_heart_rate"
                 },
                 "profileId": {
                   "column": "profileId"
@@ -3823,6 +3863,11 @@
                 }
               ],
               "columns": {
+                "average_heart_rate": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
                 "calories_active": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
@@ -3877,6 +3922,11 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "heart_rate_samples": {
+                  "codecId": "pg/jsonb@1",
+                  "dataType": "pg/jsonb",
+                  "nullable": true
+                },
                 "id": {
                   "codecId": "pg/uuid@1",
                   "dataType": "pg/uuid",
@@ -3927,6 +3977,11 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "max_heart_rate": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
                 "media_processing_status": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
@@ -3938,6 +3993,11 @@
                   "typeParams": {
                     "length": 16
                   }
+                },
+                "min_heart_rate": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
@@ -6806,7 +6866,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "c9efdd1f550ef1cde3ebb501c4bd10478338a49e1b832e99d6115b69f1ac4030"
+    "storageHash": "4a7533f74a85a4a774efb21479e03e0250dea3876362f967dda107be66b5b0ae"
   },
   "capabilities": {
     "postgres": {

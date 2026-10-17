@@ -5,6 +5,13 @@ export function omitMediaProcessingStatus(value: unknown) {
   return result;
 }
 
+export function omitActivityHeartRateSamples(value: unknown) {
+  const result = omitMediaProcessingStatus(value);
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return result;
+  delete (result as Record<string, unknown>).heartRateSamples;
+  return result;
+}
+
 export function getElevationGainFromKilometreSplits(value: unknown) {
   if (!Array.isArray(value)) return 0;
 

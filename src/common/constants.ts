@@ -33,4 +33,5 @@ export const DATABASE_ERROR_TO_HTTP_STATUS = {
 
 // The mobile client reduces tracked routes to this size before sending them.
 export const MAX_ACTIVITY_LOCATIONS = 5_000;
+export const MAX_ACTIVITY_HEART_RATE_SAMPLES = 15_000;
 export const MAX_JSON_BODY_BYTES = 5 * 1024 * 1024;

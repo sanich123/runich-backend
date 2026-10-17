@@ -77,4 +77,7 @@ export const ACTIVITY_DETAILS_SELECT = {
   visibility: true,
   emotion: true,
   kilometresSplit: true,
+  averageHeartRate: true,
+  minHeartRate: true,
+  maxHeartRate: true,
 } as const;

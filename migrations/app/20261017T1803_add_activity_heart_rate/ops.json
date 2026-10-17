@@ -1,0 +1,170 @@
+[
+  {
+    "id": "column.public.Activity.average_heart_rate",
+    "label": "Add column \"average_heart_rate\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "average_heart_rate",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"average_heart_rate\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "average_heart_rate"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"average_heart_rate\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"average_heart_rate\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"average_heart_rate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "average_heart_rate"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Activity.heart_rate_samples",
+    "label": "Add column \"heart_rate_samples\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "heart_rate_samples",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"heart_rate_samples\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "heart_rate_samples"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"heart_rate_samples\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"heart_rate_samples\" jsonb"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"heart_rate_samples\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "heart_rate_samples"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Activity.max_heart_rate",
+    "label": "Add column \"max_heart_rate\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "max_heart_rate",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"max_heart_rate\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "max_heart_rate"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"max_heart_rate\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"max_heart_rate\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"max_heart_rate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "max_heart_rate"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Activity.min_heart_rate",
+    "label": "Add column \"min_heart_rate\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "min_heart_rate",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"min_heart_rate\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "min_heart_rate"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"min_heart_rate\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"min_heart_rate\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"min_heart_rate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "min_heart_rate"
+        ]
+      }
+    ]
+  }
+]
