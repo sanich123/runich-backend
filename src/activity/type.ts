@@ -1,4 +1,4 @@
-import type { ActivityDto } from './activity.dto';
+import type { ActivityDto, ActivityHeartRateSampleObject } from './activity.dto';
 import type { ActivityCursor } from './activity.pagination';
 
 export type EnqueueMigrationInput = {
@@ -40,6 +40,10 @@ export type MigratedActivity = ActivityDto & {
   sourceActivityId: string;
   /** Elevation gain calculated by Strava and stored in activities.csv. */
   sourceElevationGain?: number;
+  heartRateSamples?: ActivityHeartRateSampleObject[];
+  averageHeartRate?: number | null;
+  minHeartRate?: number | null;
+  maxHeartRate?: number | null;
 };
 
 export type MigrationProgress = Pick<MigrationJob, 'processedActivities' | 'importedActivities' | 'skippedActivities'>;

@@ -105,6 +105,11 @@ export class UserDto {
   @IsOptional()
   allowActivityReplayViewing?: boolean;
 
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view heart rate data on activities' })
+  @IsBoolean()
+  @IsOptional()
+  allowActivityHeartRateViewing?: boolean;
+
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to share this profile activities' })
   @IsBoolean()
   @IsOptional()

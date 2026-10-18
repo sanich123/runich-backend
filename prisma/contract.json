@@ -2185,6 +2185,13 @@
                   "kind": "scalar"
                 }
               },
+              "allowActivityHeartRateViewing": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "allowActivityInteractions": {
                 "nullable": false,
                 "type": {
@@ -2500,6 +2507,9 @@
               "fields": {
                 "age": {
                   "column": "age"
+                },
+                "allowActivityHeartRateViewing": {
+                  "column": "allow_activity_heart_rate_viewing"
                 },
                 "allowActivityInteractions": {
                   "column": "allow_activity_interactions"
@@ -5673,6 +5683,15 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "allow_activity_heart_rate_viewing": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
                 "allow_activity_interactions": {
                   "codecId": "pg/bool@1",
                   "dataType": "pg/bool",
@@ -6900,7 +6919,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "f451c32846d8846087e2d684a9433d7a4d158b03052219e1224078dc480b0753"
+    "storageHash": "f3da64af7aa944be28d911fd6782c44e01570e6652cef52fd95219229c0b1699"
   },
   "capabilities": {
     "postgres": {

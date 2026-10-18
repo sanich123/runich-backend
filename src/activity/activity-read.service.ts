@@ -5,7 +5,7 @@ import { handleServiceError } from 'src/common/utils/database-errors';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { StorageService } from 'src/storage/storage.service';
 import { ActivityAccessService } from './activity-access.service';
-import type { LocationObject } from './activity.dto';
+import type { ActivityHeartRateSampleObject, LocationObject } from './activity.dto';
 import {
   ACTIVITY_CARD_SELECT,
   ACTIVITY_DETAILS_SELECT,
@@ -65,6 +65,43 @@ export class ActivityReadService {
     return { locations, kilometresSplit: activity.kilometresSplit };
   }
 
+  async getChartDataByActivityId(id: string, currentUserId?: string) {
+    const activity = await this.prisma.activity.findUnique({
+      where: { id },
+      select: {
+        heartRateSamples: true,
+        routeStorageKey: true,
+        userId: true,
+        visibility: true,
+        profile: { select: { allowActivityReplayViewing: true, allowActivityHeartRateViewing: true } },
+      },
+    });
+    if (!activity || !currentUserId) return null;
+
+    const isOwner = activity.userId === currentUserId;
+    const isPublic = activity.visibility === ACTIVITY_VISIBILITY.public;
+    const isFollowerActivity =
+      activity.visibility === ACTIVITY_VISIBILITY.followers &&
+      (isOwner || (await this.accessService.isFollower(currentUserId, activity.userId)));
+    if (!isOwner && !isPublic && !isFollowerActivity) return null;
+    if (!isOwner && activity.profile?.allowActivityReplayViewing === false) return null;
+    if (!isOwner && activity.profile?.allowActivityHeartRateViewing === false) return null;
+
+    let locations: LocationObject[] | null = null;
+    if (activity.routeStorageKey) {
+      if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');
+      locations = reduceLocations(
+        await this.storageService.readActivityRoute(activity.routeStorageKey),
+        MAX_MAP_ROUTE_LOCATIONS,
+      );
+    }
+
+    const heartRateSamples = Array.isArray(activity.heartRateSamples)
+      ? (activity.heartRateSamples as ActivityHeartRateSampleObject[])
+      : [];
+    return { heartRateSamples, locations };
+  }
+
   async getActivityByActivityId(id: string, currentUserId?: string) {
     try {
       const activity = await this.prisma.activity.findUnique({
@@ -72,7 +109,20 @@ export class ActivityReadService {
         select: ACTIVITY_DETAILS_SELECT,
       });
       if (!activity || !(await this.accessService.canAccessActivityData(activity, currentUserId))) return null;
-      return activity ? normalizeActivityDetails(activity as Record<string, unknown>) : activity;
+      const normalizedActivity = normalizeActivityDetails(activity as Record<string, unknown>);
+      if (
+        !currentUserId ||
+        activity.userId === currentUserId ||
+        activity.profile?.allowActivityHeartRateViewing !== false
+      ) {
+        return normalizedActivity;
+      }
+      return {
+        ...normalizedActivity,
+        averageHeartRate: null,
+        minHeartRate: null,
+        maxHeartRate: null,
+      };
     } catch (error) {
       handleServiceError(error);
     }

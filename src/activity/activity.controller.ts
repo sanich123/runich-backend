@@ -34,6 +34,7 @@ import {
   ActivityMediaAppendDto,
   ActivityMediaParamsDto,
   SetActivityFavoriteDto,
+  ActivityChartDataResponseDto,
   WatchWorkoutBatchImportDto,
   WatchWorkoutBatchImportResponseDto,
 } from './activity.dto';
@@ -158,8 +159,18 @@ export class ActivityController {
   @ApiOperation({ summary: 'Get activity locations for route replay' })
   @ApiParam({ name: 'id', description: 'Activity identifier' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
-  async getLocationsByActivityId(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
-    return this.activityService.getLocationsByActivityId(id, request?.user.userId ?? request?.user.id);
+  async getLocationsByActivityId(@Param() { id }: ParamsId, @Req() request: RequestWithUser) {
+    return this.activityService.getLocationsByActivityId(id, getAuthenticatedUserId(request));
+  }
+
+  @Get(`${id}/chart-data`)
+  @ApiOkResponse({ type: ActivityChartDataResponseDto })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get activity chart data' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
+  async getChartDataByActivityId(@Param() { id }: ParamsId, @Req() request: RequestWithUser) {
+    return this.activityService.getChartDataByActivityId(id, getAuthenticatedUserId(request));
   }
 
   @Get('activityIds')
@@ -543,8 +554,8 @@ export class ActivityController {
   @ApiParam({ name: 'id', description: 'Activity identifier' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-  async getActivityByActivityId(@Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
-    return await this.activityService.getActivityByActivityId(id, request?.user.userId ?? request?.user.id);
+  async getActivityByActivityId(@Param() { id }: ParamsId, @Req() request: RequestWithUser) {
+    return await this.activityService.getActivityByActivityId(id, getAuthenticatedUserId(request));
   }
 
   @Delete(id)

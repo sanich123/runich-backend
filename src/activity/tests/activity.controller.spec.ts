@@ -56,7 +56,7 @@ describe('ActivityController', () => {
     expect(activityService.getMediaByUserId).toHaveBeenCalledWith('u1', '10', undefined, 'u1');
     await expect(controller.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, request)).resolves.toBeUndefined();
     expect(activityService.deleteActivityMedia).toHaveBeenCalledWith('a1', 'm1', 'u1');
-    await expect(controller.getLocationsByActivityId({ id: 'a1' })).resolves.toEqual({ locations: [] });
+    await expect(controller.getLocationsByActivityId({ id: 'a1' }, request)).resolves.toEqual({ locations: [] });
     await expect(controller.getActivitiesByActivitiesIds(activityIds.join(','))).resolves.toEqual([result]);
     await expect(controller.getActivitiesByActivitiesIds(activityIds)).resolves.toEqual([result]);
     expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(activityIds, undefined);
@@ -76,7 +76,7 @@ describe('ActivityController', () => {
       hasMore: false,
       nextCursor: null,
     });
-    await expect(controller.getActivityByActivityId({ id: 'a1' })).resolves.toEqual(result);
+    await expect(controller.getActivityByActivityId({ id: 'a1' }, request)).resolves.toEqual(result);
     await expect(controller.deleteActivityById({ id: 'a1' })).resolves.toEqual(result);
   });
 
@@ -163,13 +163,14 @@ describe('ActivityController', () => {
 
   it('propagates service errors from every non-migration endpoint', async () => {
     const error = new Error('service failed');
+    const request = { user: { id: 'u1' } } as never;
     Object.values(activityService).forEach((method) => method.mockRejectedValue(error));
 
     await expect(controller.getMediaByUserId({ id: 'u1' }, undefined, '10')).rejects.toBe(error);
     await expect(
       controller.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, { user: { id: 'u1' } } as never),
     ).rejects.toBe(error);
-    await expect(controller.getLocationsByActivityId({ id: 'a1' })).rejects.toBe(error);
+    await expect(controller.getLocationsByActivityId({ id: 'a1' }, request)).rejects.toBe(error);
     await expect(controller.getActivitiesByActivitiesIds(activityIds[0])).rejects.toBe(error);
     await expect(
       controller.createActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'u1' }),
@@ -183,7 +184,7 @@ describe('ActivityController', () => {
     await expect(
       controller.setActivityFavorite({ isFavorite: true }, { id: 'a1' }, { user: { id: 'u1' } } as never),
     ).rejects.toBe(error);
-    await expect(controller.getActivityByActivityId({ id: 'a1' })).rejects.toBe(error);
+    await expect(controller.getActivityByActivityId({ id: 'a1' }, request)).rejects.toBe(error);
     await expect(controller.deleteActivityById({ id: 'a1' })).rejects.toBe(error);
   });
 });

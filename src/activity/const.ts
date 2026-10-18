@@ -76,6 +76,9 @@ const ACTIVITY_FEED_SELECT = {
 
 export const ACTIVITY_DETAILS_SELECT = {
   ...ACTIVITY_FEED_SELECT,
+  profile: {
+    select: { ...ACTIVITY_FEED_PROFILE_SELECT, allowActivityHeartRateViewing: true },
+  },
   description: true,
   visibility: true,
   emotion: true,

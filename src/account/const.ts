@@ -26,6 +26,7 @@ export const PUBLIC_USER_PROFILE_SELECT = {
   profilePhotoBlurhash: true,
   allowActivityInteractions: true,
   allowActivityReplayViewing: true,
+  allowActivityHeartRateViewing: true,
   allowActivitySharing: true,
   hideActivityStatistics: true,
   hideFollowingList: true,

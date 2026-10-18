@@ -171,9 +171,10 @@ export class ActivityService {
 
       const mapPhotoUrlBlurhash = null;
       const activityFields = { ...activityDto };
-      const heartRateSamples = (
-        activityDto as ActivityDto & { heartRateSamples?: { timestamp: number; beatsPerMinute: number }[] }
-      ).heartRateSamples;
+      const migratedActivity = activityDto as ActivityDto &
+        Pick<MigratedActivity, 'heartRateSamples' | 'averageHeartRate' | 'minHeartRate' | 'maxHeartRate'>;
+      const heartRateSamples = migratedActivity.heartRateSamples;
+      const heartRateStatistics = heartRateSamples?.length ? getHeartRateStatistics(heartRateSamples) : {};
       delete activityFields.locations;
       delete activityFields.media;
       activityFields.visibility = activityDto.visibility ?? ACTIVITY_VISIBILITY.public;
@@ -184,7 +185,12 @@ export class ActivityService {
         userId: id,
         profileId: `${account?.id}`,
         ...activityFields,
-        ...(heartRateSamples?.length ? getHeartRateStatistics(heartRateSamples) : {}),
+        ...heartRateStatistics,
+        ...(migratedActivity.averageHeartRate !== undefined
+          ? { averageHeartRate: migratedActivity.averageHeartRate }
+          : {}),
+        ...(migratedActivity.minHeartRate !== undefined ? { minHeartRate: migratedActivity.minHeartRate } : {}),
+        ...(migratedActivity.maxHeartRate !== undefined ? { maxHeartRate: migratedActivity.maxHeartRate } : {}),
         description,
         elevationGain: activityDto.locations?.length
           ? getElevationGainFromLocations(activityDto.locations)
@@ -786,6 +792,10 @@ export class ActivityService {
 
   async getLocationsByActivityId(id: string, currentUserId?: string) {
     return await this.readService.getLocationsByActivityId(id, currentUserId);
+  }
+
+  async getChartDataByActivityId(id: string, currentUserId?: string) {
+    return await this.readService.getChartDataByActivityId(id, currentUserId);
   }
 
   async getActivityByActivityId(id: string, currentUserId?: string) {

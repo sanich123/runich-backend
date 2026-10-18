@@ -544,6 +544,14 @@ export class ActivityLocationsResponseDto {
   kilometresSplit?: ActivityKilometreSplitResponseDto[] | null;
 }
 
+export class ActivityChartDataResponseDto {
+  @ApiProperty({ type: [ActivityHeartRateSampleDto], maxItems: MAX_ACTIVITY_HEART_RATE_SAMPLES })
+  heartRateSamples: ActivityHeartRateSampleObject[];
+
+  @ApiPropertyOptional({ type: [ActivityLocationResponseDto], nullable: true })
+  locations?: ActivityLocationResponseDto[] | null;
+}
+
 class ActivityUserEmailResponseDto {
   @ApiProperty({ type: String, format: 'email' })
   email: string;
