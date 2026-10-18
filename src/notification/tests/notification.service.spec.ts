@@ -37,7 +37,7 @@ describe('NotificationService', () => {
         where: {
           recipientUserId: 'recipient-1',
           inApp: true,
-          recipient: { profile: { is: { inAppNotifications: true } } },
+          recipient: { profile: { inAppNotifications: true } },
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: 2,
@@ -79,7 +79,7 @@ describe('NotificationService', () => {
         recipientUserId: 'recipient-1',
         inApp: true,
         readAt: null,
-        recipient: { profile: { is: { inAppNotifications: true } } },
+        recipient: { profile: { inAppNotifications: true } },
       },
     });
     expect(prisma.notification.updateMany).toHaveBeenCalledWith(
@@ -88,7 +88,7 @@ describe('NotificationService', () => {
           recipientUserId: 'recipient-1',
           inApp: true,
           readAt: null,
-          recipient: { profile: { is: { inAppNotifications: true } } },
+          recipient: { profile: { inAppNotifications: true } },
         },
         data: { readAt: expect.any(Date) },
       }),
