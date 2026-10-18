@@ -227,6 +227,11 @@ export class ActivityDto {
   @IsOptional()
   visibility?: ActivityVisibility;
 
+  @ApiPropertyOptional({ type: Boolean, description: 'Hide the base map while keeping the route visible' })
+  @IsBoolean()
+  @IsOptional()
+  hideMap?: boolean;
+
   @ApiPropertyOptional({
     type: 'array',
     description: 'Photo and video URLs',
@@ -646,11 +651,17 @@ export class ActivityCardResponseDto {
   @ApiProperty({ enum: ACTIVITY_VISIBILITY })
   visibility: ActivityVisibility;
 
+  @ApiProperty({ type: Boolean })
+  hideMap: boolean;
+
   @ApiPropertyOptional({ type: [ActivityMediaItemDto], nullable: true })
   media?: ActivityMediaItemDto[] | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   mapPhotoUrl?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  routeOnlyMapPhotoUrl?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   mapPhotoUrlBlurhash?: string | null;
@@ -712,4 +723,15 @@ export class ActivityListResponseDto {
 
   @ApiPropertyOptional({ type: Boolean, deprecated: true })
   isLastPage?: boolean;
+}
+
+export class HomeActivityFeedsResponseDto {
+  @ApiProperty({ type: ActivityListResponseDto })
+  my: ActivityListResponseDto;
+
+  @ApiProperty({ type: ActivityListResponseDto })
+  followers: ActivityListResponseDto;
+
+  @ApiProperty({ type: ActivityListResponseDto })
+  favorites: ActivityListResponseDto;
 }

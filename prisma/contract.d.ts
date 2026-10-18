@@ -22,7 +22,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'4a7533f74a85a4a774efb21479e03e0250dea3876362f967dda107be66b5b0ae'>;
+  StorageHashBase<'f451c32846d8846087e2d684a9433d7a4d158b03052219e1224078dc480b0753'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -248,6 +248,7 @@ export type FieldOutputTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
       readonly heartRateSamples: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly hideMap: CodecTypes['pg/bool@1']['output'];
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly isFavorite: CodecTypes['pg/bool@1']['output'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
@@ -261,6 +262,7 @@ export type FieldOutputTypes = {
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
       readonly routeChecksum: Varchar<64> | null;
       readonly routeFormatVersion: CodecTypes['pg/int4@1']['output'] | null;
+      readonly routeOnlyMapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly routePointCount: CodecTypes['pg/int4@1']['output'] | null;
       readonly routeSizeBytes: CodecTypes['pg/int4@1']['output'] | null;
       readonly routeStorageKey: Varchar<512> | null;
@@ -542,6 +544,7 @@ export type FieldInputTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
       readonly heartRateSamples: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly hideMap: CodecTypes['pg/bool@1']['input'];
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly isFavorite: CodecTypes['pg/bool@1']['input'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
@@ -555,6 +558,7 @@ export type FieldInputTypes = {
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
       readonly routeChecksum: CodecTypes['sql/varchar@1']['input'] | null;
       readonly routeFormatVersion: CodecTypes['pg/int4@1']['input'] | null;
+      readonly routeOnlyMapPhotoUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly routePointCount: CodecTypes['pg/int4@1']['input'] | null;
       readonly routeSizeBytes: CodecTypes['pg/int4@1']['input'] | null;
       readonly routeStorageKey: CodecTypes['sql/varchar@1']['input'] | null;
@@ -836,6 +840,7 @@ export type StorageColumnTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
       readonly heart_rate_samples: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly hide_map: CodecTypes['pg/bool@1']['output'];
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly is_favorite: CodecTypes['pg/bool@1']['output'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
@@ -849,6 +854,7 @@ export type StorageColumnTypes = {
       readonly profileId: CodecTypes['pg/uuid@1']['output'];
       readonly route_checksum: Varchar<64> | null;
       readonly route_format_version: CodecTypes['pg/int4@1']['output'] | null;
+      readonly route_only_map_photo_url: CodecTypes['pg/text@1']['output'] | null;
       readonly route_point_count: CodecTypes['pg/int4@1']['output'] | null;
       readonly route_size_bytes: CodecTypes['pg/int4@1']['output'] | null;
       readonly route_storage_key: Varchar<512> | null;
@@ -1130,6 +1136,7 @@ export type StorageColumnInputTypes = {
       readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
       readonly heart_rate_samples: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly hide_map: CodecTypes['pg/bool@1']['input'];
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly is_favorite: CodecTypes['pg/bool@1']['input'];
       readonly kilometresSplit: CodecTypes['pg/jsonb@1']['input'] | null;
@@ -1143,6 +1150,7 @@ export type StorageColumnInputTypes = {
       readonly profileId: CodecTypes['pg/uuid@1']['input'];
       readonly route_checksum: CodecTypes['sql/varchar@1']['input'] | null;
       readonly route_format_version: CodecTypes['pg/int4@1']['input'] | null;
+      readonly route_only_map_photo_url: CodecTypes['pg/text@1']['input'] | null;
       readonly route_point_count: CodecTypes['pg/int4@1']['input'] | null;
       readonly route_size_bytes: CodecTypes['pg/int4@1']['input'] | null;
       readonly route_storage_key: CodecTypes['sql/varchar@1']['input'] | null;
@@ -1424,6 +1432,7 @@ export namespace Models {
     elevationGain: CodecTypes['pg/float8@1']['output'] | null;
     emotion: CodecTypes['pg/text@1']['output'] | null;
     heartRateSamples: CodecTypes['pg/jsonb@1']['output'] | null;
+    hideMap: CodecTypes['pg/bool@1']['output'];
     id: CodecTypes['pg/uuid@1']['output'];
     isFavorite: CodecTypes['pg/bool@1']['output'];
     kilometresSplit: CodecTypes['pg/jsonb@1']['output'] | null;
@@ -1437,6 +1446,7 @@ export namespace Models {
     profileId: CodecTypes['pg/uuid@1']['output'];
     routeChecksum: Varchar<64> | null;
     routeFormatVersion: CodecTypes['pg/int4@1']['output'] | null;
+    routeOnlyMapPhotoUrl: CodecTypes['pg/text@1']['output'] | null;
     routePointCount: CodecTypes['pg/int4@1']['output'] | null;
     routeSizeBytes: CodecTypes['pg/int4@1']['output'] | null;
     routeStorageKey: Varchar<512> | null;
@@ -1889,6 +1899,16 @@ type ContractBase = Omit<
                   readonly nullable: true;
                   readonly many: false;
                 };
+                readonly hide_map: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
+                  };
+                  readonly many: false;
+                };
                 readonly id: {
                   readonly dataType: 'pg/uuid';
                   readonly codecId: 'pg/uuid@1';
@@ -1983,6 +2003,12 @@ type ContractBase = Omit<
                 readonly route_format_version: {
                   readonly dataType: 'pg/int4';
                   readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly route_only_map_photo_url: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
                   readonly nullable: true;
                   readonly many: false;
                 };
@@ -4557,6 +4583,10 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
               };
+              readonly hideMap: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
               readonly id: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
@@ -4620,6 +4650,10 @@ type ContractBase = Omit<
               readonly routeFormatVersion: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly routeOnlyMapPhotoUrl: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly routePointCount: {
                 readonly nullable: true;
@@ -4773,6 +4807,7 @@ type ContractBase = Omit<
                 readonly elevationGain: { readonly column: 'elevationGain' };
                 readonly emotion: { readonly column: 'emotion' };
                 readonly heartRateSamples: { readonly column: 'heart_rate_samples' };
+                readonly hideMap: { readonly column: 'hide_map' };
                 readonly id: { readonly column: 'id' };
                 readonly isFavorite: { readonly column: 'is_favorite' };
                 readonly kilometresSplit: { readonly column: 'kilometresSplit' };
@@ -4788,6 +4823,7 @@ type ContractBase = Omit<
                 readonly profileId: { readonly column: 'profileId' };
                 readonly routeChecksum: { readonly column: 'route_checksum' };
                 readonly routeFormatVersion: { readonly column: 'route_format_version' };
+                readonly routeOnlyMapPhotoUrl: { readonly column: 'route_only_map_photo_url' };
                 readonly routePointCount: { readonly column: 'route_point_count' };
                 readonly routeSizeBytes: { readonly column: 'route_size_bytes' };
                 readonly routeStorageKey: { readonly column: 'route_storage_key' };

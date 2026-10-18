@@ -1,5 +1,9 @@
 # Project instructions
 
+## Repository layout
+
+- All project Git roots are inside the project/ directory; run Git commands from that directory.
+
 ## Verification before completion
 
 - For every task that changes application code, run the full project checks from this directory before reporting completion:

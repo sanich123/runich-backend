@@ -3,6 +3,7 @@ import { PATHS } from 'src/common/constants';
 export const { activity, id } = PATHS;
 
 export const ACTIVITY_FAVORITES_ROUTE = 'favorites';
+export const ACTIVITY_HOME_ROUTE = 'home';
 export const ACTIVITY_FAVORITE_ROUTE = `${id}/favorite`;
 export const ACTIVITY_FAVORITE_API_COPY = {
   listSummary: 'Get the current user favorite activities',
@@ -45,12 +46,14 @@ export const ACTIVITY_CARD_SELECT = {
   id: true,
   userId: true,
   visibility: true,
+  hideMap: true,
   isFavorite: true,
   media: {
     select: { id: true, url: true, thumbnail: true, blurhash: true },
     orderBy: { position: 'asc' },
   },
   mapPhotoUrl: true,
+  routeOnlyMapPhotoUrl: true,
   mapPhotoUrlBlurhash: true,
   locationName: true,
   weatherTemperature: true,

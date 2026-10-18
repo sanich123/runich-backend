@@ -1,0 +1,44 @@
+[
+  {
+    "id": "column.public.Activity.route_only_map_photo_url",
+    "label": "Add column \"route_only_map_photo_url\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "route_only_map_photo_url",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"route_only_map_photo_url\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "route_only_map_photo_url"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"route_only_map_photo_url\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"route_only_map_photo_url\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"route_only_map_photo_url\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "route_only_map_photo_url"
+        ]
+      }
+    ]
+  }
+]

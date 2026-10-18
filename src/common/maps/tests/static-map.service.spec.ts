@@ -48,6 +48,32 @@ describe('StaticMapService', () => {
     );
   });
 
+  it('renders and uploads a separate route-only map when hideMap is enabled', async () => {
+    const storage = createStorage();
+    const service = new StaticMapService(storage as never);
+
+    await expect(
+      service.generateActivityMap({ userId: 'user-1', activityId: 'activity-1', locations, hideMap: true }),
+    ).resolves.toEqual({ key: 'map.webp', url: 'https://s3/map.webp' });
+
+    expect(storage.uploadObject).toHaveBeenCalledWith(
+      'user-1/activities/activity-1/map-route-only.webp',
+      expect.any(Buffer),
+      'image/webp',
+      'public, max-age=31536000, immutable',
+    );
+    expect(renderRunichVectorMap).not.toHaveBeenCalled();
+  });
+
+  it('returns null when a route-only image cannot be stored without an activity id', async () => {
+    const storage = createStorage();
+    const service = new StaticMapService(storage as never);
+
+    await expect(service.generateActivityMap({ userId: 'user-1', locations, hideMap: true })).resolves.toBeNull();
+    expect(storage.uploadObject).not.toHaveBeenCalled();
+    expect(renderRunichVectorMap).not.toHaveBeenCalled();
+  });
+
   it('uses the Mapbox URL when MapLibre rendering fails', async () => {
     process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     renderRunichVectorMap.mockRejectedValue(new Error('vector renderer unavailable'));

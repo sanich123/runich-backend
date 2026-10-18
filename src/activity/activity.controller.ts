@@ -41,6 +41,7 @@ import {
   ActivityCardResponseDto,
   ActivityDetailsResponseDto,
   ActivityListResponseDto,
+  HomeActivityFeedsResponseDto,
   ActivityLocationsResponseDto,
   ActivityMediaResponseDto,
   ActivityResponseDto,
@@ -74,7 +75,14 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
-import { ACTIVITY_FAVORITE_API_COPY, ACTIVITY_FAVORITE_ROUTE, ACTIVITY_FAVORITES_ROUTE, activity, id } from './const';
+import {
+  ACTIVITY_FAVORITE_API_COPY,
+  ACTIVITY_FAVORITE_ROUTE,
+  ACTIVITY_FAVORITES_ROUTE,
+  ACTIVITY_HOME_ROUTE,
+  activity,
+  id,
+} from './const';
 import { parseActivityCursor, parseActivityMediaCursor } from './activity.pagination';
 
 function normalizeActivityIdsQuery(ids?: string | string[]) {
@@ -409,10 +417,15 @@ export class ActivityController {
     return await this.activityService.updateActivity(activity, id, request?.user.userId ?? request?.user.id ?? id);
   }
 
+  // Deprecated compatibility route; remove after app version 1.2.3 is released.
   @Get(ACTIVITY_FAVORITES_ROUTE)
   @ApiOkResponse({ type: ActivityListResponseDto })
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: ACTIVITY_FAVORITE_API_COPY.listSummary })
+  @ApiOperation({
+    summary: ACTIVITY_FAVORITE_API_COPY.listSummary,
+    description: 'Deprecated compatibility route. Remove after app version 1.2.3 is released.',
+    deprecated: true,
+  })
   @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
   @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
   async getFavoriteActivities(
@@ -441,10 +454,39 @@ export class ActivityController {
     return await this.activityService.setActivityFavorite(id, getAuthenticatedUserId(request), body.isFavorite);
   }
 
+  @Get(ACTIVITY_HOME_ROUTE)
+  @ApiOkResponse({ type: HomeActivityFeedsResponseDto })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get the current user home activity feeds' })
+  @ApiQuery({ name: 'take', required: false, description: 'Count of results per feed' })
+  @ApiQuery({ name: 'myCursor', required: false, description: 'Cursor for the current user feed' })
+  @ApiQuery({ name: 'followersCursor', required: false, description: 'Cursor for the followers feed' })
+  @ApiQuery({ name: 'favoritesCursor', required: false, description: 'Cursor for the favorites feed' })
+  async getHomeActivityFeeds(
+    @Req() request: RequestWithUser,
+    @Query(QueryParams.take) take?: string,
+    @Query('myCursor') myCursor?: string,
+    @Query('followersCursor') followersCursor?: string,
+    @Query('favoritesCursor') favoritesCursor?: string,
+  ) {
+    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    const parseHomeCursor = (cursor?: string) => (cursor === 'done' ? 'done' : parseActivityCursor(cursor));
+    return await this.activityService.getHomeActivityFeeds(getAuthenticatedUserId(request), validatedTake, {
+      my: parseHomeCursor(myCursor),
+      followers: parseHomeCursor(followersCursor),
+      favorites: parseHomeCursor(favoritesCursor),
+    });
+  }
+
+  // Deprecated compatibility route; remove after app version 1.2.3 is released.
   @Get(id)
   @ApiOkResponse({ type: ActivityListResponseDto })
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get activities by userId' })
+  @ApiOperation({
+    summary: 'Get activities by userId',
+    description: 'Deprecated compatibility route. Remove after app version 1.2.3 is released.',
+    deprecated: true,
+  })
   @ApiParam({ name: 'id', description: 'User identifier' })
   @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
   @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
@@ -465,10 +507,15 @@ export class ActivityController {
     );
   }
 
+  // Deprecated compatibility route; remove after app version 1.2.3 is released.
   @Get(`${id}/all`)
   @ApiOkResponse({ type: ActivityListResponseDto })
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get activities by userId and friends ids' })
+  @ApiOperation({
+    summary: 'Get activities by userId and friends ids',
+    description: 'Deprecated compatibility route. Remove after app version 1.2.3 is released.',
+    deprecated: true,
+  })
   @ApiParam({ name: 'id', description: 'User identifier' })
   @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
   @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })

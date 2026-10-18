@@ -20,12 +20,15 @@ function createPrismaMock() {
       upsert: asyncMock(),
       update: asyncMock(),
       findUnique: asyncMock(),
+      findFirst: asyncMock(),
       findMany: asyncMock(),
       delete: asyncMock(),
     },
     activityMedia: {
       count: asyncMock(),
+      create: asyncMock(),
       createMany: asyncMock(),
+      findFirst: asyncMock(),
       findMany: asyncMock(),
       updateMany: asyncMock(),
     },
@@ -71,6 +74,101 @@ describe('ActivityService', () => {
     ).rejects.toThrow('К активности можно добавить не больше 5 файлов');
     expect(storage.promoteActivityPhotos).not.toHaveBeenCalled();
   });
+
+  it('rejects appending media when the activity does not exist', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.appendActivityMedia('missing-activity', 'user-1', [{ url: 'photo', thumbnail: null }]),
+    ).rejects.toThrow('Активность не найдена');
+    expect(prisma.activityMedia.count).not.toHaveBeenCalled();
+  });
+
+  it('rejects appending media when the current user is not the activity owner', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1', date: new Date() });
+
+    await expect(
+      service.appendActivityMedia('activity-1', 'user-1', [{ url: 'photo', thumbnail: null }]),
+    ).rejects.toThrow('Недостаточно прав');
+    expect(prisma.activityMedia.count).not.toHaveBeenCalled();
+  });
+
+  it('rejects appending media when storage is not configured', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: new Date() });
+
+    await expect(
+      service.appendActivityMedia('activity-1', 'user-1', [{ url: 'photo', thumbnail: null }]),
+    ).rejects.toThrow('Сервис хранения медиа не настроен');
+    expect(prisma.activityMedia.count).not.toHaveBeenCalled();
+  });
+
+  it('returns persisted media records when appending files to an activity', async () => {
+    const prisma = createPrismaMock();
+    const storage = {
+      promoteActivityPhotos: asyncMock().mockResolvedValue({
+        keys: ['user-1/activities/activity-1/photo.jpg'],
+        photos: [{ url: 'https://cdn.example/photo.jpg', thumbnail: 'https://cdn.example/photo-thumb.jpg' }],
+      }),
+    };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    const activityDate = new Date('2026-09-28T12:00:00.000Z');
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: activityDate });
+    prisma.activityMedia.count.mockResolvedValue(2);
+    prisma.activityMedia.findFirst.mockResolvedValue({ position: 1 });
+    const persistedMedia = [
+      {
+        id: 'media-1',
+        activityId: 'activity-1',
+        userId: 'user-1',
+        activityDate,
+        position: 2,
+        url: 'https://cdn.example/photo.jpg',
+        thumbnail: 'https://cdn.example/photo-thumb.jpg',
+        blurhash: null,
+      },
+    ];
+    prisma.activityMedia.create.mockResolvedValue(persistedMedia[0]);
+
+    await expect(
+      service.appendActivityMedia('activity-1', 'user-1', [
+        { url: 'https://temporary.example/photo.jpg', thumbnail: 'https://temporary.example/photo-thumb.jpg' },
+      ]),
+    ).resolves.toEqual({ success: true, media: persistedMedia });
+    expect(prisma.activityMedia.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        activityId: 'activity-1',
+        position: 2,
+        url: 'https://cdn.example/photo.jpg',
+        thumbnail: 'https://cdn.example/photo-thumb.jpg',
+      }),
+    });
+  });
+
+  it('removes promoted files when a concurrent append crosses the five-file limit', async () => {
+    const prisma = createPrismaMock();
+    const storage = {
+      promoteActivityPhotos: asyncMock().mockResolvedValue({
+        keys: ['user-1/activities/activity-1/photo.jpg'],
+        photos: [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }],
+      }),
+      deleteObjectByKey: asyncMock(),
+    };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: new Date() });
+    prisma.activityMedia.count.mockResolvedValueOnce(4).mockResolvedValueOnce(5);
+
+    await expect(
+      service.appendActivityMedia('activity-1', 'user-1', [{ url: 'https://temporary/photo.jpg', thumbnail: null }]),
+    ).rejects.toThrow('К активности можно добавить не больше 5 файлов');
+    expect(storage.deleteObjectByKey).toHaveBeenCalledWith('user-1/activities/activity-1/photo.jpg');
+  });
+
   const originalMapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
 
   afterEach(() => {
@@ -149,6 +247,7 @@ describe('ActivityService', () => {
       userId: 'user-1',
       activityId: undefined,
       locations,
+      hideMap: false,
     });
     expect(prisma.activity.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -681,7 +780,20 @@ describe('ActivityService', () => {
       uploadActivityRoute: asyncMock().mockResolvedValue({ key: routeKey, formatVersion: 1, pointCount: 1 }),
       deleteObjectByKey: asyncMock(),
     };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const staticMap = {
+      generateActivityMap: asyncMock().mockResolvedValue({
+        key: 'user-1/activities/new-route/map.webp',
+        url: 'https://cdn.example.com/user-1/activities/new-route/map.webp',
+      }),
+    };
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      undefined,
+      staticMap as never,
+    );
     prisma.activity.findMany.mockResolvedValue([
       {
         id: 'activity-existing',
@@ -720,8 +832,21 @@ describe('ActivityService', () => {
       uploadActivityRoute: asyncMock().mockResolvedValue({ key: routeKey, formatVersion: 1, pointCount: 1 }),
     };
     const cleanup = { enqueueObjectCleanup: asyncMock().mockRejectedValue(new Error('queue unavailable')) };
+    const staticMap = {
+      generateActivityMap: asyncMock().mockResolvedValue({
+        key: 'user-1/activities/new-route/map.webp',
+        url: 'https://cdn.example.com/user-1/activities/new-route/map.webp',
+      }),
+    };
     const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, cleanup as never);
+    const service = new ActivityService(
+      prisma as never,
+      {} as never,
+      undefined,
+      storage as never,
+      cleanup as never,
+      staticMap as never,
+    );
     prisma.activity.findMany.mockResolvedValue([
       {
         id: 'activity-existing',
@@ -833,6 +958,7 @@ describe('ActivityService', () => {
       userId: 'user-1',
       activityId: 'activity-1',
       locations,
+      hideMap: false,
     });
     expect(prisma.activity.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -919,6 +1045,163 @@ describe('ActivityService', () => {
     const [template] = prisma.$queryRaw.mock.calls[0] as unknown as [TemplateStringsArray];
     expect(Array.from(template).join('')).toContain('EXISTS');
     await expect(service.deleteActivityById('activity-1')).resolves.toEqual(activity);
+  });
+
+  it('switches a hidden activity back to its already generated full map', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const staticMap = { generateActivityMap: asyncMock() };
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      staticMap as never,
+    );
+    prisma.activity.findFirst.mockResolvedValue({
+      hideMap: true,
+      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      mapPhotoUrl: 'https://cdn.example.com/map.webp',
+      routeOnlyMapPhotoUrl: 'https://cdn.example.com/map-route-only.webp',
+    });
+    prisma.activity.update.mockResolvedValue({ id: 'activity-1', hideMap: false });
+
+    await expect(service.updateActivity({ ...activityDto, hideMap: false }, 'activity-1', 'user-1')).resolves.toEqual({
+      id: 'activity-1',
+      hideMap: false,
+    });
+
+    expect(staticMap.generateActivityMap).not.toHaveBeenCalled();
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1', userId: 'user-1' },
+      data: expect.objectContaining({ hideMap: false }),
+    });
+  });
+
+  it('generates a route-only image when an activity is hidden', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const locations = [
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+      { coords: { latitude: 55.76, longitude: 37.62 } },
+    ];
+    const storage = {
+      readActivityRoute: asyncMock().mockResolvedValue(locations),
+    };
+    const staticMap = {
+      generateActivityMap: asyncMock().mockResolvedValue({
+        key: 'user-1/activities/activity-1/map-route-only.webp',
+        url: 'https://cdn.example.com/map-route-only.webp',
+      }),
+    };
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      storage as never,
+      undefined,
+      staticMap as never,
+    );
+    prisma.activity.findFirst.mockResolvedValue({
+      hideMap: false,
+      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      mapPhotoUrl: 'https://cdn.example.com/map.webp',
+      routeOnlyMapPhotoUrl: null,
+    });
+    prisma.activity.update.mockResolvedValue({ id: 'activity-1', hideMap: true });
+
+    await service.updateActivity({ ...activityDto, hideMap: true }, 'activity-1', 'user-1');
+
+    expect(storage.readActivityRoute).toHaveBeenCalledWith(
+      'user-1/activities/activity-1/locations/locations-v1.json.gz',
+    );
+    expect(staticMap.generateActivityMap).toHaveBeenCalledWith({
+      userId: 'user-1',
+      activityId: expect.any(String),
+      locations,
+      hideMap: true,
+    });
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1', userId: 'user-1' },
+      data: expect.objectContaining({
+        hideMap: true,
+        routeOnlyMapPhotoUrl: 'https://cdn.example.com/map-route-only.webp',
+      }),
+    });
+  });
+
+  it('repairs legacy hidden activities by generating both map images', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const locations = [
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+      { coords: { latitude: 55.76, longitude: 37.62 } },
+    ];
+    const storage = {
+      readActivityRoute: asyncMock().mockResolvedValue(locations),
+      getOwnedKey: jest.fn().mockReturnValue('user-1/activities/activity-1/map.webp'),
+    };
+    const cleanup = { enqueueObjectCleanup: asyncMock() };
+    const staticMap = {
+      generateActivityMap: asyncMock()
+        .mockResolvedValueOnce({ key: 'new-map.webp', url: 'https://cdn.example.com/new-map.webp' })
+        .mockResolvedValueOnce({
+          key: 'new-route-only.webp',
+          url: 'https://cdn.example.com/new-route-only.webp',
+        }),
+    };
+    const service = new ActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      storage as never,
+      cleanup as never,
+      staticMap as never,
+    );
+    prisma.activity.findFirst.mockResolvedValue({
+      hideMap: true,
+      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      mapPhotoUrl: 'https://cdn.example.com/legacy-route-only.webp',
+      routeOnlyMapPhotoUrl: null,
+    });
+    prisma.activity.update.mockResolvedValue({ id: 'activity-1', hideMap: true });
+
+    await service.updateActivity({ ...activityDto, hideMap: true }, 'activity-1', 'user-1');
+
+    expect(staticMap.generateActivityMap).toHaveBeenNthCalledWith(1, {
+      userId: 'user-1',
+      activityId: expect.any(String),
+      locations,
+      hideMap: false,
+    });
+    expect(staticMap.generateActivityMap).toHaveBeenNthCalledWith(2, {
+      userId: 'user-1',
+      activityId: expect.any(String),
+      locations,
+      hideMap: true,
+    });
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1', userId: 'user-1' },
+      data: expect.objectContaining({
+        hideMap: true,
+        mapPhotoUrl: 'https://cdn.example.com/new-map.webp',
+        routeOnlyMapPhotoUrl: 'https://cdn.example.com/new-route-only.webp',
+      }),
+    });
+    expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith('user-1', 'user-1/activities/activity-1/map.webp');
+  });
+
+  it('rejects a visibility change for a missing activity', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new ActivityService(prisma as never, account as never);
+    prisma.activity.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.updateActivity({ ...activityDto, hideMap: true }, 'activity-missing', 'user-1'),
+    ).rejects.toThrow('Активность не найдена');
+    expect(prisma.activity.update).not.toHaveBeenCalled();
   });
 
   it('uses twenty activities as the default page size', async () => {

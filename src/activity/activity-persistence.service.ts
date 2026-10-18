@@ -17,12 +17,14 @@ type ActivityUpdateField =
   | 'minHeartRate'
   | 'maxHeartRate'
   | 'mapPhotoUrl'
+  | 'routeOnlyMapPhotoUrl'
   | 'routeStorageKey'
   | 'routeFormatVersion'
   | 'routePointCount'
   | 'routeSizeBytes'
   | 'routeChecksum'
   | 'mapPhotoUrlBlurhash'
+  | 'hideMap'
   | 'mediaProcessingStatus'
   | 'locationName'
   | 'weatherTemperature'
@@ -47,12 +49,14 @@ const ACTIVITY_UPDATE_FIELDS: ActivityUpdateField[] = [
   'minHeartRate',
   'maxHeartRate',
   'mapPhotoUrl',
+  'routeOnlyMapPhotoUrl',
   'routeStorageKey',
   'routeFormatVersion',
   'routePointCount',
   'routeSizeBytes',
   'routeChecksum',
   'mapPhotoUrlBlurhash',
+  'hideMap',
   'mediaProcessingStatus',
   'locationName',
   'weatherTemperature',

@@ -40,6 +40,13 @@ import { StaticMapService } from 'src/common/maps/static-map.service';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { getHeartRateStatistics } from './heart-rate.utils';
 
+type HomeFeedCursor = ActivityCursor | 'done' | undefined;
+type HomeFeedCursors = {
+  my?: HomeFeedCursor;
+  followers?: HomeFeedCursor;
+  favorites?: HomeFeedCursor;
+};
+
 @Injectable()
 export class ActivityService {
   private readonly logger = new Logger(ActivityService.name);
@@ -99,6 +106,7 @@ export class ActivityService {
   async createActivity(activityDto: ActivityDto, id: string) {
     let uploadedRouteKey: string | undefined;
     let uploadedMapKey: string | undefined;
+    let uploadedRouteOnlyMapKey: string | undefined;
     let uploadedActivityMediaKeys: string[] = [];
     const mediaCreatedAt = new Date();
     try {
@@ -137,13 +145,29 @@ export class ActivityService {
 
       const generatedMap = locations?.length
         ? this.staticMapService
-          ? await this.staticMapService.generateActivityMap({ userId: id, activityId, locations })
+          ? await this.staticMapService.generateActivityMap({
+              userId: id,
+              activityId,
+              locations,
+              hideMap: false,
+            })
           : undefined
         : undefined;
+      const generatedRouteOnlyMap =
+        locations?.length && activityDto.hideMap
+          ? await this.staticMapService?.generateActivityMap({
+              userId: id,
+              activityId,
+              locations,
+              hideMap: true,
+            })
+          : undefined;
       uploadedMapKey = generatedMap?.key;
+      uploadedRouteOnlyMapKey = generatedRouteOnlyMap?.key;
       const mapPhotoUrl = locations?.length
         ? (generatedMap?.url ?? (this.staticMapService ? null : getMapBoxImage(locations)))
         : activityDto.mapPhotoUrl;
+      const routeOnlyMapPhotoUrl = generatedRouteOnlyMap?.url ?? null;
 
       const mapPhotoUrlBlurhash = null;
       const activityFields = { ...activityDto };
@@ -178,6 +202,7 @@ export class ActivityService {
             }
           : {}),
         mapPhotoUrl,
+        routeOnlyMapPhotoUrl,
         mapPhotoUrlBlurhash,
         mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued,
         caloriesActive: calculateActiveCalories({
@@ -201,6 +226,7 @@ export class ActivityService {
     } catch (error) {
       await this.deleteUploadedRoute(uploadedRouteKey);
       await this.deleteUploadedRoute(uploadedMapKey);
+      await this.deleteUploadedRoute(uploadedRouteOnlyMapKey);
       await Promise.all(uploadedActivityMediaKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);
     }
@@ -222,6 +248,8 @@ export class ActivityService {
       profileId: string;
       routeStorageKey: string | null;
       mapPhotoUrl: string | null;
+      routeOnlyMapPhotoUrl: string | null;
+      hideMap: boolean;
     };
     const existingActivities = (
       uniqueWorkouts.length
@@ -237,6 +265,8 @@ export class ActivityService {
               profileId: true,
               routeStorageKey: true,
               mapPhotoUrl: true,
+              routeOnlyMapPhotoUrl: true,
+              hideMap: true,
             },
           })
         : []
@@ -272,11 +302,14 @@ export class ActivityService {
       profileId: string;
       routeStorageKey: string | null;
       mapPhotoUrl: string | null;
+      routeOnlyMapPhotoUrl: string | null;
+      hideMap: boolean;
     },
     userId: string,
   ) {
     let uploadedRouteKey: string | undefined;
     let uploadedMapKey: string | undefined;
+    let uploadedRouteOnlyMapKey: string | undefined;
     let preparedData: Record<string, unknown> = {};
     let updatedActivity: unknown;
 
@@ -288,10 +321,12 @@ export class ActivityService {
           id: randomUUID(),
           userId,
           profileId: existingActivity.profileId,
+          hideMap: existingActivity.hideMap,
         });
         preparedData = prepared.data as unknown as Record<string, unknown>;
         uploadedRouteKey = prepared.routeKey;
         uploadedMapKey = prepared.mapKey;
+        uploadedRouteOnlyMapKey = prepared.routeOnlyMapKey;
       }
 
       const updateData: Record<string, unknown> = {
@@ -325,6 +360,9 @@ export class ActivityService {
         updateData.weatherCode = null;
         updateData.locationEnrichmentStatus = ACTIVITY_ENRICHMENT_STATUS.queued;
         if ('mapPhotoUrl' in preparedData) updateData.mapPhotoUrl = preparedData.mapPhotoUrl;
+        if ('routeOnlyMapPhotoUrl' in preparedData) {
+          updateData.routeOnlyMapPhotoUrl = preparedData.routeOnlyMapPhotoUrl;
+        }
       }
 
       updatedActivity = await this.prisma.activity.update({
@@ -332,7 +370,11 @@ export class ActivityService {
         data: updateData as never,
       });
     } catch (error) {
-      await Promise.all([this.deleteUploadedRoute(uploadedRouteKey), this.deleteUploadedRoute(uploadedMapKey)]);
+      await Promise.all([
+        this.deleteUploadedRoute(uploadedRouteKey),
+        this.deleteUploadedRoute(uploadedMapKey),
+        this.deleteUploadedRoute(uploadedRouteOnlyMapKey),
+      ]);
       handleServiceError(error);
     }
 
@@ -340,9 +382,12 @@ export class ActivityService {
       const oldKeys = this.getActivityStorageKeys(userId, {
         routeStorageKey: existingActivity.routeStorageKey,
         mapPhotoUrl: existingActivity.mapPhotoUrl,
+        routeOnlyMapPhotoUrl: existingActivity.routeOnlyMapPhotoUrl,
         media: [],
       });
-      const newKeys = new Set([uploadedRouteKey, uploadedMapKey].filter((key): key is string => Boolean(key)));
+      const newKeys = new Set(
+        [uploadedRouteKey, uploadedMapKey, uploadedRouteOnlyMapKey].filter((key): key is string => Boolean(key)),
+      );
       try {
         await Promise.all(
           oldKeys
@@ -396,13 +441,23 @@ export class ActivityService {
                 sourceActivityId: { in: [...sourceActivityIds] },
               })),
             },
-            select: { id: true, userId: true, sourceActivityId: true, routeStorageKey: true, mapPhotoUrl: true },
+            select: {
+              id: true,
+              userId: true,
+              sourceActivityId: true,
+              routeStorageKey: true,
+              mapPhotoUrl: true,
+              routeOnlyMapPhotoUrl: true,
+              hideMap: true,
+            },
           })) as {
             id: string;
             userId: string;
             sourceActivityId: string;
             routeStorageKey: string | null;
             mapPhotoUrl: string | null;
+            routeOnlyMapPhotoUrl: string | null;
+            hideMap: boolean;
           }[])
         : [];
       const existingActivitiesBySource = new Map(
@@ -416,6 +471,7 @@ export class ActivityService {
         const sourceId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
         return {
           ...activity,
+          hideMap: existingActivity?.hideMap ?? activity.hideMap ?? false,
           // Use a fresh storage namespace for replacements so immutable map caches cannot serve old imagery.
           id: existingActivity ? randomUUID() : sourceId,
           title: activity.title?.trim()
@@ -430,6 +486,7 @@ export class ActivityService {
             data: Record<string, unknown>;
             routeKey?: string;
             mapKey?: string;
+            routeOnlyMapKey?: string;
             existingActivity?: (typeof existingActivities)[number];
             userId: string;
           }[] = [];
@@ -451,6 +508,10 @@ export class ActivityService {
                       typeof preparedData.mapPhotoUrl === 'string' && preparedData.mapPhotoUrl.trim()
                         ? preparedData.mapPhotoUrl
                         : null,
+                    routeOnlyMapPhotoUrl:
+                      typeof preparedData.routeOnlyMapPhotoUrl === 'string' && preparedData.routeOnlyMapPhotoUrl.trim()
+                        ? preparedData.routeOnlyMapPhotoUrl
+                        : null,
                     routeStorageKey: preparedData.routeStorageKey ?? null,
                     routeFormatVersion: preparedData.routeFormatVersion ?? null,
                     routePointCount: preparedData.routePointCount ?? null,
@@ -470,6 +531,7 @@ export class ActivityService {
                 data,
                 routeKey: prepared.routeKey,
                 mapKey: prepared.mapKey,
+                routeOnlyMapKey: prepared.routeOnlyMapKey,
                 existingActivity,
                 userId: activity.userId,
               });
@@ -485,16 +547,21 @@ export class ActivityService {
               this.getActivityMediaRows(data.id, data.userId, data.date ?? new Date(), data.media),
             );
             const result = await this.persistenceService.upsertMany(preparedData, database, media);
-            const cleanupJobs = preparedActivities.flatMap(({ routeKey, mapKey, existingActivity, userId }) => {
-              if (!existingActivity) return [];
-              const oldKeys = this.getActivityStorageKeys(userId, {
-                routeStorageKey: existingActivity.routeStorageKey,
-                mapPhotoUrl: existingActivity.mapPhotoUrl,
-                media: [],
-              });
-              const newKeys = new Set([routeKey, mapKey].filter((key): key is string => Boolean(key)));
-              return oldKeys.filter((key) => !newKeys.has(key)).map((storageKey) => ({ userId, storageKey }));
-            });
+            const cleanupJobs = preparedActivities.flatMap(
+              ({ routeKey, mapKey, routeOnlyMapKey, existingActivity, userId }) => {
+                if (!existingActivity) return [];
+                const oldKeys = this.getActivityStorageKeys(userId, {
+                  routeStorageKey: existingActivity.routeStorageKey,
+                  mapPhotoUrl: existingActivity.mapPhotoUrl,
+                  routeOnlyMapPhotoUrl: existingActivity.routeOnlyMapPhotoUrl,
+                  media: [],
+                });
+                const newKeys = new Set(
+                  [routeKey, mapKey, routeOnlyMapKey].filter((key): key is string => Boolean(key)),
+                );
+                return oldKeys.filter((key) => !newKeys.has(key)).map((storageKey) => ({ userId, storageKey }));
+              },
+            );
             if (this.mediaCleanupService) {
               await Promise.all(
                 cleanupJobs.map(({ userId, storageKey }) =>
@@ -506,7 +573,7 @@ export class ActivityService {
           } catch (error) {
             await Promise.all(
               preparedActivities
-                .flatMap(({ routeKey, mapKey }) => [routeKey, mapKey])
+                .flatMap(({ routeKey, mapKey, routeOnlyMapKey }) => [routeKey, mapKey, routeOnlyMapKey])
                 .map((key) => this.deleteUploadedRoute(key)),
             );
             throw error;
@@ -542,7 +609,7 @@ export class ActivityService {
     try {
       const promoted = await this.storageService.promoteActivityPhotos(userId, activityId, media, new Date());
       promotedKeys = promoted.keys;
-      await this.prisma.$transaction(async (transaction) => {
+      const createdMedia = await this.prisma.$transaction(async (transaction) => {
         const currentCount = await transaction.activityMedia.count({ where: { activityId } });
         if (currentCount + promoted.photos.length > UPLOAD_LIMITS.activityMediaFiles) {
           throw new BadRequestException(
@@ -558,13 +625,15 @@ export class ActivityService {
         const rows = this.getActivityMediaRows(activityId, userId, activity.date, promoted.photos).map(
           (row, index) => ({ ...row, position: positionOffset + index }),
         );
-        await transaction.activityMedia.createMany({ data: rows });
+        const createdRows = [];
+        for (const data of rows) createdRows.push(await transaction.activityMedia.create({ data }));
         await transaction.activity.update({
           where: { id: activityId },
           data: { mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued },
         });
+        return createdRows;
       });
-      return { success: true, media: promoted.photos };
+      return { success: true, media: createdMedia };
     } catch (error) {
       await Promise.all(promotedKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);
@@ -607,9 +676,11 @@ export class ActivityService {
 
   async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
-      const { date, description, emotion, visibility, sport, title, distance, duration, speed } = activityDto;
+      const { date, description, emotion, visibility, hideMap, sport, title, distance, duration, speed } = activityDto;
       const account = await this.accountService.getAccountByUserId(userId);
-      const data = {
+      let previousMapPhotoUrl: string | null = null;
+      let previousRouteOnlyMapPhotoUrl: string | null = null;
+      const data: Record<string, unknown> = {
         title,
         sport,
         visibility,
@@ -629,7 +700,79 @@ export class ActivityService {
           duration,
         }),
       };
+
+      if (hideMap !== undefined) {
+        const existingActivity = await this.prisma.activity.findFirst({
+          where: { id, userId },
+          select: {
+            hideMap: true,
+            routeStorageKey: true,
+            mapPhotoUrl: true,
+            routeOnlyMapPhotoUrl: true,
+          },
+        });
+        if (!existingActivity) throw new NotFoundException('Активность не найдена');
+        data.hideMap = hideMap;
+
+        // Legacy hidden activities only have the route-only image in mapPhotoUrl.
+        const shouldGenerateFullMap =
+          !existingActivity.mapPhotoUrl || (existingActivity.hideMap && !existingActivity.routeOnlyMapPhotoUrl);
+        const shouldGenerateRouteOnlyMap = hideMap && !existingActivity.routeOnlyMapPhotoUrl;
+        if (
+          (shouldGenerateFullMap || shouldGenerateRouteOnlyMap) &&
+          existingActivity.routeStorageKey &&
+          this.storageService &&
+          this.staticMapService
+        ) {
+          const locations = await this.storageService.readActivityRoute(existingActivity.routeStorageKey);
+          const activityId = randomUUID();
+
+          if (shouldGenerateFullMap) {
+            const generatedMap = await this.staticMapService.generateActivityMap({
+              userId,
+              activityId,
+              locations,
+              hideMap: false,
+            });
+            if (generatedMap?.url) {
+              previousMapPhotoUrl = existingActivity.mapPhotoUrl;
+              data.mapPhotoUrl = generatedMap.url;
+              data.mapPhotoUrlBlurhash = null;
+              data.mediaProcessingStatus = ACTIVITY_MEDIA_PROCESSING_STATUS.queued;
+            }
+          }
+
+          if (shouldGenerateRouteOnlyMap) {
+            const generatedRouteOnlyMap = await this.staticMapService.generateActivityMap({
+              userId,
+              activityId,
+              locations,
+              hideMap: true,
+            });
+            if (generatedRouteOnlyMap?.url) {
+              previousRouteOnlyMapPhotoUrl = existingActivity.routeOnlyMapPhotoUrl;
+              data.routeOnlyMapPhotoUrl = generatedRouteOnlyMap.url;
+            }
+          }
+        }
+      }
+
       const activity = await this.persistenceService.update(id, userId, data);
+      if ((previousMapPhotoUrl || previousRouteOnlyMapPhotoUrl) && this.mediaCleanupService) {
+        const oldMapKeys = this.getActivityStorageKeys(userId, {
+          routeStorageKey: null,
+          mapPhotoUrl: previousMapPhotoUrl,
+          routeOnlyMapPhotoUrl: previousRouteOnlyMapPhotoUrl,
+          media: [],
+        });
+        try {
+          await Promise.all(
+            [...oldMapKeys].map((storageKey) => this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey)),
+          );
+        } catch (error) {
+          this.logger.error('Не удалось поставить старые файлы активности в очередь удаления', error);
+        }
+      }
       if (date) {
         await this.prisma.activityMedia.updateMany({ where: { activityId: id }, data: { activityDate: date } });
       }
@@ -659,6 +802,26 @@ export class ActivityService {
     cursor?: ActivityCursor,
   ) {
     return await this.readService.getFavoriteActivities(currentUserId, take, cursor);
+  }
+
+  async getHomeActivityFeeds(
+    currentUserId: string,
+    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
+    cursors: HomeFeedCursors = {},
+  ) {
+    const emptyPage = { activities: [], hasMore: false, nextCursor: null, isLastPage: true };
+    const readFeed = (cursor: HomeFeedCursor, read: (cursor?: ActivityCursor) => Promise<unknown>) =>
+      cursor === 'done' ? Promise.resolve(emptyPage) : read(cursor);
+
+    const [my, followers, favorites] = await Promise.all([
+      readFeed(cursors.my, (cursor) => this.getActivitesByUserId(currentUserId, take, cursor, currentUserId)),
+      readFeed(cursors.followers, (cursor) =>
+        this.getAllActivitiesWithFriends(currentUserId, take, cursor, currentUserId),
+      ),
+      readFeed(cursors.favorites, (cursor) => this.getFavoriteActivities(currentUserId, take, cursor)),
+    ]);
+
+    return { my, followers, favorites };
   }
 
   async getActivitesByUserId(
@@ -708,6 +871,7 @@ export class ActivityService {
           select: {
             routeStorageKey: true,
             mapPhotoUrl: true,
+            routeOnlyMapPhotoUrl: true,
             media: { select: { url: true, thumbnail: true } },
           },
         });
@@ -746,6 +910,7 @@ export class ActivityService {
         },
         routeKey: undefined,
         mapKey: undefined,
+        routeOnlyMapKey: undefined,
       };
     }
 
@@ -760,6 +925,15 @@ export class ActivityService {
           userId: activity.userId,
           activityId,
           locations: activity.locations,
+          hideMap: false,
+        })
+      : undefined;
+    const generatedRouteOnlyMap = activity.hideMap
+      ? await this.staticMapService?.generateActivityMap({
+          userId: activity.userId,
+          activityId,
+          locations: activity.locations,
+          hideMap: true,
         })
       : undefined;
     const dataWithoutLocations = { ...activity };
@@ -775,12 +949,12 @@ export class ActivityService {
         routePointCount: routeMetadata.pointCount,
         routeSizeBytes: routeMetadata.sizeBytes,
         routeChecksum: routeMetadata.checksum,
-        ...(this.staticMapService
-          ? { mapPhotoUrl: generatedMap?.url ?? dataWithoutLocations.mapPhotoUrl ?? null }
-          : {}),
+        mapPhotoUrl: generatedMap?.url ?? (this.staticMapService ? null : getMapBoxImage(activity.locations)),
+        routeOnlyMapPhotoUrl: generatedRouteOnlyMap?.url ?? null,
       },
       routeKey: routeMetadata.key,
       mapKey: generatedMap?.key,
+      routeOnlyMapKey: generatedRouteOnlyMap?.key,
     };
   }
 
@@ -795,7 +969,12 @@ export class ActivityService {
 
   private getActivityStorageKeys(
     userId: string,
-    activity: { routeStorageKey: string | null; mapPhotoUrl?: string | null; media: unknown } | null,
+    activity: {
+      routeStorageKey: string | null;
+      mapPhotoUrl?: string | null;
+      routeOnlyMapPhotoUrl?: string | null;
+      media: unknown;
+    } | null,
   ) {
     const keys = new Set<string>();
     if (activity?.routeStorageKey?.startsWith(`${userId}/`)) keys.add(activity.routeStorageKey);
@@ -805,6 +984,14 @@ export class ActivityService {
         keys.add(this.storageService.getOwnedKey(userId, activity.mapPhotoUrl));
       } catch {
         // Mapbox and other external URLs are intentionally not deleted here.
+      }
+    }
+
+    if (this.storageService && activity?.routeOnlyMapPhotoUrl) {
+      try {
+        keys.add(this.storageService.getOwnedKey(userId, activity.routeOnlyMapPhotoUrl));
+      } catch {
+        // External URLs are intentionally not deleted here.
       }
     }
 

@@ -273,6 +273,7 @@ export class ActivityReadService {
           a."id",
           a."user_id" AS "userId",
           a."visibility",
+          a."hide_map" AS "hideMap",
           a."is_favorite" AS "isFavorite",
           COALESCE(
             (
@@ -291,6 +292,7 @@ export class ActivityReadService {
             '[]'::json
               ) AS "media",
           a."mapPhotoUrl",
+          a."route_only_map_photo_url" AS "routeOnlyMapPhotoUrl",
           a."mapPhotoUrlBlurhash",
           a."location_name" AS "locationName",
           a."weather_temperature" AS "weatherTemperature",

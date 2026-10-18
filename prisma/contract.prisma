@@ -124,6 +124,7 @@ model Activity {
   title               String?
   kilometresSplit     Jsonb?
   mapPhotoUrl         String?
+  routeOnlyMapPhotoUrl String?             @map("route_only_map_photo_url")
   mediaProcessingStatus VarChar(16)       @default("queued") @map("media_processing_status")
   locationName        String?             @map("location_name")
   weatherTemperature  Float?              @map("weather_temperature")
@@ -132,6 +133,7 @@ model Activity {
   caloriesActive      Int?                @map("calories_active")
   locationEnrichmentStatus VarChar(16)    @default("queued") @map("location_enrichment_status")
   visibility          ActivityVisibility   @default(public)
+  hideMap             Boolean              @default(false) @map("hide_map")
   isFavorite          Boolean              @default(false) @map("is_favorite")
   mapPhotoUrlBlurhash String?
   profileId           Uuid

@@ -178,6 +178,13 @@
                   "kind": "scalar"
                 }
               },
+              "hideMap": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "id": {
                 "nullable": false,
                 "type": {
@@ -275,6 +282,13 @@
                 "nullable": true,
                 "type": {
                   "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "routeOnlyMapPhotoUrl": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -523,6 +537,9 @@
                 "heartRateSamples": {
                   "column": "heart_rate_samples"
                 },
+                "hideMap": {
+                  "column": "hide_map"
+                },
                 "id": {
                   "column": "id"
                 },
@@ -561,6 +578,9 @@
                 },
                 "routeFormatVersion": {
                   "column": "route_format_version"
+                },
+                "routeOnlyMapPhotoUrl": {
+                  "column": "route_only_map_photo_url"
                 },
                 "routePointCount": {
                   "column": "route_point_count"
@@ -3927,6 +3947,15 @@
                   "dataType": "pg/jsonb",
                   "nullable": true
                 },
+                "hide_map": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
                 "id": {
                   "codecId": "pg/uuid@1",
                   "dataType": "pg/uuid",
@@ -4015,6 +4044,11 @@
                 "route_format_version": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "route_only_map_photo_url": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "route_point_count": {
@@ -6866,7 +6900,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "4a7533f74a85a4a774efb21479e03e0250dea3876362f967dda107be66b5b0ae"
+    "storageHash": "f451c32846d8846087e2d684a9433d7a4d158b03052219e1224078dc480b0753"
   },
   "capabilities": {
     "postgres": {

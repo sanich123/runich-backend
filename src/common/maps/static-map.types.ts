@@ -9,4 +9,5 @@ export type GenerateActivityMapInput = {
   userId: string;
   activityId?: string;
   locations: LocationObject[];
+  hideMap?: boolean;
 };
