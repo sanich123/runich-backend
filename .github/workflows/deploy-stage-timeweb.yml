@@ -165,10 +165,22 @@ jobs:
           printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
           echo "Stage is healthy at commit $DEPLOY_SHA"
 
+          email_status=0
+          if "${COMPOSE[@]}" exec -T --interactive=false \
+            --env DEPLOY_SHA --env DEPLOY_RUN_URL \
+            nestjs_app xvfb-run --auto-servernum \
+            --server-args '-screen 0 1280x1024x24' \
+            node scripts/send-deployment-success-email.mjs </dev/null; then
+            echo 'Stage deployment success email sent.'
+          else
+            email_status=$?
+            echo 'Stage deployment success email failed; continuing with cleanup.' >&2
+          fi
+
           # The stage host has limited disk space. Keep active containers and
           # all named volumes (PostgreSQL and Let's Encrypt), but remove old
           # images, stopped containers, unused networks, and build cache only
-          # after every deployment health check has passed.
+          # after deployment readiness checks and the email attempt.
           echo 'Docker disk usage before cleanup:'
           docker system df || echo 'Could not inspect Docker disk usage before cleanup.' >&2
           docker system prune --all --force || \
@@ -176,9 +188,7 @@ jobs:
           echo 'Docker disk usage after cleanup:'
           docker system df || echo 'Could not inspect Docker disk usage after cleanup.' >&2
 
-          "${COMPOSE[@]}" exec -T --interactive=false \
-            --env DEPLOY_SHA --env DEPLOY_RUN_URL \
-            nestjs_app xvfb-run --auto-servernum \
-            --server-args '-screen 0 1280x1024x24' \
-            node scripts/send-deployment-success-email.mjs </dev/null
+          if [ "$email_status" -ne 0 ]; then
+            exit "$email_status"
+          fi
           REMOTE
