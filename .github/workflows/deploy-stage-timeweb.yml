@@ -165,12 +165,6 @@ jobs:
           printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
           echo "Stage is healthy at commit $DEPLOY_SHA"
 
-          "${COMPOSE[@]}" exec -T \
-            --env DEPLOY_SHA --env DEPLOY_RUN_URL \
-            nestjs_app xvfb-run --auto-servernum \
-            --server-args '-screen 0 1280x1024x24' \
-            node scripts/send-deployment-success-email.mjs
-
           # The stage host has limited disk space. Keep active containers and
           # all named volumes (PostgreSQL and Let's Encrypt), but remove old
           # images, stopped containers, unused networks, and build cache only
@@ -181,4 +175,10 @@ jobs:
             echo 'Docker cleanup failed; keeping the healthy deployment.' >&2
           echo 'Docker disk usage after cleanup:'
           docker system df || echo 'Could not inspect Docker disk usage after cleanup.' >&2
+
+          "${COMPOSE[@]}" exec -T --interactive=false \
+            --env DEPLOY_SHA --env DEPLOY_RUN_URL \
+            nestjs_app xvfb-run --auto-servernum \
+            --server-args '-screen 0 1280x1024x24' \
+            node scripts/send-deployment-success-email.mjs </dev/null
           REMOTE
