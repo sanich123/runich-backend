@@ -11,6 +11,7 @@ export type RawStravaCsvColumns = {
   'Elevation Gain'?: number | string;
   'Average Heart Rate'?: number | string;
   'Max Heart Rate'?: number | string;
+  Calories?: number | string;
 };
 
 export enum Extensions {

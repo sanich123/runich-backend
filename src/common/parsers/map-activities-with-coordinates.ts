@@ -18,6 +18,12 @@ const MAX_MAP_IMAGE_LOCATIONS = 500;
 const MIN_HEART_RATE = 1;
 const MAX_HEART_RATE = 300;
 
+function parseCaloriesValue(value?: string | number) {
+  if (value == null || String(value).trim() === '') return undefined;
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) && parsedValue >= 0 ? Math.round(parsedValue) : undefined;
+}
+
 function parseHeartRateValue(value?: string | number) {
   if (value == null || String(value).trim() === '') return undefined;
   const parsedValue = Number(value);
@@ -120,6 +126,7 @@ export async function mapActivitiesWithCoordinates({
               parsedSourceElevationGain >= 0
                 ? parsedSourceElevationGain
                 : undefined;
+            const csvCaloriesActive = parseCaloriesValue(activity.Calories);
             const csvAverageHeartRate = parseHeartRateValue(activity['Average Heart Rate']);
             const csvMaxHeartRate = parseHeartRateValue(activity['Max Heart Rate']);
             const mapPhotoUrl =
@@ -141,6 +148,7 @@ export async function mapActivitiesWithCoordinates({
               locations,
               kilometresSplit,
               ...(sourceElevationGain !== undefined ? { sourceElevationGain } : {}),
+              ...(csvCaloriesActive !== undefined ? { caloriesActive: csvCaloriesActive } : {}),
               ...(heartRateData.samples.length ? { heartRateSamples: heartRateData.samples } : {}),
               ...(csvAverageHeartRate !== undefined || heartRateData.statistics
                 ? { averageHeartRate: csvAverageHeartRate ?? heartRateData.statistics?.averageHeartRate }

@@ -21,6 +21,10 @@ export class ProfileDto {
   height?: string | null;
   @ApiPropertyOptional({ type: String, description: 'age in years (optional)' })
   age?: string | null;
+  @ApiPropertyOptional({ type: String, description: 'resting heart rate in beats per minute (optional)' })
+  restingHeartRate?: string | null;
+  @ApiPropertyOptional({ type: String, description: 'maximum heart rate in beats per minute (optional)' })
+  maxHeartRate?: string | null;
   @ApiPropertyOptional({ type: String, description: 'profilePhoto value (optional)' })
   profilePhoto?: string | null;
   @ApiPropertyOptional({ type: String, description: 'sport value (optional)' })
@@ -52,6 +56,10 @@ export class ProfileDto {
   allowActivityReplayViewing?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view activity heart rate data' })
   allowActivityHeartRateViewing?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view activity elevation data' })
+  allowActivityElevationViewing?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view activity pace data' })
+  allowActivityPaceViewing?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to share this profile activities' })
   allowActivitySharing?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Hide the profile total activity statistics' })
@@ -72,6 +80,8 @@ export class PublicProfileDto extends OmitType(ProfileDto, [
   'height',
   'age',
   'weight',
+  'restingHeartRate',
+  'maxHeartRate',
   'emailNotifications',
   'pushNotifications',
   'inAppNotifications',

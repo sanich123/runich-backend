@@ -19,7 +19,7 @@ import {
   type ActivityMediaCursor,
 } from './activity.pagination';
 import { ACTIVITY_VISIBILITY } from './activity-visibility';
-import { normalizeActivityCard, normalizeActivityDetails } from './utils';
+import { createActivityChartLocations, normalizeActivityCardForViewer, normalizeActivityDetails } from './utils';
 import type { ActivityFeedSqlRow } from './type';
 
 @Injectable()
@@ -71,9 +71,16 @@ export class ActivityReadService {
       select: {
         heartRateSamples: true,
         routeStorageKey: true,
+        distance: true,
         userId: true,
         visibility: true,
-        profile: { select: { allowActivityReplayViewing: true, allowActivityHeartRateViewing: true } },
+        profile: {
+          select: {
+            allowActivityHeartRateViewing: true,
+            allowActivityElevationViewing: true,
+            allowActivityPaceViewing: true,
+          },
+        },
       },
     });
     if (!activity || !currentUserId) return null;
@@ -84,21 +91,26 @@ export class ActivityReadService {
       activity.visibility === ACTIVITY_VISIBILITY.followers &&
       (isOwner || (await this.accessService.isFollower(currentUserId, activity.userId)));
     if (!isOwner && !isPublic && !isFollowerActivity) return null;
-    if (!isOwner && activity.profile?.allowActivityReplayViewing === false) return null;
-    if (!isOwner && activity.profile?.allowActivityHeartRateViewing === false) return null;
+    const canViewHeartRate = isOwner || activity.profile?.allowActivityHeartRateViewing !== false;
+    const canViewElevation = isOwner || activity.profile?.allowActivityElevationViewing !== false;
+    const canViewPace = isOwner || activity.profile?.allowActivityPaceViewing !== false;
+    const hasEnoughVisibleMetrics = [canViewHeartRate, canViewElevation, canViewPace].filter(Boolean).length >= 2;
+    if (!hasEnoughVisibleMetrics) return { heartRateSamples: [], locations: null };
 
-    let locations: LocationObject[] | null = null;
-    if (activity.routeStorageKey) {
+    let locations: ReturnType<typeof createActivityChartLocations> | null = null;
+    if (activity.routeStorageKey && (canViewPace || canViewElevation)) {
       if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');
-      locations = reduceLocations(
+      const route = reduceLocations(
         await this.storageService.readActivityRoute(activity.routeStorageKey),
         MAX_MAP_ROUTE_LOCATIONS,
       );
+      locations = createActivityChartLocations(route, activity.distance, canViewPace, canViewElevation);
     }
 
-    const heartRateSamples = Array.isArray(activity.heartRateSamples)
-      ? (activity.heartRateSamples as ActivityHeartRateSampleObject[])
-      : [];
+    const heartRateSamples =
+      canViewHeartRate && Array.isArray(activity.heartRateSamples)
+        ? (activity.heartRateSamples as ActivityHeartRateSampleObject[])
+        : [];
     return { heartRateSamples, locations };
   }
 
@@ -110,18 +122,22 @@ export class ActivityReadService {
       });
       if (!activity || !(await this.accessService.canAccessActivityData(activity, currentUserId))) return null;
       const normalizedActivity = normalizeActivityDetails(activity as Record<string, unknown>);
-      if (
-        !currentUserId ||
-        activity.userId === currentUserId ||
-        activity.profile?.allowActivityHeartRateViewing !== false
-      ) {
-        return normalizedActivity;
-      }
+      const isOwner = Boolean(currentUserId && activity.userId === currentUserId);
+      const canViewHeartRate = isOwner || activity.profile?.allowActivityHeartRateViewing !== false;
+      const canViewElevation = isOwner || activity.profile?.allowActivityElevationViewing !== false;
       return {
         ...normalizedActivity,
-        averageHeartRate: null,
-        minHeartRate: null,
-        maxHeartRate: null,
+        ...(canViewHeartRate
+          ? {}
+          : {
+              averageHeartRate: null,
+              minHeartRate: null,
+              maxHeartRate: null,
+              profile: activity.profile
+                ? { ...activity.profile, age: null, restingHeartRate: null, maxHeartRate: null }
+                : normalizedActivity.profile,
+            }),
+        ...(canViewElevation ? {} : { elevationGain: null }),
       };
     } catch (error) {
       handleServiceError(error);
@@ -225,7 +241,7 @@ export class ActivityReadService {
       const hasMore = activitiesWithExtraItem.length > Number(take);
       const activities = activitiesWithExtraItem
         .slice(0, Number(take))
-        .map((activity: Record<string, unknown>) => normalizeActivityCard(activity as Record<string, unknown>));
+        .map((activity: Record<string, unknown>) => normalizeActivityCardForViewer(activity, currentUserId));
       return {
         activities,
         hasMore,
@@ -262,7 +278,7 @@ export class ActivityReadService {
       const hasMore = activitiesWithExtraItem.length > Number(take);
       const activities = activitiesWithExtraItem
         .slice(0, Number(take))
-        .map((activity: Record<string, unknown>) => normalizeActivityCard(activity as Record<string, unknown>));
+        .map((activity: Record<string, unknown>) => normalizeActivityCardForViewer(activity, currentUserId));
       return {
         activities,
         hasMore,
@@ -301,7 +317,9 @@ export class ActivityReadService {
         orderBy: { date: 'desc' },
         select: ACTIVITY_CARD_SELECT,
       });
-      return activities.map((activity: Record<string, unknown>) => normalizeActivityCard(activity));
+      return activities.map((activity: Record<string, unknown>) =>
+        normalizeActivityCardForViewer(activity, currentUserId),
+      );
     } catch (error) {
       handleServiceError(error);
     }
@@ -362,6 +380,9 @@ export class ActivityReadService {
             'profilePhotoBlurhash', p."profilePhotoBlurhash",
             'allowActivityInteractions', p."allow_activity_interactions",
             'allowActivityReplayViewing', p."allow_activity_replay_viewing",
+            'allowActivityHeartRateViewing', p."allow_activity_heart_rate_viewing",
+            'allowActivityElevationViewing', p."allow_activity_elevation_viewing",
+            'allowActivityPaceViewing', p."allow_activity_pace_viewing",
             'allowActivitySharing', p."allow_activity_sharing"
           ) AS "profile",
           json_build_object(
@@ -402,7 +423,7 @@ export class ActivityReadService {
       const hasMore = activitiesWithExtraItem.length > Number(take);
       const activities = activitiesWithExtraItem
         .slice(0, Number(take))
-        .map((activity: ActivityFeedSqlRow) => normalizeActivityCard(activity as Record<string, unknown>));
+        .map((activity: ActivityFeedSqlRow) => normalizeActivityCardForViewer(activity, currentUserId));
       const currentUserProfile =
         typeof this.accountService.getAccountByUserId === 'function'
           ? await this.accountService.getAccountByUserId(currentUserId)

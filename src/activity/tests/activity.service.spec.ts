@@ -302,6 +302,50 @@ describe('ActivityService', () => {
     });
   });
 
+  it('prefers Health Connect calories and estimates them only when the source omitted them', async () => {
+    const prisma = createPrismaMock();
+    const account = {
+      getAccountByUserId: asyncMock().mockResolvedValue({
+        id: 'profile-1',
+        weight: '80',
+        height: '180',
+        age: '30',
+        gender: 'male',
+      }),
+    };
+    const service = new ActivityService(prisma as never, account as never);
+    prisma.activity.findMany.mockResolvedValue([]);
+    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+
+    await service.importWatchWorkouts(
+      [
+        {
+          ...activityDto,
+          duration: 3_600_000,
+          distance: 10_000,
+          source: 'health-connect',
+          sourceActivityId: 'with-source-calories',
+          caloriesActive: 425,
+          locations: [],
+        },
+        {
+          ...activityDto,
+          duration: 3_600_000,
+          distance: 10_000,
+          source: 'health-connect',
+          sourceActivityId: 'without-source-calories',
+          locations: [],
+        },
+      ],
+      'user-1',
+    );
+
+    const createdCalories = (
+      prisma.activity.create.mock.calls as unknown as Array<[{ data: { caloriesActive: number | null } }]>
+    ).map(([{ data }]) => data.caloriesActive);
+    expect(createdCalories).toEqual([425, 742]);
+  });
+
   it('persists elevation gain calculated from activity locations', async () => {
     process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     const prisma = createPrismaMock();
@@ -656,7 +700,7 @@ describe('ActivityService', () => {
     };
     const service = new ActivityService(
       prisma as never,
-      {} as never,
+      { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) } as never,
       undefined,
       storage as never,
       cleanup as never,
@@ -732,7 +776,8 @@ describe('ActivityService', () => {
 
   it('refreshes watch workout metrics while preserving its stored route when Health Connect returns no points', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new ActivityService(prisma as never, account as never);
     prisma.activity.findMany.mockResolvedValue([
       {
         id: 'activity-existing',
@@ -788,7 +833,7 @@ describe('ActivityService', () => {
     };
     const service = new ActivityService(
       prisma as never,
-      {} as never,
+      { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) } as never,
       undefined,
       storage as never,
       undefined,
@@ -841,7 +886,7 @@ describe('ActivityService', () => {
     const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const service = new ActivityService(
       prisma as never,
-      {} as never,
+      { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) } as never,
       undefined,
       storage as never,
       cleanup as never,
@@ -904,6 +949,48 @@ describe('ActivityService', () => {
     const upsertCalls = prisma.activity.upsert.mock.calls as unknown as Array<[{ create: Record<string, unknown> }]>;
     expect(upsertCalls[0]?.[0]?.create).toEqual(expect.objectContaining({ elevationGain: 42.2 }));
     expect(upsertCalls[0]?.[0]?.create).not.toHaveProperty('sourceElevationGain');
+  });
+
+  it('uses Strava CSV calories before profile estimates and leaves unavailable estimates empty', async () => {
+    const prisma = createPrismaMock();
+    const account = {
+      getAccountByUserId: jest.fn(async (userId: string) =>
+        userId === 'user-complete'
+          ? { id: 'profile-complete', weight: '80', height: '180', age: '30', gender: 'male' }
+          : { id: 'profile-incomplete' },
+      ),
+    };
+    const service = new ActivityService(prisma as never, account as never);
+    prisma.activity.findMany.mockResolvedValue([]);
+    const sharedActivity = {
+      ...activityDto,
+      duration: 3_600_000,
+      distance: 10_000,
+      profileId: 'profile-1',
+      source: 'strava' as const,
+      locations: [],
+    };
+
+    await service.createActivitiesFromMigrationArchive([
+      { ...sharedActivity, userId: 'user-complete', sourceActivityId: 'csv-calories', caloriesActive: 611 },
+      { ...sharedActivity, userId: 'user-complete', sourceActivityId: 'estimated-calories' },
+      { ...sharedActivity, userId: 'user-incomplete', sourceActivityId: 'no-calories' },
+    ]);
+
+    const createBySourceId = new Map(
+      (
+        prisma.activity.upsert.mock.calls as unknown as Array<
+          [{ create: { sourceActivityId: string; caloriesActive: number | null } }]
+        >
+      ).map(([{ create }]) => [create.sourceActivityId, create.caloriesActive]),
+    );
+    expect(createBySourceId).toEqual(
+      new Map([
+        ['csv-calories', 611],
+        ['estimated-calories', 742],
+        ['no-calories', null],
+      ]),
+    );
   });
 
   it('uploads imported activity routes and stores only their metadata', async () => {
@@ -1045,6 +1132,21 @@ describe('ActivityService', () => {
     const [template] = prisma.$queryRaw.mock.calls[0] as unknown as [TemplateStringsArray];
     expect(Array.from(template).join('')).toContain('EXISTS');
     await expect(service.deleteActivityById('activity-1')).resolves.toEqual(activity);
+  });
+
+  it('preserves imported calorie values when editing an activity', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new ActivityService(prisma as never, account as never);
+    prisma.activity.findFirst.mockResolvedValue({ source: 'strava', caloriesActive: 613 });
+    prisma.activity.update.mockResolvedValue({ id: 'activity-1' });
+
+    await service.updateActivity({ ...activityDto, distance: 9_000, duration: 3_600_000 }, 'activity-1');
+
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1', userId: 'activity-1' },
+      data: expect.objectContaining({ caloriesActive: 613 }),
+    });
   });
 
   it('switches a hidden activity back to its already generated full map', async () => {

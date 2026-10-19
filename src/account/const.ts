@@ -27,6 +27,8 @@ export const PUBLIC_USER_PROFILE_SELECT = {
   allowActivityInteractions: true,
   allowActivityReplayViewing: true,
   allowActivityHeartRateViewing: true,
+  allowActivityElevationViewing: true,
+  allowActivityPaceViewing: true,
   allowActivitySharing: true,
   hideActivityStatistics: true,
   hideFollowingList: true,

@@ -62,6 +62,8 @@ model Profile {
   gender                String?
   height                String?
   age                   String?
+  restingHeartRate      String?                @map("resting_heart_rate")
+  maxHeartRate          String?                @map("max_heart_rate")
   profilePhoto          String?
   sport                 String?
   surname               String?
@@ -76,7 +78,9 @@ model Profile {
   profileSearchVisible Boolean                @default(true) @map("profile_search_visible")
   allowActivityInteractions Boolean           @default(true) @map("allow_activity_interactions")
   allowActivityReplayViewing Boolean          @default(true) @map("allow_activity_replay_viewing")
-  allowActivityHeartRateViewing Boolean       @default(false) @map("allow_activity_heart_rate_viewing")
+  allowActivityHeartRateViewing Boolean       @default(true) @map("allow_activity_heart_rate_viewing")
+  allowActivityElevationViewing Boolean       @default(true) @map("allow_activity_elevation_viewing")
+  allowActivityPaceViewing Boolean            @default(true) @map("allow_activity_pace_viewing")
   allowActivitySharing Boolean                @default(true) @map("allow_activity_sharing")
   hideActivityStatistics Boolean              @default(false) @map("hide_activity_statistics")
   hideFollowingList Boolean                   @default(false) @map("hide_following_list")

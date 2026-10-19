@@ -144,6 +144,102 @@ describe('ActivityService privacy', () => {
     expect(prisma.profile.findUnique).toHaveBeenCalledTimes(1);
   });
 
+  it('returns only enabled chart metrics and does not couple chart pace to route replay privacy', async () => {
+    const prisma = createPrismaMock();
+    const storage = {
+      readActivityRoute: asyncMock().mockResolvedValue([
+        { timestamp: 1_000, coords: { latitude: 0, longitude: 0, altitude: 100, timestamp: 1_000 } },
+        { timestamp: 61_000, coords: { latitude: 0, longitude: 0.001, altitude: 110, timestamp: 61_000 } },
+      ]),
+    };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    prisma.activity.findUnique.mockResolvedValue({
+      userId: 'owner-1',
+      visibility: 'public',
+      routeStorageKey: 'owner-1/activities/activity-1/locations/locations-v1.json.gz',
+      distance: 111,
+      heartRateSamples: [{ timestamp: 30_000, beatsPerMinute: 130 }],
+      profile: {
+        allowActivityReplayViewing: false,
+        allowActivityHeartRateViewing: false,
+        allowActivityElevationViewing: true,
+        allowActivityPaceViewing: true,
+      },
+    });
+
+    const chart = await service.getChartDataByActivityId('activity-1', 'viewer-1');
+
+    expect(chart).toEqual({
+      heartRateSamples: [],
+      locations: [
+        { timestamp: 1_000, coords: { altitude: 100, timestamp: 1_000 } },
+        expect.objectContaining({
+          timestamp: 61_000,
+          coords: expect.objectContaining({ altitude: 110, speed: expect.any(Number) }),
+        }),
+      ],
+    });
+    expect(chart?.locations?.[0]?.coords).not.toHaveProperty('latitude');
+    expect(chart?.locations?.[0]?.coords).not.toHaveProperty('longitude');
+    expect(storage.readActivityRoute).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not return chart data when fewer than two metrics are visible', async () => {
+    const prisma = createPrismaMock();
+    const storage = { readActivityRoute: asyncMock() };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    prisma.activity.findUnique.mockResolvedValue({
+      userId: 'owner-1',
+      visibility: 'public',
+      routeStorageKey: 'owner-1/activities/activity-1/locations/locations-v1.json.gz',
+      profile: {
+        allowActivityHeartRateViewing: false,
+        allowActivityElevationViewing: false,
+        allowActivityPaceViewing: true,
+      },
+      heartRateSamples: [{ timestamp: 30_000, beatsPerMinute: 130 }],
+    });
+
+    await expect(service.getChartDataByActivityId('activity-1', 'viewer-1')).resolves.toEqual({
+      heartRateSamples: [],
+      locations: null,
+    });
+    expect(storage.readActivityRoute).not.toHaveBeenCalled();
+  });
+
+  it('redacts heart rate and elevation summaries from activity details for external viewers', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findUnique.mockResolvedValue({
+      id: 'activity-1',
+      userId: 'owner-1',
+      visibility: 'public',
+      elevationGain: 88,
+      kilometresSplit: [],
+      averageHeartRate: 135,
+      minHeartRate: 80,
+      maxHeartRate: 160,
+      profile: {
+        allowActivityHeartRateViewing: false,
+        allowActivityElevationViewing: false,
+        allowActivityPaceViewing: true,
+      },
+    });
+
+    await expect(service.getActivityByActivityId('activity-1', 'viewer-1')).resolves.toMatchObject({
+      averageHeartRate: null,
+      minHeartRate: null,
+      maxHeartRate: null,
+      elevationGain: null,
+    });
+    await expect(service.getActivityByActivityId('activity-1', 'owner-1')).resolves.toMatchObject({
+      averageHeartRate: 135,
+      minHeartRate: 80,
+      maxHeartRate: 160,
+      elevationGain: 88,
+    });
+  });
+
   it('blocks activity likes and comments only for external users when disabled', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);

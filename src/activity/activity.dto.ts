@@ -128,6 +128,15 @@ export type LocationObject = {
   };
 };
 
+export type ActivityChartLocationObject = {
+  timestamp: number;
+  coords: {
+    altitude?: number;
+    speed?: number;
+    timestamp?: number;
+  };
+};
+
 class ActivityKilometreSplitDto {
   @ApiProperty({ type: Number })
   @IsNumber({ allowInfinity: false, allowNaN: false })
@@ -178,6 +187,12 @@ export class ActivityDto {
   @IsNotEmpty()
   @IsNumber({ allowInfinity: false, allowNaN: false })
   speed: number;
+
+  @ApiPropertyOptional({ type: Number, minimum: 0, description: 'Active calories recorded by the activity source' })
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @Min(0)
+  @IsOptional()
+  caloriesActive?: number | null;
 
   @ApiPropertyOptional({ type: Number, minimum: 0, description: 'Number of steps recorded during the activity' })
   @IsInt()
@@ -544,12 +559,31 @@ export class ActivityLocationsResponseDto {
   kilometresSplit?: ActivityKilometreSplitResponseDto[] | null;
 }
 
+class ActivityChartCoordinatesResponseDto {
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  altitude?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'GPS-derived speed in kilometres per hour' })
+  speed?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  timestamp?: number | null;
+}
+
+class ActivityChartLocationResponseDto {
+  @ApiProperty({ type: Number })
+  timestamp: number;
+
+  @ApiProperty({ type: ActivityChartCoordinatesResponseDto })
+  coords: ActivityChartCoordinatesResponseDto;
+}
+
 export class ActivityChartDataResponseDto {
   @ApiProperty({ type: [ActivityHeartRateSampleDto], maxItems: MAX_ACTIVITY_HEART_RATE_SAMPLES })
   heartRateSamples: ActivityHeartRateSampleObject[];
 
-  @ApiPropertyOptional({ type: [ActivityLocationResponseDto], nullable: true })
-  locations?: ActivityLocationResponseDto[] | null;
+  @ApiPropertyOptional({ type: [ActivityChartLocationResponseDto], nullable: true })
+  locations?: ActivityChartLocationResponseDto[] | null;
 }
 
 class ActivityUserEmailResponseDto {
@@ -558,6 +592,9 @@ class ActivityUserEmailResponseDto {
 }
 
 class ActivityProfileResponseDto {
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  userId?: string;
+
   @ApiPropertyOptional({ type: String, nullable: true })
   surname: string | null;
 
@@ -569,6 +606,21 @@ class ActivityProfileResponseDto {
 
   @ApiPropertyOptional({ type: String, nullable: true })
   profilePhotoBlurhash: string | null;
+
+  @ApiPropertyOptional({ type: Boolean })
+  allowActivityInteractions?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean })
+  allowActivityReplayViewing?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean })
+  allowActivityHeartRateViewing?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean })
+  allowActivityElevationViewing?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean })
+  allowActivityPaceViewing?: boolean;
 
   @ApiPropertyOptional({ type: Boolean })
   allowActivitySharing?: boolean;
@@ -606,9 +658,6 @@ export class ActivityResponseDto extends ActivityDto {
 
   @ApiProperty({ type: Number, minimum: 0 })
   elevationGain: number;
-
-  @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true, description: 'Estimated active calories' })
-  caloriesActive?: number | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   source?: string | null = undefined;
@@ -680,8 +729,8 @@ export class ActivityCardResponseDto {
   @ApiProperty({ type: Number })
   distance: number;
 
-  @ApiProperty({ type: Number, minimum: 0 })
-  elevationGain: number;
+  @ApiProperty({ type: Number, minimum: 0, nullable: true })
+  elevationGain: number | null;
 
   @ApiPropertyOptional({ type: Number, minimum: 0, nullable: true, description: 'Estimated active calories' })
   caloriesActive?: number | null;

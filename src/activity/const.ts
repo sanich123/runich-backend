@@ -30,6 +30,9 @@ const ACTIVITY_CARD_PROFILE_SELECT = {
   profilePhotoBlurhash: true,
   allowActivityInteractions: true,
   allowActivityReplayViewing: true,
+  allowActivityHeartRateViewing: true,
+  allowActivityElevationViewing: true,
+  allowActivityPaceViewing: true,
   allowActivitySharing: true,
 } as const;
 
@@ -77,7 +80,12 @@ const ACTIVITY_FEED_SELECT = {
 export const ACTIVITY_DETAILS_SELECT = {
   ...ACTIVITY_FEED_SELECT,
   profile: {
-    select: { ...ACTIVITY_FEED_PROFILE_SELECT, allowActivityHeartRateViewing: true },
+    select: {
+      ...ACTIVITY_FEED_PROFILE_SELECT,
+      age: true,
+      restingHeartRate: true,
+      maxHeartRate: true,
+    },
   },
   description: true,
   visibility: true,

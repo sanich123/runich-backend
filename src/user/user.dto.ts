@@ -4,6 +4,8 @@ import { IsBoolean, IsDateString, IsEmail, IsOptional, IsString, Matches, Valida
 const WEIGHT_PATTERN = /^(?:\d|[1-9]\d|1\d\d|200)$/;
 const HEIGHT_PATTERN = /^(?:\d|[1-9]\d|1\d\d|2[0-2]\d|230)$/;
 const AGE_PATTERN = /^(?:\d|[1-9]\d|100)$/;
+const RESTING_HEART_RATE_PATTERN = /^(?:[3-9]\d|1\d\d|200)$/;
+const MAX_HEART_RATE_PATTERN = /^(?:[8-9]\d|1\d\d|2[0-4]\d|250)$/;
 
 export class UserDto {
   @ApiPropertyOptional({ type: String, description: "User's name" })
@@ -49,6 +51,20 @@ export class UserDto {
   @Matches(AGE_PATTERN, { message: 'Возраст должен быть целым числом не более 100 лет' })
   @IsOptional()
   age?: string | null;
+
+  @ApiPropertyOptional({ type: String, description: "User's resting heart rate in beats per minute" })
+  @ValidateIf((_object, value) => value !== null && value !== undefined && value !== '')
+  @IsString()
+  @Matches(RESTING_HEART_RATE_PATTERN, { message: 'Пульс в покое должен быть целым числом от 30 до 200 уд/мин' })
+  @IsOptional()
+  restingHeartRate?: string | null;
+
+  @ApiPropertyOptional({ type: String, description: "User's maximum heart rate in beats per minute" })
+  @ValidateIf((_object, value) => value !== null && value !== undefined && value !== '')
+  @IsString()
+  @Matches(MAX_HEART_RATE_PATTERN, { message: 'Максимальный пульс должен быть целым числом от 80 до 250 уд/мин' })
+  @IsOptional()
+  maxHeartRate?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's photo" })
   @IsString()
@@ -109,6 +125,16 @@ export class UserDto {
   @IsBoolean()
   @IsOptional()
   allowActivityHeartRateViewing?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view elevation data on activities' })
+  @IsBoolean()
+  @IsOptional()
+  allowActivityElevationViewing?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to view pace data on activities' })
+  @IsBoolean()
+  @IsOptional()
+  allowActivityPaceViewing?: boolean;
 
   @ApiPropertyOptional({ type: Boolean, description: 'Allow other users to share this profile activities' })
   @IsBoolean()

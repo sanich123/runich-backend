@@ -211,15 +211,7 @@ export class ActivityService {
         routeOnlyMapPhotoUrl,
         mapPhotoUrlBlurhash,
         mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued,
-        caloriesActive: calculateActiveCalories({
-          weight: account?.weight,
-          height: account?.height,
-          age: account?.age,
-          gender: account?.gender,
-          sport: activityDto.sport,
-          distance: activityDto.distance,
-          duration: activityDto.duration,
-        }),
+        caloriesActive: this.getWatchWorkoutCalories(activityDto, account),
       };
       const mediaCount = Array.isArray(media) ? media.length : 0;
       const locationCount = Array.isArray(activityDto.locations) ? activityDto.locations.length : 0;
@@ -349,6 +341,8 @@ export class ActivityService {
         Object.assign(updateData, getHeartRateStatistics(workout.heartRateSamples));
       }
       if (workout.title?.trim()) updateData.title = workout.title.trim();
+      const profile = await this.accountService.getAccountByUserId(userId);
+      updateData.caloriesActive = this.getWatchWorkoutCalories(workout, profile);
       if (workout.kilometresSplit !== undefined) updateData.kilometresSplit = workout.kilometresSplit;
       if (preparedData.elevationGain !== undefined) updateData.elevationGain = preparedData.elevationGain;
 
@@ -471,12 +465,35 @@ export class ActivityService {
           (activity) => [activity.userId + '\u0000strava\u0000' + activity.sourceActivityId, activity] as const,
         ),
       );
+      const calorieProfileByUser = new Map<string, Awaited<ReturnType<AccountService['getAccountByUserId']>>>();
+      const usersNeedingCalories = [
+        ...new Set(uniqueActivities.filter(({ caloriesActive }) => caloriesActive == null).map(({ userId }) => userId)),
+      ];
+      await Promise.all(
+        usersNeedingCalories.map(async (userId) => {
+          if (typeof this.accountService.getAccountByUserId !== 'function') return;
+          calorieProfileByUser.set(userId, await this.accountService.getAccountByUserId(userId));
+        }),
+      );
       const activitiesWithTitles = uniqueActivities.map((activity) => {
         const key = activity.userId + '\u0000' + activity.source + '\u0000' + activity.sourceActivityId;
         const existingActivity = existingActivitiesBySource.get(key);
         const sourceId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
+        const profile = calorieProfileByUser.get(activity.userId);
+        const caloriesActive =
+          activity.caloriesActive ??
+          calculateActiveCalories({
+            weight: profile?.weight,
+            height: profile?.height,
+            age: profile?.age,
+            gender: profile?.gender,
+            sport: activity.sport,
+            distance: activity.distance,
+            duration: activity.duration,
+          });
         return {
           ...activity,
+          caloriesActive,
           hideMap: existingActivity?.hideMap ?? activity.hideMap ?? false,
           // Use a fresh storage namespace for replacements so immutable map caches cannot serve old imagery.
           id: existingActivity ? randomUUID() : sourceId,
@@ -530,7 +547,7 @@ export class ActivityService {
                     weatherWindSpeed: null,
                     weatherCode: null,
                     locationEnrichmentStatus: ACTIVITY_ENRICHMENT_STATUS.queued,
-                    caloriesActive: null,
+                    caloriesActive: preparedData.caloriesActive ?? null,
                   }
                 : preparedData;
               preparedActivities.push({
@@ -684,6 +701,24 @@ export class ActivityService {
     try {
       const { date, description, emotion, visibility, hideMap, sport, title, distance, duration, speed } = activityDto;
       const account = await this.accountService.getAccountByUserId(userId);
+      const existingActivity =
+        hideMap !== undefined || activityDto.caloriesActive === undefined
+          ? await this.prisma.activity.findFirst({
+              where: { id, userId },
+              select: {
+                source: true,
+                caloriesActive: true,
+                hideMap: true,
+                routeStorageKey: true,
+                mapPhotoUrl: true,
+                routeOnlyMapPhotoUrl: true,
+              },
+            })
+          : null;
+      const sourceCalories =
+        existingActivity && ['strava', 'health-connect', 'healthkit'].includes(existingActivity.source ?? '')
+          ? existingActivity.caloriesActive
+          : null;
       let previousMapPhotoUrl: string | null = null;
       let previousRouteOnlyMapPhotoUrl: string | null = null;
       const data: Record<string, unknown> = {
@@ -696,27 +731,21 @@ export class ActivityService {
         distance,
         duration,
         speed,
-        caloriesActive: calculateActiveCalories({
-          weight: account?.weight,
-          height: account?.height,
-          age: account?.age,
-          gender: account?.gender,
-          sport,
-          distance,
-          duration,
-        }),
+        caloriesActive:
+          activityDto.caloriesActive ??
+          sourceCalories ??
+          calculateActiveCalories({
+            weight: account?.weight,
+            height: account?.height,
+            age: account?.age,
+            gender: account?.gender,
+            sport,
+            distance,
+            duration,
+          }),
       };
 
       if (hideMap !== undefined) {
-        const existingActivity = await this.prisma.activity.findFirst({
-          where: { id, userId },
-          select: {
-            hideMap: true,
-            routeStorageKey: true,
-            mapPhotoUrl: true,
-            routeOnlyMapPhotoUrl: true,
-          },
-        });
         if (!existingActivity) throw new NotFoundException('Активность не найдена');
         data.hideMap = hideMap;
 
@@ -896,6 +925,31 @@ export class ActivityService {
     } catch (error) {
       handleServiceError(error);
     }
+  }
+
+  private getWatchWorkoutCalories(
+    activity: Pick<ActivityDto, 'source' | 'caloriesActive' | 'sport' | 'distance' | 'duration'>,
+    profile: Awaited<ReturnType<AccountService['getAccountByUserId']>>,
+  ) {
+    const caloriesActive = activity.caloriesActive;
+    if (
+      (activity.source === 'health-connect' || activity.source === 'healthkit') &&
+      typeof caloriesActive === 'number' &&
+      Number.isFinite(caloriesActive) &&
+      caloriesActive >= 0
+    ) {
+      return Math.round(caloriesActive);
+    }
+
+    return calculateActiveCalories({
+      weight: profile?.weight,
+      height: profile?.height,
+      age: profile?.age,
+      gender: profile?.gender,
+      sport: activity.sport,
+      distance: activity.distance,
+      duration: activity.duration,
+    });
   }
 
   private async prepareActivityRoute<

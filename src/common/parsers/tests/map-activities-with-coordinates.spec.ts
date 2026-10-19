@@ -74,6 +74,7 @@ describe('mapActivitiesWithCoordinates', () => {
           'Moving Time': 240,
           Distance: 1_250,
           'Elevation Gain': '42.2',
+          Calories: '612.6',
         },
       ],
     });
@@ -81,6 +82,7 @@ describe('mapActivitiesWithCoordinates', () => {
     expect(activity.locations).toHaveLength(6);
     expect(activity.duration).toBe(240_000);
     expect(activity.sourceElevationGain).toBe(42.2);
+    expect(activity.caloriesActive).toBe(613);
     expect(activity.kilometresSplit).toHaveLength(1);
     expect(activity.kilometresSplit?.[0].kilometerPoint.coords.longitude).toBeCloseTo(
       1_000 / METERS_PER_EQUATOR_DEGREE,
@@ -184,6 +186,37 @@ describe('mapActivitiesWithCoordinates', () => {
     expect(activities[1].duration).toBe(0);
     expect(parseCoordinatesFromFile).not.toHaveBeenCalled();
     expect(getMapBoxImage).not.toHaveBeenCalled();
+  });
+
+  it('ignores missing, invalid, and negative Strava calorie values', async () => {
+    const activities = await mapActivitiesWithCoordinates({
+      userId: 'user-1',
+      profileId: 'profile-1',
+      parsedActivities: [
+        {
+          'Activity ID': 'strava-calories-invalid',
+          Filename: '',
+          'Activity Date': '2026-08-18T10:00:00.000Z',
+          'Activity Type': 'Run',
+          'Moving Time': 60,
+          Distance: 500,
+          Calories: 'not available',
+        } as never,
+        {
+          'Activity ID': 'strava-calories-negative',
+          Filename: '',
+          'Activity Date': '2026-08-18T10:00:00.000Z',
+          'Activity Type': 'Run',
+          'Moving Time': 60,
+          Distance: 500,
+          Calories: -10,
+        } as never,
+      ],
+    });
+
+    expect(activities).toHaveLength(2);
+    expect(activities[0]).not.toHaveProperty('caloriesActive');
+    expect(activities[1]).not.toHaveProperty('caloriesActive');
   });
 
   it('unzips and parses TCX routes before generating a map image', async () => {

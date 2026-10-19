@@ -22,7 +22,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'f3da64af7aa944be28d911fd6782c44e01570e6652cef52fd95219229c0b1699'>;
+  StorageHashBase<'1ae533fab6c31b41428b19a1d444d9f31204a0d6d673ea6811acf240ab0c8c49'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -408,8 +408,10 @@ export type FieldOutputTypes = {
     };
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['output'] | null;
+      readonly allowActivityElevationViewing: CodecTypes['pg/bool@1']['output'];
       readonly allowActivityHeartRateViewing: CodecTypes['pg/bool@1']['output'];
       readonly allowActivityInteractions: CodecTypes['pg/bool@1']['output'];
+      readonly allowActivityPaceViewing: CodecTypes['pg/bool@1']['output'];
       readonly allowActivityReplayViewing: CodecTypes['pg/bool@1']['output'];
       readonly allowActivitySharing: CodecTypes['pg/bool@1']['output'];
       readonly allowNewFollowers: CodecTypes['pg/bool@1']['output'];
@@ -427,11 +429,13 @@ export type FieldOutputTypes = {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly inAppNotifications: CodecTypes['pg/bool@1']['output'];
       readonly language: CodecTypes['pg/text@1']['output'] | null;
+      readonly maxHeartRate: CodecTypes['pg/text@1']['output'] | null;
       readonly name: CodecTypes['pg/text@1']['output'] | null;
       readonly profilePhoto: CodecTypes['pg/text@1']['output'] | null;
       readonly profilePhotoBlurhash: CodecTypes['pg/text@1']['output'] | null;
       readonly profileSearchVisible: CodecTypes['pg/bool@1']['output'];
       readonly pushNotifications: CodecTypes['pg/bool@1']['output'];
+      readonly restingHeartRate: CodecTypes['pg/text@1']['output'] | null;
       readonly sport: CodecTypes['pg/text@1']['output'] | null;
       readonly surname: CodecTypes['pg/text@1']['output'] | null;
       readonly updatedAt: TimestamptzString<6> | null;
@@ -705,8 +709,10 @@ export type FieldInputTypes = {
     };
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['input'] | null;
+      readonly allowActivityElevationViewing: CodecTypes['pg/bool@1']['input'];
       readonly allowActivityHeartRateViewing: CodecTypes['pg/bool@1']['input'];
       readonly allowActivityInteractions: CodecTypes['pg/bool@1']['input'];
+      readonly allowActivityPaceViewing: CodecTypes['pg/bool@1']['input'];
       readonly allowActivityReplayViewing: CodecTypes['pg/bool@1']['input'];
       readonly allowActivitySharing: CodecTypes['pg/bool@1']['input'];
       readonly allowNewFollowers: CodecTypes['pg/bool@1']['input'];
@@ -724,11 +730,13 @@ export type FieldInputTypes = {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly inAppNotifications: CodecTypes['pg/bool@1']['input'];
       readonly language: CodecTypes['pg/text@1']['input'] | null;
+      readonly maxHeartRate: CodecTypes['pg/text@1']['input'] | null;
       readonly name: CodecTypes['pg/text@1']['input'] | null;
       readonly profilePhoto: CodecTypes['pg/text@1']['input'] | null;
       readonly profilePhotoBlurhash: CodecTypes['pg/text@1']['input'] | null;
       readonly profileSearchVisible: CodecTypes['pg/bool@1']['input'];
       readonly pushNotifications: CodecTypes['pg/bool@1']['input'];
+      readonly restingHeartRate: CodecTypes['pg/text@1']['input'] | null;
       readonly sport: CodecTypes['pg/text@1']['input'] | null;
       readonly surname: CodecTypes['pg/text@1']['input'] | null;
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
@@ -1002,8 +1010,10 @@ export type StorageColumnTypes = {
     };
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['output'] | null;
+      readonly allow_activity_elevation_viewing: CodecTypes['pg/bool@1']['output'];
       readonly allow_activity_heart_rate_viewing: CodecTypes['pg/bool@1']['output'];
       readonly allow_activity_interactions: CodecTypes['pg/bool@1']['output'];
+      readonly allow_activity_pace_viewing: CodecTypes['pg/bool@1']['output'];
       readonly allow_activity_replay_viewing: CodecTypes['pg/bool@1']['output'];
       readonly allow_activity_sharing: CodecTypes['pg/bool@1']['output'];
       readonly allow_new_followers: CodecTypes['pg/bool@1']['output'];
@@ -1021,11 +1031,13 @@ export type StorageColumnTypes = {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly in_app_notifications: CodecTypes['pg/bool@1']['output'];
       readonly language: CodecTypes['pg/text@1']['output'] | null;
+      readonly max_heart_rate: CodecTypes['pg/text@1']['output'] | null;
       readonly name: CodecTypes['pg/text@1']['output'] | null;
       readonly profile_search_visible: CodecTypes['pg/bool@1']['output'];
       readonly profilePhoto: CodecTypes['pg/text@1']['output'] | null;
       readonly profilePhotoBlurhash: CodecTypes['pg/text@1']['output'] | null;
       readonly push_notifications: CodecTypes['pg/bool@1']['output'];
+      readonly resting_heart_rate: CodecTypes['pg/text@1']['output'] | null;
       readonly sport: CodecTypes['pg/text@1']['output'] | null;
       readonly surname: CodecTypes['pg/text@1']['output'] | null;
       readonly updatedAt: TimestamptzString<6> | null;
@@ -1299,8 +1311,10 @@ export type StorageColumnInputTypes = {
     };
     readonly Profile: {
       readonly age: CodecTypes['pg/text@1']['input'] | null;
+      readonly allow_activity_elevation_viewing: CodecTypes['pg/bool@1']['input'];
       readonly allow_activity_heart_rate_viewing: CodecTypes['pg/bool@1']['input'];
       readonly allow_activity_interactions: CodecTypes['pg/bool@1']['input'];
+      readonly allow_activity_pace_viewing: CodecTypes['pg/bool@1']['input'];
       readonly allow_activity_replay_viewing: CodecTypes['pg/bool@1']['input'];
       readonly allow_activity_sharing: CodecTypes['pg/bool@1']['input'];
       readonly allow_new_followers: CodecTypes['pg/bool@1']['input'];
@@ -1318,11 +1332,13 @@ export type StorageColumnInputTypes = {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly in_app_notifications: CodecTypes['pg/bool@1']['input'];
       readonly language: CodecTypes['pg/text@1']['input'] | null;
+      readonly max_heart_rate: CodecTypes['pg/text@1']['input'] | null;
       readonly name: CodecTypes['pg/text@1']['input'] | null;
       readonly profile_search_visible: CodecTypes['pg/bool@1']['input'];
       readonly profilePhoto: CodecTypes['pg/text@1']['input'] | null;
       readonly profilePhotoBlurhash: CodecTypes['pg/text@1']['input'] | null;
       readonly push_notifications: CodecTypes['pg/bool@1']['input'];
+      readonly resting_heart_rate: CodecTypes['pg/text@1']['input'] | null;
       readonly sport: CodecTypes['pg/text@1']['input'] | null;
       readonly surname: CodecTypes['pg/text@1']['input'] | null;
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
@@ -1629,8 +1645,10 @@ export namespace Models {
   };
   export type public_Profile = {
     age: CodecTypes['pg/text@1']['output'] | null;
+    allowActivityElevationViewing: CodecTypes['pg/bool@1']['output'];
     allowActivityHeartRateViewing: CodecTypes['pg/bool@1']['output'];
     allowActivityInteractions: CodecTypes['pg/bool@1']['output'];
+    allowActivityPaceViewing: CodecTypes['pg/bool@1']['output'];
     allowActivityReplayViewing: CodecTypes['pg/bool@1']['output'];
     allowActivitySharing: CodecTypes['pg/bool@1']['output'];
     allowNewFollowers: CodecTypes['pg/bool@1']['output'];
@@ -1648,11 +1666,13 @@ export namespace Models {
     id: CodecTypes['pg/uuid@1']['output'];
     inAppNotifications: CodecTypes['pg/bool@1']['output'];
     language: CodecTypes['pg/text@1']['output'] | null;
+    maxHeartRate: CodecTypes['pg/text@1']['output'] | null;
     name: CodecTypes['pg/text@1']['output'] | null;
     profilePhoto: CodecTypes['pg/text@1']['output'] | null;
     profilePhotoBlurhash: CodecTypes['pg/text@1']['output'] | null;
     profileSearchVisible: CodecTypes['pg/bool@1']['output'];
     pushNotifications: CodecTypes['pg/bool@1']['output'];
+    restingHeartRate: CodecTypes['pg/text@1']['output'] | null;
     sport: CodecTypes['pg/text@1']['output'] | null;
     surname: CodecTypes['pg/text@1']['output'] | null;
     updatedAt: TimestamptzString<6> | null;
@@ -3405,17 +3425,37 @@ type ContractBase = Omit<
                   readonly nullable: true;
                   readonly many: false;
                 };
+                readonly allow_activity_elevation_viewing: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
                 readonly allow_activity_heart_rate_viewing: {
                   readonly dataType: 'pg/bool';
                   readonly codecId: 'pg/bool@1';
                   readonly nullable: false;
                   readonly default: {
                     readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
                   };
                   readonly many: false;
                 };
                 readonly allow_activity_interactions: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
+                readonly allow_activity_pace_viewing: {
                   readonly dataType: 'pg/bool';
                   readonly codecId: 'pg/bool@1';
                   readonly nullable: false;
@@ -3565,6 +3605,12 @@ type ContractBase = Omit<
                   readonly nullable: true;
                   readonly many: false;
                 };
+                readonly max_heart_rate: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly name: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
@@ -3601,6 +3647,12 @@ type ContractBase = Omit<
                     readonly kind: 'literal';
                     readonly value: DefaultLiteralValue<'pg/bool@1', false>;
                   };
+                  readonly many: false;
+                };
+                readonly resting_heart_rate: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
                   readonly many: false;
                 };
                 readonly sport: {
@@ -5845,11 +5897,19 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly allowActivityElevationViewing: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
               readonly allowActivityHeartRateViewing: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
               readonly allowActivityInteractions: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly allowActivityPaceViewing: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
@@ -5925,6 +5985,10 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly maxHeartRate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly name: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -5944,6 +6008,10 @@ type ContractBase = Omit<
               readonly pushNotifications: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly restingHeartRate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly sport: {
                 readonly nullable: true;
@@ -6049,11 +6117,17 @@ type ContractBase = Omit<
               readonly namespaceId: 'public';
               readonly fields: {
                 readonly age: { readonly column: 'age' };
+                readonly allowActivityElevationViewing: {
+                  readonly column: 'allow_activity_elevation_viewing';
+                };
                 readonly allowActivityHeartRateViewing: {
                   readonly column: 'allow_activity_heart_rate_viewing';
                 };
                 readonly allowActivityInteractions: {
                   readonly column: 'allow_activity_interactions';
+                };
+                readonly allowActivityPaceViewing: {
+                  readonly column: 'allow_activity_pace_viewing';
                 };
                 readonly allowActivityReplayViewing: {
                   readonly column: 'allow_activity_replay_viewing';
@@ -6074,11 +6148,13 @@ type ContractBase = Omit<
                 readonly id: { readonly column: 'id' };
                 readonly inAppNotifications: { readonly column: 'in_app_notifications' };
                 readonly language: { readonly column: 'language' };
+                readonly maxHeartRate: { readonly column: 'max_heart_rate' };
                 readonly name: { readonly column: 'name' };
                 readonly profilePhoto: { readonly column: 'profilePhoto' };
                 readonly profilePhotoBlurhash: { readonly column: 'profilePhotoBlurhash' };
                 readonly profileSearchVisible: { readonly column: 'profile_search_visible' };
                 readonly pushNotifications: { readonly column: 'push_notifications' };
+                readonly restingHeartRate: { readonly column: 'resting_heart_rate' };
                 readonly sport: { readonly column: 'sport' };
                 readonly surname: { readonly column: 'surname' };
                 readonly updatedAt: { readonly column: 'updatedAt' };

@@ -2185,6 +2185,13 @@
                   "kind": "scalar"
                 }
               },
+              "allowActivityElevationViewing": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "allowActivityHeartRateViewing": {
                 "nullable": false,
                 "type": {
@@ -2193,6 +2200,13 @@
                 }
               },
               "allowActivityInteractions": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "allowActivityPaceViewing": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/bool@1",
@@ -2321,6 +2335,13 @@
                   "kind": "scalar"
                 }
               },
+              "maxHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "name": {
                 "nullable": true,
                 "type": {
@@ -2353,6 +2374,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "restingHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -2508,11 +2536,17 @@
                 "age": {
                   "column": "age"
                 },
+                "allowActivityElevationViewing": {
+                  "column": "allow_activity_elevation_viewing"
+                },
                 "allowActivityHeartRateViewing": {
                   "column": "allow_activity_heart_rate_viewing"
                 },
                 "allowActivityInteractions": {
                   "column": "allow_activity_interactions"
+                },
+                "allowActivityPaceViewing": {
+                  "column": "allow_activity_pace_viewing"
                 },
                 "allowActivityReplayViewing": {
                   "column": "allow_activity_replay_viewing"
@@ -2565,6 +2599,9 @@
                 "language": {
                   "column": "language"
                 },
+                "maxHeartRate": {
+                  "column": "max_heart_rate"
+                },
                 "name": {
                   "column": "name"
                 },
@@ -2579,6 +2616,9 @@
                 },
                 "pushNotifications": {
                   "column": "push_notifications"
+                },
+                "restingHeartRate": {
+                  "column": "resting_heart_rate"
                 },
                 "sport": {
                   "column": "sport"
@@ -5683,16 +5723,34 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "allow_activity_elevation_viewing": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
                 "allow_activity_heart_rate_viewing": {
                   "codecId": "pg/bool@1",
                   "dataType": "pg/bool",
                   "default": {
                     "kind": "literal",
-                    "value": false
+                    "value": true
                   },
                   "nullable": false
                 },
                 "allow_activity_interactions": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "allow_activity_pace_viewing": {
                   "codecId": "pg/bool@1",
                   "dataType": "pg/bool",
                   "default": {
@@ -5829,6 +5887,11 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "max_heart_rate": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
                 "name": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -5861,6 +5924,11 @@
                     "value": false
                   },
                   "nullable": false
+                },
+                "resting_heart_rate": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
                 },
                 "sport": {
                   "codecId": "pg/text@1",
@@ -6919,7 +6987,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "f3da64af7aa944be28d911fd6782c44e01570e6652cef52fd95219229c0b1699"
+    "storageHash": "1ae533fab6c31b41428b19a1d444d9f31204a0d6d673ea6811acf240ab0c8c49"
   },
   "capabilities": {
     "postgres": {
