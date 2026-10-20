@@ -19,7 +19,12 @@ import {
   type ActivityMediaCursor,
 } from './activity.pagination';
 import { ACTIVITY_VISIBILITY } from './activity-visibility';
-import { createActivityChartLocations, normalizeActivityCardForViewer, normalizeActivityDetails } from './utils';
+import {
+  createActivityChartLocations,
+  hideActivityMapForViewer,
+  normalizeActivityCardForViewer,
+  normalizeActivityDetails,
+} from './utils';
 import type { ActivityFeedSqlRow } from './type';
 
 @Injectable()
@@ -39,6 +44,7 @@ export class ActivityReadService {
         kilometresSplit: true,
         userId: true,
         visibility: true,
+        hideMap: true,
         profile: { select: { allowActivityReplayViewing: true } },
       },
     });
@@ -53,6 +59,7 @@ export class ActivityReadService {
       activity.visibility === ACTIVITY_VISIBILITY.followers &&
       (isOwner || (await this.accessService.isFollower(currentUserId, activity.userId)));
     if (!isOwner && !isPublic && !isFollowerActivity) return null;
+    if (!isOwner && activity.hideMap) return null;
     if (!isOwner && activity.profile?.allowActivityReplayViewing === false) return null;
     let locations: LocationObject[] | undefined;
     if (activity.routeStorageKey) {
@@ -121,7 +128,10 @@ export class ActivityReadService {
         select: ACTIVITY_DETAILS_SELECT,
       });
       if (!activity || !(await this.accessService.canAccessActivityData(activity, currentUserId))) return null;
-      const normalizedActivity = normalizeActivityDetails(activity as Record<string, unknown>);
+      const normalizedActivity = hideActivityMapForViewer(
+        normalizeActivityDetails(activity as Record<string, unknown>),
+        currentUserId,
+      );
       const isOwner = Boolean(currentUserId && activity.userId === currentUserId);
       const canViewHeartRate = isOwner || activity.profile?.allowActivityHeartRateViewing !== false;
       const canViewElevation = isOwner || activity.profile?.allowActivityElevationViewing !== false;

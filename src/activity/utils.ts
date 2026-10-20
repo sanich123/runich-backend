@@ -125,8 +125,31 @@ export function normalizeActivityCard<T extends Record<string, unknown>>(activit
   };
 }
 
+export function hideActivityMapForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {
+  const isOwner = typeof viewerId === 'string' && activity.userId === viewerId;
+  if (isOwner || activity.hideMap !== true) return activity;
+
+  const kilometresSplit = activity.kilometresSplit;
+  const kilometresSplitWithoutLocations = Array.isArray(kilometresSplit)
+    ? kilometresSplit.map((split) => {
+        if (!split || typeof split !== 'object' || Array.isArray(split)) return split;
+        const splitWithoutLocation = { ...(split as Record<string, unknown>) };
+        delete splitWithoutLocation.kilometerPoint;
+        return splitWithoutLocation;
+      })
+    : undefined;
+
+  return {
+    ...activity,
+    mapPhotoUrl: null,
+    routeOnlyMapPhotoUrl: null,
+    mapPhotoUrlBlurhash: null,
+    ...(Array.isArray(kilometresSplit) ? { kilometresSplit: kilometresSplitWithoutLocations } : {}),
+  };
+}
+
 export function normalizeActivityCardForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {
-  const normalizedActivity = normalizeActivityCard(activity);
+  const normalizedActivity = hideActivityMapForViewer(normalizeActivityCard(activity), viewerId);
   const profile = normalizedActivity.profile as { allowActivityElevationViewing?: boolean } | undefined;
   const isOwner = typeof viewerId === 'string' && normalizedActivity.userId === viewerId;
   if (isOwner || profile?.allowActivityElevationViewing !== false) return normalizedActivity;

@@ -523,8 +523,8 @@ class ActivityKilometreSplitResponseDto {
   @ApiProperty({ type: Number })
   lastKilometerAltitude: number;
 
-  @ApiProperty({ type: ActivityLocationResponseDto })
-  kilometerPoint: ActivityLocationResponseDto;
+  @ApiPropertyOptional({ type: ActivityLocationResponseDto })
+  kilometerPoint?: ActivityLocationResponseDto;
 }
 
 export class ActivityMediaResponseDto {
