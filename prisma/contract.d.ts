@@ -22,7 +22,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'1ae533fab6c31b41428b19a1d444d9f31204a0d6d673ea6811acf240ab0c8c49'>;
+  StorageHashBase<'4ee189d7e1e557c5a9fb68821ede039f46731647eb29a9197c629e4757538f2c'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -247,7 +247,7 @@ export type FieldOutputTypes = {
       readonly duration: CodecTypes['pg/int4@1']['output'];
       readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
-      readonly heartRateSamples: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly heartRateStorageKey: Varchar<512> | null;
       readonly hideMap: CodecTypes['pg/bool@1']['output'];
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly isFavorite: CodecTypes['pg/bool@1']['output'];
@@ -548,7 +548,7 @@ export type FieldInputTypes = {
       readonly duration: CodecTypes['pg/int4@1']['input'];
       readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
-      readonly heartRateSamples: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly heartRateStorageKey: CodecTypes['sql/varchar@1']['input'] | null;
       readonly hideMap: CodecTypes['pg/bool@1']['input'];
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly isFavorite: CodecTypes['pg/bool@1']['input'];
@@ -849,7 +849,7 @@ export type StorageColumnTypes = {
       readonly duration: CodecTypes['pg/int4@1']['output'];
       readonly elevationGain: CodecTypes['pg/float8@1']['output'] | null;
       readonly emotion: CodecTypes['pg/text@1']['output'] | null;
-      readonly heart_rate_samples: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly heart_rate_storage_key: Varchar<512> | null;
       readonly hide_map: CodecTypes['pg/bool@1']['output'];
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly is_favorite: CodecTypes['pg/bool@1']['output'];
@@ -1150,7 +1150,7 @@ export type StorageColumnInputTypes = {
       readonly duration: CodecTypes['pg/int4@1']['input'];
       readonly elevationGain: CodecTypes['pg/float8@1']['input'] | null;
       readonly emotion: CodecTypes['pg/text@1']['input'] | null;
-      readonly heart_rate_samples: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly heart_rate_storage_key: CodecTypes['sql/varchar@1']['input'] | null;
       readonly hide_map: CodecTypes['pg/bool@1']['input'];
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly is_favorite: CodecTypes['pg/bool@1']['input'];
@@ -1451,7 +1451,7 @@ export namespace Models {
     duration: CodecTypes['pg/int4@1']['output'];
     elevationGain: CodecTypes['pg/float8@1']['output'] | null;
     emotion: CodecTypes['pg/text@1']['output'] | null;
-    heartRateSamples: CodecTypes['pg/jsonb@1']['output'] | null;
+    heartRateStorageKey: Varchar<512> | null;
     hideMap: CodecTypes['pg/bool@1']['output'];
     id: CodecTypes['pg/uuid@1']['output'];
     isFavorite: CodecTypes['pg/bool@1']['output'];
@@ -1918,10 +1918,11 @@ type ContractBase = Omit<
                   readonly nullable: true;
                   readonly many: false;
                 };
-                readonly heart_rate_samples: {
-                  readonly dataType: 'pg/jsonb';
-                  readonly codecId: 'pg/jsonb@1';
+                readonly heart_rate_storage_key: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
                   readonly nullable: true;
+                  readonly typeParams: { readonly length: 512 };
                   readonly many: false;
                 };
                 readonly hide_map: {
@@ -4646,9 +4647,13 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly heartRateSamples: {
+              readonly heartRateStorageKey: {
                 readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 512 };
+                };
               };
               readonly hideMap: {
                 readonly nullable: false;
@@ -4873,7 +4878,7 @@ type ContractBase = Omit<
                 readonly duration: { readonly column: 'duration' };
                 readonly elevationGain: { readonly column: 'elevationGain' };
                 readonly emotion: { readonly column: 'emotion' };
-                readonly heartRateSamples: { readonly column: 'heart_rate_samples' };
+                readonly heartRateStorageKey: { readonly column: 'heart_rate_storage_key' };
                 readonly hideMap: { readonly column: 'hide_map' };
                 readonly id: { readonly column: 'id' };
                 readonly isFavorite: { readonly column: 'is_favorite' };

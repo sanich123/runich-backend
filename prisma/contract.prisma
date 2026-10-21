@@ -123,6 +123,7 @@ model Activity {
   routePointCount     Int?                 @map("route_point_count")
   routeSizeBytes      Int?                 @map("route_size_bytes")
   routeChecksum       VarChar(64)?         @map("route_checksum")
+  heartRateStorageKey VarChar(512)?        @map("heart_rate_storage_key")
   userId              Uuid                 @map("user_id")
   speed               Float
   sport               String
@@ -145,7 +146,6 @@ model Activity {
   source              VarChar(32)?
   sourceActivityId    VarChar(128)?
   steps               Int?
-  heartRateSamples    Jsonb?               @map("heart_rate_samples")
   averageHeartRate    Int?                 @map("average_heart_rate")
   minHeartRate        Int?                 @map("min_heart_rate")
   maxHeartRate        Int?                 @map("max_heart_rate")

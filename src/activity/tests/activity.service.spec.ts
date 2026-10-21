@@ -927,6 +927,7 @@ describe('ActivityService', () => {
   });
 
   it('uses Strava elevation gain from the migration CSV for imported routes', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);

@@ -171,11 +171,14 @@
                   "kind": "scalar"
                 }
               },
-              "heartRateSamples": {
+              "heartRateStorageKey": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/jsonb@1",
-                  "kind": "scalar"
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 512
+                  }
                 }
               },
               "hideMap": {
@@ -534,8 +537,8 @@
                 "emotion": {
                   "column": "emotion"
                 },
-                "heartRateSamples": {
-                  "column": "heart_rate_samples"
+                "heartRateStorageKey": {
+                  "column": "heart_rate_storage_key"
                 },
                 "hideMap": {
                   "column": "hide_map"
@@ -3992,10 +3995,13 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
-                "heart_rate_samples": {
-                  "codecId": "pg/jsonb@1",
-                  "dataType": "pg/jsonb",
-                  "nullable": true
+                "heart_rate_storage_key": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 512
+                  }
                 },
                 "hide_map": {
                   "codecId": "pg/bool@1",
@@ -6987,7 +6993,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "1ae533fab6c31b41428b19a1d444d9f31204a0d6d673ea6811acf240ab0c8c49"
+    "storageHash": "4ee189d7e1e557c5a9fb68821ede039f46731647eb29a9197c629e4757538f2c"
   },
   "capabilities": {
     "postgres": {

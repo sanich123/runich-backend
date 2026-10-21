@@ -1,4 +1,7 @@
-import type { ActivityChartLocationObject, LocationObject } from './activity.dto';
+import type { ActivityChartLocationObject, ActivityHeartRateSampleObject, LocationObject } from './activity.dto';
+
+// Keep this aligned with CHART_POINT_COUNT in the Runich client.
+const ACTIVITY_CHART_HEART_RATE_POINT_COUNT = 81;
 
 export function omitMediaProcessingStatus(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
@@ -11,7 +14,63 @@ export function omitActivityHeartRateSamples(value: unknown) {
   const result = omitMediaProcessingStatus(value);
   if (!result || typeof result !== 'object' || Array.isArray(result)) return result;
   delete (result as Record<string, unknown>).heartRateSamples;
+  delete (result as Record<string, unknown>).heartRateStorageKey;
   return result;
+}
+
+function interpolateHeartRateAt(samples: ActivityHeartRateSampleObject[], timestamp: number): number {
+  if (timestamp <= samples[0].timestamp) return samples[0].beatsPerMinute;
+
+  for (let index = 1; index < samples.length; index += 1) {
+    const right = samples[index];
+    if (timestamp > right.timestamp) continue;
+    const left = samples[index - 1];
+    const span = right.timestamp - left.timestamp;
+    if (span <= 0) return right.beatsPerMinute;
+    const fraction = (timestamp - left.timestamp) / span;
+    return left.beatsPerMinute + (right.beatsPerMinute - left.beatsPerMinute) * fraction;
+  }
+
+  return samples[samples.length - 1].beatsPerMinute;
+}
+
+export function reduceActivityChartHeartRateSamples(
+  samples: ActivityHeartRateSampleObject[],
+  locations: ActivityChartLocationObject[] | null,
+): ActivityHeartRateSampleObject[] {
+  const firstLocationTimestamp = locations?.[0]?.timestamp;
+  const lastLocationTimestamp = locations?.[locations.length - 1]?.timestamp;
+  const hasChartTimeRange =
+    typeof firstLocationTimestamp === 'number' &&
+    Number.isFinite(firstLocationTimestamp) &&
+    typeof lastLocationTimestamp === 'number' &&
+    Number.isFinite(lastLocationTimestamp) &&
+    lastLocationTimestamp > firstLocationTimestamp;
+  const chartSamples = samples
+    .filter(
+      (sample) =>
+        Number.isFinite(sample.timestamp) &&
+        Number.isFinite(sample.beatsPerMinute) &&
+        sample.beatsPerMinute >= 1 &&
+        sample.beatsPerMinute <= 300 &&
+        (!hasChartTimeRange ||
+          (sample.timestamp >= firstLocationTimestamp && sample.timestamp <= lastLocationTimestamp)),
+    )
+    .sort((first, second) => first.timestamp - second.timestamp);
+
+  if (chartSamples.length <= ACTIVITY_CHART_HEART_RATE_POINT_COUNT) return chartSamples;
+
+  const rangeStart = hasChartTimeRange ? firstLocationTimestamp : chartSamples[0].timestamp;
+  const rangeEnd = hasChartTimeRange ? lastLocationTimestamp : chartSamples[chartSamples.length - 1].timestamp;
+  if (rangeEnd <= rangeStart) return chartSamples.slice(0, ACTIVITY_CHART_HEART_RATE_POINT_COUNT);
+
+  return Array.from({ length: ACTIVITY_CHART_HEART_RATE_POINT_COUNT }, (_, index) => {
+    const timestamp = rangeStart + ((rangeEnd - rangeStart) * index) / (ACTIVITY_CHART_HEART_RATE_POINT_COUNT - 1);
+    return {
+      timestamp,
+      beatsPerMinute: interpolateHeartRateAt(chartSamples, timestamp),
+    };
+  });
 }
 
 export function getElevationGainFromKilometreSplits(value: unknown) {

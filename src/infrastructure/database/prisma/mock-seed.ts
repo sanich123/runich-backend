@@ -64,7 +64,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
 
   const activityTemplates = await loadMockActivityTemplates();
   const activityPhotoUrls = getMockActivityPhotoUrls();
-  const seedVersion = `${MOCK_SEED_VERSION}:${activityTemplates.length ? 'routes-v1' : 'generated'}:photos-v1`;
+  const seedVersion = MOCK_SEED_VERSION + ':routes-heart-rate-80-20-v3:photos-v1';
   const seedInProgress = `${seedVersion}:in-progress`;
 
   if (existingMocks.length === MOCK_USER_COUNT) {
@@ -76,7 +76,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
           userIndex >= 0 &&
           userIndex < MOCK_USER_COUNT &&
           mock.profile?.bio === version &&
-          mock._count.activities === mockActivityCount(userIndex)
+          mock._count.activities === mockActivityCount()
         );
       });
 

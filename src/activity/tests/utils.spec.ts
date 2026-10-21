@@ -6,6 +6,7 @@ import {
   normalizeActivityCardForViewer,
   normalizeActivityDetails,
   omitMediaProcessingStatus,
+  reduceActivityChartHeartRateSamples,
 } from '../utils';
 
 describe('activity utilities', () => {
@@ -122,6 +123,43 @@ describe('activity utilities', () => {
     expect(fallbackTimestampSamples[0]?.timestamp).toBe(1_000);
     expect(fallbackTimestampSamples[1]?.timestamp).toBe(61_000);
     expect(fallbackTimestampSamples[1]?.coords).not.toHaveProperty('timestamp');
+  });
+
+  it('filters, sorts, and aligns heart-rate samples to the activity route', () => {
+    const samples = [
+      { timestamp: 300, beatsPerMinute: 120 },
+      { timestamp: 100, beatsPerMinute: 90 },
+      { timestamp: 99, beatsPerMinute: 80 },
+      { timestamp: 301, beatsPerMinute: 130 },
+      { timestamp: 150, beatsPerMinute: 0 },
+      { timestamp: 150, beatsPerMinute: 301 },
+      { timestamp: Number.NaN, beatsPerMinute: 100 },
+      { timestamp: 200, beatsPerMinute: Number.NaN },
+    ];
+    const locations = [
+      { timestamp: 100, coords: { timestamp: 100 } },
+      { timestamp: 300, coords: { timestamp: 300 } },
+    ];
+
+    expect(reduceActivityChartHeartRateSamples(samples, locations)).toEqual([
+      { timestamp: 100, beatsPerMinute: 90 },
+      { timestamp: 300, beatsPerMinute: 120 },
+    ]);
+  });
+
+  it('downsamples long heart-rate streams while preserving their time range and interpolation', () => {
+    const samples = Array.from({ length: 82 }, (_, index) => ({
+      timestamp: 1_000 + index * 100,
+      beatsPerMinute: 100 + index,
+    }));
+
+    const reduced = reduceActivityChartHeartRateSamples(samples, null);
+
+    expect(reduced).toHaveLength(81);
+    expect(reduced[0]).toEqual(samples[0]);
+    expect(reduced[40]?.timestamp).toBe(5_050);
+    expect(reduced[40]?.beatsPerMinute).toBe(140.5);
+    expect(reduced[80]).toEqual(samples[81]);
   });
 
   it('normalizes activity cards and details using stored or derived elevation', () => {

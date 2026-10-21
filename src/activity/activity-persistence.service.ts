@@ -12,7 +12,7 @@ type ActivityUpdateField =
   | 'sport'
   | 'title'
   | 'kilometresSplit'
-  | 'heartRateSamples'
+  | 'heartRateStorageKey'
   | 'averageHeartRate'
   | 'minHeartRate'
   | 'maxHeartRate'
@@ -44,7 +44,7 @@ const ACTIVITY_UPDATE_FIELDS: ActivityUpdateField[] = [
   'sport',
   'title',
   'kilometresSplit',
-  'heartRateSamples',
+  'heartRateStorageKey',
   'averageHeartRate',
   'minHeartRate',
   'maxHeartRate',

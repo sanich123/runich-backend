@@ -1,6 +1,6 @@
 import {
   CREATE_MANY_BATCH_SIZE,
-  MAX_MOCK_RELATION_COUNT,
+  MOCK_ACTIVITY_COUNT,
   MOCK_PROFILE_PRIVACY_PRESETS,
   MOCK_RUNNERS,
   MOCK_RUNNER_PHOTOS,
@@ -28,8 +28,8 @@ export function mockRunner(index: number) {
   return { name: `${baseName}${suffix}`, surname: `${baseSurname}${suffix}`, city };
 }
 
-export function mockActivityCount(userIndex: number) {
-  return random(100_000 + userIndex, MAX_MOCK_RELATION_COUNT);
+export function mockActivityCount() {
+  return MOCK_ACTIVITY_COUNT;
 }
 
 export async function createManyInBatches<T>(items: T[], createMany: (data: T[]) => Promise<unknown>) {

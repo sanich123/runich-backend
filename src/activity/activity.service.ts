@@ -105,6 +105,7 @@ export class ActivityService {
 
   async createActivity(activityDto: ActivityDto, id: string) {
     let uploadedRouteKey: string | undefined;
+    let uploadedHeartRateKey: string | undefined;
     let uploadedMapKey: string | undefined;
     let uploadedRouteOnlyMapKey: string | undefined;
     let uploadedActivityMediaKeys: string[] = [];
@@ -126,14 +127,24 @@ export class ActivityService {
       const account = await this.accountService.getAccountByUserId(id);
       const locations = activityDto.locations;
       const storageService = this.storageService;
+      const migratedActivity = activityDto as ActivityDto &
+        Pick<MigratedActivity, 'heartRateSamples' | 'averageHeartRate' | 'minHeartRate' | 'maxHeartRate'>;
+      const heartRateSamples = migratedActivity.heartRateSamples;
+      if (heartRateSamples?.length && !storageService) {
+        throw new ServiceUnavailableException('Сервис хранения данных пульса не настроен');
+      }
       let media = activityDto.media;
       let activityId: string | undefined = media?.length ? randomUUID() : undefined;
       let routeMetadata;
-      if (!activityId && storageService && locations?.length) activityId = randomUUID();
-      if (storageService && (locations?.length || media?.length)) {
+      if (!activityId && storageService && (locations?.length || heartRateSamples?.length)) activityId = randomUUID();
+      if (storageService && (locations?.length || media?.length || heartRateSamples?.length)) {
         activityId ??= randomUUID();
         if (locations?.length) {
           routeMetadata = await storageService.uploadActivityRoute(id, activityId, locations);
+          uploadedRouteKey = routeMetadata.key;
+        }
+        if (heartRateSamples?.length) {
+          uploadedHeartRateKey = await storageService.uploadActivityHeartRateSamples(id, activityId, heartRateSamples);
         }
         if (media?.length) {
           const promotedMedia = await storageService.promoteActivityPhotos(id, activityId, media, mediaCreatedAt);
@@ -141,7 +152,7 @@ export class ActivityService {
           uploadedActivityMediaKeys = promotedMedia.keys;
         }
       }
-      uploadedRouteKey = routeMetadata?.key;
+      uploadedRouteKey ??= routeMetadata?.key;
 
       const generatedMap = locations?.length
         ? this.staticMapService
@@ -170,13 +181,12 @@ export class ActivityService {
       const routeOnlyMapPhotoUrl = generatedRouteOnlyMap?.url ?? null;
 
       const mapPhotoUrlBlurhash = null;
-      const activityFields = { ...activityDto };
-      const migratedActivity = activityDto as ActivityDto &
-        Pick<MigratedActivity, 'heartRateSamples' | 'averageHeartRate' | 'minHeartRate' | 'maxHeartRate'>;
-      const heartRateSamples = migratedActivity.heartRateSamples;
+      const activityFields = { ...activityDto } as Record<string, unknown>;
       const heartRateStatistics = heartRateSamples?.length ? getHeartRateStatistics(heartRateSamples) : {};
       delete activityFields.locations;
       delete activityFields.media;
+      delete activityFields.heartRateSamples;
+      delete activityFields.heartRateStorageKey;
       activityFields.visibility = activityDto.visibility ?? ACTIVITY_VISIBILITY.public;
       const description = activityDto.description?.trim() || null;
 
@@ -207,6 +217,7 @@ export class ActivityService {
               routeChecksum: routeMetadata.checksum,
             }
           : {}),
+        ...(uploadedHeartRateKey ? { heartRateStorageKey: uploadedHeartRateKey } : {}),
         mapPhotoUrl,
         routeOnlyMapPhotoUrl,
         mapPhotoUrlBlurhash,
@@ -219,10 +230,11 @@ export class ActivityService {
         `Сохранение активности: userId=${id}, sport=${activityDto.sport}, date=${activityDto.date}, media=${mediaCount}, locations=${locationCount}`,
       );
 
-      const mediaRows = this.getActivityMediaRows(activityId, id, data.date ?? new Date(), media);
+      const mediaRows = this.getActivityMediaRows(activityId, id, activityDto.date ?? new Date(), media);
       return omitActivityHeartRateSamples(await this.persistenceService.create(data, mediaRows));
     } catch (error) {
       await this.deleteUploadedRoute(uploadedRouteKey);
+      await this.deleteUploadedRoute(uploadedHeartRateKey);
       await this.deleteUploadedRoute(uploadedMapKey);
       await this.deleteUploadedRoute(uploadedRouteOnlyMapKey);
       await Promise.all(uploadedActivityMediaKeys.map((key) => this.deleteUploadedRoute(key)));
@@ -245,6 +257,7 @@ export class ActivityService {
       sourceActivityId: string | null;
       profileId: string;
       routeStorageKey: string | null;
+      heartRateStorageKey: string | null;
       mapPhotoUrl: string | null;
       routeOnlyMapPhotoUrl: string | null;
       hideMap: boolean;
@@ -262,6 +275,7 @@ export class ActivityService {
               sourceActivityId: true,
               profileId: true,
               routeStorageKey: true,
+              heartRateStorageKey: true,
               mapPhotoUrl: true,
               routeOnlyMapPhotoUrl: true,
               hideMap: true,
@@ -299,6 +313,7 @@ export class ActivityService {
       id: string;
       profileId: string;
       routeStorageKey: string | null;
+      heartRateStorageKey: string | null;
       mapPhotoUrl: string | null;
       routeOnlyMapPhotoUrl: string | null;
       hideMap: boolean;
@@ -306,15 +321,18 @@ export class ActivityService {
     userId: string,
   ) {
     let uploadedRouteKey: string | undefined;
+    let uploadedHeartRateKey: string | undefined;
     let uploadedMapKey: string | undefined;
     let uploadedRouteOnlyMapKey: string | undefined;
     let preparedData: Record<string, unknown> = {};
     let updatedActivity: unknown;
+    let didUpdateHeartRate = false;
 
     try {
       if (workout.locations?.length) {
         const prepared = await this.prepareActivityRoute({
           ...workout,
+          heartRateSamples: undefined,
           // Use a fresh storage namespace so route and map caches cannot serve an older sync.
           id: randomUUID(),
           userId,
@@ -337,7 +355,18 @@ export class ActivityService {
       if (workout.timeZone !== undefined) updateData.timeZone = workout.timeZone;
       if (workout.steps !== undefined) updateData.steps = workout.steps;
       if (workout.heartRateSamples !== undefined) {
-        updateData.heartRateSamples = workout.heartRateSamples;
+        didUpdateHeartRate = true;
+        if (workout.heartRateSamples.length) {
+          if (!this.storageService) throw new ServiceUnavailableException('Сервис хранения данных пульса не настроен');
+          uploadedHeartRateKey = await this.storageService.uploadActivityHeartRateSamples(
+            userId,
+            existingActivity.id,
+            workout.heartRateSamples,
+          );
+          updateData.heartRateStorageKey = uploadedHeartRateKey;
+        } else {
+          updateData.heartRateStorageKey = null;
+        }
         Object.assign(updateData, getHeartRateStatistics(workout.heartRateSamples));
       }
       if (workout.title?.trim()) updateData.title = workout.title.trim();
@@ -374,19 +403,23 @@ export class ActivityService {
         this.deleteUploadedRoute(uploadedRouteKey),
         this.deleteUploadedRoute(uploadedMapKey),
         this.deleteUploadedRoute(uploadedRouteOnlyMapKey),
+        this.deleteUploadedRoute(uploadedHeartRateKey),
       ]);
       handleServiceError(error);
     }
 
-    if (uploadedRouteKey && this.mediaCleanupService) {
+    if ((uploadedRouteKey || didUpdateHeartRate) && this.mediaCleanupService) {
       const oldKeys = this.getActivityStorageKeys(userId, {
         routeStorageKey: existingActivity.routeStorageKey,
+        heartRateStorageKey: existingActivity.heartRateStorageKey,
         mapPhotoUrl: existingActivity.mapPhotoUrl,
         routeOnlyMapPhotoUrl: existingActivity.routeOnlyMapPhotoUrl,
         media: [],
       });
       const newKeys = new Set(
-        [uploadedRouteKey, uploadedMapKey, uploadedRouteOnlyMapKey].filter((key): key is string => Boolean(key)),
+        [uploadedRouteKey, uploadedMapKey, uploadedRouteOnlyMapKey, uploadedHeartRateKey].filter((key): key is string =>
+          Boolean(key),
+        ),
       );
       try {
         await Promise.all(
@@ -446,6 +479,7 @@ export class ActivityService {
               userId: true,
               sourceActivityId: true,
               routeStorageKey: true,
+              heartRateStorageKey: true,
               mapPhotoUrl: true,
               routeOnlyMapPhotoUrl: true,
               hideMap: true,
@@ -455,6 +489,7 @@ export class ActivityService {
             userId: string;
             sourceActivityId: string;
             routeStorageKey: string | null;
+            heartRateStorageKey: string | null;
             mapPhotoUrl: string | null;
             routeOnlyMapPhotoUrl: string | null;
             hideMap: boolean;
@@ -508,6 +543,7 @@ export class ActivityService {
           const preparedActivities: {
             data: Record<string, unknown>;
             routeKey?: string;
+            heartRateKey?: string;
             mapKey?: string;
             routeOnlyMapKey?: string;
             existingActivity?: (typeof existingActivities)[number];
@@ -553,6 +589,7 @@ export class ActivityService {
               preparedActivities.push({
                 data,
                 routeKey: prepared.routeKey,
+                heartRateKey: prepared.heartRateKey,
                 mapKey: prepared.mapKey,
                 routeOnlyMapKey: prepared.routeOnlyMapKey,
                 existingActivity,
@@ -571,16 +608,17 @@ export class ActivityService {
             );
             const result = await this.persistenceService.upsertMany(preparedData, database, media);
             const cleanupJobs = preparedActivities.flatMap(
-              ({ routeKey, mapKey, routeOnlyMapKey, existingActivity, userId }) => {
+              ({ routeKey, heartRateKey, mapKey, routeOnlyMapKey, existingActivity, userId }) => {
                 if (!existingActivity) return [];
                 const oldKeys = this.getActivityStorageKeys(userId, {
                   routeStorageKey: existingActivity.routeStorageKey,
+                  heartRateStorageKey: existingActivity.heartRateStorageKey,
                   mapPhotoUrl: existingActivity.mapPhotoUrl,
                   routeOnlyMapPhotoUrl: existingActivity.routeOnlyMapPhotoUrl,
                   media: [],
                 });
                 const newKeys = new Set(
-                  [routeKey, mapKey, routeOnlyMapKey].filter((key): key is string => Boolean(key)),
+                  [routeKey, heartRateKey, mapKey, routeOnlyMapKey].filter((key): key is string => Boolean(key)),
                 );
                 return oldKeys.filter((key) => !newKeys.has(key)).map((storageKey) => ({ userId, storageKey }));
               },
@@ -596,7 +634,12 @@ export class ActivityService {
           } catch (error) {
             await Promise.all(
               preparedActivities
-                .flatMap(({ routeKey, mapKey, routeOnlyMapKey }) => [routeKey, mapKey, routeOnlyMapKey])
+                .flatMap(({ routeKey, heartRateKey, mapKey, routeOnlyMapKey }) => [
+                  routeKey,
+                  heartRateKey,
+                  mapKey,
+                  routeOnlyMapKey,
+                ])
                 .map((key) => this.deleteUploadedRoute(key)),
             );
             throw error;
@@ -909,6 +952,7 @@ export class ActivityService {
           where: { id, userId },
           select: {
             routeStorageKey: true,
+            heartRateStorageKey: true,
             mapPhotoUrl: true,
             routeOnlyMapPhotoUrl: true,
             media: { select: { url: true, thumbnail: true } },
@@ -963,63 +1007,92 @@ export class ActivityService {
       : activity.locations?.length
         ? getElevationGainFromLocations(activity.locations)
         : getElevationGainFromKilometreSplits(activity.kilometresSplit);
-    if (!activity.locations?.length || !this.storageService) {
-      const dataWithoutLocations = { ...activity };
+    const importedActivity = activity as T & Pick<MigratedActivity, 'heartRateSamples'>;
+    const heartRateSamples = importedActivity.heartRateSamples;
+    if (heartRateSamples?.length && !this.storageService) {
+      throw new ServiceUnavailableException('Сервис хранения данных пульса не настроен');
+    }
+
+    const activityId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
+    let routeKey: string | undefined;
+    let heartRateKey: string | undefined;
+    let mapKey: string | undefined;
+    let routeOnlyMapKey: string | undefined;
+
+    try {
+      if (heartRateSamples?.length && this.storageService) {
+        heartRateKey = await this.storageService.uploadActivityHeartRateSamples(
+          activity.userId,
+          activityId,
+          heartRateSamples,
+        );
+      }
+
+      const routeMetadata =
+        activity.locations?.length && this.storageService
+          ? await this.storageService.uploadActivityRoute(activity.userId, activityId, activity.locations)
+          : undefined;
+      routeKey = routeMetadata?.key;
+      const generatedMap =
+        activity.locations?.length && this.staticMapService
+          ? await this.staticMapService.generateActivityMap({
+              userId: activity.userId,
+              activityId,
+              locations: activity.locations,
+              hideMap: false,
+            })
+          : undefined;
+      mapKey = generatedMap?.key;
+      const generatedRouteOnlyMap =
+        activity.locations?.length && activity.hideMap
+          ? await this.staticMapService?.generateActivityMap({
+              userId: activity.userId,
+              activityId,
+              locations: activity.locations,
+              hideMap: true,
+            })
+          : undefined;
+      routeOnlyMapKey = generatedRouteOnlyMap?.key;
+
+      const dataWithoutLocations = { ...activity } as unknown as Record<string, unknown>;
       delete dataWithoutLocations.locations;
       delete dataWithoutLocations.sourceElevationGain;
+      delete dataWithoutLocations.heartRateSamples;
+      delete dataWithoutLocations.heartRateStorageKey;
+      if (importedActivity.heartRateSamples !== undefined) {
+        dataWithoutLocations.heartRateStorageKey = heartRateKey ?? null;
+      }
+
       return {
         data: {
           ...dataWithoutLocations,
           elevationGain,
+          id: activityId,
+          ...(routeMetadata
+            ? {
+                routeStorageKey: routeMetadata.key,
+                routeFormatVersion: routeMetadata.formatVersion,
+                routePointCount: routeMetadata.pointCount,
+                routeSizeBytes: routeMetadata.sizeBytes,
+                routeChecksum: routeMetadata.checksum,
+              }
+            : {}),
+          ...(activity.locations?.length
+            ? {
+                mapPhotoUrl: generatedMap?.url ?? (this.staticMapService ? null : getMapBoxImage(activity.locations)),
+                routeOnlyMapPhotoUrl: generatedRouteOnlyMap?.url ?? null,
+              }
+            : {}),
         },
-        routeKey: undefined,
-        mapKey: undefined,
-        routeOnlyMapKey: undefined,
+        routeKey,
+        heartRateKey,
+        mapKey,
+        routeOnlyMapKey,
       };
+    } catch (error) {
+      await Promise.all([routeKey, heartRateKey, mapKey, routeOnlyMapKey].map((key) => this.deleteUploadedRoute(key)));
+      throw error;
     }
-
-    const activityId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
-    const routeMetadata = await this.storageService.uploadActivityRoute(
-      activity.userId,
-      activityId,
-      activity.locations,
-    );
-    const generatedMap = this.staticMapService
-      ? await this.staticMapService.generateActivityMap({
-          userId: activity.userId,
-          activityId,
-          locations: activity.locations,
-          hideMap: false,
-        })
-      : undefined;
-    const generatedRouteOnlyMap = activity.hideMap
-      ? await this.staticMapService?.generateActivityMap({
-          userId: activity.userId,
-          activityId,
-          locations: activity.locations,
-          hideMap: true,
-        })
-      : undefined;
-    const dataWithoutLocations = { ...activity };
-    delete dataWithoutLocations.locations;
-    delete dataWithoutLocations.sourceElevationGain;
-    return {
-      data: {
-        ...dataWithoutLocations,
-        elevationGain,
-        id: activityId,
-        routeStorageKey: routeMetadata.key,
-        routeFormatVersion: routeMetadata.formatVersion,
-        routePointCount: routeMetadata.pointCount,
-        routeSizeBytes: routeMetadata.sizeBytes,
-        routeChecksum: routeMetadata.checksum,
-        mapPhotoUrl: generatedMap?.url ?? (this.staticMapService ? null : getMapBoxImage(activity.locations)),
-        routeOnlyMapPhotoUrl: generatedRouteOnlyMap?.url ?? null,
-      },
-      routeKey: routeMetadata.key,
-      mapKey: generatedMap?.key,
-      routeOnlyMapKey: generatedRouteOnlyMap?.key,
-    };
   }
 
   private async deleteUploadedRoute(routeKey?: string) {
@@ -1035,6 +1108,7 @@ export class ActivityService {
     userId: string,
     activity: {
       routeStorageKey: string | null;
+      heartRateStorageKey?: string | null;
       mapPhotoUrl?: string | null;
       routeOnlyMapPhotoUrl?: string | null;
       media: unknown;
@@ -1042,6 +1116,7 @@ export class ActivityService {
   ) {
     const keys = new Set<string>();
     if (activity?.routeStorageKey?.startsWith(`${userId}/`)) keys.add(activity.routeStorageKey);
+    if (activity?.heartRateStorageKey?.startsWith(`${userId}/`)) keys.add(activity.heartRateStorageKey);
 
     if (this.storageService && activity?.mapPhotoUrl) {
       try {

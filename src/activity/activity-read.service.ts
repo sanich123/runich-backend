@@ -24,6 +24,7 @@ import {
   hideActivityMapForViewer,
   normalizeActivityCardForViewer,
   normalizeActivityDetails,
+  reduceActivityChartHeartRateSamples,
 } from './utils';
 import type { ActivityFeedSqlRow } from './type';
 
@@ -76,7 +77,7 @@ export class ActivityReadService {
     const activity = await this.prisma.activity.findUnique({
       where: { id },
       select: {
-        heartRateSamples: true,
+        heartRateStorageKey: true,
         routeStorageKey: true,
         distance: true,
         userId: true,
@@ -114,10 +115,14 @@ export class ActivityReadService {
       locations = createActivityChartLocations(route, activity.distance, canViewPace, canViewElevation);
     }
 
-    const heartRateSamples =
-      canViewHeartRate && Array.isArray(activity.heartRateSamples)
-        ? (activity.heartRateSamples as ActivityHeartRateSampleObject[])
-        : [];
+    let heartRateSamples: ActivityHeartRateSampleObject[] = [];
+    if (canViewHeartRate && activity.heartRateStorageKey) {
+      if (!this.storageService) throw new Error('Сервис хранения данных пульса не настроен');
+      heartRateSamples = reduceActivityChartHeartRateSamples(
+        await this.storageService.readActivityHeartRateSamples(activity.heartRateStorageKey),
+        locations,
+      );
+    }
     return { heartRateSamples, locations };
   }
 
