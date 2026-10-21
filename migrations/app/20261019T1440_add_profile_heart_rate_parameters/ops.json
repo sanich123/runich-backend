@@ -1,0 +1,202 @@
+[
+  {
+    "id": "column.public.Profile.allow_activity_elevation_viewing",
+    "label": "Add column \"allow_activity_elevation_viewing\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "allow_activity_elevation_viewing",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"allow_activity_elevation_viewing\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "allow_activity_elevation_viewing"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"allow_activity_elevation_viewing\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"allow_activity_elevation_viewing\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"allow_activity_elevation_viewing\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "allow_activity_elevation_viewing"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Profile.allow_activity_pace_viewing",
+    "label": "Add column \"allow_activity_pace_viewing\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "allow_activity_pace_viewing",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"allow_activity_pace_viewing\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "allow_activity_pace_viewing"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"allow_activity_pace_viewing\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"allow_activity_pace_viewing\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"allow_activity_pace_viewing\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "allow_activity_pace_viewing"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Profile.max_heart_rate",
+    "label": "Add column \"max_heart_rate\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "max_heart_rate",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"max_heart_rate\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "max_heart_rate"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"max_heart_rate\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"max_heart_rate\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"max_heart_rate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "max_heart_rate"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Profile.resting_heart_rate",
+    "label": "Add column \"resting_heart_rate\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "resting_heart_rate",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"resting_heart_rate\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "resting_heart_rate"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"resting_heart_rate\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"resting_heart_rate\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"resting_heart_rate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "resting_heart_rate"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "setDefault.Profile.allow_activity_heart_rate_viewing",
+    "label": "Set default on \"Profile\".\"allow_activity_heart_rate_viewing\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "allow_activity_heart_rate_viewing",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"allow_activity_heart_rate_viewing\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "allow_activity_heart_rate_viewing"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "set default on \"allow_activity_heart_rate_viewing\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ALTER COLUMN \"allow_activity_heart_rate_viewing\" SET DEFAULT true"
+      }
+    ],
+    "postcheck": []
+  }
+]

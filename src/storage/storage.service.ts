@@ -23,7 +23,7 @@ import { pipeline } from 'node:stream/promises';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { normalizeImage } from 'src/common/images/image-processing';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
-import type { ActivityMediaObject, LocationObject } from 'src/activity/activity.dto';
+import type { ActivityHeartRateSampleObject, ActivityMediaObject, LocationObject } from 'src/activity/activity.dto';
 import {
   ACTIVITY_ROUTE_CACHE_MAX_ENTRIES,
   ACTIVITY_ROUTE_CACHE_TTL_MS,
@@ -34,6 +34,7 @@ import {
   MEDIA_BATCH_CONCURRENCY,
 } from './const';
 import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from './activity-route';
+import { decodeActivityHeartRateSamples, encodeActivityHeartRateSamples } from './activity-heart-rate';
 import {
   getActivityPhotoKey,
   getExtensionFromStorageKey,
@@ -270,6 +271,31 @@ export class StorageService {
 
   async readActivityRoute(key: string) {
     return await decodeActivityRoute(await this.readCachedActivityRouteBody(key));
+  }
+
+  async uploadActivityHeartRateSamples(userId: string, activityId: string, samples: ActivityHeartRateSampleObject[]) {
+    this.assertConfigured();
+    const { body, key } = await encodeActivityHeartRateSamples(userId, activityId, samples);
+
+    await this.measureS3('putObject', () =>
+      this.client.send(
+        new PutObjectCommand({
+          Bucket: this.settings.bucket,
+          Key: key,
+          Body: body,
+          ContentLength: body.byteLength,
+          ContentType: 'application/json',
+          ContentEncoding: 'gzip',
+          CacheControl: 'private, no-store',
+        }),
+      ),
+    );
+
+    return key;
+  }
+
+  async readActivityHeartRateSamples(key: string) {
+    return await decodeActivityHeartRateSamples(await this.readObject(key, 'S3 не вернул данные пульса активности'));
   }
 
   private async readCachedActivityRouteBody(key: string) {

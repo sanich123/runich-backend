@@ -18,7 +18,7 @@ export class NotificationService {
       where: {
         recipientUserId: userId,
         inApp: true,
-        recipient: { profile: { is: { inAppNotifications: true } } },
+        recipient: { profile: { inAppNotifications: true } },
         ...(cursor
           ? {
               OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }],
@@ -57,7 +57,7 @@ export class NotificationService {
         recipientUserId: userId,
         inApp: true,
         readAt: null,
-        recipient: { profile: { is: { inAppNotifications: true } } },
+        recipient: { profile: { inAppNotifications: true } },
       },
     });
   }
@@ -83,7 +83,7 @@ export class NotificationService {
         recipientUserId: userId,
         inApp: true,
         readAt: null,
-        recipient: { profile: { is: { inAppNotifications: true } } },
+        recipient: { profile: { inAppNotifications: true } },
       },
       data: { readAt: new Date() },
     });

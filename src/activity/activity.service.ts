@@ -10,44 +10,42 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ActivityDto, type ActivityMediaObject, type LocationObject, type WatchWorkoutImportDto } from './activity.dto';
+import { ActivityDto, type ActivityMediaObject, type WatchWorkoutImportDto } from './activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
 import { chunkArray } from 'src/common/parsers/chunk-array';
 import { generateActivityTitle } from './activity-title';
 import { ActivityPersistenceService } from './activity-persistence.service';
+import { ActivityAccessService } from './activity-access.service';
+import { ActivityReadService } from './activity-read.service';
 import { ACTIVITY_ENRICHMENT_STATUS } from './activity-enrichment.constants';
 import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.constants';
-import {
-  ACTIVITY_CARD_SELECT,
-  ACTIVITY_DETAILS_SELECT,
-  ACTIVITY_FAVORITE_ERROR_MESSAGES,
-  DEFAULT_ACTIVITY_PAGE_SIZE,
-  MAX_MAP_ROUTE_LOCATIONS,
-} from './const';
-import {
-  encodeActivityCursor,
-  encodeActivityMediaCursor,
-  type ActivityCursor,
-  type ActivityMediaCursor,
-} from './activity.pagination';
+import { ACTIVITY_FAVORITE_ERROR_MESSAGES, DEFAULT_ACTIVITY_PAGE_SIZE } from './const';
+import type { ActivityCursor, ActivityMediaCursor } from './activity.pagination';
 import {
   getElevationGainFromKilometreSplits,
   getElevationGainFromLocations,
-  normalizeActivityCard,
   normalizeActivityDetails,
+  omitActivityHeartRateSamples,
   omitMediaProcessingStatus,
 } from './utils';
-import type { ActivityFeedSqlRow, MigratedActivity } from './type';
+import type { MigratedActivity } from './type';
 import { MediaCleanupService } from 'src/storage/media-cleanup.service';
 import { StorageService } from 'src/storage/storage.service';
 import type { ActivityDatabase } from './activity-persistence.service';
-import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from './activity-visibility';
+import { ACTIVITY_VISIBILITY } from './activity-visibility';
 import { calculateActiveCalories } from './activity-calories';
 import { StaticMapService } from 'src/common/maps/static-map.service';
-import { reduceLocations } from 'src/common/parsers/reduce-locations';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import { getHeartRateStatistics } from './heart-rate.utils';
+
+type HomeFeedCursor = ActivityCursor | 'done' | undefined;
+type HomeFeedCursors = {
+  my?: HomeFeedCursor;
+  followers?: HomeFeedCursor;
+  favorites?: HomeFeedCursor;
+};
 
 @Injectable()
 export class ActivityService {
@@ -69,70 +67,47 @@ export class ActivityService {
     @Optional()
     @Inject(StaticMapService)
     staticMapService?: StaticMapService,
+    @Optional()
+    @Inject(ActivityAccessService)
+    activityAccessService?: ActivityAccessService,
+    @Optional()
+    @Inject(ActivityReadService)
+    activityReadService?: ActivityReadService,
   ) {
     this.persistenceService = persistenceService ?? new ActivityPersistenceService(this.prisma);
     this.storageService = storageService;
     this.mediaCleanupService = mediaCleanupService;
     this.staticMapService = staticMapService;
+    this.accessService = activityAccessService ?? new ActivityAccessService(this.prisma);
+    this.readService =
+      activityReadService ??
+      new ActivityReadService(this.prisma, this.accountService, this.accessService, storageService);
   }
 
   private readonly persistenceService: ActivityPersistenceService;
   private readonly storageService?: StorageService;
   private readonly mediaCleanupService?: MediaCleanupService;
   private readonly staticMapService?: StaticMapService;
-
-  private async isFollower(viewerId: string, ownerId: string) {
-    if (viewerId === ownerId) return false;
-    const relation = await this.prisma.friend.findUnique({
-      where: { userId_friendId: { userId: viewerId, friendId: ownerId } },
-      select: { id: true },
-    });
-    return Boolean(relation);
-  }
-
-  private async getVisibilityFilter(ownerId: string, currentUserId?: string) {
-    if (!currentUserId || currentUserId === ownerId) return {};
-    const followsOwner = await this.isFollower(currentUserId, ownerId);
-    return followsOwner
-      ? { visibility: { in: ACTIVITY_VISIBLE_TO_FOLLOWERS } }
-      : { visibility: ACTIVITY_VISIBILITY.public };
-  }
+  private readonly accessService: ActivityAccessService;
+  private readonly readService: ActivityReadService;
 
   async canAccessActivity(id: string, currentUserId?: string) {
-    if (!currentUserId) return false;
-
-    const activity = await this.prisma.activity.findUnique({
-      where: { id },
-      select: { userId: true, visibility: true },
-    });
-
-    return this.canAccessActivityData(activity, currentUserId);
+    return await this.accessService.canAccessActivity(id, currentUserId);
   }
 
   async canAccessActivityData(activity: { userId: string; visibility: string } | null, currentUserId?: string) {
-    if (!activity || !currentUserId) return false;
-    if (activity.userId === currentUserId || activity.visibility === ACTIVITY_VISIBILITY.public) return true;
-    if (activity.visibility !== ACTIVITY_VISIBILITY.followers) return false;
-    return this.isFollower(currentUserId, activity.userId);
+    return await this.accessService.canAccessActivityData(activity, currentUserId);
   }
 
   async canInteractWithActivity(id: string, currentUserId: string) {
-    const activity = await this.prisma.activity.findUnique({
-      where: { id },
-      select: {
-        userId: true,
-        profile: { select: { allowActivityInteractions: true } },
-      },
-    });
-
-    return Boolean(
-      activity && (activity.userId === currentUserId || activity.profile?.allowActivityInteractions !== false),
-    );
+    return await this.accessService.canInteractWithActivity(id, currentUserId);
   }
 
   async createActivity(activityDto: ActivityDto, id: string) {
     let uploadedRouteKey: string | undefined;
+    let uploadedHeartRateKey: string | undefined;
     let uploadedMapKey: string | undefined;
+    let uploadedRouteOnlyMapKey: string | undefined;
     let uploadedActivityMediaKeys: string[] = [];
     const mediaCreatedAt = new Date();
     try {
@@ -152,14 +127,24 @@ export class ActivityService {
       const account = await this.accountService.getAccountByUserId(id);
       const locations = activityDto.locations;
       const storageService = this.storageService;
+      const migratedActivity = activityDto as ActivityDto &
+        Pick<MigratedActivity, 'heartRateSamples' | 'averageHeartRate' | 'minHeartRate' | 'maxHeartRate'>;
+      const heartRateSamples = migratedActivity.heartRateSamples;
+      if (heartRateSamples?.length && !storageService) {
+        throw new ServiceUnavailableException('Сервис хранения данных пульса не настроен');
+      }
       let media = activityDto.media;
       let activityId: string | undefined = media?.length ? randomUUID() : undefined;
       let routeMetadata;
-      if (!activityId && storageService && locations?.length) activityId = randomUUID();
-      if (storageService && (locations?.length || media?.length)) {
+      if (!activityId && storageService && (locations?.length || heartRateSamples?.length)) activityId = randomUUID();
+      if (storageService && (locations?.length || media?.length || heartRateSamples?.length)) {
         activityId ??= randomUUID();
         if (locations?.length) {
           routeMetadata = await storageService.uploadActivityRoute(id, activityId, locations);
+          uploadedRouteKey = routeMetadata.key;
+        }
+        if (heartRateSamples?.length) {
+          uploadedHeartRateKey = await storageService.uploadActivityHeartRateSamples(id, activityId, heartRateSamples);
         }
         if (media?.length) {
           const promotedMedia = await storageService.promoteActivityPhotos(id, activityId, media, mediaCreatedAt);
@@ -167,22 +152,41 @@ export class ActivityService {
           uploadedActivityMediaKeys = promotedMedia.keys;
         }
       }
-      uploadedRouteKey = routeMetadata?.key;
+      uploadedRouteKey ??= routeMetadata?.key;
 
       const generatedMap = locations?.length
         ? this.staticMapService
-          ? await this.staticMapService.generateActivityMap({ userId: id, activityId, locations })
+          ? await this.staticMapService.generateActivityMap({
+              userId: id,
+              activityId,
+              locations,
+              hideMap: false,
+            })
           : undefined
         : undefined;
+      const generatedRouteOnlyMap =
+        locations?.length && activityDto.hideMap
+          ? await this.staticMapService?.generateActivityMap({
+              userId: id,
+              activityId,
+              locations,
+              hideMap: true,
+            })
+          : undefined;
       uploadedMapKey = generatedMap?.key;
+      uploadedRouteOnlyMapKey = generatedRouteOnlyMap?.key;
       const mapPhotoUrl = locations?.length
         ? (generatedMap?.url ?? (this.staticMapService ? null : getMapBoxImage(locations)))
         : activityDto.mapPhotoUrl;
+      const routeOnlyMapPhotoUrl = generatedRouteOnlyMap?.url ?? null;
 
       const mapPhotoUrlBlurhash = null;
-      const activityFields = { ...activityDto };
+      const activityFields = { ...activityDto } as Record<string, unknown>;
+      const heartRateStatistics = heartRateSamples?.length ? getHeartRateStatistics(heartRateSamples) : {};
       delete activityFields.locations;
       delete activityFields.media;
+      delete activityFields.heartRateSamples;
+      delete activityFields.heartRateStorageKey;
       activityFields.visibility = activityDto.visibility ?? ACTIVITY_VISIBILITY.public;
       const description = activityDto.description?.trim() || null;
 
@@ -191,6 +195,12 @@ export class ActivityService {
         userId: id,
         profileId: `${account?.id}`,
         ...activityFields,
+        ...heartRateStatistics,
+        ...(migratedActivity.averageHeartRate !== undefined
+          ? { averageHeartRate: migratedActivity.averageHeartRate }
+          : {}),
+        ...(migratedActivity.minHeartRate !== undefined ? { minHeartRate: migratedActivity.minHeartRate } : {}),
+        ...(migratedActivity.maxHeartRate !== undefined ? { maxHeartRate: migratedActivity.maxHeartRate } : {}),
         description,
         elevationGain: activityDto.locations?.length
           ? getElevationGainFromLocations(activityDto.locations)
@@ -207,18 +217,12 @@ export class ActivityService {
               routeChecksum: routeMetadata.checksum,
             }
           : {}),
+        ...(uploadedHeartRateKey ? { heartRateStorageKey: uploadedHeartRateKey } : {}),
         mapPhotoUrl,
+        routeOnlyMapPhotoUrl,
         mapPhotoUrlBlurhash,
         mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued,
-        caloriesActive: calculateActiveCalories({
-          weight: account?.weight,
-          height: account?.height,
-          age: account?.age,
-          gender: account?.gender,
-          sport: activityDto.sport,
-          distance: activityDto.distance,
-          duration: activityDto.duration,
-        }),
+        caloriesActive: this.getWatchWorkoutCalories(activityDto, account),
       };
       const mediaCount = Array.isArray(media) ? media.length : 0;
       const locationCount = Array.isArray(activityDto.locations) ? activityDto.locations.length : 0;
@@ -226,11 +230,13 @@ export class ActivityService {
         `Сохранение активности: userId=${id}, sport=${activityDto.sport}, date=${activityDto.date}, media=${mediaCount}, locations=${locationCount}`,
       );
 
-      const mediaRows = this.getActivityMediaRows(activityId, id, data.date ?? new Date(), media);
-      return omitMediaProcessingStatus(await this.persistenceService.create(data, mediaRows));
+      const mediaRows = this.getActivityMediaRows(activityId, id, activityDto.date ?? new Date(), media);
+      return omitActivityHeartRateSamples(await this.persistenceService.create(data, mediaRows));
     } catch (error) {
       await this.deleteUploadedRoute(uploadedRouteKey);
+      await this.deleteUploadedRoute(uploadedHeartRateKey);
       await this.deleteUploadedRoute(uploadedMapKey);
+      await this.deleteUploadedRoute(uploadedRouteOnlyMapKey);
       await Promise.all(uploadedActivityMediaKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);
     }
@@ -251,7 +257,10 @@ export class ActivityService {
       sourceActivityId: string | null;
       profileId: string;
       routeStorageKey: string | null;
+      heartRateStorageKey: string | null;
       mapPhotoUrl: string | null;
+      routeOnlyMapPhotoUrl: string | null;
+      hideMap: boolean;
     };
     const existingActivities = (
       uniqueWorkouts.length
@@ -266,7 +275,10 @@ export class ActivityService {
               sourceActivityId: true,
               profileId: true,
               routeStorageKey: true,
+              heartRateStorageKey: true,
               mapPhotoUrl: true,
+              routeOnlyMapPhotoUrl: true,
+              hideMap: true,
             },
           })
         : []
@@ -301,27 +313,36 @@ export class ActivityService {
       id: string;
       profileId: string;
       routeStorageKey: string | null;
+      heartRateStorageKey: string | null;
       mapPhotoUrl: string | null;
+      routeOnlyMapPhotoUrl: string | null;
+      hideMap: boolean;
     },
     userId: string,
   ) {
     let uploadedRouteKey: string | undefined;
+    let uploadedHeartRateKey: string | undefined;
     let uploadedMapKey: string | undefined;
+    let uploadedRouteOnlyMapKey: string | undefined;
     let preparedData: Record<string, unknown> = {};
     let updatedActivity: unknown;
+    let didUpdateHeartRate = false;
 
     try {
       if (workout.locations?.length) {
         const prepared = await this.prepareActivityRoute({
           ...workout,
+          heartRateSamples: undefined,
           // Use a fresh storage namespace so route and map caches cannot serve an older sync.
           id: randomUUID(),
           userId,
           profileId: existingActivity.profileId,
+          hideMap: existingActivity.hideMap,
         });
         preparedData = prepared.data as unknown as Record<string, unknown>;
         uploadedRouteKey = prepared.routeKey;
         uploadedMapKey = prepared.mapKey;
+        uploadedRouteOnlyMapKey = prepared.routeOnlyMapKey;
       }
 
       const updateData: Record<string, unknown> = {
@@ -333,7 +354,24 @@ export class ActivityService {
       };
       if (workout.timeZone !== undefined) updateData.timeZone = workout.timeZone;
       if (workout.steps !== undefined) updateData.steps = workout.steps;
+      if (workout.heartRateSamples !== undefined) {
+        didUpdateHeartRate = true;
+        if (workout.heartRateSamples.length) {
+          if (!this.storageService) throw new ServiceUnavailableException('Сервис хранения данных пульса не настроен');
+          uploadedHeartRateKey = await this.storageService.uploadActivityHeartRateSamples(
+            userId,
+            existingActivity.id,
+            workout.heartRateSamples,
+          );
+          updateData.heartRateStorageKey = uploadedHeartRateKey;
+        } else {
+          updateData.heartRateStorageKey = null;
+        }
+        Object.assign(updateData, getHeartRateStatistics(workout.heartRateSamples));
+      }
       if (workout.title?.trim()) updateData.title = workout.title.trim();
+      const profile = await this.accountService.getAccountByUserId(userId);
+      updateData.caloriesActive = this.getWatchWorkoutCalories(workout, profile);
       if (workout.kilometresSplit !== undefined) updateData.kilometresSplit = workout.kilometresSplit;
       if (preparedData.elevationGain !== undefined) updateData.elevationGain = preparedData.elevationGain;
 
@@ -351,6 +389,9 @@ export class ActivityService {
         updateData.weatherCode = null;
         updateData.locationEnrichmentStatus = ACTIVITY_ENRICHMENT_STATUS.queued;
         if ('mapPhotoUrl' in preparedData) updateData.mapPhotoUrl = preparedData.mapPhotoUrl;
+        if ('routeOnlyMapPhotoUrl' in preparedData) {
+          updateData.routeOnlyMapPhotoUrl = preparedData.routeOnlyMapPhotoUrl;
+        }
       }
 
       updatedActivity = await this.prisma.activity.update({
@@ -358,17 +399,28 @@ export class ActivityService {
         data: updateData as never,
       });
     } catch (error) {
-      await Promise.all([this.deleteUploadedRoute(uploadedRouteKey), this.deleteUploadedRoute(uploadedMapKey)]);
+      await Promise.all([
+        this.deleteUploadedRoute(uploadedRouteKey),
+        this.deleteUploadedRoute(uploadedMapKey),
+        this.deleteUploadedRoute(uploadedRouteOnlyMapKey),
+        this.deleteUploadedRoute(uploadedHeartRateKey),
+      ]);
       handleServiceError(error);
     }
 
-    if (uploadedRouteKey && this.mediaCleanupService) {
+    if ((uploadedRouteKey || didUpdateHeartRate) && this.mediaCleanupService) {
       const oldKeys = this.getActivityStorageKeys(userId, {
         routeStorageKey: existingActivity.routeStorageKey,
+        heartRateStorageKey: existingActivity.heartRateStorageKey,
         mapPhotoUrl: existingActivity.mapPhotoUrl,
+        routeOnlyMapPhotoUrl: existingActivity.routeOnlyMapPhotoUrl,
         media: [],
       });
-      const newKeys = new Set([uploadedRouteKey, uploadedMapKey].filter((key): key is string => Boolean(key)));
+      const newKeys = new Set(
+        [uploadedRouteKey, uploadedMapKey, uploadedRouteOnlyMapKey, uploadedHeartRateKey].filter((key): key is string =>
+          Boolean(key),
+        ),
+      );
       try {
         await Promise.all(
           oldKeys
@@ -380,7 +432,7 @@ export class ActivityService {
       }
     }
 
-    return omitMediaProcessingStatus(updatedActivity);
+    return omitActivityHeartRateSamples(updatedActivity);
   }
 
   async createActivitiesFromMigrationArchive(
@@ -422,13 +474,25 @@ export class ActivityService {
                 sourceActivityId: { in: [...sourceActivityIds] },
               })),
             },
-            select: { id: true, userId: true, sourceActivityId: true, routeStorageKey: true, mapPhotoUrl: true },
+            select: {
+              id: true,
+              userId: true,
+              sourceActivityId: true,
+              routeStorageKey: true,
+              heartRateStorageKey: true,
+              mapPhotoUrl: true,
+              routeOnlyMapPhotoUrl: true,
+              hideMap: true,
+            },
           })) as {
             id: string;
             userId: string;
             sourceActivityId: string;
             routeStorageKey: string | null;
+            heartRateStorageKey: string | null;
             mapPhotoUrl: string | null;
+            routeOnlyMapPhotoUrl: string | null;
+            hideMap: boolean;
           }[])
         : [];
       const existingActivitiesBySource = new Map(
@@ -436,12 +500,36 @@ export class ActivityService {
           (activity) => [activity.userId + '\u0000strava\u0000' + activity.sourceActivityId, activity] as const,
         ),
       );
+      const calorieProfileByUser = new Map<string, Awaited<ReturnType<AccountService['getAccountByUserId']>>>();
+      const usersNeedingCalories = [
+        ...new Set(uniqueActivities.filter(({ caloriesActive }) => caloriesActive == null).map(({ userId }) => userId)),
+      ];
+      await Promise.all(
+        usersNeedingCalories.map(async (userId) => {
+          if (typeof this.accountService.getAccountByUserId !== 'function') return;
+          calorieProfileByUser.set(userId, await this.accountService.getAccountByUserId(userId));
+        }),
+      );
       const activitiesWithTitles = uniqueActivities.map((activity) => {
         const key = activity.userId + '\u0000' + activity.source + '\u0000' + activity.sourceActivityId;
         const existingActivity = existingActivitiesBySource.get(key);
         const sourceId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
+        const profile = calorieProfileByUser.get(activity.userId);
+        const caloriesActive =
+          activity.caloriesActive ??
+          calculateActiveCalories({
+            weight: profile?.weight,
+            height: profile?.height,
+            age: profile?.age,
+            gender: profile?.gender,
+            sport: activity.sport,
+            distance: activity.distance,
+            duration: activity.duration,
+          });
         return {
           ...activity,
+          caloriesActive,
+          hideMap: existingActivity?.hideMap ?? activity.hideMap ?? false,
           // Use a fresh storage namespace for replacements so immutable map caches cannot serve old imagery.
           id: existingActivity ? randomUUID() : sourceId,
           title: activity.title?.trim()
@@ -455,7 +543,9 @@ export class ActivityService {
           const preparedActivities: {
             data: Record<string, unknown>;
             routeKey?: string;
+            heartRateKey?: string;
             mapKey?: string;
+            routeOnlyMapKey?: string;
             existingActivity?: (typeof existingActivities)[number];
             userId: string;
           }[] = [];
@@ -477,6 +567,10 @@ export class ActivityService {
                       typeof preparedData.mapPhotoUrl === 'string' && preparedData.mapPhotoUrl.trim()
                         ? preparedData.mapPhotoUrl
                         : null,
+                    routeOnlyMapPhotoUrl:
+                      typeof preparedData.routeOnlyMapPhotoUrl === 'string' && preparedData.routeOnlyMapPhotoUrl.trim()
+                        ? preparedData.routeOnlyMapPhotoUrl
+                        : null,
                     routeStorageKey: preparedData.routeStorageKey ?? null,
                     routeFormatVersion: preparedData.routeFormatVersion ?? null,
                     routePointCount: preparedData.routePointCount ?? null,
@@ -489,13 +583,15 @@ export class ActivityService {
                     weatherWindSpeed: null,
                     weatherCode: null,
                     locationEnrichmentStatus: ACTIVITY_ENRICHMENT_STATUS.queued,
-                    caloriesActive: null,
+                    caloriesActive: preparedData.caloriesActive ?? null,
                   }
                 : preparedData;
               preparedActivities.push({
                 data,
                 routeKey: prepared.routeKey,
+                heartRateKey: prepared.heartRateKey,
                 mapKey: prepared.mapKey,
+                routeOnlyMapKey: prepared.routeOnlyMapKey,
                 existingActivity,
                 userId: activity.userId,
               });
@@ -511,16 +607,22 @@ export class ActivityService {
               this.getActivityMediaRows(data.id, data.userId, data.date ?? new Date(), data.media),
             );
             const result = await this.persistenceService.upsertMany(preparedData, database, media);
-            const cleanupJobs = preparedActivities.flatMap(({ routeKey, mapKey, existingActivity, userId }) => {
-              if (!existingActivity) return [];
-              const oldKeys = this.getActivityStorageKeys(userId, {
-                routeStorageKey: existingActivity.routeStorageKey,
-                mapPhotoUrl: existingActivity.mapPhotoUrl,
-                media: [],
-              });
-              const newKeys = new Set([routeKey, mapKey].filter((key): key is string => Boolean(key)));
-              return oldKeys.filter((key) => !newKeys.has(key)).map((storageKey) => ({ userId, storageKey }));
-            });
+            const cleanupJobs = preparedActivities.flatMap(
+              ({ routeKey, heartRateKey, mapKey, routeOnlyMapKey, existingActivity, userId }) => {
+                if (!existingActivity) return [];
+                const oldKeys = this.getActivityStorageKeys(userId, {
+                  routeStorageKey: existingActivity.routeStorageKey,
+                  heartRateStorageKey: existingActivity.heartRateStorageKey,
+                  mapPhotoUrl: existingActivity.mapPhotoUrl,
+                  routeOnlyMapPhotoUrl: existingActivity.routeOnlyMapPhotoUrl,
+                  media: [],
+                });
+                const newKeys = new Set(
+                  [routeKey, heartRateKey, mapKey, routeOnlyMapKey].filter((key): key is string => Boolean(key)),
+                );
+                return oldKeys.filter((key) => !newKeys.has(key)).map((storageKey) => ({ userId, storageKey }));
+              },
+            );
             if (this.mediaCleanupService) {
               await Promise.all(
                 cleanupJobs.map(({ userId, storageKey }) =>
@@ -532,7 +634,12 @@ export class ActivityService {
           } catch (error) {
             await Promise.all(
               preparedActivities
-                .flatMap(({ routeKey, mapKey }) => [routeKey, mapKey])
+                .flatMap(({ routeKey, heartRateKey, mapKey, routeOnlyMapKey }) => [
+                  routeKey,
+                  heartRateKey,
+                  mapKey,
+                  routeOnlyMapKey,
+                ])
                 .map((key) => this.deleteUploadedRoute(key)),
             );
             throw error;
@@ -568,7 +675,7 @@ export class ActivityService {
     try {
       const promoted = await this.storageService.promoteActivityPhotos(userId, activityId, media, new Date());
       promotedKeys = promoted.keys;
-      await this.prisma.$transaction(async (transaction) => {
+      const createdMedia = await this.prisma.$transaction(async (transaction) => {
         const currentCount = await transaction.activityMedia.count({ where: { activityId } });
         if (currentCount + promoted.photos.length > UPLOAD_LIMITS.activityMediaFiles) {
           throw new BadRequestException(
@@ -584,13 +691,15 @@ export class ActivityService {
         const rows = this.getActivityMediaRows(activityId, userId, activity.date, promoted.photos).map(
           (row, index) => ({ ...row, position: positionOffset + index }),
         );
-        await transaction.activityMedia.createMany({ data: rows });
+        const createdRows = [];
+        for (const data of rows) createdRows.push(await transaction.activityMedia.create({ data }));
         await transaction.activity.update({
           where: { id: activityId },
           data: { mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued },
         });
+        return createdRows;
       });
-      return { success: true, media: promoted.photos };
+      return { success: true, media: createdMedia };
     } catch (error) {
       await Promise.all(promotedKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);
@@ -633,9 +742,29 @@ export class ActivityService {
 
   async updateActivity(activityDto: ActivityDto, id: string, userId = id) {
     try {
-      const { date, description, emotion, visibility, sport, title, distance, duration, speed } = activityDto;
+      const { date, description, emotion, visibility, hideMap, sport, title, distance, duration, speed } = activityDto;
       const account = await this.accountService.getAccountByUserId(userId);
-      const data = {
+      const existingActivity =
+        hideMap !== undefined || activityDto.caloriesActive === undefined
+          ? await this.prisma.activity.findFirst({
+              where: { id, userId },
+              select: {
+                source: true,
+                caloriesActive: true,
+                hideMap: true,
+                routeStorageKey: true,
+                mapPhotoUrl: true,
+                routeOnlyMapPhotoUrl: true,
+              },
+            })
+          : null;
+      const sourceCalories =
+        existingActivity && ['strava', 'health-connect', 'healthkit'].includes(existingActivity.source ?? '')
+          ? existingActivity.caloriesActive
+          : null;
+      let previousMapPhotoUrl: string | null = null;
+      let previousRouteOnlyMapPhotoUrl: string | null = null;
+      const data: Record<string, unknown> = {
         title,
         sport,
         visibility,
@@ -645,17 +774,83 @@ export class ActivityService {
         distance,
         duration,
         speed,
-        caloriesActive: calculateActiveCalories({
-          weight: account?.weight,
-          height: account?.height,
-          age: account?.age,
-          gender: account?.gender,
-          sport,
-          distance,
-          duration,
-        }),
+        caloriesActive:
+          activityDto.caloriesActive ??
+          sourceCalories ??
+          calculateActiveCalories({
+            weight: account?.weight,
+            height: account?.height,
+            age: account?.age,
+            gender: account?.gender,
+            sport,
+            distance,
+            duration,
+          }),
       };
+
+      if (hideMap !== undefined) {
+        if (!existingActivity) throw new NotFoundException('Активность не найдена');
+        data.hideMap = hideMap;
+
+        // Legacy hidden activities only have the route-only image in mapPhotoUrl.
+        const shouldGenerateFullMap =
+          !existingActivity.mapPhotoUrl || (existingActivity.hideMap && !existingActivity.routeOnlyMapPhotoUrl);
+        const shouldGenerateRouteOnlyMap = hideMap && !existingActivity.routeOnlyMapPhotoUrl;
+        if (
+          (shouldGenerateFullMap || shouldGenerateRouteOnlyMap) &&
+          existingActivity.routeStorageKey &&
+          this.storageService &&
+          this.staticMapService
+        ) {
+          const locations = await this.storageService.readActivityRoute(existingActivity.routeStorageKey);
+          const activityId = randomUUID();
+
+          if (shouldGenerateFullMap) {
+            const generatedMap = await this.staticMapService.generateActivityMap({
+              userId,
+              activityId,
+              locations,
+              hideMap: false,
+            });
+            if (generatedMap?.url) {
+              previousMapPhotoUrl = existingActivity.mapPhotoUrl;
+              data.mapPhotoUrl = generatedMap.url;
+              data.mapPhotoUrlBlurhash = null;
+              data.mediaProcessingStatus = ACTIVITY_MEDIA_PROCESSING_STATUS.queued;
+            }
+          }
+
+          if (shouldGenerateRouteOnlyMap) {
+            const generatedRouteOnlyMap = await this.staticMapService.generateActivityMap({
+              userId,
+              activityId,
+              locations,
+              hideMap: true,
+            });
+            if (generatedRouteOnlyMap?.url) {
+              previousRouteOnlyMapPhotoUrl = existingActivity.routeOnlyMapPhotoUrl;
+              data.routeOnlyMapPhotoUrl = generatedRouteOnlyMap.url;
+            }
+          }
+        }
+      }
+
       const activity = await this.persistenceService.update(id, userId, data);
+      if ((previousMapPhotoUrl || previousRouteOnlyMapPhotoUrl) && this.mediaCleanupService) {
+        const oldMapKeys = this.getActivityStorageKeys(userId, {
+          routeStorageKey: null,
+          mapPhotoUrl: previousMapPhotoUrl,
+          routeOnlyMapPhotoUrl: previousRouteOnlyMapPhotoUrl,
+          media: [],
+        });
+        try {
+          await Promise.all(
+            [...oldMapKeys].map((storageKey) => this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey)),
+          );
+        } catch (error) {
+          this.logger.error('Не удалось поставить старые файлы активности в очередь удаления', error);
+        }
+      }
       if (date) {
         await this.prisma.activityMedia.updateMany({ where: { activityId: id }, data: { activityDate: date } });
       }
@@ -668,124 +863,19 @@ export class ActivityService {
   }
 
   async getLocationsByActivityId(id: string, currentUserId?: string) {
-    const activity = await this.prisma.activity.findUnique({
-      where: { id },
-      select: {
-        routeStorageKey: true,
-        kilometresSplit: true,
-        userId: true,
-        visibility: true,
-        profile: { select: { allowActivityReplayViewing: true } },
-      },
-    });
-    if (!activity || !currentUserId) return null;
+    return await this.readService.getLocationsByActivityId(id, currentUserId);
+  }
 
-    // The activity row already contains the fields required for the common
-    // owner/public checks. Avoid fetching the same row a second time; only
-    // follower-only activities need the additional relationship lookup.
-    const isOwner = activity.userId === currentUserId;
-    const isPublic = activity.visibility === ACTIVITY_VISIBILITY.public;
-    const isFollowerActivity =
-      activity.visibility === ACTIVITY_VISIBILITY.followers &&
-      (isOwner || (await this.isFollower(currentUserId, activity.userId)));
-    if (!isOwner && !isPublic && !isFollowerActivity) return null;
-    if (!isOwner && activity.profile?.allowActivityReplayViewing === false) return null;
-    let locations: LocationObject[] | undefined;
-    if (activity.routeStorageKey) {
-      if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');
-      locations = reduceLocations(
-        await this.storageService.readActivityRoute(activity.routeStorageKey),
-        MAX_MAP_ROUTE_LOCATIONS,
-      );
-    }
-    return { locations, kilometresSplit: activity.kilometresSplit };
+  async getChartDataByActivityId(id: string, currentUserId?: string) {
+    return await this.readService.getChartDataByActivityId(id, currentUserId);
   }
 
   async getActivityByActivityId(id: string, currentUserId?: string) {
-    try {
-      const activity = await this.prisma.activity.findUnique({
-        where: { id },
-        select: ACTIVITY_DETAILS_SELECT,
-      });
-      if (!activity || !(await this.canAccessActivityData(activity, currentUserId))) return null;
-      return activity ? normalizeActivityDetails(activity as Record<string, unknown>) : activity;
-    } catch (error) {
-      handleServiceError(error);
-    }
+    return await this.readService.getActivityByActivityId(id, currentUserId);
   }
 
   async getMediaByUserId(id: string, take = '10', cursor?: ActivityMediaCursor, currentUserId?: string) {
-    try {
-      const pageSize = Number(take);
-      if (currentUserId && currentUserId !== id) {
-        const profile = await this.prisma.profile.findUnique({
-          where: { userId: id },
-          select: { hideProfilePhotos: true },
-        });
-        if (profile?.hideProfilePhotos) {
-          return { media: [], hasMore: false, nextCursor: null, isLastPage: true };
-        }
-      }
-      const visibilityFilter = await this.getVisibilityFilter(id, currentUserId);
-      const media = await this.prisma.activityMedia.findMany({
-        where: {
-          userId: id,
-          ...(Object.keys(visibilityFilter).length ? { activity: visibilityFilter } : {}),
-          ...(cursor
-            ? {
-                OR: [
-                  { activityDate: { lt: cursor.date } },
-                  { activityDate: cursor.date, activityId: { lt: cursor.id } },
-                  { activityDate: cursor.date, activityId: cursor.id, position: { gt: cursor.photoIndex } },
-                ],
-              }
-            : {}),
-        },
-        orderBy: [{ activityDate: 'desc' }, { activityId: 'desc' }, { position: 'asc' }],
-        take: pageSize + 1,
-        select: {
-          activityDate: true,
-          activityId: true,
-          position: true,
-          id: true,
-          url: true,
-          thumbnail: true,
-          blurhash: true,
-        },
-      });
-      const hasMore = media.length > pageSize;
-      const slicedMedia = media.slice(0, pageSize) as Array<{
-        id: string;
-        activityDate: Date;
-        activityId: string;
-        position: number;
-        url: string;
-        thumbnail: string | null;
-        blurhash: string | null;
-      }>;
-      const lastMedia = slicedMedia.at(-1);
-      return {
-        media: slicedMedia.map(({ id, activityId, url, thumbnail, blurhash }) => ({
-          id,
-          activityId,
-          url,
-          thumbnail,
-          blurhash,
-        })),
-        hasMore,
-        nextCursor:
-          hasMore && lastMedia
-            ? encodeActivityMediaCursor({
-                date: lastMedia.activityDate,
-                id: lastMedia.activityId,
-                photoIndex: lastMedia.position,
-              })
-            : null,
-        isLastPage: !hasMore,
-      };
-    } catch (error) {
-      handleServiceError(error);
-    }
+    return await this.readService.getMediaByUserId(id, take, cursor, currentUserId);
   }
 
   async getFavoriteActivities(
@@ -793,34 +883,49 @@ export class ActivityService {
     take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
     cursor?: ActivityCursor,
   ) {
-    try {
-      const activitiesWithExtraItem = await this.prisma.activity.findMany({
-        where: {
-          userId: currentUserId,
-          isFavorite: true,
-          ...(cursor
-            ? {
-                OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
-              }
-            : {}),
-        },
-        orderBy: [{ date: 'desc' }, { id: 'desc' }],
-        take: Number(take) + 1,
-        select: ACTIVITY_CARD_SELECT,
-      });
-      const hasMore = activitiesWithExtraItem.length > Number(take);
-      const activities = activitiesWithExtraItem
-        .slice(0, Number(take))
-        .map((activity: Record<string, unknown>) => normalizeActivityCard(activity as Record<string, unknown>));
-      return {
-        activities,
-        hasMore,
-        nextCursor: hasMore && activities.length ? encodeActivityCursor(activities.at(-1)!) : null,
-        isLastPage: !hasMore,
-      };
-    } catch (error) {
-      handleServiceError(error);
-    }
+    return await this.readService.getFavoriteActivities(currentUserId, take, cursor);
+  }
+
+  async getHomeActivityFeeds(
+    currentUserId: string,
+    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
+    cursors: HomeFeedCursors = {},
+  ) {
+    const emptyPage = { activities: [], hasMore: false, nextCursor: null, isLastPage: true };
+    const readFeed = (cursor: HomeFeedCursor, read: (cursor?: ActivityCursor) => Promise<unknown>) =>
+      cursor === 'done' ? Promise.resolve(emptyPage) : read(cursor);
+
+    const [my, followers, favorites] = await Promise.all([
+      readFeed(cursors.my, (cursor) => this.getActivitesByUserId(currentUserId, take, cursor, currentUserId)),
+      readFeed(cursors.followers, (cursor) =>
+        this.getAllActivitiesWithFriends(currentUserId, take, cursor, currentUserId),
+      ),
+      readFeed(cursors.favorites, (cursor) => this.getFavoriteActivities(currentUserId, take, cursor)),
+    ]);
+
+    return { my, followers, favorites };
+  }
+
+  async getActivitesByUserId(
+    id: string,
+    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
+    cursor?: ActivityCursor,
+    currentUserId?: string,
+  ) {
+    return await this.readService.getActivitesByUserId(id, take, cursor, currentUserId);
+  }
+
+  async getActivitiesByTheirIds(ids?: string | string[], currentUserId?: string) {
+    return await this.readService.getActivitiesByTheirIds(ids, currentUserId);
+  }
+
+  async getAllActivitiesWithFriends(
+    id: string,
+    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
+    cursor?: ActivityCursor,
+    currentUserId = id,
+  ) {
+    return await this.readService.getAllActivitiesWithFriends(id, take, cursor, currentUserId);
   }
 
   async setActivityFavorite(id: string, currentUserId: string, isFavorite: boolean) {
@@ -838,197 +943,6 @@ export class ActivityService {
     }
   }
 
-  async getActivitesByUserId(
-    id: string,
-    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
-    cursor?: ActivityCursor,
-    currentUserId?: string,
-  ) {
-    try {
-      const visibilityFilter = await this.getVisibilityFilter(id, currentUserId);
-      const activitiesWithExtraItem = await this.prisma.activity.findMany({
-        where: {
-          userId: id,
-          ...visibilityFilter,
-          ...(cursor
-            ? {
-                OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
-              }
-            : {}),
-        },
-        orderBy: [{ date: 'desc' }, { id: 'desc' }],
-        take: Number(take) + 1,
-        select: ACTIVITY_CARD_SELECT,
-      });
-      const hasMore = activitiesWithExtraItem.length > Number(take);
-      const activities = activitiesWithExtraItem
-        .slice(0, Number(take))
-        .map((activity: Record<string, unknown>) => normalizeActivityCard(activity as Record<string, unknown>));
-      return {
-        activities,
-        hasMore,
-        nextCursor: hasMore && activities.length ? encodeActivityCursor(activities.at(-1)!) : null,
-        isLastPage: !hasMore,
-      };
-    } catch (error) {
-      handleServiceError(error);
-    }
-  }
-
-  async getActivitiesByTheirIds(ids?: string | string[], currentUserId?: string) {
-    const normalizedIds = (Array.isArray(ids) ? ids : [ids ?? ''])
-      .flatMap((activityId) => activityId.split(','))
-      .map((activityId) => activityId.trim())
-      .filter(Boolean);
-    if (!normalizedIds.length) return [];
-
-    const searchByStringOrArray = normalizedIds.length === 1 ? normalizedIds[0] : { in: normalizedIds };
-    try {
-      const followedUsers = currentUserId
-        ? await this.prisma.friend.findMany({ where: { userId: currentUserId }, select: { friendId: true } })
-        : [];
-      const followedUserIds = followedUsers.map((friend: { friendId: string }) => friend.friendId);
-      const activities = await this.prisma.activity.findMany({
-        where: {
-          id: searchByStringOrArray,
-          OR: [
-            ...(currentUserId ? [{ userId: currentUserId }] : []),
-            { visibility: ACTIVITY_VISIBILITY.public },
-            ...(followedUserIds.length
-              ? [{ userId: { in: followedUserIds }, visibility: ACTIVITY_VISIBILITY.followers }]
-              : []),
-          ],
-        },
-        orderBy: { date: 'desc' },
-        select: ACTIVITY_CARD_SELECT,
-      });
-      return activities.map((activity: Record<string, unknown>) => normalizeActivityCard(activity));
-    } catch (error) {
-      handleServiceError(error);
-    }
-  }
-
-  async getAllActivitiesWithFriends(
-    id: string,
-    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
-    cursor?: ActivityCursor,
-    currentUserId = id,
-  ) {
-    try {
-      const activitiesWithExtraItem = await this.prisma.$queryRaw<ActivityFeedSqlRow[]>`
-        SELECT
-          a."title",
-          a."date",
-          a."sport",
-          a."emotion",
-          a."id",
-          a."user_id" AS "userId",
-          a."visibility",
-          a."is_favorite" AS "isFavorite",
-          COALESCE(
-            (
-              SELECT json_agg(
-                json_build_object(
-                  'id', am."id",
-                  'url', am."url",
-                  'thumbnail', am."thumbnail",
-                  'blurhash', am."blurhash"
-                )
-                ORDER BY am."position" ASC
-              )
-              FROM "ActivityMedia" AS am
-              WHERE am."activity_id" = a."id"
-            ),
-            '[]'::json
-              ) AS "media",
-          a."mapPhotoUrl",
-          a."mapPhotoUrlBlurhash",
-          a."location_name" AS "locationName",
-          a."weather_temperature" AS "weatherTemperature",
-          a."weather_wind_speed" AS "weatherWindSpeed",
-          a."weather_code" AS "weatherCode",
-          a."calories_active" AS "caloriesActive",
-          a."duration",
-          a."distance",
-          a."steps",
-          a."elevationGain",
-          a."kilometresSplit",
-          json_build_object(
-            'userId', p."user_id",
-            'surname', p."surname",
-            'name', p."name",
-            'profilePhoto', p."profilePhoto",
-            'profilePhotoBlurhash', p."profilePhotoBlurhash",
-            'allowActivityInteractions', p."allow_activity_interactions",
-            'allowActivityReplayViewing', p."allow_activity_replay_viewing",
-            'allowActivitySharing', p."allow_activity_sharing"
-          ) AS "profile",
-          json_build_object(
-            'comments', (
-              SELECT COUNT(*)::int
-              FROM "Comment" AS c
-              WHERE c."activityId" = a."id"
-            ),
-            'likes', (
-              SELECT COUNT(*)::int
-              FROM "Like" AS l
-              WHERE l."activityId" = a."id"
-            )
-          ) AS "_count"
-        FROM "Activity" AS a
-        INNER JOIN "Profile" AS p ON p."id" = a."profileId"
-        WHERE a."visibility" IN ('public', 'followers')
-          AND (
-            a."user_id" = ${currentUserId}::uuid
-            OR EXISTS (
-              SELECT 1
-              FROM "Friend" AS f
-              WHERE f."user_id" = ${currentUserId}::uuid
-                AND f."friendId" = a."user_id"
-            )
-          )
-          AND (
-            ${cursor === undefined}
-            OR a."date" < ${cursor?.date ?? null}
-            OR (
-              a."date" = ${cursor?.date ?? null}
-              AND a."id" < ${cursor?.id ?? null}::uuid
-            )
-          )
-        ORDER BY a."date" DESC, a."id" DESC
-        LIMIT ${Number(take) + 1}::int
-      `;
-      const hasMore = activitiesWithExtraItem.length > Number(take);
-      const activities = activitiesWithExtraItem
-        .slice(0, Number(take))
-        .map((activity: ActivityFeedSqlRow) => normalizeActivityCard(activity as Record<string, unknown>));
-      const currentUserProfile =
-        typeof this.accountService.getAccountByUserId === 'function'
-          ? await this.accountService.getAccountByUserId(currentUserId)
-          : undefined;
-      return {
-        activities,
-        ...(currentUserProfile
-          ? {
-              currentUserProfile: {
-                userId: currentUserProfile.userId,
-                surname: currentUserProfile.surname,
-                name: currentUserProfile.name,
-                profilePhoto: currentUserProfile.profilePhoto,
-                profilePhotoBlurhash: currentUserProfile.profilePhotoBlurhash,
-              },
-            }
-          : {}),
-        hasMore,
-        nextCursor:
-          hasMore && activities.length ? encodeActivityCursor(activities.at(-1)! as unknown as ActivityCursor) : null,
-        isLastPage: !hasMore,
-      };
-    } catch (error) {
-      handleServiceError(error);
-    }
-  }
-
   async deleteActivityById(id: string, userId = id) {
     try {
       if (!this.mediaCleanupService) return await this.persistenceService.delete(id, userId);
@@ -1038,7 +952,9 @@ export class ActivityService {
           where: { id, userId },
           select: {
             routeStorageKey: true,
+            heartRateStorageKey: true,
             mapPhotoUrl: true,
+            routeOnlyMapPhotoUrl: true,
             media: { select: { url: true, thumbnail: true } },
           },
         });
@@ -1055,6 +971,31 @@ export class ActivityService {
     }
   }
 
+  private getWatchWorkoutCalories(
+    activity: Pick<ActivityDto, 'source' | 'caloriesActive' | 'sport' | 'distance' | 'duration'>,
+    profile: Awaited<ReturnType<AccountService['getAccountByUserId']>>,
+  ) {
+    const caloriesActive = activity.caloriesActive;
+    if (
+      (activity.source === 'health-connect' || activity.source === 'healthkit') &&
+      typeof caloriesActive === 'number' &&
+      Number.isFinite(caloriesActive) &&
+      caloriesActive >= 0
+    ) {
+      return Math.round(caloriesActive);
+    }
+
+    return calculateActiveCalories({
+      weight: profile?.weight,
+      height: profile?.height,
+      age: profile?.age,
+      gender: profile?.gender,
+      sport: activity.sport,
+      distance: activity.distance,
+      duration: activity.duration,
+    });
+  }
+
   private async prepareActivityRoute<
     T extends ActivityDto & { userId: string; profileId: string; sourceElevationGain?: number },
   >(activity: T) {
@@ -1066,53 +1007,92 @@ export class ActivityService {
       : activity.locations?.length
         ? getElevationGainFromLocations(activity.locations)
         : getElevationGainFromKilometreSplits(activity.kilometresSplit);
-    if (!activity.locations?.length || !this.storageService) {
-      const dataWithoutLocations = { ...activity };
+    const importedActivity = activity as T & Pick<MigratedActivity, 'heartRateSamples'>;
+    const heartRateSamples = importedActivity.heartRateSamples;
+    if (heartRateSamples?.length && !this.storageService) {
+      throw new ServiceUnavailableException('Сервис хранения данных пульса не настроен');
+    }
+
+    const activityId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
+    let routeKey: string | undefined;
+    let heartRateKey: string | undefined;
+    let mapKey: string | undefined;
+    let routeOnlyMapKey: string | undefined;
+
+    try {
+      if (heartRateSamples?.length && this.storageService) {
+        heartRateKey = await this.storageService.uploadActivityHeartRateSamples(
+          activity.userId,
+          activityId,
+          heartRateSamples,
+        );
+      }
+
+      const routeMetadata =
+        activity.locations?.length && this.storageService
+          ? await this.storageService.uploadActivityRoute(activity.userId, activityId, activity.locations)
+          : undefined;
+      routeKey = routeMetadata?.key;
+      const generatedMap =
+        activity.locations?.length && this.staticMapService
+          ? await this.staticMapService.generateActivityMap({
+              userId: activity.userId,
+              activityId,
+              locations: activity.locations,
+              hideMap: false,
+            })
+          : undefined;
+      mapKey = generatedMap?.key;
+      const generatedRouteOnlyMap =
+        activity.locations?.length && activity.hideMap
+          ? await this.staticMapService?.generateActivityMap({
+              userId: activity.userId,
+              activityId,
+              locations: activity.locations,
+              hideMap: true,
+            })
+          : undefined;
+      routeOnlyMapKey = generatedRouteOnlyMap?.key;
+
+      const dataWithoutLocations = { ...activity } as unknown as Record<string, unknown>;
       delete dataWithoutLocations.locations;
       delete dataWithoutLocations.sourceElevationGain;
+      delete dataWithoutLocations.heartRateSamples;
+      delete dataWithoutLocations.heartRateStorageKey;
+      if (importedActivity.heartRateSamples !== undefined) {
+        dataWithoutLocations.heartRateStorageKey = heartRateKey ?? null;
+      }
+
       return {
         data: {
           ...dataWithoutLocations,
           elevationGain,
+          id: activityId,
+          ...(routeMetadata
+            ? {
+                routeStorageKey: routeMetadata.key,
+                routeFormatVersion: routeMetadata.formatVersion,
+                routePointCount: routeMetadata.pointCount,
+                routeSizeBytes: routeMetadata.sizeBytes,
+                routeChecksum: routeMetadata.checksum,
+              }
+            : {}),
+          ...(activity.locations?.length
+            ? {
+                mapPhotoUrl: generatedMap?.url ?? (this.staticMapService ? null : getMapBoxImage(activity.locations)),
+                routeOnlyMapPhotoUrl: generatedRouteOnlyMap?.url ?? null,
+              }
+            : {}),
         },
-        routeKey: undefined,
-        mapKey: undefined,
+        routeKey,
+        heartRateKey,
+        mapKey,
+        routeOnlyMapKey,
       };
+    } catch (error) {
+      await Promise.all([routeKey, heartRateKey, mapKey, routeOnlyMapKey].map((key) => this.deleteUploadedRoute(key)));
+      throw error;
     }
-
-    const activityId = 'id' in activity && typeof activity.id === 'string' ? activity.id : randomUUID();
-    const routeMetadata = await this.storageService.uploadActivityRoute(
-      activity.userId,
-      activityId,
-      activity.locations,
-    );
-    const generatedMap = this.staticMapService
-      ? await this.staticMapService.generateActivityMap({
-          userId: activity.userId,
-          activityId,
-          locations: activity.locations,
-        })
-      : undefined;
-    const dataWithoutLocations = { ...activity };
-    delete dataWithoutLocations.locations;
-    delete dataWithoutLocations.sourceElevationGain;
-    return {
-      data: {
-        ...dataWithoutLocations,
-        elevationGain,
-        id: activityId,
-        routeStorageKey: routeMetadata.key,
-        routeFormatVersion: routeMetadata.formatVersion,
-        routePointCount: routeMetadata.pointCount,
-        routeSizeBytes: routeMetadata.sizeBytes,
-        routeChecksum: routeMetadata.checksum,
-        ...(this.staticMapService
-          ? { mapPhotoUrl: generatedMap?.url ?? dataWithoutLocations.mapPhotoUrl ?? null }
-          : {}),
-      },
-      routeKey: routeMetadata.key,
-      mapKey: generatedMap?.key,
-    };
   }
 
   private async deleteUploadedRoute(routeKey?: string) {
@@ -1126,16 +1106,31 @@ export class ActivityService {
 
   private getActivityStorageKeys(
     userId: string,
-    activity: { routeStorageKey: string | null; mapPhotoUrl?: string | null; media: unknown } | null,
+    activity: {
+      routeStorageKey: string | null;
+      heartRateStorageKey?: string | null;
+      mapPhotoUrl?: string | null;
+      routeOnlyMapPhotoUrl?: string | null;
+      media: unknown;
+    } | null,
   ) {
     const keys = new Set<string>();
     if (activity?.routeStorageKey?.startsWith(`${userId}/`)) keys.add(activity.routeStorageKey);
+    if (activity?.heartRateStorageKey?.startsWith(`${userId}/`)) keys.add(activity.heartRateStorageKey);
 
     if (this.storageService && activity?.mapPhotoUrl) {
       try {
         keys.add(this.storageService.getOwnedKey(userId, activity.mapPhotoUrl));
       } catch {
         // Mapbox and other external URLs are intentionally not deleted here.
+      }
+    }
+
+    if (this.storageService && activity?.routeOnlyMapPhotoUrl) {
+      try {
+        keys.add(this.storageService.getOwnedKey(userId, activity.routeOnlyMapPhotoUrl));
+      } catch {
+        // External URLs are intentionally not deleted here.
       }
     }
 

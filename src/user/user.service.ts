@@ -5,6 +5,7 @@ import { handleServiceError } from 'src/common/utils/database-errors';
 import { UserDto } from './user.dto';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
 import { StorageService } from 'src/storage/storage.service';
+import { PUBLIC_USER_PROFILE_SELECT } from 'src/account/const';
 
 @Injectable()
 export class UserService {
@@ -14,8 +15,11 @@ export class UserService {
     @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
   ) {}
 
-  async getProfileByUserId(userId: string) {
+  async getProfileByUserId(userId: string, currentUserId = userId) {
     try {
+      if (userId !== currentUserId) {
+        return await this.prisma.profile.findUnique({ where: { userId }, select: PUBLIC_USER_PROFILE_SELECT });
+      }
       return await this.prisma.profile.findUnique({ where: { userId } });
     } catch (error) {
       handleServiceError(error);

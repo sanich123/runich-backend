@@ -47,7 +47,7 @@ model User {
 
   @@unique([email], map: "Users_email_key")
   @@unique([phone], map: "Users_phone_key")
-  @@index(expression: "email gin_trgm_ops", type: "gin", name: "Users_email_trgm_idx")
+  @@index(expression: sql`email gin_trgm_ops`, type: "gin", name: "Users_email_trgm_idx")
   @@map("Users")
 }
 
@@ -62,6 +62,8 @@ model Profile {
   gender                String?
   height                String?
   age                   String?
+  restingHeartRate      String?                @map("resting_heart_rate")
+  maxHeartRate          String?                @map("max_heart_rate")
   profilePhoto          String?
   sport                 String?
   surname               String?
@@ -76,6 +78,9 @@ model Profile {
   profileSearchVisible Boolean                @default(true) @map("profile_search_visible")
   allowActivityInteractions Boolean           @default(true) @map("allow_activity_interactions")
   allowActivityReplayViewing Boolean          @default(true) @map("allow_activity_replay_viewing")
+  allowActivityHeartRateViewing Boolean       @default(true) @map("allow_activity_heart_rate_viewing")
+  allowActivityElevationViewing Boolean       @default(true) @map("allow_activity_elevation_viewing")
+  allowActivityPaceViewing Boolean            @default(true) @map("allow_activity_pace_viewing")
   allowActivitySharing Boolean                @default(true) @map("allow_activity_sharing")
   hideActivityStatistics Boolean              @default(false) @map("hide_activity_statistics")
   hideFollowingList Boolean                   @default(false) @map("hide_following_list")
@@ -90,9 +95,9 @@ model Profile {
   user                  User                   @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Profile_user_id_fkey")
 
   @@unique([userId], map: "Profile_user_id_key")
-  @@index(expression: "name gin_trgm_ops", type: "gin", name: "Profile_name_trgm_idx")
-  @@index(expression: "surname gin_trgm_ops", type: "gin", name: "Profile_surname_trgm_idx")
-  @@index(expression: "email gin_trgm_ops", type: "gin", name: "Profile_email_trgm_idx")
+  @@index(expression: sql`name gin_trgm_ops`, type: "gin", name: "Profile_name_trgm_idx")
+  @@index(expression: sql`surname gin_trgm_ops`, type: "gin", name: "Profile_surname_trgm_idx")
+  @@index(expression: sql`email gin_trgm_ops`, type: "gin", name: "Profile_email_trgm_idx")
   @@map("Profile")
 }
 
@@ -118,12 +123,14 @@ model Activity {
   routePointCount     Int?                 @map("route_point_count")
   routeSizeBytes      Int?                 @map("route_size_bytes")
   routeChecksum       VarChar(64)?         @map("route_checksum")
+  heartRateStorageKey VarChar(512)?        @map("heart_rate_storage_key")
   userId              Uuid                 @map("user_id")
   speed               Float
   sport               String
   title               String?
   kilometresSplit     Jsonb?
   mapPhotoUrl         String?
+  routeOnlyMapPhotoUrl String?             @map("route_only_map_photo_url")
   mediaProcessingStatus VarChar(16)       @default("queued") @map("media_processing_status")
   locationName        String?             @map("location_name")
   weatherTemperature  Float?              @map("weather_temperature")
@@ -132,12 +139,16 @@ model Activity {
   caloriesActive      Int?                @map("calories_active")
   locationEnrichmentStatus VarChar(16)    @default("queued") @map("location_enrichment_status")
   visibility          ActivityVisibility   @default(public)
+  hideMap             Boolean              @default(false) @map("hide_map")
   isFavorite          Boolean              @default(false) @map("is_favorite")
   mapPhotoUrlBlurhash String?
   profileId           Uuid
   source              VarChar(32)?
   sourceActivityId    VarChar(128)?
   steps               Int?
+  averageHeartRate    Int?                 @map("average_heart_rate")
+  minHeartRate        Int?                 @map("min_heart_rate")
+  maxHeartRate        Int?                 @map("max_heart_rate")
   comments            Comment[]
   likes               Like[]
   media               ActivityMedia[]

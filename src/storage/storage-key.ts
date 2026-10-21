@@ -17,6 +17,10 @@ export function getActivityMapKey(userId: string, activityId: string) {
   return `${userId}/activities/${activityId}/map.webp`;
 }
 
+export function getActivityRouteOnlyMapKey(userId: string, activityId: string) {
+  return `${userId}/activities/${activityId}/map-route-only.webp`;
+}
+
 export function getFeedbackPhotoKey(userId: string, feedbackId: string, extension: string, createdAt = new Date()) {
   return `${userId}/feedback/${getDateFolder(createdAt)}/${feedbackId}/${randomUUID()}.${extension}`;
 }

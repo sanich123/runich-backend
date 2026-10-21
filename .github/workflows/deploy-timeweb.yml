@@ -136,16 +136,6 @@ jobs:
                 fi
                 printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
                 echo "Production is ready at commit $DEPLOY_SHA using image $DEPLOY_IMAGE"
-                # PostgreSQL is an external Timeweb DBaaS service and has no
-                # Docker volume here. Migration archives live in S3.
-                # --remove-orphans above removes services retired from Compose;
-                # this prune removes their now-unused images and other Docker data.
-                docker system prune --all --force || echo 'Docker cleanup failed; keeping the healthy deployment.' >&2
-                # The two-stage Dockerfile leaves large, rebuildable BuildKit caches
-                # for the development and production dependency installs. Volumes
-                # are intentionally not pruned because rebuildable caches are
-                # safe to remove, while the migration archive must survive.
-                docker builder prune --all --force || echo 'Build cache cleanup failed; keeping the healthy deployment.' >&2
                 exit 0
               fi
               sleep 2
@@ -171,6 +161,7 @@ jobs:
           exit 1
 
       - name: Send deployment success email from Production server
+        id: send_success_email
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -196,3 +187,47 @@ jobs:
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd /opt/runich-backend/project && DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' docker compose -f docker-compose.timeweb.yml exec -T --env DEPLOY_SHA --env DEPLOY_RUN_URL nestjs_app xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' node scripts/send-deployment-success-email.mjs"
+
+
+      - name: Clean up Production Docker resources after notification
+        if: ${{ always() && steps.send_success_email.outcome != 'skipped' }}
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          : "${DEPLOY_HOST:?GitHub Secret DEPLOY_HOST is required}"
+          : "${DEPLOY_USER:?GitHub Secret DEPLOY_USER is required}"
+          : "${DEPLOY_SSH_KEY:?GitHub Secret DEPLOY_SSH_KEY is required}"
+          : "${DEPLOY_KNOWN_HOSTS:?GitHub Secret DEPLOY_KNOWN_HOSTS is required}"
+
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 644 "$HOME/.ssh/known_hosts"
+          unset DEPLOY_SSH_KEY
+
+          # This runs after the email step even if that script reports a failure.
+          # Cleanup is best effort, and neither external database nor volumes are pruned.
+          if ssh -i "$HOME/.ssh/id_ed25519" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /opt/runich-backend/project
+
+          echo 'Docker disk usage before cleanup:'
+          docker system df || echo 'Could not inspect Docker disk usage before cleanup.' >&2
+          docker system prune --all --force || echo 'Docker cleanup failed; keeping the healthy deployment.' >&2
+          docker builder prune --all --force || echo 'Build cache cleanup failed; keeping the healthy deployment.' >&2
+          echo 'Docker disk usage after cleanup:'
+          docker system df || echo 'Could not inspect Docker disk usage after cleanup.' >&2
+          REMOTE
+          then
+            echo 'Production Docker cleanup finished after notification.'
+          else
+            echo 'Production Docker cleanup could not be run; deployment remains healthy.' >&2
+          fi

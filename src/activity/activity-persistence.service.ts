@@ -12,13 +12,19 @@ type ActivityUpdateField =
   | 'sport'
   | 'title'
   | 'kilometresSplit'
+  | 'heartRateStorageKey'
+  | 'averageHeartRate'
+  | 'minHeartRate'
+  | 'maxHeartRate'
   | 'mapPhotoUrl'
+  | 'routeOnlyMapPhotoUrl'
   | 'routeStorageKey'
   | 'routeFormatVersion'
   | 'routePointCount'
   | 'routeSizeBytes'
   | 'routeChecksum'
   | 'mapPhotoUrlBlurhash'
+  | 'hideMap'
   | 'mediaProcessingStatus'
   | 'locationName'
   | 'weatherTemperature'
@@ -38,13 +44,19 @@ const ACTIVITY_UPDATE_FIELDS: ActivityUpdateField[] = [
   'sport',
   'title',
   'kilometresSplit',
+  'heartRateStorageKey',
+  'averageHeartRate',
+  'minHeartRate',
+  'maxHeartRate',
   'mapPhotoUrl',
+  'routeOnlyMapPhotoUrl',
   'routeStorageKey',
   'routeFormatVersion',
   'routePointCount',
   'routeSizeBytes',
   'routeChecksum',
   'mapPhotoUrlBlurhash',
+  'hideMap',
   'mediaProcessingStatus',
   'locationName',
   'weatherTemperature',

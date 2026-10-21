@@ -5,11 +5,13 @@ import {
   DAY_IN_MS,
   MAX_MOCK_ACTIVITY_PHOTOS,
   MAX_MOCK_RELATION_COUNT,
+  MOCK_ACTIVITY_COUNT,
+  MOCK_HEART_RATE_ACTIVITY_COUNT,
+  MOCK_ROUTE_ONLY_ACTIVITY_COUNT,
   MINUTE_IN_MS,
   MOCK_ACTIVITY_TITLES,
   MOCK_COMMENT_TEXTS,
   MOCK_EMOTIONS,
-  MOCK_SPORTS,
 } from './mock-seed.constants';
 import { createManyInBatches, random } from './mock-seed.helpers';
 import type { AnyRecord, MockActivitySeedStats, MockUser, SeedUser } from './mock-seed.types';
@@ -22,6 +24,18 @@ export async function seedMockActivities(
   activityTemplates: MockActivityTemplate[],
   activityPhotoUrls: readonly string[],
 ): Promise<MockActivitySeedStats> {
+  if (activityTemplates.length !== MOCK_ACTIVITY_COUNT) {
+    throw new Error('Mock activity seed requires exactly 100 templates');
+  }
+  const heartRateTemplateCount = activityTemplates.filter((template) => template.heartRateStorageKey !== null).length;
+  const routeOnlyTemplateCount = activityTemplates.length - heartRateTemplateCount;
+  if (
+    heartRateTemplateCount !== MOCK_HEART_RATE_ACTIVITY_COUNT ||
+    routeOnlyTemplateCount !== MOCK_ROUTE_ONLY_ACTIVITY_COUNT
+  ) {
+    throw new Error('Mock activity seed requires exactly 80 route-only and 20 heart-rate templates');
+  }
+
   const seedStartedAt = Date.now();
   let activityTotal = 0;
   let commentTotal = 0;
@@ -30,14 +44,13 @@ export async function seedMockActivities(
 
   for (const [userIndex, user] of mockUsers.entries()) {
     const profile = user.profile!;
-    const activityCount = random(100_000 + userIndex, MAX_MOCK_RELATION_COUNT);
+    const activityCount = MOCK_ACTIVITY_COUNT;
     const activityRows: AnyRecord[] = [];
     const mediaRows: AnyRecord[] = [];
 
     for (let activityIndex = 0; activityIndex < activityCount; activityIndex += 1) {
-      const template = activityTemplates.length
-        ? activityTemplates[(userIndex * MAX_MOCK_RELATION_COUNT + activityIndex) % activityTemplates.length]
-        : undefined;
+      const template =
+        activityTemplates[(userIndex * MAX_MOCK_RELATION_COUNT + activityIndex) % activityTemplates.length];
       const activityDate = new Date(seedStartedAt - (activityIndex + MAX_MOCK_RELATION_COUNT) * DAY_IN_MS);
 
       activityRows.push({
@@ -48,31 +61,34 @@ export async function seedMockActivities(
           template?.title ??
           `${MOCK_ACTIVITY_TITLES[activityIndex % MOCK_ACTIVITY_TITLES.length]} #${activityIndex + 1}`,
         description: template?.description ?? 'Mock activity for the Runich feed',
-        sport:
-          template?.sport ?? MOCK_SPORTS[(userIndex * MAX_MOCK_RELATION_COUNT + activityIndex) % MOCK_SPORTS.length],
-        distance: template?.distance ?? 5000 + random((userIndex + 1) * 100 + activityIndex, 25000),
-        duration: template?.duration ?? 1500 + random((userIndex + 1) * 200 + activityIndex, 9000),
-        speed: template?.speed ?? 8 + random((userIndex + 1) * 300 + activityIndex, 8),
+        sport: template.sport,
+        distance: template.distance,
+        duration: template.duration,
+        speed: template.speed,
         date: activityDate,
-        elevationGain: template?.elevationGain ?? null,
+        elevationGain: template.elevationGain,
         emotion: template?.emotion ?? MOCK_EMOTIONS[activityIndex % MOCK_EMOTIONS.length],
         visibility: 'public',
         kilometresSplit: template?.kilometresSplit ?? [
           { kilometre: 1, pace: 280 + random(userIndex + activityIndex, 45) },
           { kilometre: 2, pace: 285 + random(userIndex + activityIndex + 20, 45) },
         ],
-        steps: template?.steps ?? null,
-        locationName: template?.locationName ?? null,
-        weatherTemperature: template?.weatherTemperature ?? null,
-        weatherWindSpeed: template?.weatherWindSpeed ?? null,
-        weatherCode: template?.weatherCode ?? null,
-        caloriesActive: template?.caloriesActive ?? null,
-        routeStorageKey: template?.routeStorageKey ?? null,
-        routeFormatVersion: template?.routeFormatVersion ?? null,
-        routePointCount: template?.routePointCount ?? null,
-        routeSizeBytes: template?.routeSizeBytes ?? null,
-        routeChecksum: template?.routeChecksum ?? null,
-        mapPhotoUrl: template?.mapPhotoUrl ?? null,
+        steps: template.steps,
+        locationName: template.locationName,
+        weatherTemperature: template.weatherTemperature,
+        weatherWindSpeed: template.weatherWindSpeed,
+        weatherCode: template.weatherCode,
+        caloriesActive: template.caloriesActive,
+        routeStorageKey: template.routeStorageKey,
+        routeFormatVersion: template.routeFormatVersion,
+        routePointCount: template.routePointCount,
+        routeSizeBytes: template.routeSizeBytes,
+        routeChecksum: template.routeChecksum,
+        heartRateStorageKey: template.heartRateStorageKey,
+        averageHeartRate: template.averageHeartRate,
+        minHeartRate: template.minHeartRate,
+        maxHeartRate: template.maxHeartRate,
+        mapPhotoUrl: template.mapPhotoUrl,
         mapPhotoUrlBlurhash: null,
       });
       const activity = activityRows.at(-1)!;

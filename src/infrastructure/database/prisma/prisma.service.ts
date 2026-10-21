@@ -5,6 +5,7 @@ import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.servic
 import { seedMockData } from './mock-seed';
 import { createDatabaseRepositories, DatabaseRepositories, RuntimeClient } from './database-repository';
 import { databaseClient } from './client';
+import { getDatabaseUrl } from 'src/common/config/environment';
 
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
@@ -35,7 +36,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   constructor(@Optional() @Inject(LatencyMetricsService) latencyMetrics?: LatencyMetricsService) {
     this.client = databaseClient;
     this.latencyMetrics = latencyMetrics;
-    this.pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    this.pool = new Pool({ connectionString: getDatabaseUrl() });
     this.assignDelegates(databaseClient);
   }
 

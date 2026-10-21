@@ -3,6 +3,7 @@ import { PATHS } from 'src/common/constants';
 export const { activity, id } = PATHS;
 
 export const ACTIVITY_FAVORITES_ROUTE = 'favorites';
+export const ACTIVITY_HOME_ROUTE = 'home';
 export const ACTIVITY_FAVORITE_ROUTE = `${id}/favorite`;
 export const ACTIVITY_FAVORITE_API_COPY = {
   listSummary: 'Get the current user favorite activities',
@@ -29,6 +30,9 @@ const ACTIVITY_CARD_PROFILE_SELECT = {
   profilePhotoBlurhash: true,
   allowActivityInteractions: true,
   allowActivityReplayViewing: true,
+  allowActivityHeartRateViewing: true,
+  allowActivityElevationViewing: true,
+  allowActivityPaceViewing: true,
   allowActivitySharing: true,
 } as const;
 
@@ -45,12 +49,14 @@ export const ACTIVITY_CARD_SELECT = {
   id: true,
   userId: true,
   visibility: true,
+  hideMap: true,
   isFavorite: true,
   media: {
     select: { id: true, url: true, thumbnail: true, blurhash: true },
     orderBy: { position: 'asc' },
   },
   mapPhotoUrl: true,
+  routeOnlyMapPhotoUrl: true,
   mapPhotoUrlBlurhash: true,
   locationName: true,
   weatherTemperature: true,
@@ -73,8 +79,19 @@ const ACTIVITY_FEED_SELECT = {
 
 export const ACTIVITY_DETAILS_SELECT = {
   ...ACTIVITY_FEED_SELECT,
+  profile: {
+    select: {
+      ...ACTIVITY_FEED_PROFILE_SELECT,
+      age: true,
+      restingHeartRate: true,
+      maxHeartRate: true,
+    },
+  },
   description: true,
   visibility: true,
   emotion: true,
   kilometresSplit: true,
+  averageHeartRate: true,
+  minHeartRate: true,
+  maxHeartRate: true,
 } as const;

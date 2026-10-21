@@ -2,11 +2,13 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
+  ApiExtraModels,
   ApiOperation,
   ApiOkResponse,
   ApiParam,
   ApiResponse,
   ApiTags,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import {
   Body,
@@ -24,13 +26,14 @@ import {
 import { ParamsId } from 'src/common/dto/params-validation';
 import { UserService } from './user.service';
 import { UserDto } from './user.dto';
-import { ProfileDto } from 'src/account/account.dto';
+import { ProfileDto, PublicProfileDto } from 'src/account/account.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { PATHS } from 'src/common/constants';
-import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
+import { getAuthenticatedUserId, type AuthenticatedRequest } from 'src/auth/request/auth-request';
 
 @ApiTags(PATHS.user)
 @ApiBearerAuth('bearerAuth')
+@ApiExtraModels(ProfileDto, PublicProfileDto)
 @Controller('/user')
 export class UserController {
   constructor(@Inject(UserService) private readonly userService: UserService) {}
@@ -38,12 +41,17 @@ export class UserController {
   @Get(':id/profile')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: ProfileDto })
+  @ApiOkResponse({
+    schema: {
+      oneOf: [{ $ref: getSchemaPath(ProfileDto) }, { $ref: getSchemaPath(PublicProfileDto) }],
+    },
+    description: 'Full profile for its owner, public profile fields for other users',
+  })
   @ApiOperation({ summary: 'Get a user profile' })
   @ApiParam({ name: 'id', description: 'User identifier' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
-  async getProfileByUserId(@Param() { id }: ParamsId) {
-    return await this.userService.getProfileByUserId(id);
+  async getProfileByUserId(@Param() { id }: ParamsId, @Req() request?: AuthenticatedRequest) {
+    return await this.userService.getProfileByUserId(id, request ? getAuthenticatedUserId(request) : id);
   }
 
   @Post(':id/profile')

@@ -32,7 +32,7 @@ import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
-import { isSupportedVideoUpload } from './const';
+import { photoUploadFileFilter } from './photo-upload-file-filter';
 import {
   DeletePhotoDto,
   PhotoUploadBatchDto,
@@ -86,16 +86,7 @@ export class StorageController {
         files: UPLOAD_LIMITS.mediaBatchFiles,
         parts: UPLOAD_LIMITS.mediaBatchFiles + 3,
       },
-      fileFilter: (_request, file, callback) => {
-        const isImage = file.mimetype.startsWith('image/');
-        const isSupportedVideo =
-          file.mimetype.startsWith('video/') && isSupportedVideoUpload(file.originalname, file.mimetype);
-        if (!isImage && !isSupportedVideo) {
-          callback(new BadRequestException('Разрешены изображения и видео в форматах MP4, MOV и WebM'), false);
-          return;
-        }
-        callback(null, true);
-      },
+      fileFilter: photoUploadFileFilter,
     }),
   )
   @HttpCode(HttpStatus.CREATED)
@@ -140,16 +131,7 @@ export class StorageController {
         },
       }),
       limits: { fileSize: UPLOAD_LIMITS.videoBytes, files: 1 },
-      fileFilter: (_request, file, callback) => {
-        const isImage = file.mimetype.startsWith('image/');
-        const isSupportedVideo =
-          file.mimetype.startsWith('video/') && isSupportedVideoUpload(file.originalname, file.mimetype);
-        if (!isImage && !isSupportedVideo) {
-          callback(new BadRequestException('Разрешены изображения и видео в форматах MP4, MOV и WebM'), false);
-          return;
-        }
-        callback(null, true);
-      },
+      fileFilter: photoUploadFileFilter,
     }),
   )
   @HttpCode(HttpStatus.CREATED)

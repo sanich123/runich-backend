@@ -3,6 +3,8 @@ import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { ActivityController } from './activity.controller';
 import { ActivityService } from './activity.service';
+import { ActivityAccessService } from './activity-access.service';
+import { ActivityReadService } from './activity-read.service';
 import { FriendModule } from '../friend/friend.module';
 import { AccountModule } from '../account/account.module';
 import { ActivityPersistenceService } from './activity-persistence.service';
@@ -20,7 +22,15 @@ import { StaticMapService } from 'src/common/maps/static-map.service';
     PassportModule.register({ defaultStrategy: 'jwt' }),
   ],
   controllers: [ActivityController],
-  providers: [ActivityService, ActivityPersistenceService, ActivityMigrationService, StaticMapService, ThrottlerGuard],
+  providers: [
+    ActivityService,
+    ActivityAccessService,
+    ActivityReadService,
+    ActivityPersistenceService,
+    ActivityMigrationService,
+    StaticMapService,
+    ThrottlerGuard,
+  ],
   exports: [ActivityService, ActivityPersistenceService, ActivityMigrationService],
 })
 export class ActivityModule {}

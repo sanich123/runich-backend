@@ -1,8 +1,76 @@
+import type { ActivityChartLocationObject, ActivityHeartRateSampleObject, LocationObject } from './activity.dto';
+
+// Keep this aligned with CHART_POINT_COUNT in the Runich client.
+const ACTIVITY_CHART_HEART_RATE_POINT_COUNT = 81;
+
 export function omitMediaProcessingStatus(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
   const result = { ...(value as Record<string, unknown>) };
   delete result.mediaProcessingStatus;
   return result;
+}
+
+export function omitActivityHeartRateSamples(value: unknown) {
+  const result = omitMediaProcessingStatus(value);
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return result;
+  delete (result as Record<string, unknown>).heartRateSamples;
+  delete (result as Record<string, unknown>).heartRateStorageKey;
+  return result;
+}
+
+function interpolateHeartRateAt(samples: ActivityHeartRateSampleObject[], timestamp: number): number {
+  if (timestamp <= samples[0].timestamp) return samples[0].beatsPerMinute;
+
+  for (let index = 1; index < samples.length; index += 1) {
+    const right = samples[index];
+    if (timestamp > right.timestamp) continue;
+    const left = samples[index - 1];
+    const span = right.timestamp - left.timestamp;
+    if (span <= 0) return right.beatsPerMinute;
+    const fraction = (timestamp - left.timestamp) / span;
+    return left.beatsPerMinute + (right.beatsPerMinute - left.beatsPerMinute) * fraction;
+  }
+
+  return samples[samples.length - 1].beatsPerMinute;
+}
+
+export function reduceActivityChartHeartRateSamples(
+  samples: ActivityHeartRateSampleObject[],
+  locations: ActivityChartLocationObject[] | null,
+): ActivityHeartRateSampleObject[] {
+  const firstLocationTimestamp = locations?.[0]?.timestamp;
+  const lastLocationTimestamp = locations?.[locations.length - 1]?.timestamp;
+  const hasChartTimeRange =
+    typeof firstLocationTimestamp === 'number' &&
+    Number.isFinite(firstLocationTimestamp) &&
+    typeof lastLocationTimestamp === 'number' &&
+    Number.isFinite(lastLocationTimestamp) &&
+    lastLocationTimestamp > firstLocationTimestamp;
+  const chartSamples = samples
+    .filter(
+      (sample) =>
+        Number.isFinite(sample.timestamp) &&
+        Number.isFinite(sample.beatsPerMinute) &&
+        sample.beatsPerMinute >= 1 &&
+        sample.beatsPerMinute <= 300 &&
+        (!hasChartTimeRange ||
+          (sample.timestamp >= firstLocationTimestamp && sample.timestamp <= lastLocationTimestamp)),
+    )
+    .sort((first, second) => first.timestamp - second.timestamp);
+
+  if (chartSamples.length <= ACTIVITY_CHART_HEART_RATE_POINT_COUNT) return chartSamples;
+
+  const rangeStart = hasChartTimeRange ? firstLocationTimestamp : chartSamples[0].timestamp;
+  const rangeEnd = hasChartTimeRange ? lastLocationTimestamp : chartSamples[chartSamples.length - 1].timestamp;
+  if (rangeEnd <= rangeStart) return chartSamples.slice(0, ACTIVITY_CHART_HEART_RATE_POINT_COUNT);
+
+  return Array.from({ length: ACTIVITY_CHART_HEART_RATE_POINT_COUNT }, (_, index) => {
+    const timestamp = rangeStart + ((rangeEnd - rangeStart) * index) / (ACTIVITY_CHART_HEART_RATE_POINT_COUNT - 1);
+    return {
+      timestamp,
+      beatsPerMinute: interpolateHeartRateAt(chartSamples, timestamp),
+    };
+  });
 }
 
 export function getElevationGainFromKilometreSplits(value: unknown) {
@@ -31,8 +99,9 @@ type LocationWithElevation = {
   mocked?: unknown;
 };
 
-function getReliableAltitude(location: LocationWithElevation) {
-  if (!location || typeof location !== 'object') return null;
+function getReliableAltitude(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const location = value as LocationWithElevation;
   const altitude = location.coords?.altitude;
   const altitudeAccuracy = location.coords?.altitudeAccuracy;
   if (typeof altitude !== 'number' || !Number.isFinite(altitude)) return null;
@@ -59,9 +128,7 @@ export function getElevationGainFromLocations(value: unknown) {
   if (!Array.isArray(value)) return 0;
 
   const reliableLocations = (value as unknown[]).filter(
-    (location): location is LocationWithElevation =>
-      Boolean(location && typeof location === 'object') &&
-      getReliableAltitude(location as LocationWithElevation) !== null,
+    (location): location is LocationWithElevation => getReliableAltitude(location) !== null,
   );
   if (reliableLocations.length < 2) return 0;
 
@@ -115,6 +182,88 @@ export function normalizeActivityCard<T extends Record<string, unknown>>(activit
         ? elevationGain
         : getElevationGainFromKilometreSplits(kilometresSplit),
   };
+}
+
+export function hideActivityMapForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {
+  const isOwner = typeof viewerId === 'string' && activity.userId === viewerId;
+  if (isOwner || activity.hideMap !== true) return activity;
+
+  const kilometresSplit = activity.kilometresSplit;
+  const kilometresSplitWithoutLocations = Array.isArray(kilometresSplit)
+    ? kilometresSplit.map((split) => {
+        if (!split || typeof split !== 'object' || Array.isArray(split)) return split;
+        const splitWithoutLocation = { ...(split as Record<string, unknown>) };
+        delete splitWithoutLocation.kilometerPoint;
+        return splitWithoutLocation;
+      })
+    : undefined;
+
+  return {
+    ...activity,
+    mapPhotoUrl: null,
+    mapPhotoUrlBlurhash: null,
+    ...(Array.isArray(kilometresSplit) ? { kilometresSplit: kilometresSplitWithoutLocations } : {}),
+  };
+}
+
+export function normalizeActivityCardForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {
+  const normalizedActivity = hideActivityMapForViewer(normalizeActivityCard(activity), viewerId);
+  const profile = normalizedActivity.profile as { allowActivityElevationViewing?: boolean } | undefined;
+  const isOwner = typeof viewerId === 'string' && normalizedActivity.userId === viewerId;
+  if (isOwner || profile?.allowActivityElevationViewing !== false) return normalizedActivity;
+  return { ...normalizedActivity, elevationGain: null };
+}
+
+function getDistanceBetweenLocations(first: LocationObject, second: LocationObject) {
+  const earthRadiusMeters = 6_371_000;
+  const latitudeDifference = ((second.coords.latitude - first.coords.latitude) * Math.PI) / 180;
+  const longitudeDifference = ((second.coords.longitude - first.coords.longitude) * Math.PI) / 180;
+  const firstLatitude = (first.coords.latitude * Math.PI) / 180;
+  const secondLatitude = (second.coords.latitude * Math.PI) / 180;
+  const haversine =
+    Math.sin(latitudeDifference / 2) ** 2 +
+    Math.cos(firstLatitude) * Math.cos(secondLatitude) * Math.sin(longitudeDifference / 2) ** 2;
+  return 2 * earthRadiusMeters * Math.asin(Math.sqrt(Math.min(1, haversine)));
+}
+
+export function createActivityChartLocations(
+  locations: LocationObject[],
+  activityDistance: number,
+  canViewPace: boolean,
+  canViewElevation: boolean,
+): ActivityChartLocationObject[] {
+  const timedLocations = locations
+    .flatMap((location) => {
+      const timestamp = location.timestamp ?? location.coords.timestamp;
+      return typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0
+        ? [{ location, timestamp }]
+        : [];
+    })
+    .sort((first, second) => first.timestamp - second.timestamp);
+  const routeDistance = timedLocations.reduce((totalDistance, { location }, index) => {
+    if (index === 0) return totalDistance;
+    return totalDistance + getDistanceBetweenLocations(timedLocations[index - 1].location, location);
+  }, 0);
+  const distanceScale = activityDistance > 0 && routeDistance > 0 ? activityDistance / routeDistance : 1;
+
+  return timedLocations.map(({ location, timestamp }, index) => {
+    const previousLocation = timedLocations[index - 1];
+    const elapsedSeconds = previousLocation ? (timestamp - previousLocation.timestamp) / 1000 : 0;
+    const segmentDistance = previousLocation
+      ? getDistanceBetweenLocations(previousLocation.location, location) * distanceScale
+      : 0;
+    const speedKilometresPerHour = elapsedSeconds > 0 ? (segmentDistance / elapsedSeconds) * 3.6 : 0;
+    const canExposeSpeed = canViewPace && speedKilometresPerHour >= 0.5 && speedKilometresPerHour <= 126;
+    const altitude = location.coords.altitude;
+    return {
+      timestamp,
+      coords: {
+        ...(canViewElevation && typeof altitude === 'number' && Number.isFinite(altitude) ? { altitude } : {}),
+        ...(typeof location.coords.timestamp === 'number' ? { timestamp: location.coords.timestamp } : {}),
+        ...(canExposeSpeed ? { speed: speedKilometresPerHour } : {}),
+      },
+    };
+  });
 }
 
 export function normalizeActivityDetails<T extends Record<string, unknown>>(activity: T) {

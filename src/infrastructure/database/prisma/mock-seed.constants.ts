@@ -1,7 +1,10 @@
 import type { MockProfilePrivacySettings } from './mock-seed.types';
 
 export const MOCK_EMAIL_PREFIX = 'runich.mock.runner.';
-export const MOCK_SEED_VERSION = 'runich-mock-v19';
+export const MOCK_SEED_VERSION = 'runich-mock-v22';
+export const MOCK_ACTIVITY_COUNT = 100;
+export const MOCK_HEART_RATE_ACTIVITY_COUNT = 20;
+export const MOCK_ROUTE_ONLY_ACTIVITY_COUNT = MOCK_ACTIVITY_COUNT - MOCK_HEART_RATE_ACTIVITY_COUNT;
 export const MOCK_USER_COUNT = 100;
 export const MAX_MOCK_RELATION_COUNT = 40;
 export const MAX_MOCK_ACTIVITY_PHOTOS = 4;
@@ -15,6 +18,9 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: false,
     allowActivityReplayViewing: false,
+    allowActivityHeartRateViewing: false,
+    allowActivityElevationViewing: false,
+    allowActivityPaceViewing: false,
     allowActivitySharing: false,
     hideActivityStatistics: true,
     hideFollowingList: true,
@@ -25,6 +31,9 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: false,
     allowActivityInteractions: false,
     allowActivityReplayViewing: true,
+    allowActivityHeartRateViewing: false,
+    allowActivityElevationViewing: true,
+    allowActivityPaceViewing: true,
     allowActivitySharing: false,
     hideActivityStatistics: true,
     hideFollowingList: true,
@@ -35,6 +44,9 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: false,
     allowActivityReplayViewing: false,
+    allowActivityHeartRateViewing: true,
+    allowActivityElevationViewing: false,
+    allowActivityPaceViewing: true,
     allowActivitySharing: true,
     hideActivityStatistics: true,
     hideFollowingList: false,
@@ -45,6 +57,9 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: false,
     allowActivityReplayViewing: true,
+    allowActivityHeartRateViewing: true,
+    allowActivityElevationViewing: true,
+    allowActivityPaceViewing: false,
     allowActivitySharing: false,
     hideActivityStatistics: false,
     hideFollowingList: false,
@@ -55,6 +70,9 @@ export const MOCK_PROFILE_PRIVACY_PRESETS: MockProfilePrivacySettings[] = [
     allowNewFollowers: true,
     allowActivityInteractions: true,
     allowActivityReplayViewing: true,
+    allowActivityHeartRateViewing: true,
+    allowActivityElevationViewing: true,
+    allowActivityPaceViewing: true,
     allowActivitySharing: true,
     hideActivityStatistics: false,
     hideFollowingList: false,

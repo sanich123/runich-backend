@@ -102,6 +102,13 @@
         "models": {
           "Activity": {
             "fields": {
+              "averageHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "caloriesActive": {
                 "nullable": true,
                 "type": {
@@ -164,6 +171,23 @@
                   "kind": "scalar"
                 }
               },
+              "heartRateStorageKey": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 512
+                  }
+                }
+              },
+              "hideMap": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "id": {
                 "nullable": false,
                 "type": {
@@ -216,6 +240,13 @@
                   "kind": "scalar"
                 }
               },
+              "maxHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "mediaProcessingStatus": {
                 "nullable": false,
                 "type": {
@@ -224,6 +255,13 @@
                   "typeParams": {
                     "length": 16
                   }
+                }
+              },
+              "minHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
                 }
               },
               "profileId": {
@@ -247,6 +285,13 @@
                 "nullable": true,
                 "type": {
                   "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "routeOnlyMapPhotoUrl": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -465,6 +510,9 @@
             },
             "storage": {
               "fields": {
+                "averageHeartRate": {
+                  "column": "average_heart_rate"
+                },
                 "caloriesActive": {
                   "column": "calories_active"
                 },
@@ -489,6 +537,12 @@
                 "emotion": {
                   "column": "emotion"
                 },
+                "heartRateStorageKey": {
+                  "column": "heart_rate_storage_key"
+                },
+                "hideMap": {
+                  "column": "hide_map"
+                },
                 "id": {
                   "column": "id"
                 },
@@ -510,8 +564,14 @@
                 "mapPhotoUrlBlurhash": {
                   "column": "mapPhotoUrlBlurhash"
                 },
+                "maxHeartRate": {
+                  "column": "max_heart_rate"
+                },
                 "mediaProcessingStatus": {
                   "column": "media_processing_status"
+                },
+                "minHeartRate": {
+                  "column": "min_heart_rate"
                 },
                 "profileId": {
                   "column": "profileId"
@@ -521,6 +581,9 @@
                 },
                 "routeFormatVersion": {
                   "column": "route_format_version"
+                },
+                "routeOnlyMapPhotoUrl": {
+                  "column": "route_only_map_photo_url"
                 },
                 "routePointCount": {
                   "column": "route_point_count"
@@ -2125,7 +2188,28 @@
                   "kind": "scalar"
                 }
               },
+              "allowActivityElevationViewing": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "allowActivityHeartRateViewing": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "allowActivityInteractions": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "allowActivityPaceViewing": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/bool@1",
@@ -2254,6 +2338,13 @@
                   "kind": "scalar"
                 }
               },
+              "maxHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "name": {
                 "nullable": true,
                 "type": {
@@ -2286,6 +2377,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "restingHeartRate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -2441,8 +2539,17 @@
                 "age": {
                   "column": "age"
                 },
+                "allowActivityElevationViewing": {
+                  "column": "allow_activity_elevation_viewing"
+                },
+                "allowActivityHeartRateViewing": {
+                  "column": "allow_activity_heart_rate_viewing"
+                },
                 "allowActivityInteractions": {
                   "column": "allow_activity_interactions"
+                },
+                "allowActivityPaceViewing": {
+                  "column": "allow_activity_pace_viewing"
                 },
                 "allowActivityReplayViewing": {
                   "column": "allow_activity_replay_viewing"
@@ -2495,6 +2602,9 @@
                 "language": {
                   "column": "language"
                 },
+                "maxHeartRate": {
+                  "column": "max_heart_rate"
+                },
                 "name": {
                   "column": "name"
                 },
@@ -2509,6 +2619,9 @@
                 },
                 "pushNotifications": {
                   "column": "push_notifications"
+                },
+                "restingHeartRate": {
+                  "column": "resting_heart_rate"
                 },
                 "sport": {
                   "column": "sport"
@@ -3823,6 +3936,11 @@
                 }
               ],
               "columns": {
+                "average_heart_rate": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
                 "calories_active": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
@@ -3877,6 +3995,23 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "heart_rate_storage_key": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 512
+                  }
+                },
+                "hide_map": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
                 "id": {
                   "codecId": "pg/uuid@1",
                   "dataType": "pg/uuid",
@@ -3927,6 +4062,11 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "max_heart_rate": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
                 "media_processing_status": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
@@ -3938,6 +4078,11 @@
                   "typeParams": {
                     "length": 16
                   }
+                },
+                "min_heart_rate": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
@@ -3955,6 +4100,11 @@
                 "route_format_version": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "route_only_map_photo_url": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "route_point_count": {
@@ -5579,7 +5729,34 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "allow_activity_elevation_viewing": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "allow_activity_heart_rate_viewing": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
                 "allow_activity_interactions": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "allow_activity_pace_viewing": {
                   "codecId": "pg/bool@1",
                   "dataType": "pg/bool",
                   "default": {
@@ -5716,6 +5893,11 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "max_heart_rate": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
                 "name": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -5748,6 +5930,11 @@
                     "value": false
                   },
                   "nullable": false
+                },
+                "resting_heart_rate": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
                 },
                 "sport": {
                   "codecId": "pg/text@1",
@@ -6806,7 +6993,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "c9efdd1f550ef1cde3ebb501c4bd10478338a49e1b832e99d6115b69f1ac4030"
+    "storageHash": "4ee189d7e1e557c5a9fb68821ede039f46731647eb29a9197c629e4757538f2c"
   },
   "capabilities": {
     "postgres": {
