@@ -3435,9 +3435,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/cli@npm:12.0.9":
-  version: 12.0.9
-  resolution: "@nestjs/cli@npm:12.0.9"
+"@nestjs/cli@npm:12.0.10":
+  version: 12.0.10
+  resolution: "@nestjs/cli@npm:12.0.10"
   dependencies:
     "@angular-devkit/core": "npm:22.2.3"
     "@angular-devkit/schematics": "npm:22.2.3"
@@ -3482,7 +3482,7 @@ __metadata:
       optional: true
   bin:
     nest: bin/nest.js
-  checksum: 10c0/4900a12510eef5d547158bb15b9f2e8f85411fa26e33cd0bae885e15af7c551edb87cf69f3f1142f09b5b45a5d4c1ccffeeffc9850f2288330fa2926e08ba692
+  checksum: 10c0/f26ad1820a2793ce27b200ecb4c554204f86a7fdd194d820f77a620e647705850cb50eab4bf1e5e1b2b63e011887d5ed9195822f37c340a0c0542a810a2b257c
   languageName: node
   linkType: hard
 
@@ -3636,9 +3636,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/schematics@npm:12.0.9":
-  version: 12.0.9
-  resolution: "@nestjs/schematics@npm:12.0.9"
+"@nestjs/schematics@npm:12.0.10":
+  version: 12.0.10
+  resolution: "@nestjs/schematics@npm:12.0.10"
   dependencies:
     "@angular-devkit/core": "npm:22.2.3"
     "@angular-devkit/schematics": "npm:22.2.3"
@@ -3651,7 +3651,7 @@ __metadata:
   peerDependenciesMeta:
     prettier:
       optional: true
-  checksum: 10c0/0d4ad799f330fc92945861cf2a89e883ec1e2978a424d071c38c7ea4d681c8d35b337c5d6d2797bdae416fc805eb9b0c57a06657a19043d0f28d6b5701c4b4e3
+  checksum: 10c0/ebcc5089d89430a03520d5704b179361afb039a79e2ab705763a86826d6d984a3ac95a343f2a71fa0d090346b8af2259c395add32357a4d7cd1fb84e858cb8ed
   languageName: node
   linkType: hard
 
@@ -13566,14 +13566,14 @@ __metadata:
     "@jest/globals": "npm:^30.5.2"
     "@mapbox/polyline": "npm:^1.2.1"
     "@maplibre/maplibre-gl-native": "npm:6.5.0-pre.1"
-    "@nestjs/cli": "npm:12.0.9"
+    "@nestjs/cli": "npm:12.0.10"
     "@nestjs/common": "npm:12.2.0"
     "@nestjs/core": "npm:12.2.0"
     "@nestjs/jwt": "npm:12.0.3"
     "@nestjs/observe": "npm:0.3.16"
     "@nestjs/passport": "npm:12.0.0"
     "@nestjs/platform-express": "npm:12.2.0"
-    "@nestjs/schematics": "npm:12.0.9"
+    "@nestjs/schematics": "npm:12.0.10"
     "@nestjs/swagger": "npm:12.0.2"
     "@nestjs/testing": "npm:12.2.0"
     "@nestjs/throttler": "patch:@nestjs/throttler@npm%3A6.5.0#~/.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch"

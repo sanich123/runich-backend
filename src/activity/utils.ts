@@ -142,7 +142,6 @@ export function hideActivityMapForViewer<T extends Record<string, unknown>>(acti
   return {
     ...activity,
     mapPhotoUrl: null,
-    routeOnlyMapPhotoUrl: null,
     mapPhotoUrlBlurhash: null,
     ...(Array.isArray(kilometresSplit) ? { kilometresSplit: kilometresSplitWithoutLocations } : {}),
   };
