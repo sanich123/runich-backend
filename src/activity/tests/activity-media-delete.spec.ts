@@ -9,6 +9,7 @@ function createService(ownerId = 'owner-1') {
   const transaction = { activityMedia: { findFirst: mediaFindFirst, delete: mediaDelete } };
   const prisma = {
     activity: { findUnique: asyncMock().mockResolvedValue({ userId: ownerId }) },
+    activityMedia: { findFirst: mediaFindFirst },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((async (callback: (transaction: unknown) => Promise<unknown>) =>
@@ -17,6 +18,7 @@ function createService(ownerId = 'owner-1') {
     getOwnedKey: jest.fn((_userId: string, url: string) =>
       url.endsWith('thumb.jpg') ? 'photo-thumb.jpg' : 'photo.jpg',
     ),
+    deleteActivityModerationAssets: asyncMock(),
   };
   const cleanup = { enqueueObjectCleanup: asyncMock() };
   const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, cleanup as never);
@@ -30,6 +32,8 @@ describe('ActivityService.deleteActivityMedia', () => {
     mediaFindFirst.mockResolvedValue({
       url: 'https://cdn.example/owner/photo.jpg',
       thumbnail: 'https://cdn.example/owner/photo-thumb.jpg',
+      mediaModerationAssetId: null,
+      thumbnailModerationAssetId: null,
     });
     mediaDelete.mockResolvedValue({ id: 'media-1' });
 
@@ -37,7 +41,12 @@ describe('ActivityService.deleteActivityMedia', () => {
 
     expect(mediaFindFirst).toHaveBeenCalledWith({
       where: { id: 'media-1', activityId: 'activity-1', userId: 'owner-1' },
-      select: { url: true, thumbnail: true },
+      select: {
+        url: true,
+        thumbnail: true,
+        mediaModerationAssetId: true,
+        thumbnailModerationAssetId: true,
+      },
     });
     expect(storage.getOwnedKey).toHaveBeenCalledTimes(2);
     expect(cleanup.enqueueObjectCleanup).toHaveBeenNthCalledWith(1, 'owner-1', 'photo.jpg', transaction);

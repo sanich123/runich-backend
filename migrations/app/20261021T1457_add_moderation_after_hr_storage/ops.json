@@ -1,0 +1,2757 @@
+[
+  {
+    "id": "table.ContentReport",
+    "label": "Create table \"ContentReport\"",
+    "summary": "Creates table \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"ContentReport\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"ContentReport\"",
+        "sql": "CREATE TABLE \"public\".\"ContentReport\" (\n  \"activity_id\" uuid,\n  \"assigned_moderator_id\" uuid,\n  \"comment_id\" uuid,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"details\" character varying(1000),\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"media_id\" uuid,\n  \"media_upload_id\" uuid,\n  \"priority\" text DEFAULT 'normal' NOT NULL,\n  \"reason\" text NOT NULL,\n  \"reporter_id\" uuid,\n  \"reviewed_at\" timestamptz(6),\n  \"status\" text DEFAULT 'open' NOT NULL,\n  \"subject_user_id\" uuid,\n  \"target_id\" uuid NOT NULL,\n  \"target_type\" text NOT NULL,\n  \"target_user_id\" uuid,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"ContentReport_priority_check_f8340615\" CHECK (\"priority\" IN ('low', 'normal', 'high', 'urgent')),\n  CONSTRAINT \"ContentReport_reason_check_65edaa13\" CHECK (\"reason\" IN ('threats', 'harassment', 'hate_speech', 'sexual_content', 'violence', 'spam', 'other')),\n  CONSTRAINT \"ContentReport_status_check_821e53f0\" CHECK (\"status\" IN ('open', 'in_review', 'resolved', 'rejected', 'appealed')),\n  CONSTRAINT \"ContentReport_target_type_check_15fa25b2\" CHECK (\"target_type\" IN ('activity', 'comment', 'media', 'media_upload', 'user'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"ContentReport\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.MediaModerationAsset",
+    "label": "Create table \"MediaModerationAsset\"",
+    "summary": "Creates table \"MediaModerationAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "MediaModerationAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"MediaModerationAsset\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"MediaModerationAsset\"",
+        "sql": "CREATE TABLE \"public\".\"MediaModerationAsset\" (\n  \"attempts\" int4 DEFAULT 0 NOT NULL,\n  \"byte_size\" int4 NOT NULL,\n  \"content_type\" character varying(255) NOT NULL,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"frame_count\" int4,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"media_id\" character varying(100) NOT NULL,\n  \"model_version\" character varying(100),\n  \"owner_id\" uuid NOT NULL,\n  \"processing_started_at\" timestamptz(6),\n  \"published_key\" character varying(2048),\n  \"quarantine_key\" character varying(2048) NOT NULL,\n  \"review_note\" character varying(1000),\n  \"reviewed_at\" timestamptz(6),\n  \"reviewer_id\" uuid,\n  \"role\" character varying(16) DEFAULT 'media' NOT NULL,\n  \"scanned_at\" timestamptz(6),\n  \"scope\" character varying(16) DEFAULT 'activity' NOT NULL,\n  \"scores\" jsonb,\n  \"status\" text DEFAULT 'queued' NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"MediaModerationAsset_status_check_da540f42\" CHECK (\"status\" IN ('queued', 'processing', 'review_required', 'approved', 'rejected', 'failed'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"MediaModerationAsset\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.ModerationAction",
+    "label": "Create table \"ModerationAction\"",
+    "summary": "Creates table \"ModerationAction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "ModerationAction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"ModerationAction\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"ModerationAction\"",
+        "sql": "CREATE TABLE \"public\".\"ModerationAction\" (\n  \"action\" text NOT NULL,\n  \"actor_id\" uuid,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"note\" character varying(1000),\n  \"report_id\" uuid NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"ModerationAction_action_check_f8fd69ad\" CHECK (\"action\" IN ('hide_content', 'remove_content', 'restore_content', 'warn_user', 'temporary_suspend', 'permanent_suspend', 'reject_report', 'appeal_submitted', 'appeal_upheld', 'appeal_rejected', 'approve_media', 'reject_media'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"ModerationAction\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.ModerationAppeal",
+    "label": "Create table \"ModerationAppeal\"",
+    "summary": "Creates table \"ModerationAppeal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "ModerationAppeal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"ModerationAppeal\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"ModerationAppeal\"",
+        "sql": "CREATE TABLE \"public\".\"ModerationAppeal\" (\n  \"appellant_id\" uuid,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"reason\" character varying(1000) NOT NULL,\n  \"report_id\" uuid NOT NULL,\n  \"resolution_note\" character varying(1000),\n  \"reviewed_at\" timestamptz(6),\n  \"reviewer_id\" uuid,\n  \"status\" text DEFAULT 'pending' NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"ModerationAppeal_status_check_f33e7560\" CHECK (\"status\" IN ('pending', 'upheld', 'rejected'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"ModerationAppeal\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.UserBlock",
+    "label": "Create table \"UserBlock\"",
+    "summary": "Creates table \"UserBlock\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "UserBlock"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"UserBlock\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"UserBlock\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"UserBlock\"",
+        "sql": "CREATE TABLE \"public\".\"UserBlock\" (\n  \"blocked_id\" uuid NOT NULL,\n  \"blocker_id\" uuid NOT NULL,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"UserBlock\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"UserBlock\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Activity.moderation_status",
+    "label": "Add column \"moderation_status\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "moderation_status",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"moderation_status\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "moderation_status"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"moderation_status\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"moderation_status\" text DEFAULT 'visible' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"moderation_status\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "moderation_status"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.ActivityMedia.media_moderation_asset_id",
+    "label": "Add column \"media_moderation_asset_id\" to \"ActivityMedia\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "media_moderation_asset_id",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"media_moderation_asset_id\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "media_moderation_asset_id"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"media_moderation_asset_id\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ADD COLUMN \"media_moderation_asset_id\" uuid"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"media_moderation_asset_id\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "media_moderation_asset_id"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.ActivityMedia.media_review_status",
+    "label": "Add column \"media_review_status\" to \"ActivityMedia\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "media_review_status",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"media_review_status\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "media_review_status"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"media_review_status\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ADD COLUMN \"media_review_status\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"media_review_status\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "media_review_status"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.ActivityMedia.moderation_status",
+    "label": "Add column \"moderation_status\" to \"ActivityMedia\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "moderation_status",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"moderation_status\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "moderation_status"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"moderation_status\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ADD COLUMN \"moderation_status\" text DEFAULT 'visible' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"moderation_status\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "moderation_status"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.ActivityMedia.thumbnail_moderation_asset_id",
+    "label": "Add column \"thumbnail_moderation_asset_id\" to \"ActivityMedia\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "thumbnail_moderation_asset_id",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"thumbnail_moderation_asset_id\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "thumbnail_moderation_asset_id"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"thumbnail_moderation_asset_id\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ADD COLUMN \"thumbnail_moderation_asset_id\" uuid"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"thumbnail_moderation_asset_id\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "thumbnail_moderation_asset_id"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Comment.moderation_status",
+    "label": "Add column \"moderation_status\" to \"Comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "moderation_status",
+        "table": "Comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"moderation_status\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Comment",
+          "moderation_status"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"moderation_status\"",
+        "sql": "ALTER TABLE \"public\".\"Comment\" ADD COLUMN \"moderation_status\" text DEFAULT 'visible' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"moderation_status\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Comment",
+          "moderation_status"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.dropNotNull.ActivityMedia.url",
+    "label": "Drop NOT NULL on \"ActivityMedia\".\"url\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "url",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"url\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "url"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop NOT NULL on \"url\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ALTER COLUMN \"url\" DROP NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"url\" is nullable",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "ActivityMedia",
+          "url",
+          "YES"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.Activity.Activity_moderation_status_check_9e17caab",
+    "label": "Add check constraint \"Activity_moderation_status_check_9e17caab\" on \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Activity_moderation_status_check_9e17caab",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Activity_moderation_status_check_9e17caab\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Activity_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Activity\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"Activity_moderation_status_check_9e17caab\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD CONSTRAINT \"Activity_moderation_status_check_9e17caab\" CHECK (\"moderation_status\" IN ('visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Activity_moderation_status_check_9e17caab\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Activity_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Activity\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.ActivityMedia.ActivityMedia_media_review_status_check_5a4c7db5",
+    "label": "Add check constraint \"ActivityMedia_media_review_status_check_5a4c7db5\" on \"ActivityMedia\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ActivityMedia_media_review_status_check_5a4c7db5",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ActivityMedia_media_review_status_check_5a4c7db5\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_media_review_status_check_5a4c7db5",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"ActivityMedia_media_review_status_check_5a4c7db5\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ADD CONSTRAINT \"ActivityMedia_media_review_status_check_5a4c7db5\" CHECK (\"media_review_status\" IN ('queued', 'processing', 'review_required', 'approved', 'rejected', 'failed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ActivityMedia_media_review_status_check_5a4c7db5\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_media_review_status_check_5a4c7db5",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.ActivityMedia.ActivityMedia_moderation_status_check_9e17caab",
+    "label": "Add check constraint \"ActivityMedia_moderation_status_check_9e17caab\" on \"ActivityMedia\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ActivityMedia_moderation_status_check_9e17caab",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ActivityMedia_moderation_status_check_9e17caab\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"ActivityMedia_moderation_status_check_9e17caab\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ADD CONSTRAINT \"ActivityMedia_moderation_status_check_9e17caab\" CHECK (\"moderation_status\" IN ('visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ActivityMedia_moderation_status_check_9e17caab\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.ActivityMedia.ActivityMedia_media_moderation_asset_id_key",
+    "label": "Add unique constraint on \"ActivityMedia\" (media_moderation_asset_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "ActivityMedia_media_moderation_asset_id_key",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ActivityMedia_media_moderation_asset_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_media_moderation_asset_id_key",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"ActivityMedia_media_moderation_asset_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ADD CONSTRAINT \"ActivityMedia_media_moderation_asset_id_key\" UNIQUE (\"media_moderation_asset_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ActivityMedia_media_moderation_asset_id_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_media_moderation_asset_id_key",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.ActivityMedia.ActivityMedia_thumbnail_moderation_asset_id_key",
+    "label": "Add unique constraint on \"ActivityMedia\" (thumbnail_moderation_asset_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "ActivityMedia_thumbnail_moderation_asset_id_key",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ActivityMedia_thumbnail_moderation_asset_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_thumbnail_moderation_asset_id_key",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"ActivityMedia_thumbnail_moderation_asset_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ADD CONSTRAINT \"ActivityMedia_thumbnail_moderation_asset_id_key\" UNIQUE (\"thumbnail_moderation_asset_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ActivityMedia_thumbnail_moderation_asset_id_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_thumbnail_moderation_asset_id_key",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.Comment.Comment_moderation_status_check_9e17caab",
+    "label": "Add check constraint \"Comment_moderation_status_check_9e17caab\" on \"Comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Comment_moderation_status_check_9e17caab",
+        "table": "Comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Comment_moderation_status_check_9e17caab\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Comment_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Comment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"Comment_moderation_status_check_9e17caab\"",
+        "sql": "ALTER TABLE \"public\".\"Comment\" ADD CONSTRAINT \"Comment_moderation_status_check_9e17caab\" CHECK (\"moderation_status\" IN ('visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Comment_moderation_status_check_9e17caab\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Comment_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Comment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.MediaModerationAsset.MediaModerationAsset_owner_media_role_key",
+    "label": "Add unique constraint on \"MediaModerationAsset\" (owner_id, media_id, role)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "MediaModerationAsset_owner_media_role_key",
+        "table": "MediaModerationAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"MediaModerationAsset_owner_media_role_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaModerationAsset_owner_media_role_key",
+          "public",
+          "\"public\".\"MediaModerationAsset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"MediaModerationAsset_owner_media_role_key\"",
+        "sql": "ALTER TABLE \"public\".\"MediaModerationAsset\" ADD CONSTRAINT \"MediaModerationAsset_owner_media_role_key\" UNIQUE (\"owner_id\", \"media_id\", \"role\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"MediaModerationAsset_owner_media_role_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaModerationAsset_owner_media_role_key",
+          "public",
+          "\"public\".\"MediaModerationAsset\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.UserBlock.UserBlock_blocker_blocked_key",
+    "label": "Add unique constraint on \"UserBlock\" (blocker_id, blocked_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "UserBlock_blocker_blocked_key",
+        "table": "UserBlock"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"UserBlock_blocker_blocked_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "UserBlock_blocker_blocked_key",
+          "public",
+          "\"public\".\"UserBlock\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"UserBlock_blocker_blocked_key\"",
+        "sql": "ALTER TABLE \"public\".\"UserBlock\" ADD CONSTRAINT \"UserBlock_blocker_blocked_key\" UNIQUE (\"blocker_id\", \"blocked_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"UserBlock_blocker_blocked_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "UserBlock_blocker_blocked_key",
+          "public",
+          "\"public\".\"UserBlock\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_activity_id_idx_c0c84520",
+    "label": "Create index \"ContentReport_activity_id_idx_c0c84520\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_activity_id_idx_c0c84520",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_activity_id_idx_c0c84520\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_activity_id_idx_c0c84520\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_activity_id_idx_c0c84520\"",
+        "sql": "CREATE INDEX \"ContentReport_activity_id_idx_c0c84520\" ON \"public\".\"ContentReport\" (\"activity_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_activity_id_idx_c0c84520\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_activity_id_idx_c0c84520\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_assigned_moderator_id_idx_357b4693",
+    "label": "Create index \"ContentReport_assigned_moderator_id_idx_357b4693\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_assigned_moderator_id_idx_357b4693",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_assigned_moderator_id_idx_357b4693\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_assigned_moderator_id_idx_357b4693\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_assigned_moderator_id_idx_357b4693\"",
+        "sql": "CREATE INDEX \"ContentReport_assigned_moderator_id_idx_357b4693\" ON \"public\".\"ContentReport\" (\"assigned_moderator_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_assigned_moderator_id_idx_357b4693\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_assigned_moderator_id_idx_357b4693\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_assignee_status_createdAt_idx",
+    "label": "Create index \"ContentReport_assignee_status_createdAt_idx\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_assignee_status_createdAt_idx",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_assignee_status_createdAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_assignee_status_createdAt_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_assignee_status_createdAt_idx\"",
+        "sql": "CREATE INDEX \"ContentReport_assignee_status_createdAt_idx\" ON \"public\".\"ContentReport\" (\"assigned_moderator_id\", \"status\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_assignee_status_createdAt_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_assignee_status_createdAt_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_comment_id_idx_fe121171",
+    "label": "Create index \"ContentReport_comment_id_idx_fe121171\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_comment_id_idx_fe121171",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_comment_id_idx_fe121171\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_comment_id_idx_fe121171\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_comment_id_idx_fe121171\"",
+        "sql": "CREATE INDEX \"ContentReport_comment_id_idx_fe121171\" ON \"public\".\"ContentReport\" (\"comment_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_comment_id_idx_fe121171\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_comment_id_idx_fe121171\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_media_id_idx_495ca900",
+    "label": "Create index \"ContentReport_media_id_idx_495ca900\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_media_id_idx_495ca900",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_media_id_idx_495ca900\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_media_id_idx_495ca900\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_media_id_idx_495ca900\"",
+        "sql": "CREATE INDEX \"ContentReport_media_id_idx_495ca900\" ON \"public\".\"ContentReport\" (\"media_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_media_id_idx_495ca900\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_media_id_idx_495ca900\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_media_upload_id_idx",
+    "label": "Create index \"ContentReport_media_upload_id_idx\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_media_upload_id_idx",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_media_upload_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_media_upload_id_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_media_upload_id_idx\"",
+        "sql": "CREATE INDEX \"ContentReport_media_upload_id_idx\" ON \"public\".\"ContentReport\" (\"media_upload_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_media_upload_id_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_media_upload_id_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_reporter_createdAt_idx",
+    "label": "Create index \"ContentReport_reporter_createdAt_idx\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_reporter_createdAt_idx",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_reporter_createdAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_reporter_createdAt_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_reporter_createdAt_idx\"",
+        "sql": "CREATE INDEX \"ContentReport_reporter_createdAt_idx\" ON \"public\".\"ContentReport\" (\"reporter_id\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_reporter_createdAt_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_reporter_createdAt_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_reporter_id_idx_3eeed9a0",
+    "label": "Create index \"ContentReport_reporter_id_idx_3eeed9a0\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_reporter_id_idx_3eeed9a0",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_reporter_id_idx_3eeed9a0\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_reporter_id_idx_3eeed9a0\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_reporter_id_idx_3eeed9a0\"",
+        "sql": "CREATE INDEX \"ContentReport_reporter_id_idx_3eeed9a0\" ON \"public\".\"ContentReport\" (\"reporter_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_reporter_id_idx_3eeed9a0\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_reporter_id_idx_3eeed9a0\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_status_priority_createdAt_idx",
+    "label": "Create index \"ContentReport_status_priority_createdAt_idx\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_status_priority_createdAt_idx",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_status_priority_createdAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_status_priority_createdAt_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_status_priority_createdAt_idx\"",
+        "sql": "CREATE INDEX \"ContentReport_status_priority_createdAt_idx\" ON \"public\".\"ContentReport\" (\"status\", \"priority\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_status_priority_createdAt_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_status_priority_createdAt_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_subject_createdAt_idx",
+    "label": "Create index \"ContentReport_subject_createdAt_idx\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_subject_createdAt_idx",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_subject_createdAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_subject_createdAt_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_subject_createdAt_idx\"",
+        "sql": "CREATE INDEX \"ContentReport_subject_createdAt_idx\" ON \"public\".\"ContentReport\" (\"subject_user_id\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_subject_createdAt_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_subject_createdAt_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_subject_user_id_idx_70bcca8f",
+    "label": "Create index \"ContentReport_subject_user_id_idx_70bcca8f\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_subject_user_id_idx_70bcca8f",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_subject_user_id_idx_70bcca8f\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_subject_user_id_idx_70bcca8f\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_subject_user_id_idx_70bcca8f\"",
+        "sql": "CREATE INDEX \"ContentReport_subject_user_id_idx_70bcca8f\" ON \"public\".\"ContentReport\" (\"subject_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_subject_user_id_idx_70bcca8f\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_subject_user_id_idx_70bcca8f\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_target_idx",
+    "label": "Create index \"ContentReport_target_idx\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_target_idx",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_target_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_target_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_target_idx\"",
+        "sql": "CREATE INDEX \"ContentReport_target_idx\" ON \"public\".\"ContentReport\" (\"target_type\", \"target_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_target_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_target_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_target_user_id_idx_cc615011",
+    "label": "Create index \"ContentReport_target_user_id_idx_cc615011\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_target_user_id_idx_cc615011",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_target_user_id_idx_cc615011\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_target_user_id_idx_cc615011\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_target_user_id_idx_cc615011\"",
+        "sql": "CREATE INDEX \"ContentReport_target_user_id_idx_cc615011\" ON \"public\".\"ContentReport\" (\"target_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_target_user_id_idx_cc615011\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_target_user_id_idx_cc615011\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.MediaModerationAsset.MediaModerationAsset_owner_created_at_idx",
+    "label": "Create index \"MediaModerationAsset_owner_created_at_idx\" on \"MediaModerationAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "MediaModerationAsset_owner_created_at_idx",
+        "table": "MediaModerationAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"MediaModerationAsset_owner_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset_owner_created_at_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"MediaModerationAsset_owner_created_at_idx\"",
+        "sql": "CREATE INDEX \"MediaModerationAsset_owner_created_at_idx\" ON \"public\".\"MediaModerationAsset\" (\"owner_id\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"MediaModerationAsset_owner_created_at_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset_owner_created_at_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.MediaModerationAsset.MediaModerationAsset_owner_id_idx_ade9f347",
+    "label": "Create index \"MediaModerationAsset_owner_id_idx_ade9f347\" on \"MediaModerationAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "MediaModerationAsset_owner_id_idx_ade9f347",
+        "table": "MediaModerationAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"MediaModerationAsset_owner_id_idx_ade9f347\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset_owner_id_idx_ade9f347\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"MediaModerationAsset_owner_id_idx_ade9f347\"",
+        "sql": "CREATE INDEX \"MediaModerationAsset_owner_id_idx_ade9f347\" ON \"public\".\"MediaModerationAsset\" (\"owner_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"MediaModerationAsset_owner_id_idx_ade9f347\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset_owner_id_idx_ade9f347\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.MediaModerationAsset.MediaModerationAsset_reviewer_id_idx_ab069db0",
+    "label": "Create index \"MediaModerationAsset_reviewer_id_idx_ab069db0\" on \"MediaModerationAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "MediaModerationAsset_reviewer_id_idx_ab069db0",
+        "table": "MediaModerationAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"MediaModerationAsset_reviewer_id_idx_ab069db0\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset_reviewer_id_idx_ab069db0\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"MediaModerationAsset_reviewer_id_idx_ab069db0\"",
+        "sql": "CREATE INDEX \"MediaModerationAsset_reviewer_id_idx_ab069db0\" ON \"public\".\"MediaModerationAsset\" (\"reviewer_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"MediaModerationAsset_reviewer_id_idx_ab069db0\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset_reviewer_id_idx_ab069db0\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.MediaModerationAsset.MediaModerationAsset_status_created_at_idx",
+    "label": "Create index \"MediaModerationAsset_status_created_at_idx\" on \"MediaModerationAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "MediaModerationAsset_status_created_at_idx",
+        "table": "MediaModerationAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"MediaModerationAsset_status_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset_status_created_at_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"MediaModerationAsset_status_created_at_idx\"",
+        "sql": "CREATE INDEX \"MediaModerationAsset_status_created_at_idx\" ON \"public\".\"MediaModerationAsset\" (\"status\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"MediaModerationAsset_status_created_at_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaModerationAsset_status_created_at_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ModerationAction.ModerationAction_actor_createdAt_idx",
+    "label": "Create index \"ModerationAction_actor_createdAt_idx\" on \"ModerationAction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ModerationAction_actor_createdAt_idx",
+        "table": "ModerationAction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ModerationAction_actor_createdAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction_actor_createdAt_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ModerationAction_actor_createdAt_idx\"",
+        "sql": "CREATE INDEX \"ModerationAction_actor_createdAt_idx\" ON \"public\".\"ModerationAction\" (\"actor_id\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ModerationAction_actor_createdAt_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction_actor_createdAt_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ModerationAction.ModerationAction_actor_id_idx_69a2164d",
+    "label": "Create index \"ModerationAction_actor_id_idx_69a2164d\" on \"ModerationAction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ModerationAction_actor_id_idx_69a2164d",
+        "table": "ModerationAction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ModerationAction_actor_id_idx_69a2164d\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction_actor_id_idx_69a2164d\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ModerationAction_actor_id_idx_69a2164d\"",
+        "sql": "CREATE INDEX \"ModerationAction_actor_id_idx_69a2164d\" ON \"public\".\"ModerationAction\" (\"actor_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ModerationAction_actor_id_idx_69a2164d\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction_actor_id_idx_69a2164d\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ModerationAction.ModerationAction_report_createdAt_idx",
+    "label": "Create index \"ModerationAction_report_createdAt_idx\" on \"ModerationAction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ModerationAction_report_createdAt_idx",
+        "table": "ModerationAction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ModerationAction_report_createdAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction_report_createdAt_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ModerationAction_report_createdAt_idx\"",
+        "sql": "CREATE INDEX \"ModerationAction_report_createdAt_idx\" ON \"public\".\"ModerationAction\" (\"report_id\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ModerationAction_report_createdAt_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction_report_createdAt_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ModerationAction.ModerationAction_report_id_idx_6f6640fd",
+    "label": "Create index \"ModerationAction_report_id_idx_6f6640fd\" on \"ModerationAction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ModerationAction_report_id_idx_6f6640fd",
+        "table": "ModerationAction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ModerationAction_report_id_idx_6f6640fd\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction_report_id_idx_6f6640fd\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ModerationAction_report_id_idx_6f6640fd\"",
+        "sql": "CREATE INDEX \"ModerationAction_report_id_idx_6f6640fd\" ON \"public\".\"ModerationAction\" (\"report_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ModerationAction_report_id_idx_6f6640fd\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAction_report_id_idx_6f6640fd\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ModerationAppeal.ModerationAppeal_appellant_id_idx_ed1ef576",
+    "label": "Create index \"ModerationAppeal_appellant_id_idx_ed1ef576\" on \"ModerationAppeal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ModerationAppeal_appellant_id_idx_ed1ef576",
+        "table": "ModerationAppeal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ModerationAppeal_appellant_id_idx_ed1ef576\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_appellant_id_idx_ed1ef576\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ModerationAppeal_appellant_id_idx_ed1ef576\"",
+        "sql": "CREATE INDEX \"ModerationAppeal_appellant_id_idx_ed1ef576\" ON \"public\".\"ModerationAppeal\" (\"appellant_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ModerationAppeal_appellant_id_idx_ed1ef576\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_appellant_id_idx_ed1ef576\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ModerationAppeal.ModerationAppeal_report_createdAt_idx",
+    "label": "Create index \"ModerationAppeal_report_createdAt_idx\" on \"ModerationAppeal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ModerationAppeal_report_createdAt_idx",
+        "table": "ModerationAppeal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ModerationAppeal_report_createdAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_report_createdAt_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ModerationAppeal_report_createdAt_idx\"",
+        "sql": "CREATE INDEX \"ModerationAppeal_report_createdAt_idx\" ON \"public\".\"ModerationAppeal\" (\"report_id\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ModerationAppeal_report_createdAt_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_report_createdAt_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ModerationAppeal.ModerationAppeal_report_id_idx_6f6640fd",
+    "label": "Create index \"ModerationAppeal_report_id_idx_6f6640fd\" on \"ModerationAppeal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ModerationAppeal_report_id_idx_6f6640fd",
+        "table": "ModerationAppeal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ModerationAppeal_report_id_idx_6f6640fd\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_report_id_idx_6f6640fd\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ModerationAppeal_report_id_idx_6f6640fd\"",
+        "sql": "CREATE INDEX \"ModerationAppeal_report_id_idx_6f6640fd\" ON \"public\".\"ModerationAppeal\" (\"report_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ModerationAppeal_report_id_idx_6f6640fd\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_report_id_idx_6f6640fd\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ModerationAppeal.ModerationAppeal_reviewer_id_idx_ab069db0",
+    "label": "Create index \"ModerationAppeal_reviewer_id_idx_ab069db0\" on \"ModerationAppeal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ModerationAppeal_reviewer_id_idx_ab069db0",
+        "table": "ModerationAppeal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ModerationAppeal_reviewer_id_idx_ab069db0\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_reviewer_id_idx_ab069db0\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ModerationAppeal_reviewer_id_idx_ab069db0\"",
+        "sql": "CREATE INDEX \"ModerationAppeal_reviewer_id_idx_ab069db0\" ON \"public\".\"ModerationAppeal\" (\"reviewer_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ModerationAppeal_reviewer_id_idx_ab069db0\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_reviewer_id_idx_ab069db0\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ModerationAppeal.ModerationAppeal_status_createdAt_idx",
+    "label": "Create index \"ModerationAppeal_status_createdAt_idx\" on \"ModerationAppeal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ModerationAppeal_status_createdAt_idx",
+        "table": "ModerationAppeal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ModerationAppeal_status_createdAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_status_createdAt_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ModerationAppeal_status_createdAt_idx\"",
+        "sql": "CREATE INDEX \"ModerationAppeal_status_createdAt_idx\" ON \"public\".\"ModerationAppeal\" (\"status\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ModerationAppeal_status_createdAt_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ModerationAppeal_status_createdAt_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.UserBlock.UserBlock_blocked_blocker_idx",
+    "label": "Create index \"UserBlock_blocked_blocker_idx\" on \"UserBlock\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "UserBlock_blocked_blocker_idx",
+        "table": "UserBlock"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"UserBlock_blocked_blocker_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"UserBlock_blocked_blocker_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"UserBlock_blocked_blocker_idx\"",
+        "sql": "CREATE INDEX \"UserBlock_blocked_blocker_idx\" ON \"public\".\"UserBlock\" (\"blocked_id\", \"blocker_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"UserBlock_blocked_blocker_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"UserBlock_blocked_blocker_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.UserBlock.UserBlock_blocked_id_idx_181c3a00",
+    "label": "Create index \"UserBlock_blocked_id_idx_181c3a00\" on \"UserBlock\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "UserBlock_blocked_id_idx_181c3a00",
+        "table": "UserBlock"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"UserBlock_blocked_id_idx_181c3a00\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"UserBlock_blocked_id_idx_181c3a00\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"UserBlock_blocked_id_idx_181c3a00\"",
+        "sql": "CREATE INDEX \"UserBlock_blocked_id_idx_181c3a00\" ON \"public\".\"UserBlock\" (\"blocked_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"UserBlock_blocked_id_idx_181c3a00\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"UserBlock_blocked_id_idx_181c3a00\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.UserBlock.UserBlock_blocker_id_idx_e9326670",
+    "label": "Create index \"UserBlock_blocker_id_idx_e9326670\" on \"UserBlock\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "UserBlock_blocker_id_idx_e9326670",
+        "table": "UserBlock"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"UserBlock_blocker_id_idx_e9326670\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"UserBlock_blocker_id_idx_e9326670\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"UserBlock_blocker_id_idx_e9326670\"",
+        "sql": "CREATE INDEX \"UserBlock_blocker_id_idx_e9326670\" ON \"public\".\"UserBlock\" (\"blocker_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"UserBlock_blocker_id_idx_e9326670\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"UserBlock_blocker_id_idx_e9326670\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ContentReport.ContentReport_reporter_id_fkey",
+    "label": "Add foreign key \"ContentReport_reporter_id_fkey\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ContentReport_reporter_id_fkey",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ContentReport_reporter_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_reporter_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ContentReport_reporter_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\"\nADD CONSTRAINT \"ContentReport_reporter_id_fkey\"\nFOREIGN KEY (\"reporter_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ContentReport_reporter_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_reporter_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ContentReport.ContentReport_subject_user_id_fkey",
+    "label": "Add foreign key \"ContentReport_subject_user_id_fkey\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ContentReport_subject_user_id_fkey",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ContentReport_subject_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_subject_user_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ContentReport_subject_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\"\nADD CONSTRAINT \"ContentReport_subject_user_id_fkey\"\nFOREIGN KEY (\"subject_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ContentReport_subject_user_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_subject_user_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ContentReport.ContentReport_assigned_moderator_id_fkey",
+    "label": "Add foreign key \"ContentReport_assigned_moderator_id_fkey\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ContentReport_assigned_moderator_id_fkey",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ContentReport_assigned_moderator_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_assigned_moderator_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ContentReport_assigned_moderator_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\"\nADD CONSTRAINT \"ContentReport_assigned_moderator_id_fkey\"\nFOREIGN KEY (\"assigned_moderator_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ContentReport_assigned_moderator_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_assigned_moderator_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ContentReport.ContentReport_target_user_id_fkey",
+    "label": "Add foreign key \"ContentReport_target_user_id_fkey\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ContentReport_target_user_id_fkey",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ContentReport_target_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_target_user_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ContentReport_target_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\"\nADD CONSTRAINT \"ContentReport_target_user_id_fkey\"\nFOREIGN KEY (\"target_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ContentReport_target_user_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_target_user_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ContentReport.ContentReport_activity_id_fkey",
+    "label": "Add foreign key \"ContentReport_activity_id_fkey\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ContentReport_activity_id_fkey",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ContentReport_activity_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_activity_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ContentReport_activity_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\"\nADD CONSTRAINT \"ContentReport_activity_id_fkey\"\nFOREIGN KEY (\"activity_id\")\nREFERENCES \"public\".\"Activity\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ContentReport_activity_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_activity_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ContentReport.ContentReport_comment_id_fkey",
+    "label": "Add foreign key \"ContentReport_comment_id_fkey\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ContentReport_comment_id_fkey",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ContentReport_comment_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_comment_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ContentReport_comment_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\"\nADD CONSTRAINT \"ContentReport_comment_id_fkey\"\nFOREIGN KEY (\"comment_id\")\nREFERENCES \"public\".\"Comment\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ContentReport_comment_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_comment_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ContentReport.ContentReport_media_id_fkey",
+    "label": "Add foreign key \"ContentReport_media_id_fkey\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ContentReport_media_id_fkey",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ContentReport_media_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_media_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ContentReport_media_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\"\nADD CONSTRAINT \"ContentReport_media_id_fkey\"\nFOREIGN KEY (\"media_id\")\nREFERENCES \"public\".\"ActivityMedia\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ContentReport_media_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_media_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ContentReport.ContentReport_media_upload_id_fkey",
+    "label": "Add foreign key \"ContentReport_media_upload_id_fkey\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ContentReport_media_upload_id_fkey",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ContentReport_media_upload_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_media_upload_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ContentReport_media_upload_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\"\nADD CONSTRAINT \"ContentReport_media_upload_id_fkey\"\nFOREIGN KEY (\"media_upload_id\")\nREFERENCES \"public\".\"MediaModerationAsset\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ContentReport_media_upload_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_media_upload_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.MediaModerationAsset.MediaModerationAsset_owner_id_fkey",
+    "label": "Add foreign key \"MediaModerationAsset_owner_id_fkey\" on \"MediaModerationAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "MediaModerationAsset_owner_id_fkey",
+        "table": "MediaModerationAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"MediaModerationAsset_owner_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaModerationAsset_owner_id_fkey",
+          "public",
+          "\"public\".\"MediaModerationAsset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"MediaModerationAsset_owner_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"MediaModerationAsset\"\nADD CONSTRAINT \"MediaModerationAsset_owner_id_fkey\"\nFOREIGN KEY (\"owner_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"MediaModerationAsset_owner_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaModerationAsset_owner_id_fkey",
+          "public",
+          "\"public\".\"MediaModerationAsset\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.MediaModerationAsset.MediaModerationAsset_reviewer_id_fkey",
+    "label": "Add foreign key \"MediaModerationAsset_reviewer_id_fkey\" on \"MediaModerationAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "MediaModerationAsset_reviewer_id_fkey",
+        "table": "MediaModerationAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"MediaModerationAsset_reviewer_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaModerationAsset_reviewer_id_fkey",
+          "public",
+          "\"public\".\"MediaModerationAsset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"MediaModerationAsset_reviewer_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"MediaModerationAsset\"\nADD CONSTRAINT \"MediaModerationAsset_reviewer_id_fkey\"\nFOREIGN KEY (\"reviewer_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"MediaModerationAsset_reviewer_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaModerationAsset_reviewer_id_fkey",
+          "public",
+          "\"public\".\"MediaModerationAsset\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ActivityMedia.ActivityMedia_media_moderation_asset_id_fkey",
+    "label": "Add foreign key \"ActivityMedia_media_moderation_asset_id_fkey\" on \"ActivityMedia\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ActivityMedia_media_moderation_asset_id_fkey",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ActivityMedia_media_moderation_asset_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_media_moderation_asset_id_fkey",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ActivityMedia_media_moderation_asset_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\"\nADD CONSTRAINT \"ActivityMedia_media_moderation_asset_id_fkey\"\nFOREIGN KEY (\"media_moderation_asset_id\")\nREFERENCES \"public\".\"MediaModerationAsset\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ActivityMedia_media_moderation_asset_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_media_moderation_asset_id_fkey",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ActivityMedia.ActivityMedia_thumbnail_moderation_asset_id_fkey",
+    "label": "Add foreign key \"ActivityMedia_thumbnail_moderation_asset_id_fkey\" on \"ActivityMedia\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ActivityMedia_thumbnail_moderation_asset_id_fkey",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ActivityMedia_thumbnail_moderation_asset_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_thumbnail_moderation_asset_id_fkey",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ActivityMedia_thumbnail_moderation_asset_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\"\nADD CONSTRAINT \"ActivityMedia_thumbnail_moderation_asset_id_fkey\"\nFOREIGN KEY (\"thumbnail_moderation_asset_id\")\nREFERENCES \"public\".\"MediaModerationAsset\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ActivityMedia_thumbnail_moderation_asset_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_thumbnail_moderation_asset_id_fkey",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ModerationAction.ModerationAction_report_id_fkey",
+    "label": "Add foreign key \"ModerationAction_report_id_fkey\" on \"ModerationAction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ModerationAction_report_id_fkey",
+        "table": "ModerationAction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ModerationAction_report_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAction_report_id_fkey",
+          "public",
+          "\"public\".\"ModerationAction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ModerationAction_report_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ModerationAction\"\nADD CONSTRAINT \"ModerationAction_report_id_fkey\"\nFOREIGN KEY (\"report_id\")\nREFERENCES \"public\".\"ContentReport\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ModerationAction_report_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAction_report_id_fkey",
+          "public",
+          "\"public\".\"ModerationAction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ModerationAction.ModerationAction_actor_id_fkey",
+    "label": "Add foreign key \"ModerationAction_actor_id_fkey\" on \"ModerationAction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ModerationAction_actor_id_fkey",
+        "table": "ModerationAction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ModerationAction_actor_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAction_actor_id_fkey",
+          "public",
+          "\"public\".\"ModerationAction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ModerationAction_actor_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ModerationAction\"\nADD CONSTRAINT \"ModerationAction_actor_id_fkey\"\nFOREIGN KEY (\"actor_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ModerationAction_actor_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAction_actor_id_fkey",
+          "public",
+          "\"public\".\"ModerationAction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ModerationAppeal.ModerationAppeal_report_id_fkey",
+    "label": "Add foreign key \"ModerationAppeal_report_id_fkey\" on \"ModerationAppeal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ModerationAppeal_report_id_fkey",
+        "table": "ModerationAppeal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ModerationAppeal_report_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAppeal_report_id_fkey",
+          "public",
+          "\"public\".\"ModerationAppeal\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ModerationAppeal_report_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ModerationAppeal\"\nADD CONSTRAINT \"ModerationAppeal_report_id_fkey\"\nFOREIGN KEY (\"report_id\")\nREFERENCES \"public\".\"ContentReport\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ModerationAppeal_report_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAppeal_report_id_fkey",
+          "public",
+          "\"public\".\"ModerationAppeal\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ModerationAppeal.ModerationAppeal_appellant_id_fkey",
+    "label": "Add foreign key \"ModerationAppeal_appellant_id_fkey\" on \"ModerationAppeal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ModerationAppeal_appellant_id_fkey",
+        "table": "ModerationAppeal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ModerationAppeal_appellant_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAppeal_appellant_id_fkey",
+          "public",
+          "\"public\".\"ModerationAppeal\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ModerationAppeal_appellant_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ModerationAppeal\"\nADD CONSTRAINT \"ModerationAppeal_appellant_id_fkey\"\nFOREIGN KEY (\"appellant_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ModerationAppeal_appellant_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAppeal_appellant_id_fkey",
+          "public",
+          "\"public\".\"ModerationAppeal\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ModerationAppeal.ModerationAppeal_reviewer_id_fkey",
+    "label": "Add foreign key \"ModerationAppeal_reviewer_id_fkey\" on \"ModerationAppeal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ModerationAppeal_reviewer_id_fkey",
+        "table": "ModerationAppeal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ModerationAppeal_reviewer_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAppeal_reviewer_id_fkey",
+          "public",
+          "\"public\".\"ModerationAppeal\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ModerationAppeal_reviewer_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ModerationAppeal\"\nADD CONSTRAINT \"ModerationAppeal_reviewer_id_fkey\"\nFOREIGN KEY (\"reviewer_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ModerationAppeal_reviewer_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ModerationAppeal_reviewer_id_fkey",
+          "public",
+          "\"public\".\"ModerationAppeal\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.UserBlock.UserBlock_blocker_id_fkey",
+    "label": "Add foreign key \"UserBlock_blocker_id_fkey\" on \"UserBlock\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "UserBlock_blocker_id_fkey",
+        "table": "UserBlock"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"UserBlock_blocker_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "UserBlock_blocker_id_fkey",
+          "public",
+          "\"public\".\"UserBlock\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"UserBlock_blocker_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"UserBlock\"\nADD CONSTRAINT \"UserBlock_blocker_id_fkey\"\nFOREIGN KEY (\"blocker_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"UserBlock_blocker_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "UserBlock_blocker_id_fkey",
+          "public",
+          "\"public\".\"UserBlock\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.UserBlock.UserBlock_blocked_id_fkey",
+    "label": "Add foreign key \"UserBlock_blocked_id_fkey\" on \"UserBlock\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "UserBlock_blocked_id_fkey",
+        "table": "UserBlock"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"UserBlock_blocked_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "UserBlock_blocked_id_fkey",
+          "public",
+          "\"public\".\"UserBlock\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"UserBlock_blocked_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"UserBlock\"\nADD CONSTRAINT \"UserBlock_blocked_id_fkey\"\nFOREIGN KEY (\"blocked_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"UserBlock_blocked_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "UserBlock_blocked_id_fkey",
+          "public",
+          "\"public\".\"UserBlock\""
+        ]
+      }
+    ]
+  }
+]

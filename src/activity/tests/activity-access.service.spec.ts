@@ -7,6 +7,10 @@ describe('ActivityAccessService', () => {
   const prisma = {
     friend: { findUnique: jest.fn<(args: unknown) => Promise<unknown>>() },
     activity: { findUnique: jest.fn<(args: unknown) => Promise<unknown>>() },
+    userBlock: {
+      findFirst: jest.fn<(args: unknown) => Promise<unknown>>(),
+      findMany: jest.fn<(args: unknown) => Promise<unknown>>(),
+    },
   };
   const service = new ActivityAccessService(prisma as unknown as PrismaService);
 
@@ -64,9 +68,21 @@ describe('ActivityAccessService', () => {
 
   it('allows interaction for the owner and follows the profile interaction setting for others', async () => {
     prisma.activity.findUnique
-      .mockResolvedValueOnce({ userId: 'viewer-1', profile: { allowActivityInteractions: false } })
-      .mockResolvedValueOnce({ userId: 'owner-1', profile: { allowActivityInteractions: false } })
-      .mockResolvedValueOnce({ userId: 'owner-1', profile: { allowActivityInteractions: true } })
+      .mockResolvedValueOnce({
+        userId: 'viewer-1',
+        moderationStatus: 'visible',
+        profile: { allowActivityInteractions: false },
+      })
+      .mockResolvedValueOnce({
+        userId: 'owner-1',
+        moderationStatus: 'visible',
+        profile: { allowActivityInteractions: false },
+      })
+      .mockResolvedValueOnce({
+        userId: 'owner-1',
+        moderationStatus: 'visible',
+        profile: { allowActivityInteractions: true },
+      })
       .mockResolvedValueOnce(null);
 
     await expect(service.canInteractWithActivity('activity-1', 'viewer-1')).resolves.toBe(true);

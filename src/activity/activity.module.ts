@@ -12,6 +12,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { ActivityMigrationService } from './activity-migration.service';
 import { StorageModule } from 'src/storage/storage.module';
 import { StaticMapService } from 'src/common/maps/static-map.service';
+import { ModerationModule } from 'src/moderation/moderation.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { StaticMapService } from 'src/common/maps/static-map.service';
     FriendModule,
     AccountModule,
     StorageModule,
+    ModerationModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
   ],
   controllers: [ActivityController],

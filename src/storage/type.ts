@@ -20,8 +20,10 @@ export type MediaUploadManifestEntry = {
 };
 
 export type UploadedPhotoBatch = {
-  url: string;
-  key: string;
+  url?: string;
+  key?: string;
+  assetId?: string;
+  status?: 'queued' | 'processing' | 'review_required' | 'approved' | 'rejected' | 'failed';
   contentType: string;
   mediaId: string;
   role: MediaUploadRole;
@@ -36,6 +38,8 @@ export type StorageSettings = {
   endpoint: string;
   region: string;
   bucket: string;
+  quarantineBucket: string;
+  quarantinePrefix: string;
   accessKey: string;
   secretKey: string;
   publicUrl: string;

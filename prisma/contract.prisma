@@ -44,6 +44,17 @@ model User {
   receivedNotifications    Notification[]      @relation("NotificationRecipient")
   sentNotifications       Notification[]      @relation("NotificationActor")
   pushDeviceTokens        PushDeviceToken[]
+  submittedContentReports ContentReport[]    @relation("ContentReportReporter")
+  reportedContentSubjects ContentReport[]    @relation("ContentReportSubject")
+  assignedContentReports ContentReport[]     @relation("ContentReportAssignee")
+  contentReportsForUser  ContentReport[]     @relation("ContentReportTargetUser")
+  blocksCreated          UserBlock[]         @relation("UserBlockBlocker")
+  blocksReceived         UserBlock[]         @relation("UserBlockBlocked")
+  moderationActions      ModerationAction[]  @relation("ModerationActionActor")
+  moderationAppeals      ModerationAppeal[]  @relation("ModerationAppealAppellant")
+  reviewedModerationAppeals ModerationAppeal[] @relation("ModerationAppealReviewer")
+  mediaModerationAssets  MediaModerationAsset[] @relation("MediaModerationAssetOwner")
+  reviewedMediaModerationAssets MediaModerationAsset[] @relation("MediaModerationAssetReviewer")
 
   @@unique([email], map: "Users_email_key")
   @@unique([phone], map: "Users_phone_key")
@@ -107,6 +118,75 @@ enum ActivityVisibility {
   private
 }
 
+enum ModerationContentStatus {
+  visible
+  hidden
+  removed
+}
+
+enum ContentReportTargetType {
+  activity
+  comment
+  media
+  media_upload
+  user
+}
+
+enum ContentReportReason {
+  threats
+  harassment
+  hate_speech
+  sexual_content
+  violence
+  spam
+  other
+}
+
+enum ContentReportStatus {
+  open
+  in_review
+  resolved
+  rejected
+  appealed
+}
+
+enum ModerationPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum ModerationActionType {
+  hide_content
+  remove_content
+  restore_content
+  warn_user
+  temporary_suspend
+  permanent_suspend
+  reject_report
+  appeal_submitted
+  appeal_upheld
+  appeal_rejected
+  approve_media
+  reject_media
+}
+
+enum MediaModerationStatus {
+  queued
+  processing
+  review_required
+  approved
+  rejected
+  failed
+}
+
+enum ModerationAppealStatus {
+  pending
+  upheld
+  rejected
+}
+
 model Activity {
   id                  Uuid                 @id(map: "Activity_pkey") @default(sql`gen_random_uuid()`)
   date                TimestamptzString(6) @default(now())
@@ -149,9 +229,11 @@ model Activity {
   averageHeartRate    Int?                 @map("average_heart_rate")
   minHeartRate        Int?                 @map("min_heart_rate")
   maxHeartRate        Int?                 @map("max_heart_rate")
+  moderationStatus    ModerationContentStatus @default(visible) @map("moderation_status")
   comments            Comment[]
   likes               Like[]
   media               ActivityMedia[]
+  contentReports      ContentReport[]      @relation("ContentReportActivity")
   profile             Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Activity_profileId_fkey", index: false)
   user                User                 @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Activity_user_id_fkey", index: false)
 
@@ -163,16 +245,23 @@ model Activity {
 }
 
 model ActivityMedia {
-  id           Uuid                  @id(map: "ActivityMedia_pkey") @default(sql`gen_random_uuid()`)
-  activityId   Uuid                  @map("activity_id")
-  userId       Uuid                  @map("user_id")
-  activityDate TimestamptzString(6)  @map("activity_date")
-  position     Int
-  url          String
-  thumbnail    String?
-  blurhash     String?
-  createdAt    TimestamptzString(6)  @default(now()) @map("created_at")
-  activity     Activity              @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "ActivityMedia_activity_id_fkey", index: false)
+  id                          Uuid                     @id(map: "ActivityMedia_pkey") @default(sql`gen_random_uuid()`)
+  activityId                  Uuid                     @map("activity_id")
+  userId                      Uuid                     @map("user_id")
+  activityDate                TimestamptzString(6)     @map("activity_date")
+  position                    Int
+  url                         String?
+  thumbnail                   String?
+  blurhash                    String?
+  moderationStatus            ModerationContentStatus  @default(visible) @map("moderation_status")
+  mediaModerationAssetId      Uuid?                    @unique @map("media_moderation_asset_id")
+  thumbnailModerationAssetId  Uuid?                    @unique @map("thumbnail_moderation_asset_id")
+  mediaReviewStatus           MediaModerationStatus?   @map("media_review_status")
+  createdAt                   TimestamptzString(6)     @default(now()) @map("created_at")
+  activity                    Activity                 @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "ActivityMedia_activity_id_fkey", index: false)
+  mediaModerationAsset        MediaModerationAsset?    @relation("ActivityMediaMediaAsset", fields:[mediaModerationAssetId], references:[id], onDelete: SetNull)
+  thumbnailModerationAsset    MediaModerationAsset?    @relation("ActivityMediaThumbnailAsset", fields:[thumbnailModerationAssetId], references:[id], onDelete: SetNull)
+  contentReports              ContentReport[]          @relation("ContentReportMedia")
 
   @@unique([activityId, position], map: "ActivityMedia_activity_id_position_key")
   @@index([userId, activityDate, activityId, position], map: "ActivityMedia_user_id_activity_date_idx")
@@ -247,9 +336,11 @@ model Comment {
   authorId     String
   activityId   Uuid
   profileId    Uuid
+  moderationStatus ModerationContentStatus @default(visible) @map("moderation_status")
   commentLikes CommentLike[]
   activity     Activity             @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "Comment_activityId_fkey", index: false)
   profile      Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Comment_profileId_fkey", index: false)
+  contentReports ContentReport[]    @relation("ContentReportComment")
 
   @@index([activityId, date, id], map: "Comment_activityId_idx")
   @@map("Comment")
@@ -282,6 +373,124 @@ model Friend {
   @@index([friendId], map: "Friend_friendId_idx")
   @@unique([userId, friendId], map: "Friend_user_id_friendId_key")
   @@map("Friend")
+}
+
+model ContentReport {
+  id                  Uuid                    @id @default(sql`gen_random_uuid()`)
+  reporterId          Uuid?                   @map("reporter_id")
+  targetType          ContentReportTargetType  @map("target_type")
+  targetId            Uuid                    @map("target_id")
+  activityId          Uuid?                   @map("activity_id")
+  commentId           Uuid?                   @map("comment_id")
+  mediaId             Uuid?                   @map("media_id")
+  mediaUploadId       Uuid?                   @map("media_upload_id")
+  targetUserId        Uuid?                   @map("target_user_id")
+  subjectUserId       Uuid?                   @map("subject_user_id")
+  reason              ContentReportReason
+  details             VarChar(1000)?
+  status              ContentReportStatus     @default(open)
+  priority            ModerationPriority      @default(normal)
+  assignedModeratorId Uuid?                   @map("assigned_moderator_id")
+  createdAt           TimestamptzString(6)    @default(now()) @map("created_at")
+  reviewedAt          TimestamptzString(6)?   @map("reviewed_at")
+  reporter            User?                   @relation("ContentReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  subjectUser         User?                   @relation("ContentReportSubject", fields: [subjectUserId], references: [id], onDelete: SetNull)
+  assignedModerator   User?                   @relation("ContentReportAssignee", fields: [assignedModeratorId], references: [id], onDelete: SetNull)
+  targetUser          User?                   @relation("ContentReportTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+  activity            Activity?               @relation("ContentReportActivity", fields: [activityId], references: [id], onDelete: SetNull)
+  comment             Comment?                @relation("ContentReportComment", fields: [commentId], references: [id], onDelete: SetNull)
+  media               ActivityMedia?          @relation("ContentReportMedia", fields: [mediaId], references: [id], onDelete: SetNull)
+  mediaUpload         MediaModerationAsset?   @relation(fields: [mediaUploadId], references: [id], onDelete: SetNull)
+  actions             ModerationAction[]
+  appeals             ModerationAppeal[]
+
+  @@index([status, priority, createdAt], map: "ContentReport_status_priority_createdAt_idx")
+  @@index([assignedModeratorId, status, createdAt], map: "ContentReport_assignee_status_createdAt_idx")
+  @@index([reporterId, createdAt], map: "ContentReport_reporter_createdAt_idx")
+  @@index([subjectUserId, createdAt], map: "ContentReport_subject_createdAt_idx")
+  @@index([targetType, targetId], map: "ContentReport_target_idx")
+  @@index([mediaUploadId], map: "ContentReport_media_upload_id_idx")
+  @@map("ContentReport")
+}
+
+model MediaModerationAsset {
+  id                  Uuid                  @id @default(sql`gen_random_uuid()`)
+  ownerId             Uuid                  @map("owner_id")
+  mediaId             VarChar(100)          @map("media_id")
+  role                VarChar(16)           @default("media")
+  scope               VarChar(16)           @default("activity")
+  quarantineKey       VarChar(2048)          @map("quarantine_key")
+  publishedKey        VarChar(2048)?         @map("published_key")
+  contentType         VarChar(255)           @map("content_type")
+  byteSize            Int                   @map("byte_size")
+  status              MediaModerationStatus @default(queued)
+  scores              Jsonb?
+  frameCount          Int?                  @map("frame_count")
+  modelVersion        VarChar(100)?          @map("model_version")
+  attempts            Int                   @default(0)
+  processingStartedAt TimestamptzString(6)?  @map("processing_started_at")
+  scannedAt           TimestamptzString(6)?  @map("scanned_at")
+  reviewedAt          TimestamptzString(6)?  @map("reviewed_at")
+  reviewerId          Uuid?                 @map("reviewer_id")
+  reviewNote          VarChar(1000)?         @map("review_note")
+  createdAt           TimestamptzString(6)  @default(now()) @map("created_at")
+  owner               User                  @relation("MediaModerationAssetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  reviewer            User?                 @relation("MediaModerationAssetReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  activityMedia       ActivityMedia?         @relation("ActivityMediaMediaAsset")
+  thumbnailForActivityMedia ActivityMedia?    @relation("ActivityMediaThumbnailAsset")
+  reports             ContentReport[]
+
+  @@unique([ownerId, mediaId, role], map: "MediaModerationAsset_owner_media_role_key")
+  @@index([status, createdAt], map: "MediaModerationAsset_status_created_at_idx")
+  @@index([ownerId, createdAt], map: "MediaModerationAsset_owner_created_at_idx")
+  @@map("MediaModerationAsset")
+}
+
+model UserBlock {
+  id        Uuid                 @id @default(sql`gen_random_uuid()`)
+  blockerId Uuid                 @map("blocker_id")
+  blockedId Uuid                 @map("blocked_id")
+  createdAt TimestamptzString(6) @default(now()) @map("created_at")
+  blocker   User                 @relation("UserBlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User                 @relation("UserBlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId], map: "UserBlock_blocker_blocked_key")
+  @@index([blockedId, blockerId], map: "UserBlock_blocked_blocker_idx")
+  @@map("UserBlock")
+}
+
+model ModerationAction {
+  id        Uuid                 @id @default(sql`gen_random_uuid()`)
+  reportId  Uuid                 @map("report_id")
+  actorId   Uuid?                @map("actor_id")
+  action    ModerationActionType
+  note      VarChar(1000)?
+  createdAt TimestamptzString(6) @default(now()) @map("created_at")
+  report    ContentReport        @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  actor     User?                @relation("ModerationActionActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([reportId, createdAt], map: "ModerationAction_report_createdAt_idx")
+  @@index([actorId, createdAt], map: "ModerationAction_actor_createdAt_idx")
+  @@map("ModerationAction")
+}
+
+model ModerationAppeal {
+  id             Uuid                    @id @default(sql`gen_random_uuid()`)
+  reportId       Uuid                    @map("report_id")
+  appellantId    Uuid?                   @map("appellant_id")
+  reason         VarChar(1000)
+  status         ModerationAppealStatus   @default(pending)
+  createdAt      TimestamptzString(6)     @default(now()) @map("created_at")
+  reviewedAt     TimestamptzString(6)?    @map("reviewed_at")
+  reviewerId     Uuid?                   @map("reviewer_id")
+  resolutionNote VarChar(1000)?           @map("resolution_note")
+  report         ContentReport            @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  appellant      User?                    @relation("ModerationAppealAppellant", fields: [appellantId], references: [id], onDelete: SetNull)
+  reviewer       User?                    @relation("ModerationAppealReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt], map: "ModerationAppeal_status_createdAt_idx")
+  @@index([reportId, createdAt], map: "ModerationAppeal_report_createdAt_idx")
+  @@map("ModerationAppeal")
 }
 
 model Like {

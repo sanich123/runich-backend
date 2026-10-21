@@ -136,6 +136,9 @@ export class ActivityService {
       let media = activityDto.media;
       let activityId: string | undefined = media?.length ? randomUUID() : undefined;
       let routeMetadata;
+      if (media?.some(({ assetId }) => assetId) && !storageService) {
+        throw new ServiceUnavailableException('Сервис хранения проверяемого медиа не настроен');
+      }
       if (!activityId && storageService && (locations?.length || heartRateSamples?.length)) activityId = randomUUID();
       if (storageService && (locations?.length || media?.length || heartRateSamples?.length)) {
         activityId ??= randomUUID();
@@ -231,7 +234,11 @@ export class ActivityService {
       );
 
       const mediaRows = this.getActivityMediaRows(activityId, id, activityDto.date ?? new Date(), media);
-      return omitActivityHeartRateSamples(await this.persistenceService.create(data, mediaRows));
+      const createdActivity = await this.persistenceService.create(data, mediaRows);
+      await storageService?.refreshLinkedActivityMedia(
+        media?.flatMap(({ assetId, thumbnailAssetId }) => [assetId, thumbnailAssetId]) ?? [],
+      );
+      return omitActivityHeartRateSamples(createdActivity);
     } catch (error) {
       await this.deleteUploadedRoute(uploadedRouteKey);
       await this.deleteUploadedRoute(uploadedHeartRateKey);
@@ -699,7 +706,14 @@ export class ActivityService {
         });
         return createdRows;
       });
-      return { success: true, media: createdMedia };
+      await this.storageService.refreshLinkedActivityMedia(
+        promoted.photos.flatMap(({ assetId, thumbnailAssetId }) => [assetId, thumbnailAssetId]),
+      );
+      const refreshedMedia = await this.prisma.activityMedia.findMany({
+        where: { id: { in: createdMedia.map(({ id }) => id) } },
+        orderBy: { position: 'asc' },
+      });
+      return { success: true, media: refreshedMedia };
     } catch (error) {
       await Promise.all(promotedKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);
@@ -718,13 +732,17 @@ export class ActivityService {
         throw new ServiceUnavailableException('Сервис удаления медиа не настроен');
       }
 
+      const media = await this.prisma.activityMedia.findFirst({
+        where: { id: mediaId, activityId, userId },
+        select: {
+          url: true,
+          thumbnail: true,
+          mediaModerationAssetId: true,
+          thumbnailModerationAssetId: true,
+        },
+      });
+      if (!media) throw new NotFoundException('Медиа активности не найдено');
       await this.prisma.$transaction(async (transaction) => {
-        const media = await transaction.activityMedia.findFirst({
-          where: { id: mediaId, activityId, userId },
-          select: { url: true, thumbnail: true },
-        });
-        if (!media) throw new NotFoundException('Медиа активности не найдено');
-
         const storageKeys = this.getMediaStorageKeys(userId, media);
         await Promise.all(
           storageKeys.map((storageKey) =>
@@ -733,6 +751,10 @@ export class ActivityService {
         );
         await transaction.activityMedia.delete({ where: { id: mediaId } });
       });
+      await this.storageService.deleteActivityModerationAssets(userId, [
+        media.mediaModerationAssetId,
+        media.thumbnailModerationAssetId,
+      ]);
 
       return { success: true };
     } catch (error) {
@@ -945,9 +967,24 @@ export class ActivityService {
 
   async deleteActivityById(id: string, userId = id) {
     try {
-      if (!this.mediaCleanupService) return await this.persistenceService.delete(id, userId);
+      if (!this.mediaCleanupService) {
+        const activity = await this.prisma.activity.findFirst({
+          where: { id, userId },
+          select: { media: { select: { mediaModerationAssetId: true, thumbnailModerationAssetId: true } } },
+        });
+        await this.storageService?.deleteActivityModerationAssets(
+          userId,
+          (activity?.media ?? []).flatMap(
+            (media: { mediaModerationAssetId: string | null; thumbnailModerationAssetId: string | null }) => [
+              media.mediaModerationAssetId,
+              media.thumbnailModerationAssetId,
+            ],
+          ),
+        );
+        return await this.persistenceService.delete(id, userId);
+      }
 
-      return await this.prisma.$transaction(async (transaction) => {
+      const deletion = await this.prisma.$transaction(async (transaction) => {
         const activity = await transaction.activity.findFirst({
           where: { id, userId },
           select: {
@@ -955,7 +992,14 @@ export class ActivityService {
             heartRateStorageKey: true,
             mapPhotoUrl: true,
             routeOnlyMapPhotoUrl: true,
-            media: { select: { url: true, thumbnail: true } },
+            media: {
+              select: {
+                url: true,
+                thumbnail: true,
+                mediaModerationAssetId: true,
+                thumbnailModerationAssetId: true,
+              },
+            },
           },
         });
         const storageKeys = this.getActivityStorageKeys(userId, activity);
@@ -964,8 +1008,19 @@ export class ActivityService {
             this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey, transaction as never),
           ),
         );
-        return await transaction.activity.delete({ where: { id, userId } });
+        const deletedActivity = await transaction.activity.delete({ where: { id, userId } });
+        return {
+          deletedActivity,
+          moderationAssetIds: (activity?.media ?? []).flatMap(
+            (media: { mediaModerationAssetId: string | null; thumbnailModerationAssetId: string | null }) => [
+              media.mediaModerationAssetId,
+              media.thumbnailModerationAssetId,
+            ],
+          ),
+        };
       });
+      await this.storageService?.deleteActivityModerationAssets(userId, deletion.moderationAssetIds);
+      return deletion.deletedActivity;
     } catch (error) {
       handleServiceError(error);
     }
@@ -1174,13 +1229,29 @@ export class ActivityService {
     if (!(activityDate instanceof Date) && typeof activityDate !== 'string') return [];
     if (!Array.isArray(media)) return [];
 
-    return media.flatMap((item, position) => {
+    return media.flatMap((item, position): Record<string, unknown>[] => {
       if (typeof item === 'string') {
         return [{ activityId, userId, activityDate, position, url: item, thumbnail: null, blurhash: null }];
       }
-      if (!item || typeof item !== 'object' || !('url' in item) || typeof item.url !== 'string') return [];
-
+      if (!item || typeof item !== 'object') return [];
       const photo = item as ActivityMediaObject;
+      if (photo.assetId) {
+        return [
+          {
+            activityId,
+            userId,
+            activityDate,
+            position,
+            url: photo.url ?? null,
+            thumbnail: photo.thumbnail ?? null,
+            blurhash: photo.blurhash ?? null,
+            mediaModerationAssetId: photo.assetId,
+            thumbnailModerationAssetId: photo.thumbnailAssetId ?? null,
+            mediaReviewStatus: photo.mediaReviewStatus ?? 'queued',
+          },
+        ];
+      }
+      if (typeof photo.url !== 'string') return [];
       return [
         {
           activityId,

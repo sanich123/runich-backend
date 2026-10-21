@@ -1,0 +1,11 @@
+export const MEDIA_MODERATION_MODEL_VERSION = 'nsfwjs-five-label-cpu';
+export const MEDIA_MODERATION_MAX_VIDEO_SECONDS = 60;
+export const MEDIA_MODERATION_VIDEO_SAMPLE_FPS = 1;
+export const MEDIA_MODERATION_MAX_VIDEO_FRAMES = 60;
+export const MEDIA_MODERATION_RETRY_LIMIT = 5;
+export const MEDIA_MODERATION_STALE_PROCESSING_MS = 15 * 60_000;
+export const MEDIA_MODERATION_REVIEW_THRESHOLDS = {
+  Porn: 0.25,
+  Hentai: 0.25,
+  Sexy: 0.6,
+} as const;

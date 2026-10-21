@@ -21,6 +21,7 @@ import {
 import { ACTIVITY_VISIBILITY } from './activity-visibility';
 import {
   createActivityChartLocations,
+  hidePendingActivityMediaForViewer,
   hideActivityMapForViewer,
   normalizeActivityCardForViewer,
   normalizeActivityDetails,
@@ -45,6 +46,7 @@ export class ActivityReadService {
         kilometresSplit: true,
         userId: true,
         visibility: true,
+        moderationStatus: true,
         hideMap: true,
         profile: { select: { allowActivityReplayViewing: true } },
       },
@@ -54,12 +56,8 @@ export class ActivityReadService {
     // The activity row already contains the fields required for the common
     // owner/public checks. Avoid fetching the same row a second time; only
     // follower-only activities need the additional relationship lookup.
+    if (!(await this.accessService.canAccessActivityData(activity, currentUserId))) return null;
     const isOwner = activity.userId === currentUserId;
-    const isPublic = activity.visibility === ACTIVITY_VISIBILITY.public;
-    const isFollowerActivity =
-      activity.visibility === ACTIVITY_VISIBILITY.followers &&
-      (isOwner || (await this.accessService.isFollower(currentUserId, activity.userId)));
-    if (!isOwner && !isPublic && !isFollowerActivity) return null;
     if (!isOwner && activity.hideMap) return null;
     if (!isOwner && activity.profile?.allowActivityReplayViewing === false) return null;
     let locations: LocationObject[] | undefined;
@@ -82,6 +80,7 @@ export class ActivityReadService {
         distance: true,
         userId: true,
         visibility: true,
+        moderationStatus: true,
         profile: {
           select: {
             allowActivityHeartRateViewing: true,
@@ -93,12 +92,8 @@ export class ActivityReadService {
     });
     if (!activity || !currentUserId) return null;
 
+    if (!(await this.accessService.canAccessActivityData(activity, currentUserId))) return null;
     const isOwner = activity.userId === currentUserId;
-    const isPublic = activity.visibility === ACTIVITY_VISIBILITY.public;
-    const isFollowerActivity =
-      activity.visibility === ACTIVITY_VISIBILITY.followers &&
-      (isOwner || (await this.accessService.isFollower(currentUserId, activity.userId)));
-    if (!isOwner && !isPublic && !isFollowerActivity) return null;
     const canViewHeartRate = isOwner || activity.profile?.allowActivityHeartRateViewing !== false;
     const canViewElevation = isOwner || activity.profile?.allowActivityElevationViewing !== false;
     const canViewPace = isOwner || activity.profile?.allowActivityPaceViewing !== false;
@@ -132,9 +127,16 @@ export class ActivityReadService {
         where: { id },
         select: ACTIVITY_DETAILS_SELECT,
       });
-      if (!activity || !(await this.accessService.canAccessActivityData(activity, currentUserId))) return null;
+      if (
+        !activity ||
+        activity.moderationStatus !== 'visible' ||
+        !(await this.accessService.canAccessActivityData(activity, currentUserId))
+      )
+        return null;
+      const activityForResponse = hidePendingActivityMediaForViewer({ ...activity }, currentUserId);
+      delete activityForResponse.moderationStatus;
       const normalizedActivity = hideActivityMapForViewer(
-        normalizeActivityDetails(activity as Record<string, unknown>),
+        normalizeActivityDetails(activityForResponse as Record<string, unknown>),
         currentUserId,
       );
       const isOwner = Boolean(currentUserId && activity.userId === currentUserId);
@@ -175,7 +177,11 @@ export class ActivityReadService {
       const media = await this.prisma.activityMedia.findMany({
         where: {
           userId: id,
-          ...(Object.keys(visibilityFilter).length ? { activity: visibilityFilter } : {}),
+          moderationStatus: 'visible',
+          ...(currentUserId === id ? {} : { url: { not: null } }),
+          ...(Object.keys(visibilityFilter).length
+            ? { activity: { ...visibilityFilter, moderationStatus: 'visible' } }
+            : { activity: { moderationStatus: 'visible' } }),
           ...(cursor
             ? {
                 OR: [
@@ -196,6 +202,7 @@ export class ActivityReadService {
           url: true,
           thumbnail: true,
           blurhash: true,
+          mediaReviewStatus: true,
         },
       });
       const hasMore = media.length > pageSize;
@@ -204,18 +211,20 @@ export class ActivityReadService {
         activityDate: Date;
         activityId: string;
         position: number;
-        url: string;
+        url: string | null;
         thumbnail: string | null;
         blurhash: string | null;
+        mediaReviewStatus: string | null;
       }>;
       const lastMedia = slicedMedia.at(-1);
       return {
-        media: slicedMedia.map(({ id: mediaId, activityId, url, thumbnail, blurhash }) => ({
+        media: slicedMedia.map(({ id: mediaId, activityId, url, thumbnail, blurhash, mediaReviewStatus }) => ({
           id: mediaId,
           activityId,
           url,
           thumbnail,
           blurhash,
+          mediaReviewStatus,
         })),
         hasMore,
         nextCursor:
@@ -243,6 +252,7 @@ export class ActivityReadService {
         where: {
           userId: currentUserId,
           isFavorite: true,
+          moderationStatus: 'visible',
           ...(cursor
             ? {
                 OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
@@ -279,6 +289,7 @@ export class ActivityReadService {
       const activitiesWithExtraItem = await this.prisma.activity.findMany({
         where: {
           userId: id,
+          moderationStatus: 'visible',
           ...visibilityFilter,
           ...(cursor
             ? {
@@ -314,6 +325,7 @@ export class ActivityReadService {
 
     const searchByStringOrArray = normalizedIds.length === 1 ? normalizedIds[0] : { in: normalizedIds };
     try {
+      const blockedUserIds = currentUserId ? await this.accessService.getBlockedUserIds(currentUserId) : [];
       const followedUsers = currentUserId
         ? await this.prisma.friend.findMany({ where: { userId: currentUserId }, select: { friendId: true } })
         : [];
@@ -321,6 +333,8 @@ export class ActivityReadService {
       const activities = await this.prisma.activity.findMany({
         where: {
           id: searchByStringOrArray,
+          moderationStatus: 'visible',
+          ...(blockedUserIds.length ? { userId: { notIn: blockedUserIds } } : {}),
           OR: [
             ...(currentUserId ? [{ userId: currentUserId }] : []),
             { visibility: ACTIVITY_VISIBILITY.public },
@@ -365,12 +379,14 @@ export class ActivityReadService {
                   'id', am."id",
                   'url', am."url",
                   'thumbnail', am."thumbnail",
-                  'blurhash', am."blurhash"
+                  'blurhash', am."blurhash",
+                  'mediaReviewStatus', am."media_review_status"
                 )
                 ORDER BY am."position" ASC
               )
               FROM "ActivityMedia" AS am
               WHERE am."activity_id" = a."id"
+                AND am."moderation_status" = 'visible'
             ),
             '[]'::json
               ) AS "media",
@@ -405,6 +421,12 @@ export class ActivityReadService {
               SELECT COUNT(*)::int
               FROM "Comment" AS c
               WHERE c."activityId" = a."id"
+                AND c."moderation_status" = 'visible'
+                AND NOT EXISTS (
+                  SELECT 1 FROM "UserBlock" AS cb
+                  WHERE (cb."blocker_id" = ${currentUserId}::uuid AND cb."blocked_id"::text = c."authorId")
+                     OR (cb."blocked_id" = ${currentUserId}::uuid AND cb."blocker_id"::text = c."authorId")
+                )
             ),
             'likes', (
               SELECT COUNT(*)::int
@@ -415,6 +437,12 @@ export class ActivityReadService {
         FROM "Activity" AS a
         INNER JOIN "Profile" AS p ON p."id" = a."profileId"
         WHERE a."visibility" IN ('public', 'followers')
+          AND a."moderation_status" = 'visible'
+          AND NOT EXISTS (
+            SELECT 1 FROM "UserBlock" AS ab
+            WHERE (ab."blocker_id" = ${currentUserId}::uuid AND ab."blocked_id" = a."user_id")
+               OR (ab."blocked_id" = ${currentUserId}::uuid AND ab."blocker_id" = a."user_id")
+          )
           AND (
             a."user_id" = ${currentUserId}::uuid
             OR EXISTS (

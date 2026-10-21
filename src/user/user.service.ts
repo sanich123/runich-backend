@@ -6,6 +6,7 @@ import { UserDto } from './user.dto';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
 import { StorageService } from 'src/storage/storage.service';
 import { PUBLIC_USER_PROFILE_SELECT } from 'src/account/const';
+import { ModerationAccessService } from 'src/moderation/moderation-access.service';
 
 @Injectable()
 export class UserService {
@@ -13,11 +14,17 @@ export class UserService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
     @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
-  ) {}
+    @Optional() @Inject(ModerationAccessService) moderationAccess?: ModerationAccessService,
+  ) {
+    this.moderationAccess = moderationAccess ?? new ModerationAccessService(this.prisma);
+  }
+
+  private readonly moderationAccess: ModerationAccessService;
 
   async getProfileByUserId(userId: string, currentUserId = userId) {
     try {
       if (userId !== currentUserId) {
+        if (await this.moderationAccess.areBlocked(userId, currentUserId)) return null;
         return await this.prisma.profile.findUnique({ where: { userId }, select: PUBLIC_USER_PROFILE_SELECT });
       }
       return await this.prisma.profile.findUnique({ where: { userId } });

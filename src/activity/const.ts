@@ -52,7 +52,8 @@ export const ACTIVITY_CARD_SELECT = {
   hideMap: true,
   isFavorite: true,
   media: {
-    select: { id: true, url: true, thumbnail: true, blurhash: true },
+    where: { moderationStatus: 'visible' },
+    select: { id: true, url: true, thumbnail: true, blurhash: true, mediaReviewStatus: true },
     orderBy: { position: 'asc' },
   },
   mapPhotoUrl: true,
@@ -69,7 +70,7 @@ export const ACTIVITY_CARD_SELECT = {
   steps: true,
   kilometresSplit: true,
   profile: { select: ACTIVITY_CARD_PROFILE_SELECT },
-  _count: { select: { comments: true, likes: true } },
+  _count: { select: { comments: { where: { moderationStatus: 'visible' } }, likes: true } },
 } as const;
 
 const ACTIVITY_FEED_SELECT = {
@@ -79,6 +80,7 @@ const ACTIVITY_FEED_SELECT = {
 
 export const ACTIVITY_DETAILS_SELECT = {
   ...ACTIVITY_FEED_SELECT,
+  moderationStatus: true,
   profile: {
     select: {
       ...ACTIVITY_FEED_PROFILE_SELECT,

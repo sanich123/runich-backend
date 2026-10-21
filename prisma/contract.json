@@ -28,6 +28,10 @@
       "model": "CommentLike",
       "namespace": "public"
     },
+    "ContentReport": {
+      "model": "ContentReport",
+      "namespace": "public"
+    },
     "EmailNotificationJob": {
       "model": "EmailNotificationJob",
       "namespace": "public"
@@ -48,6 +52,18 @@
       "model": "MediaCleanupJob",
       "namespace": "public"
     },
+    "MediaModerationAsset": {
+      "model": "MediaModerationAsset",
+      "namespace": "public"
+    },
+    "ModerationAction": {
+      "model": "ModerationAction",
+      "namespace": "public"
+    },
+    "ModerationAppeal": {
+      "model": "ModerationAppeal",
+      "namespace": "public"
+    },
     "Notification": {
       "model": "Notification",
       "namespace": "public"
@@ -66,6 +82,10 @@
     },
     "Subscriptions": {
       "model": "Subscription",
+      "namespace": "public"
+    },
+    "UserBlock": {
+      "model": "UserBlock",
       "namespace": "public"
     },
     "UserSession": {
@@ -95,6 +115,226 @@
               {
                 "name": "private",
                 "value": "private"
+              }
+            ]
+          },
+          "ContentReportReason": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "threats",
+                "value": "threats"
+              },
+              {
+                "name": "harassment",
+                "value": "harassment"
+              },
+              {
+                "name": "hate_speech",
+                "value": "hate_speech"
+              },
+              {
+                "name": "sexual_content",
+                "value": "sexual_content"
+              },
+              {
+                "name": "violence",
+                "value": "violence"
+              },
+              {
+                "name": "spam",
+                "value": "spam"
+              },
+              {
+                "name": "other",
+                "value": "other"
+              }
+            ]
+          },
+          "ContentReportStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "open",
+                "value": "open"
+              },
+              {
+                "name": "in_review",
+                "value": "in_review"
+              },
+              {
+                "name": "resolved",
+                "value": "resolved"
+              },
+              {
+                "name": "rejected",
+                "value": "rejected"
+              },
+              {
+                "name": "appealed",
+                "value": "appealed"
+              }
+            ]
+          },
+          "ContentReportTargetType": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "activity",
+                "value": "activity"
+              },
+              {
+                "name": "comment",
+                "value": "comment"
+              },
+              {
+                "name": "media",
+                "value": "media"
+              },
+              {
+                "name": "media_upload",
+                "value": "media_upload"
+              },
+              {
+                "name": "user",
+                "value": "user"
+              }
+            ]
+          },
+          "MediaModerationStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "queued",
+                "value": "queued"
+              },
+              {
+                "name": "processing",
+                "value": "processing"
+              },
+              {
+                "name": "review_required",
+                "value": "review_required"
+              },
+              {
+                "name": "approved",
+                "value": "approved"
+              },
+              {
+                "name": "rejected",
+                "value": "rejected"
+              },
+              {
+                "name": "failed",
+                "value": "failed"
+              }
+            ]
+          },
+          "ModerationActionType": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "hide_content",
+                "value": "hide_content"
+              },
+              {
+                "name": "remove_content",
+                "value": "remove_content"
+              },
+              {
+                "name": "restore_content",
+                "value": "restore_content"
+              },
+              {
+                "name": "warn_user",
+                "value": "warn_user"
+              },
+              {
+                "name": "temporary_suspend",
+                "value": "temporary_suspend"
+              },
+              {
+                "name": "permanent_suspend",
+                "value": "permanent_suspend"
+              },
+              {
+                "name": "reject_report",
+                "value": "reject_report"
+              },
+              {
+                "name": "appeal_submitted",
+                "value": "appeal_submitted"
+              },
+              {
+                "name": "appeal_upheld",
+                "value": "appeal_upheld"
+              },
+              {
+                "name": "appeal_rejected",
+                "value": "appeal_rejected"
+              },
+              {
+                "name": "approve_media",
+                "value": "approve_media"
+              },
+              {
+                "name": "reject_media",
+                "value": "reject_media"
+              }
+            ]
+          },
+          "ModerationAppealStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "pending",
+                "value": "pending"
+              },
+              {
+                "name": "upheld",
+                "value": "upheld"
+              },
+              {
+                "name": "rejected",
+                "value": "rejected"
+              }
+            ]
+          },
+          "ModerationContentStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "visible",
+                "value": "visible"
+              },
+              {
+                "name": "hidden",
+                "value": "hidden"
+              },
+              {
+                "name": "removed",
+                "value": "removed"
+              }
+            ]
+          },
+          "ModerationPriority": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "low",
+                "value": "low"
+              },
+              {
+                "name": "normal",
+                "value": "normal"
+              },
+              {
+                "name": "high",
+                "value": "high"
+              },
+              {
+                "name": "urgent",
+                "value": "urgent"
               }
             ]
           }
@@ -262,6 +502,19 @@
                 "type": {
                   "codecId": "pg/int4@1",
                   "kind": "scalar"
+                }
+              },
+              "moderationStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationContentStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
                 }
               },
               "profileId": {
@@ -445,6 +698,21 @@
                   "namespace": "public"
                 }
               },
+              "contentReports": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "activityId"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
+                  "namespace": "public"
+                }
+              },
               "likes": {
                 "cardinality": "1:N",
                 "on": {
@@ -573,6 +841,9 @@
                 "minHeartRate": {
                   "column": "min_heart_rate"
                 },
+                "moderationStatus": {
+                  "column": "moderation_status"
+                },
                 "profileId": {
                   "column": "profileId"
                 },
@@ -681,6 +952,39 @@
                   "kind": "scalar"
                 }
               },
+              "mediaModerationAssetId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "mediaReviewStatus": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "MediaModerationStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "moderationStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationContentStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "position": {
                 "nullable": false,
                 "type": {
@@ -695,8 +999,15 @@
                   "kind": "scalar"
                 }
               },
+              "thumbnailModerationAssetId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
               "url": {
-                "nullable": false,
+                "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
@@ -726,6 +1037,53 @@
                   "model": "Activity",
                   "namespace": "public"
                 }
+              },
+              "contentReports": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "mediaId"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
+                  "namespace": "public"
+                }
+              },
+              "mediaModerationAsset": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "mediaModerationAssetId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "MediaModerationAsset",
+                  "namespace": "public"
+                }
+              },
+              "thumbnailModerationAsset": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "thumbnailModerationAssetId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "MediaModerationAsset",
+                  "namespace": "public"
+                }
               }
             },
             "storage": {
@@ -745,11 +1103,23 @@
                 "id": {
                   "column": "id"
                 },
+                "mediaModerationAssetId": {
+                  "column": "media_moderation_asset_id"
+                },
+                "mediaReviewStatus": {
+                  "column": "media_review_status"
+                },
+                "moderationStatus": {
+                  "column": "moderation_status"
+                },
                 "position": {
                   "column": "position"
                 },
                 "thumbnail": {
                   "column": "thumbnail"
+                },
+                "thumbnailModerationAssetId": {
+                  "column": "thumbnail_moderation_asset_id"
                 },
                 "url": {
                   "column": "url"
@@ -1137,6 +1507,19 @@
                   "kind": "scalar"
                 }
               },
+              "moderationStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationContentStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "profileId": {
                 "nullable": false,
                 "type": {
@@ -1177,6 +1560,21 @@
                   "namespace": "public"
                 }
               },
+              "contentReports": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "commentId"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
+                  "namespace": "public"
+                }
+              },
               "profile": {
                 "cardinality": "N:1",
                 "nullable": false,
@@ -1210,6 +1608,9 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "moderationStatus": {
+                  "column": "moderation_status"
                 },
                 "profileId": {
                   "column": "profileId"
@@ -1314,6 +1715,379 @@
               },
               "namespaceId": "public",
               "table": "CommentLike"
+            }
+          },
+          "ContentReport": {
+            "fields": {
+              "activityId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "assignedModeratorId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "commentId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "details": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 1000
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "mediaId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "mediaUploadId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "priority": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationPriority",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "reason": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ContentReportReason",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "reporterId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "reviewedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ContentReportStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "subjectUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "targetId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "targetType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ContentReportTargetType",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "targetUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "actions": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "reportId"
+                  ]
+                },
+                "to": {
+                  "model": "ModerationAction",
+                  "namespace": "public"
+                }
+              },
+              "activity": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "activityId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Activity",
+                  "namespace": "public"
+                }
+              },
+              "appeals": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "reportId"
+                  ]
+                },
+                "to": {
+                  "model": "ModerationAppeal",
+                  "namespace": "public"
+                }
+              },
+              "assignedModerator": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "assignedModeratorId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "comment": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "commentId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Comment",
+                  "namespace": "public"
+                }
+              },
+              "media": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "mediaId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "ActivityMedia",
+                  "namespace": "public"
+                }
+              },
+              "mediaUpload": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "mediaUploadId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "MediaModerationAsset",
+                  "namespace": "public"
+                }
+              },
+              "reporter": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "reporterId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "subjectUser": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "subjectUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "targetUser": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "targetUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "activityId": {
+                  "column": "activity_id"
+                },
+                "assignedModeratorId": {
+                  "column": "assigned_moderator_id"
+                },
+                "commentId": {
+                  "column": "comment_id"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "details": {
+                  "column": "details"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "mediaId": {
+                  "column": "media_id"
+                },
+                "mediaUploadId": {
+                  "column": "media_upload_id"
+                },
+                "priority": {
+                  "column": "priority"
+                },
+                "reason": {
+                  "column": "reason"
+                },
+                "reporterId": {
+                  "column": "reporter_id"
+                },
+                "reviewedAt": {
+                  "column": "reviewed_at"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "subjectUserId": {
+                  "column": "subject_user_id"
+                },
+                "targetId": {
+                  "column": "target_id"
+                },
+                "targetType": {
+                  "column": "target_type"
+                },
+                "targetUserId": {
+                  "column": "target_user_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "ContentReport"
             }
           },
           "EmailNotificationJob": {
@@ -1955,6 +2729,623 @@
               },
               "namespaceId": "public",
               "table": "MediaCleanupJob"
+            }
+          },
+          "MediaModerationAsset": {
+            "fields": {
+              "attempts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "byteSize": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "contentType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 255
+                  }
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "frameCount": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "mediaId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 100
+                  }
+                }
+              },
+              "modelVersion": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 100
+                  }
+                }
+              },
+              "ownerId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "processingStartedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "publishedKey": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 2048
+                  }
+                }
+              },
+              "quarantineKey": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 2048
+                  }
+                }
+              },
+              "reviewNote": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 1000
+                  }
+                }
+              },
+              "reviewedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "reviewerId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "role": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              },
+              "scannedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "scope": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              },
+              "scores": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/jsonb@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "MediaModerationStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              }
+            },
+            "relations": {
+              "activityMedia": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "mediaModerationAssetId"
+                  ]
+                },
+                "to": {
+                  "model": "ActivityMedia",
+                  "namespace": "public"
+                }
+              },
+              "owner": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "ownerId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "reports": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "mediaUploadId"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
+                  "namespace": "public"
+                }
+              },
+              "reviewer": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "reviewerId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "thumbnailForActivityMedia": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "thumbnailModerationAssetId"
+                  ]
+                },
+                "to": {
+                  "model": "ActivityMedia",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "attempts": {
+                  "column": "attempts"
+                },
+                "byteSize": {
+                  "column": "byte_size"
+                },
+                "contentType": {
+                  "column": "content_type"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "frameCount": {
+                  "column": "frame_count"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "mediaId": {
+                  "column": "media_id"
+                },
+                "modelVersion": {
+                  "column": "model_version"
+                },
+                "ownerId": {
+                  "column": "owner_id"
+                },
+                "processingStartedAt": {
+                  "column": "processing_started_at"
+                },
+                "publishedKey": {
+                  "column": "published_key"
+                },
+                "quarantineKey": {
+                  "column": "quarantine_key"
+                },
+                "reviewNote": {
+                  "column": "review_note"
+                },
+                "reviewedAt": {
+                  "column": "reviewed_at"
+                },
+                "reviewerId": {
+                  "column": "reviewer_id"
+                },
+                "role": {
+                  "column": "role"
+                },
+                "scannedAt": {
+                  "column": "scanned_at"
+                },
+                "scope": {
+                  "column": "scope"
+                },
+                "scores": {
+                  "column": "scores"
+                },
+                "status": {
+                  "column": "status"
+                }
+              },
+              "namespaceId": "public",
+              "table": "MediaModerationAsset"
+            }
+          },
+          "ModerationAction": {
+            "fields": {
+              "action": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationActionType",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "actorId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "note": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 1000
+                  }
+                }
+              },
+              "reportId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "actor": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "actorId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "report": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "reportId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "action": {
+                  "column": "action"
+                },
+                "actorId": {
+                  "column": "actor_id"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "note": {
+                  "column": "note"
+                },
+                "reportId": {
+                  "column": "report_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "ModerationAction"
+            }
+          },
+          "ModerationAppeal": {
+            "fields": {
+              "appellantId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "reason": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 1000
+                  }
+                }
+              },
+              "reportId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "resolutionNote": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 1000
+                  }
+                }
+              },
+              "reviewedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "reviewerId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationAppealStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              }
+            },
+            "relations": {
+              "appellant": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "appellantId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "report": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "reportId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
+                  "namespace": "public"
+                }
+              },
+              "reviewer": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "reviewerId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "appellantId": {
+                  "column": "appellant_id"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "reason": {
+                  "column": "reason"
+                },
+                "reportId": {
+                  "column": "report_id"
+                },
+                "resolutionNote": {
+                  "column": "resolution_note"
+                },
+                "reviewedAt": {
+                  "column": "reviewed_at"
+                },
+                "reviewerId": {
+                  "column": "reviewer_id"
+                },
+                "status": {
+                  "column": "status"
+                }
+              },
+              "namespaceId": "public",
+              "table": "ModerationAppeal"
             }
           },
           "Notification": {
@@ -3401,6 +4792,21 @@
                   "namespace": "public"
                 }
               },
+              "assignedContentReports": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "assignedModeratorId"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
+                  "namespace": "public"
+                }
+              },
               "authExchanges": {
                 "cardinality": "1:N",
                 "on": {
@@ -3416,6 +4822,51 @@
                   "namespace": "public"
                 }
               },
+              "blocksCreated": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "blockerId"
+                  ]
+                },
+                "to": {
+                  "model": "UserBlock",
+                  "namespace": "public"
+                }
+              },
+              "blocksReceived": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "blockedId"
+                  ]
+                },
+                "to": {
+                  "model": "UserBlock",
+                  "namespace": "public"
+                }
+              },
+              "contentReportsForUser": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "targetUserId"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
+                  "namespace": "public"
+                }
+              },
               "friends": {
                 "cardinality": "1:N",
                 "on": {
@@ -3428,6 +4879,51 @@
                 },
                 "to": {
                   "model": "Friend",
+                  "namespace": "public"
+                }
+              },
+              "mediaModerationAssets": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "ownerId"
+                  ]
+                },
+                "to": {
+                  "model": "MediaModerationAsset",
+                  "namespace": "public"
+                }
+              },
+              "moderationActions": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "actorId"
+                  ]
+                },
+                "to": {
+                  "model": "ModerationAction",
+                  "namespace": "public"
+                }
+              },
+              "moderationAppeals": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "appellantId"
+                  ]
+                },
+                "to": {
+                  "model": "ModerationAppeal",
                   "namespace": "public"
                 }
               },
@@ -3477,6 +4973,51 @@
                   "namespace": "public"
                 }
               },
+              "reportedContentSubjects": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "subjectUserId"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
+                  "namespace": "public"
+                }
+              },
+              "reviewedMediaModerationAssets": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "reviewerId"
+                  ]
+                },
+                "to": {
+                  "model": "MediaModerationAsset",
+                  "namespace": "public"
+                }
+              },
+              "reviewedModerationAppeals": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "reviewerId"
+                  ]
+                },
+                "to": {
+                  "model": "ModerationAppeal",
+                  "namespace": "public"
+                }
+              },
               "sentNotifications": {
                 "cardinality": "1:N",
                 "on": {
@@ -3489,6 +5030,21 @@
                 },
                 "to": {
                   "model": "Notification",
+                  "namespace": "public"
+                }
+              },
+              "submittedContentReports": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "reporterId"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
                   "namespace": "public"
                 }
               },
@@ -3627,6 +5183,93 @@
               },
               "namespaceId": "public",
               "table": "Users"
+            }
+          },
+          "UserBlock": {
+            "fields": {
+              "blockedId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "blockerId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "blocked": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "blockedId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "blocker": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "blockerId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "blockedId": {
+                  "column": "blocked_id"
+                },
+                "blockerId": {
+                  "column": "blocker_id"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "id": {
+                  "column": "id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "UserBlock"
             }
           },
           "UserSession": {
@@ -3930,6 +5573,11 @@
             "Activity": {
               "checks": [
                 {
+                  "expression": "\"moderation_status\" IN ('visible', 'hidden', 'removed')",
+                  "name": "Activity_moderation_status_check_9e17caab",
+                  "prefix": "Activity_moderation_status_check"
+                },
+                {
                   "expression": "\"visibility\" IN ('public', 'followers', 'private')",
                   "name": "Activity_visibility_check_3bfc61f5",
                   "prefix": "Activity_visibility_check"
@@ -4083,6 +5731,21 @@
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
                   "nullable": true
+                },
+                "moderation_status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "visible"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationContentStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
@@ -4299,6 +5962,18 @@
               ]
             },
             "ActivityMedia": {
+              "checks": [
+                {
+                  "expression": "\"media_review_status\" IN ('queued', 'processing', 'review_required', 'approved', 'rejected', 'failed')",
+                  "name": "ActivityMedia_media_review_status_check_5a4c7db5",
+                  "prefix": "ActivityMedia_media_review_status_check"
+                },
+                {
+                  "expression": "\"moderation_status\" IN ('visible', 'hidden', 'removed')",
+                  "name": "ActivityMedia_moderation_status_check_9e17caab",
+                  "prefix": "ActivityMedia_moderation_status_check"
+                }
+              ],
               "columns": {
                 "activity_date": {
                   "codecId": "pg/timestamptz-string@1",
@@ -4339,6 +6014,37 @@
                   },
                   "nullable": false
                 },
+                "media_moderation_asset_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "media_review_status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "MediaModerationStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "moderation_status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "visible"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationContentStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
                 "position": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
@@ -4349,10 +6055,15 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "thumbnail_moderation_asset_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
                 "url": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
-                  "nullable": false
+                  "nullable": true
                 },
                 "user_id": {
                   "codecId": "pg/uuid@1",
@@ -4377,6 +6088,50 @@
                     ],
                     "namespaceId": "public",
                     "tableName": "Activity"
+                  }
+                },
+                {
+                  "index": {
+                    "unique": [
+                      "media_moderation_asset_id"
+                    ]
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "media_moderation_asset_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ActivityMedia"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaModerationAsset"
+                  }
+                },
+                {
+                  "index": {
+                    "unique": [
+                      "thumbnail_moderation_asset_id"
+                    ]
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "thumbnail_moderation_asset_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ActivityMedia"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaModerationAsset"
                   }
                 }
               ],
@@ -4406,6 +6161,16 @@
                 "name": "ActivityMedia_pkey"
               },
               "uniques": [
+                {
+                  "columns": [
+                    "media_moderation_asset_id"
+                  ]
+                },
+                {
+                  "columns": [
+                    "thumbnail_moderation_asset_id"
+                  ]
+                },
                 {
                   "columns": [
                     "activity_id",
@@ -4726,6 +6491,13 @@
               ]
             },
             "Comment": {
+              "checks": [
+                {
+                  "expression": "\"moderation_status\" IN ('visible', 'hidden', 'removed')",
+                  "name": "Comment_moderation_status_check_9e17caab",
+                  "prefix": "Comment_moderation_status_check"
+                }
+              ],
               "columns": {
                 "activityId": {
                   "codecId": "pg/uuid@1",
@@ -4762,6 +6534,21 @@
                     "kind": "function"
                   },
                   "nullable": false
+                },
+                "moderation_status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "visible"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationContentStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
                 },
                 "profileId": {
                   "codecId": "pg/uuid@1",
@@ -4930,6 +6717,441 @@
                   "name": "CommentLike_authorId_commentId_key"
                 }
               ]
+            },
+            "ContentReport": {
+              "checks": [
+                {
+                  "expression": "\"priority\" IN ('low', 'normal', 'high', 'urgent')",
+                  "name": "ContentReport_priority_check_f8340615",
+                  "prefix": "ContentReport_priority_check"
+                },
+                {
+                  "expression": "\"reason\" IN ('threats', 'harassment', 'hate_speech', 'sexual_content', 'violence', 'spam', 'other')",
+                  "name": "ContentReport_reason_check_65edaa13",
+                  "prefix": "ContentReport_reason_check"
+                },
+                {
+                  "expression": "\"status\" IN ('open', 'in_review', 'resolved', 'rejected', 'appealed')",
+                  "name": "ContentReport_status_check_821e53f0",
+                  "prefix": "ContentReport_status_check"
+                },
+                {
+                  "expression": "\"target_type\" IN ('activity', 'comment', 'media', 'media_upload', 'user')",
+                  "name": "ContentReport_target_type_check_15fa25b2",
+                  "prefix": "ContentReport_target_type_check"
+                }
+              ],
+              "columns": {
+                "activity_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "assigned_moderator_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "comment_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "details": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 1000
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "media_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "media_upload_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "priority": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "normal"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationPriority",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "reason": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ContentReportReason",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "reporter_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "reviewed_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "open"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ContentReportStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "subject_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "target_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "target_type": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ContentReportTargetType",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "target_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "ContentReport_reporter_id_idx_3eeed9a0"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "reporter_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ContentReport_subject_user_id_idx_70bcca8f"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "subject_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ContentReport_assigned_moderator_id_idx_357b4693"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "assigned_moderator_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ContentReport_target_user_id_idx_cc615011"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "target_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ContentReport_activity_id_idx_c0c84520"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "activity_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Activity"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ContentReport_comment_id_idx_fe121171"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "comment_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Comment"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ContentReport_media_id_idx_495ca900"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "media_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ActivityMedia"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ContentReport_media_upload_id_idx"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "media_upload_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaModerationAsset"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "activity_id"
+                  ],
+                  "name": "ContentReport_activity_id_idx_c0c84520",
+                  "prefix": "ContentReport_activity_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "assigned_moderator_id"
+                  ],
+                  "name": "ContentReport_assigned_moderator_id_idx_357b4693",
+                  "prefix": "ContentReport_assigned_moderator_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "assigned_moderator_id",
+                    "status",
+                    "created_at"
+                  ],
+                  "name": "ContentReport_assignee_status_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "comment_id"
+                  ],
+                  "name": "ContentReport_comment_id_idx_fe121171",
+                  "prefix": "ContentReport_comment_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "media_id"
+                  ],
+                  "name": "ContentReport_media_id_idx_495ca900",
+                  "prefix": "ContentReport_media_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "media_upload_id"
+                  ],
+                  "name": "ContentReport_media_upload_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "reporter_id",
+                    "created_at"
+                  ],
+                  "name": "ContentReport_reporter_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "reporter_id"
+                  ],
+                  "name": "ContentReport_reporter_id_idx_3eeed9a0",
+                  "prefix": "ContentReport_reporter_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status",
+                    "priority",
+                    "created_at"
+                  ],
+                  "name": "ContentReport_status_priority_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "subject_user_id",
+                    "created_at"
+                  ],
+                  "name": "ContentReport_subject_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "subject_user_id"
+                  ],
+                  "name": "ContentReport_subject_user_id_idx_70bcca8f",
+                  "prefix": "ContentReport_subject_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "target_type",
+                    "target_id"
+                  ],
+                  "name": "ContentReport_target_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "target_user_id"
+                  ],
+                  "name": "ContentReport_target_user_id_idx_cc615011",
+                  "prefix": "ContentReport_target_user_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
             },
             "EmailNotificationJob": {
               "columns": {
@@ -5522,6 +7744,613 @@
                   "id"
                 ],
                 "name": "MediaCleanupJob_pkey"
+              },
+              "uniques": []
+            },
+            "MediaModerationAsset": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('queued', 'processing', 'review_required', 'approved', 'rejected', 'failed')",
+                  "name": "MediaModerationAsset_status_check_da540f42",
+                  "prefix": "MediaModerationAsset_status_check"
+                }
+              ],
+              "columns": {
+                "attempts": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "byte_size": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": false
+                },
+                "content_type": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 255
+                  }
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "frame_count": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "media_id": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 100
+                  }
+                },
+                "model_version": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 100
+                  }
+                },
+                "owner_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "processing_started_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "published_key": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 2048
+                  }
+                },
+                "quarantine_key": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 2048
+                  }
+                },
+                "review_note": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 1000
+                  }
+                },
+                "reviewed_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "reviewer_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "role": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "default": {
+                    "kind": "literal",
+                    "value": "media"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 16
+                  }
+                },
+                "scanned_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "scope": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "default": {
+                    "kind": "literal",
+                    "value": "activity"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 16
+                  }
+                },
+                "scores": {
+                  "codecId": "pg/jsonb@1",
+                  "dataType": "pg/jsonb",
+                  "nullable": true
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "queued"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "MediaModerationStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "MediaModerationAsset_owner_id_idx_ade9f347"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "owner_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaModerationAsset"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "MediaModerationAsset_reviewer_id_idx_ab069db0"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "reviewer_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaModerationAsset"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "owner_id",
+                    "created_at"
+                  ],
+                  "name": "MediaModerationAsset_owner_created_at_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "owner_id"
+                  ],
+                  "name": "MediaModerationAsset_owner_id_idx_ade9f347",
+                  "prefix": "MediaModerationAsset_owner_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "reviewer_id"
+                  ],
+                  "name": "MediaModerationAsset_reviewer_id_idx_ab069db0",
+                  "prefix": "MediaModerationAsset_reviewer_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status",
+                    "created_at"
+                  ],
+                  "name": "MediaModerationAsset_status_created_at_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "owner_id",
+                    "media_id",
+                    "role"
+                  ],
+                  "name": "MediaModerationAsset_owner_media_role_key"
+                }
+              ]
+            },
+            "ModerationAction": {
+              "checks": [
+                {
+                  "expression": "\"action\" IN ('hide_content', 'remove_content', 'restore_content', 'warn_user', 'temporary_suspend', 'permanent_suspend', 'reject_report', 'appeal_submitted', 'appeal_upheld', 'appeal_rejected', 'approve_media', 'reject_media')",
+                  "name": "ModerationAction_action_check_f8fd69ad",
+                  "prefix": "ModerationAction_action_check"
+                }
+              ],
+              "columns": {
+                "action": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationActionType",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "actor_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "note": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 1000
+                  }
+                },
+                "report_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "ModerationAction_report_id_idx_6f6640fd"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "report_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ModerationAction"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ModerationAction_actor_id_idx_69a2164d"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "actor_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ModerationAction"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "actor_id",
+                    "created_at"
+                  ],
+                  "name": "ModerationAction_actor_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "actor_id"
+                  ],
+                  "name": "ModerationAction_actor_id_idx_69a2164d",
+                  "prefix": "ModerationAction_actor_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "report_id",
+                    "created_at"
+                  ],
+                  "name": "ModerationAction_report_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "report_id"
+                  ],
+                  "name": "ModerationAction_report_id_idx_6f6640fd",
+                  "prefix": "ModerationAction_report_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "ModerationAppeal": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('pending', 'upheld', 'rejected')",
+                  "name": "ModerationAppeal_status_check_f33e7560",
+                  "prefix": "ModerationAppeal_status_check"
+                }
+              ],
+              "columns": {
+                "appellant_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "reason": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 1000
+                  }
+                },
+                "report_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "resolution_note": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 1000
+                  }
+                },
+                "reviewed_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "reviewer_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "pending"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationAppealStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "ModerationAppeal_report_id_idx_6f6640fd"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "report_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ModerationAppeal"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ModerationAppeal_appellant_id_idx_ed1ef576"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "appellant_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ModerationAppeal"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "ModerationAppeal_reviewer_id_idx_ab069db0"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "reviewer_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ModerationAppeal"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "appellant_id"
+                  ],
+                  "name": "ModerationAppeal_appellant_id_idx_ed1ef576",
+                  "prefix": "ModerationAppeal_appellant_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "report_id",
+                    "created_at"
+                  ],
+                  "name": "ModerationAppeal_report_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "report_id"
+                  ],
+                  "name": "ModerationAppeal_report_id_idx_6f6640fd",
+                  "prefix": "ModerationAppeal_report_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "reviewer_id"
+                  ],
+                  "name": "ModerationAppeal_reviewer_id_idx_ab069db0",
+                  "prefix": "ModerationAppeal_reviewer_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status",
+                    "created_at"
+                  ],
+                  "name": "ModerationAppeal_status_createdAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
               },
               "uniques": []
             },
@@ -6453,6 +9282,123 @@
                 }
               ]
             },
+            "UserBlock": {
+              "columns": {
+                "blocked_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "blocker_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "UserBlock_blocker_id_idx_e9326670"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "blocker_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "UserBlock"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "UserBlock_blocked_id_idx_181c3a00"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "blocked_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "UserBlock"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "blocked_id",
+                    "blocker_id"
+                  ],
+                  "name": "UserBlock_blocked_blocker_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "blocked_id"
+                  ],
+                  "name": "UserBlock_blocked_id_idx_181c3a00",
+                  "prefix": "UserBlock_blocked_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "blocker_id"
+                  ],
+                  "name": "UserBlock_blocker_id_idx_e9326670",
+                  "prefix": "UserBlock_blocker_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "blocker_id",
+                    "blocked_id"
+                  ],
+                  "name": "UserBlock_blocker_blocked_key"
+                }
+              ]
+            },
             "UserSession": {
               "columns": {
                 "app_build": {
@@ -6986,6 +9932,91 @@
                 "followers",
                 "private"
               ]
+            },
+            "ContentReportReason": {
+              "kind": "valueSet",
+              "values": [
+                "threats",
+                "harassment",
+                "hate_speech",
+                "sexual_content",
+                "violence",
+                "spam",
+                "other"
+              ]
+            },
+            "ContentReportStatus": {
+              "kind": "valueSet",
+              "values": [
+                "open",
+                "in_review",
+                "resolved",
+                "rejected",
+                "appealed"
+              ]
+            },
+            "ContentReportTargetType": {
+              "kind": "valueSet",
+              "values": [
+                "activity",
+                "comment",
+                "media",
+                "media_upload",
+                "user"
+              ]
+            },
+            "MediaModerationStatus": {
+              "kind": "valueSet",
+              "values": [
+                "queued",
+                "processing",
+                "review_required",
+                "approved",
+                "rejected",
+                "failed"
+              ]
+            },
+            "ModerationActionType": {
+              "kind": "valueSet",
+              "values": [
+                "hide_content",
+                "remove_content",
+                "restore_content",
+                "warn_user",
+                "temporary_suspend",
+                "permanent_suspend",
+                "reject_report",
+                "appeal_submitted",
+                "appeal_upheld",
+                "appeal_rejected",
+                "approve_media",
+                "reject_media"
+              ]
+            },
+            "ModerationAppealStatus": {
+              "kind": "valueSet",
+              "values": [
+                "pending",
+                "upheld",
+                "rejected"
+              ]
+            },
+            "ModerationContentStatus": {
+              "kind": "valueSet",
+              "values": [
+                "visible",
+                "hidden",
+                "removed"
+              ]
+            },
+            "ModerationPriority": {
+              "kind": "valueSet",
+              "values": [
+                "low",
+                "normal",
+                "high",
+                "urgent"
+              ]
             }
           }
         },
@@ -6993,7 +10024,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "4ee189d7e1e557c5a9fb68821ede039f46731647eb29a9197c629e4757538f2c"
+    "storageHash": "32bf1c2fb08dbc31f537920a31bc6cb67cc94a2fe55a09c4069bb2747797dfcf"
   },
   "capabilities": {
     "postgres": {

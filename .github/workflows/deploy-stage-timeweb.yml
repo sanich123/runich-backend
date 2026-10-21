@@ -88,6 +88,16 @@ jobs:
           test -s .env
           test -s app.env
           chmod 600 .env app.env
+          if ! grep -qx 'S3_BUCKET=runich-stage' app.env; then
+            echo 'Stage app.env must use S3_BUCKET=runich-stage before configuring moderation storage' >&2
+            exit 1
+          fi
+          quarantine_env="$(mktemp app.env.XXXXXX)"
+          awk -F= '$1 != "S3_QUARANTINE_BUCKET" && $1 != "S3_QUARANTINE_PREFIX"' app.env > "$quarantine_env"
+          printf 'S3_QUARANTINE_BUCKET=runich-stage\nS3_QUARANTINE_PREFIX=moderation-quarantine/stage/\n' >> "$quarantine_env"
+          chmod --reference=app.env "$quarantine_env"
+          chown --reference=app.env "$quarantine_env"
+          mv "$quarantine_env" app.env
           install -o "$(id -un)" -g docker -m 0640 /tmp/docker-compose.timeweb.stage.yml ./docker-compose.timeweb.stage.yml
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.bootstrap.conf ./nginx.stage.bootstrap.conf
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.conf ./nginx.stage.tls.conf

@@ -2,6 +2,8 @@ export const EMAIL_NOTIFICATION_TYPE = {
   activityLike: 'activity-like',
   comment: 'comment',
   commentLike: 'comment-like',
+  moderationReport: 'moderation-report',
+  moderationAppeal: 'moderation-appeal',
 } as const;
 
 export type EmailNotificationType = (typeof EMAIL_NOTIFICATION_TYPE)[keyof typeof EMAIL_NOTIFICATION_TYPE];

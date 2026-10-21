@@ -64,7 +64,10 @@ describe('JwtStrategy', () => {
       id: 'user-1',
       sessionId: 'session-1',
     });
-    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      select: { id: true, bannedUntil: true },
+    });
     expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
       where: {
         id: 'session-1',

@@ -78,6 +78,25 @@ jobs:
 
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" 'bash -s' <<'REMOTE'
+            set -euo pipefail
+            cd /opt/runich-backend/project
+            if ! grep -qx 'S3_BUCKET=runich-production' .env; then
+              echo 'Production .env must use S3_BUCKET=runich-production before configuring quarantine' >&2
+              exit 1
+            fi
+            quarantine_env="$(mktemp .env.XXXXXX)"
+            awk -F= '$1 != "S3_QUARANTINE_BUCKET" && $1 != "S3_QUARANTINE_PREFIX" { print }' .env > "$quarantine_env"
+            printf 'S3_QUARANTINE_BUCKET=runich-stage\nS3_QUARANTINE_PREFIX=moderation-quarantine/production/\n' >> "$quarantine_env"
+            chmod --reference=.env "$quarantine_env"
+            chown --reference=.env "$quarantine_env"
+            mv "$quarantine_env" .env
+            grep -qx 'S3_QUARANTINE_BUCKET=runich-stage' .env
+            grep -qx 'S3_QUARANTINE_PREFIX=moderation-quarantine/production/' .env
+          REMOTE
+
+          ssh -i "$HOME/.ssh/id_ed25519" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_IMAGE='$DEPLOY_IMAGE' DEPLOY_TREE_SHA='$TREE_SHA' bash -s" <<'REMOTE'
             set -euo pipefail

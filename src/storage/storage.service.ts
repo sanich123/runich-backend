@@ -16,13 +16,17 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
+import type { Readable } from 'node:stream';
 import { mkdir, rm, stat } from 'node:fs/promises';
 import { dirname, extname } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { normalizeImage } from 'src/common/images/image-processing';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { ActivityHeartRateSampleObject, ActivityMediaObject, LocationObject } from 'src/activity/activity.dto';
 import {
   ACTIVITY_ROUTE_CACHE_MAX_ENTRIES,
@@ -61,15 +65,27 @@ export class StorageService {
   private readonly client: S3Client;
   private readonly activityRouteCache = new Map<string, ActivityRouteCacheEntry>();
 
-  constructor(@Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService) {
+  constructor(
+    @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
+    @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
+  ) {
     const endpoint = process.env.S3_ENDPOINT?.trim() || DEFAULT_S3_ENDPOINT;
     const region = process.env.S3_REGION?.trim() || DEFAULT_S3_REGION;
     const bucket = process.env.S3_BUCKET?.trim() || '';
+    const quarantineBucket = process.env.S3_QUARANTINE_BUCKET?.trim() || '';
+    const rawQuarantinePrefix = process.env.S3_QUARANTINE_PREFIX?.trim().replace(/^\/+|\/+$/g, '') || '';
+    const quarantinePrefix = rawQuarantinePrefix ? `${rawQuarantinePrefix}/` : '';
+    if (
+      rawQuarantinePrefix &&
+      rawQuarantinePrefix.split('/').some((segment) => !segment || segment === '.' || segment === '..')
+    ) {
+      throw new Error('S3_QUARANTINE_PREFIX contains an invalid path segment');
+    }
     const accessKey = process.env.S3_ACCESS_KEY?.trim() || '';
     const secretKey = process.env.S3_SECRET_ACCESS_KEY?.trim() || '';
     const publicUrl = (process.env.S3_PUBLIC_URL?.trim() || `${endpoint}/${bucket}`).replace(/\/$/, '');
 
-    this.settings = { endpoint, region, bucket, accessKey, secretKey, publicUrl };
+    this.settings = { endpoint, region, bucket, quarantineBucket, quarantinePrefix, accessKey, secretKey, publicUrl };
     this.client = new S3Client({
       endpoint,
       region,
@@ -84,7 +100,12 @@ export class StorageService {
     });
   }
 
-  async uploadPhoto(userId: string, file: StorageFile, options: PhotoUploadOptions = {}) {
+  async uploadPhoto(
+    userId: string,
+    file: StorageFile,
+    options: PhotoUploadOptions = {},
+    manifestEntry?: MediaUploadManifestEntry,
+  ) {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
       this.assertConfigured();
@@ -106,6 +127,22 @@ export class StorageService {
 
       const normalizedImage = file.mimetype.startsWith('image/') ? await this.normalizeImage(input) : undefined;
       const extension = normalizedImage ? 'webp' : this.getExtension(file.originalname, file.mimetype);
+      const mediaId = manifestEntry?.mediaId ?? randomUUID();
+      const role = manifestEntry?.role ?? 'media';
+      const scope = options.scope ?? 'activity';
+      if (scope !== 'feedback') {
+        return await this.uploadForModeration({
+          userId,
+          mediaId,
+          role,
+          scope,
+          extension,
+          contentType: normalizedImage ? 'image/webp' : file.mimetype,
+          contentLength: normalizedImage?.length ?? fileSize,
+          body: normalizedImage ?? (file.path ? (stream = createReadStream(file.path)) : file.buffer!),
+        });
+      }
+
       const key = this.getPhotoKey(userId, extension, options);
       const body = normalizedImage ?? (file.path ? (stream = createReadStream(file.path)) : file.buffer);
       const contentType = normalizedImage ? 'image/webp' : file.mimetype;
@@ -164,7 +201,7 @@ export class StorageService {
         const index = nextIndex++;
         try {
           results[index] = {
-            ...(await this.uploadPhoto(userId, files[index], options)),
+            ...(await this.uploadPhoto(userId, files[index], options, manifest[index])),
             ...manifest[index],
           };
         } catch (error) {
@@ -179,12 +216,266 @@ export class StorageService {
       await Promise.allSettled(
         results
           .filter((result): result is UploadedPhotoBatch => Boolean(result))
-          .map(({ key }) => this.deleteObjectByKey(key)),
+          .map(async (result) => {
+            if (result.key) await this.deleteObjectByKey(result.key);
+            if (result.assetId) await this.deleteQuarantineAsset(result.assetId, userId);
+          }),
       );
       throw errors[0];
     }
 
     return results as UploadedPhotoBatch[];
+  }
+
+  private async uploadForModeration(input: {
+    userId: string;
+    mediaId: string;
+    role: MediaUploadManifestEntry['role'];
+    scope: Exclude<NonNullable<PhotoUploadOptions['scope']>, 'feedback'>;
+    extension: string;
+    contentType: string;
+    contentLength: number;
+    body: Buffer | Uint8Array | Readable;
+  }) {
+    if (!this.prisma) throw new ServiceUnavailableException('Проверка загружаемых медиафайлов не настроена');
+    const publicBucket = this.assertConfigured();
+    const quarantineBucket = this.assertQuarantineConfigured();
+    if (publicBucket === quarantineBucket && !this.settings.quarantinePrefix) {
+      throw new ServiceUnavailableException('Для карантина в основном S3-бакете задайте S3_QUARANTINE_PREFIX');
+    }
+
+    const assetId = randomUUID();
+    const quarantineKey = `${this.settings.quarantinePrefix}${input.userId}/${assetId}.${input.extension}`;
+    await this.measureS3('putQuarantineObject', () =>
+      this.client.send(
+        new PutObjectCommand({
+          Bucket: quarantineBucket,
+          Key: quarantineKey,
+          Body: input.body,
+          ContentLength: input.contentLength,
+          ContentType: input.contentType,
+          CacheControl: 'private, no-store',
+        }),
+      ),
+    );
+
+    try {
+      const asset = await this.prisma.mediaModerationAsset.create({
+        data: {
+          id: assetId,
+          ownerId: input.userId,
+          mediaId: input.mediaId,
+          role: input.role,
+          scope: input.scope,
+          quarantineKey,
+          contentType: input.contentType,
+          byteSize: input.contentLength,
+        },
+        select: { id: true, status: true, contentType: true },
+      });
+      return { assetId: asset.id, status: asset.status, contentType: asset.contentType };
+    } catch (error) {
+      await this.deleteQuarantineObject(quarantineKey).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private async deleteQuarantineAsset(assetId: string, ownerId: string) {
+    if (!this.prisma) return;
+    const asset = await this.prisma.mediaModerationAsset.findFirst({ where: { id: assetId, ownerId } });
+    if (!asset) return;
+    await this.deleteQuarantineObject(asset.quarantineKey);
+    if (asset.publishedKey) await this.deleteObjectByKey(asset.publishedKey);
+    await this.prisma.mediaModerationAsset.delete({ where: { id: assetId } });
+  }
+
+  async deleteUnattachedModerationAsset(ownerId: string, assetId: string) {
+    if (!this.prisma) throw new ServiceUnavailableException('Хранилище загруженных медиа недоступно');
+    const asset = await this.prisma.mediaModerationAsset.findFirst({
+      where: { id: assetId, ownerId, scope: 'activity' },
+    });
+    if (!asset) throw new BadRequestException('Загруженный файл не найден');
+    const linkedMedia = await this.prisma.activityMedia.findFirst({
+      where: { OR: [{ mediaModerationAssetId: assetId }, { thumbnailModerationAssetId: assetId }] },
+      select: { id: true },
+    });
+    if (linkedMedia) throw new BadRequestException('Файл уже добавлен к тренировке');
+    await this.deleteQuarantineObject(asset.quarantineKey);
+    if (asset.publishedKey) await this.deleteObjectByKey(asset.publishedKey);
+    await this.prisma.mediaModerationAsset.delete({ where: { id: assetId } });
+  }
+
+  async deleteActivityModerationAssets(ownerId: string, assetIds: Array<string | null | undefined>) {
+    const uniqueAssetIds = [...new Set(assetIds.filter((assetId): assetId is string => Boolean(assetId)))];
+    for (const assetId of uniqueAssetIds) {
+      await this.deleteQuarantineAsset(assetId, ownerId);
+    }
+  }
+
+  private async deleteQuarantineObject(key: string) {
+    const bucket = this.assertQuarantineConfigured();
+    await this.measureS3('deleteQuarantineObject', () =>
+      this.client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key })),
+    );
+  }
+
+  private assertQuarantineConfigured() {
+    if (!this.settings.quarantineBucket || !this.settings.accessKey || !this.settings.secretKey) {
+      throw new ServiceUnavailableException('Карантинное S3-хранилище не настроено');
+    }
+    if (this.settings.bucket === this.settings.quarantineBucket && !this.settings.quarantinePrefix) {
+      throw new ServiceUnavailableException('Для карантина в основном S3-бакете задайте S3_QUARANTINE_PREFIX');
+    }
+    return this.settings.quarantineBucket;
+  }
+
+  async getModerationUploadStatuses(ownerId: string, assetIds: string[]) {
+    if (!this.prisma) throw new ServiceUnavailableException('Хранилище статусов загрузки недоступно');
+    const assets = (await this.prisma.mediaModerationAsset.findMany({
+      where: { ownerId, id: { in: assetIds } },
+      select: { id: true, status: true, publishedKey: true, contentType: true },
+    })) as Array<{ id: string; status: string; publishedKey: string | null; contentType: string }>;
+    return {
+      items: assets.map((asset) => ({
+        assetId: asset.id,
+        status: asset.status,
+        ...(asset.status === 'approved' && asset.publishedKey ? { url: this.getPublicUrl(asset.publishedKey) } : {}),
+        contentType: asset.contentType,
+      })),
+    };
+  }
+
+  async downloadQuarantineObjectToFile(key: string, filePath: string) {
+    const bucket = this.assertQuarantineConfigured();
+    await mkdir(dirname(filePath), { recursive: true });
+    const response = await this.measureS3('getQuarantineObject', () =>
+      this.client.send(new GetObjectCommand({ Bucket: bucket, Key: key })),
+    );
+    if (!response.Body) throw new Error(`S3 не вернул карантинный объект ${key}`);
+    await pipeline(response.Body as NodeJS.ReadableStream, createWriteStream(filePath));
+  }
+
+  async getQuarantinePreviewUrl(key: string) {
+    const bucket = this.assertQuarantineConfigured();
+    return await getSignedUrl(this.client, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: 600 });
+  }
+
+  async approveModerationAsset(assetId: string, reviewerId?: string, reviewNote?: string) {
+    if (!this.prisma) throw new ServiceUnavailableException('Хранилище статусов загрузки недоступно');
+    const asset = await this.prisma.mediaModerationAsset.findUnique({ where: { id: assetId } });
+    if (!asset) throw new BadRequestException('Загруженный файл не найден');
+    if (asset.status === 'approved' && asset.publishedKey) {
+      await this.syncLinkedActivityMedia(assetId, this.getPublicUrl(asset.publishedKey), 'approved');
+      return { url: this.getPublicUrl(asset.publishedKey), key: asset.publishedKey };
+    }
+    if (asset.status === 'rejected') throw new BadRequestException('Отклонённый файл нельзя опубликовать');
+    if (reviewerId && asset.status !== 'review_required') {
+      throw new BadRequestException('Этот файл больше не ожидает решения модератора');
+    }
+
+    const extension = this.getExtension(asset.quarantineKey, asset.contentType);
+    const destinationKey = `${asset.ownerId}/uploads/moderated/${asset.id}.${extension}`;
+    await this.copyObjectBetweenBuckets(
+      this.assertQuarantineConfigured(),
+      asset.quarantineKey,
+      this.settings.bucket,
+      destinationKey,
+    );
+    await this.prisma.mediaModerationAsset.update({
+      where: { id: asset.id },
+      data: {
+        status: 'approved',
+        publishedKey: destinationKey,
+        reviewedAt: reviewerId ? new Date() : asset.reviewedAt,
+        reviewerId: reviewerId ?? asset.reviewerId,
+        reviewNote: reviewNote?.trim() || asset.reviewNote,
+      },
+    });
+    await this.syncLinkedActivityMedia(assetId, this.getPublicUrl(destinationKey), 'approved');
+    await this.deleteQuarantineObject(asset.quarantineKey);
+    return { url: this.getPublicUrl(destinationKey), key: destinationKey };
+  }
+
+  async publishApprovedModerationAsset(ownerId: string, assetId: string) {
+    if (!this.prisma) throw new ServiceUnavailableException('Хранилище статусов загрузки недоступно');
+    const asset = await this.prisma.mediaModerationAsset.findFirst({ where: { id: assetId, ownerId } });
+    if (!asset) throw new BadRequestException('Загруженный файл не найден');
+    if (asset.status !== 'approved') throw new BadRequestException('Модератор ещё не одобрил этот файл');
+    return await this.approveModerationAsset(assetId);
+  }
+
+  async refreshLinkedActivityMedia(assetIds: Array<string | null | undefined>) {
+    if (!this.prisma) return;
+    const uniqueAssetIds = [...new Set(assetIds.filter((assetId): assetId is string => Boolean(assetId)))];
+    for (const assetId of uniqueAssetIds) {
+      const asset = await this.prisma.mediaModerationAsset.findUnique({
+        where: { id: assetId },
+        select: { status: true, role: true, publishedKey: true },
+      });
+      if (!asset) continue;
+      if (asset.status === 'approved' && asset.publishedKey) {
+        await this.syncLinkedActivityMedia(assetId, this.getPublicUrl(asset.publishedKey), 'approved');
+      } else if (asset.status === 'rejected') {
+        await this.syncLinkedActivityMedia(assetId, null, 'rejected');
+      } else if (asset.role === 'media') {
+        await this.prisma.activityMedia.updateMany({
+          where: { mediaModerationAssetId: assetId },
+          data: { mediaReviewStatus: asset.status },
+        });
+      }
+    }
+  }
+
+  async rejectModerationAsset(assetId: string, reviewerId: string, reviewNote?: string) {
+    if (!this.prisma) throw new ServiceUnavailableException('Хранилище статусов загрузки недоступно');
+    const asset = await this.prisma.mediaModerationAsset.findUnique({ where: { id: assetId } });
+    if (!asset) throw new BadRequestException('Загруженный файл не найден');
+    if (asset.status === 'rejected') return;
+    if (asset.status !== 'review_required')
+      throw new BadRequestException('Этот файл больше не ожидает решения модератора');
+    const linkedMedia =
+      asset.role === 'media'
+        ? await this.prisma.activityMedia.findMany({
+            where: { mediaModerationAssetId: asset.id },
+            select: { thumbnailModerationAssetId: true },
+          })
+        : [];
+    if (asset.status === 'approved' && asset.publishedKey) await this.deleteObjectByKey(asset.publishedKey);
+    await this.deleteQuarantineObject(asset.quarantineKey);
+    await this.prisma.mediaModerationAsset.update({
+      where: { id: asset.id },
+      data: {
+        status: 'rejected',
+        publishedKey: null,
+        reviewerId,
+        reviewedAt: new Date(),
+        reviewNote: reviewNote?.trim() || null,
+      },
+    });
+    await this.syncLinkedActivityMedia(asset.id, null, 'rejected');
+    await this.deleteActivityModerationAssets(
+      asset.ownerId,
+      linkedMedia.map((media: { thumbnailModerationAssetId: string | null }) => media.thumbnailModerationAssetId),
+    );
+  }
+
+  private async syncLinkedActivityMedia(assetId: string, url: string | null, status: 'approved' | 'rejected') {
+    if (!this.prisma) return;
+    const asset = await this.prisma.mediaModerationAsset.findUnique({
+      where: { id: assetId },
+      select: { role: true },
+    });
+    if (asset?.role === 'thumbnail') {
+      await this.prisma.activityMedia.updateMany({
+        where: { thumbnailModerationAssetId: assetId },
+        data: { thumbnail: status === 'approved' ? url : null },
+      });
+      return;
+    }
+    await this.prisma.activityMedia.updateMany({
+      where: { mediaModerationAssetId: assetId },
+      data: { url, mediaReviewStatus: status, ...(status === 'rejected' ? { thumbnail: null } : {}) },
+    });
   }
 
   async uploadMigrationArchive(userId: string, migrationId: string, filePath: string) {
@@ -241,7 +532,9 @@ export class StorageService {
       const mediaId = (entry as { mediaId: string }).mediaId.trim();
       const role = (entry as { role: MediaUploadManifestEntry['role'] }).role;
       const key = `${mediaId}:${role}`;
-      if (!mediaId || seen.has(key)) throw new BadRequestException('Manifest содержит дублирующие mediaId и role');
+      if (!mediaId || mediaId.length > 100 || seen.has(key)) {
+        throw new BadRequestException('Manifest содержит пустой, слишком длинный или дублирующий mediaId и role');
+      }
       seen.add(key);
       return { mediaId, role };
     });
@@ -422,6 +715,47 @@ export class StorageService {
     try {
       const promotedPhotos: ActivityMediaObject[] = [];
       for (const photo of photos) {
+        if (photo.assetId) {
+          if (photo.url) throw new BadRequestException('Для проверяемого файла нельзя передавать публичный URL');
+          const mediaAsset = await this.prisma?.mediaModerationAsset.findFirst({
+            where: { id: photo.assetId, ownerId: userId, scope: 'activity', role: 'media' },
+            select: { id: true, mediaId: true, status: true, publishedKey: true },
+          });
+          if (!mediaAsset)
+            throw new BadRequestException('Загруженное медиа не найдено или принадлежит другому аккаунту');
+
+          const thumbnailAsset = photo.thumbnailAssetId
+            ? await this.prisma?.mediaModerationAsset.findFirst({
+                where: {
+                  id: photo.thumbnailAssetId,
+                  ownerId: userId,
+                  scope: 'activity',
+                  role: 'thumbnail',
+                  mediaId: mediaAsset.mediaId,
+                },
+                select: { id: true, status: true, publishedKey: true },
+              })
+            : null;
+          if (photo.thumbnailAssetId && !thumbnailAsset) {
+            throw new BadRequestException('Миниатюра не соответствует загруженному видео');
+          }
+          if (mediaAsset.status === 'failed') throw new BadRequestException('Не удалось проверить загруженный файл');
+
+          promotedPhotos.push({
+            assetId: mediaAsset.id,
+            ...(mediaAsset.status === 'approved' && mediaAsset.publishedKey
+              ? { url: this.getPublicUrl(mediaAsset.publishedKey) }
+              : {}),
+            ...(thumbnailAsset?.status === 'approved' && thumbnailAsset.publishedKey
+              ? { thumbnail: this.getPublicUrl(thumbnailAsset.publishedKey) }
+              : { thumbnail: null }),
+            ...(thumbnailAsset ? { thumbnailAssetId: thumbnailAsset.id } : {}),
+            mediaReviewStatus: mediaAsset.status as ActivityMediaObject['mediaReviewStatus'],
+            blurhash: photo.blurhash ?? null,
+          });
+          continue;
+        }
+        if (!photo.url) throw new BadRequestException('Для медиафайла укажите URL или идентификатор загрузки');
         promotedPhotos.push({
           ...photo,
           url: await promoteUrl(photo.url),
@@ -541,6 +875,7 @@ export class StorageService {
     if (!this.settings.bucket || !this.settings.accessKey || !this.settings.secretKey) {
       throw new ServiceUnavailableException('S3-хранилище не настроено на сервере');
     }
+    return this.settings.bucket;
   }
 
   private async measureS3<T>(operation: string, action: () => Promise<T>) {
@@ -596,6 +931,26 @@ export class StorageService {
           Bucket: this.settings.bucket,
           Key: destinationKey,
           CopySource: `${this.settings.bucket}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`,
+          CacheControl: 'public, max-age=31536000, immutable',
+          MetadataDirective: 'COPY',
+        }),
+      ),
+    );
+  }
+
+  private async copyObjectBetweenBuckets(
+    sourceBucket: string,
+    sourceKey: string,
+    destinationBucket: string,
+    destinationKey: string,
+  ) {
+    this.assertConfigured();
+    await this.measureS3('copyQuarantineObject', () =>
+      this.client.send(
+        new CopyObjectCommand({
+          Bucket: destinationBucket,
+          Key: destinationKey,
+          CopySource: `${sourceBucket}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`,
           CacheControl: 'public, max-age=31536000, immutable',
           MetadataDirective: 'COPY',
         }),

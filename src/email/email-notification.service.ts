@@ -1,9 +1,11 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { render } from '@react-email/components';
 import { sendEmail } from 'src/common/email/nodemailer';
+import { MODERATOR_EMAIL } from 'src/moderation/moderation.constants';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { NotificationEmail } from './templates';
+import { ModerationReportEmail, type ModerationReportEmailProps } from './templates/ModerationReportEmail';
 import { EmailType } from './templates/types';
 
 export interface EmailNotificationPayload {
@@ -32,6 +34,12 @@ export class EmailNotificationService {
 
   sendCommentLike(payload: EmailNotificationPayload) {
     return this.send(payload, EmailType.commentLike, 'Лайк к вашему комментарию');
+  }
+
+  async sendModerationUpdate(payload: ModerationReportEmailProps) {
+    const subject = payload.requestType === 'appeal' ? '[Runich] Новая апелляция' : '[Runich] Новая жалоба';
+    const html = await render(ModerationReportEmail(payload));
+    return sendEmail(MODERATOR_EMAIL, subject, html, [], this.latencyMetrics);
   }
 
   private async send(payload: EmailNotificationPayload, type: EmailType, subject: string) {

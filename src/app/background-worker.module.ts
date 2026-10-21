@@ -9,6 +9,7 @@ import { LoadTestModule } from 'src/load-test/load-test.module';
 import { observeImports } from 'src/common/observe/observe.config';
 import { EmailNotificationModule } from 'src/email/email-notification.module';
 import { NotificationModule } from 'src/notification/notification.module';
+import { MediaModerationWorkerService } from 'src/storage/media-moderation-worker.service';
 
 @Module({
   imports: [
@@ -21,6 +22,6 @@ import { NotificationModule } from 'src/notification/notification.module';
     EmailNotificationModule,
     NotificationModule,
   ],
-  providers: [ActivityMediaProcessingService, ActivityEnrichmentService],
+  providers: [ActivityMediaProcessingService, ActivityEnrichmentService, MediaModerationWorkerService],
 })
 export class BackgroundWorkerModule {}

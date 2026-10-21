@@ -15,12 +15,28 @@ import {
 } from '@aws-sdk/client-s3';
 import { BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import { asyncMock } from 'src/tests/helpers';
 import { StorageService } from '../storage.service';
 import { decodeActivityRoute, encodeActivityRoute } from '../activity-route';
 import { getActivityPhotoKey, getExtensionFromStorageKey } from '../storage-key';
 import { getStorageErrorMessage } from '../utils';
 
 const s3Send = jest.spyOn(S3Client.prototype, 'send');
+
+function createModerationPrismaMock() {
+  return {
+    mediaModerationAsset: {
+      create: asyncMock(),
+      findFirst: asyncMock(),
+      findMany: asyncMock(),
+      findUnique: asyncMock(),
+      update: asyncMock(),
+      updateMany: asyncMock(),
+      delete: asyncMock(),
+    },
+    activityMedia: { findFirst: asyncMock(), findMany: asyncMock(), updateMany: asyncMock() },
+  };
+}
 
 async function createTestImage() {
   return await sharp({
@@ -37,6 +53,8 @@ describe('StorageService', () => {
     process.env.S3_BUCKET = 'runich-test';
     process.env.S3_ACCESS_KEY = 'access-key';
     process.env.S3_SECRET_ACCESS_KEY = 'secret-key';
+    process.env.S3_QUARANTINE_BUCKET = 'runich-test';
+    process.env.S3_QUARANTINE_PREFIX = 'moderation-quarantine';
     delete process.env.APP_ENV;
     delete process.env.S3_PUBLIC_URL;
     s3Send.mockReset();
@@ -48,6 +66,8 @@ describe('StorageService', () => {
     delete process.env.S3_BUCKET;
     delete process.env.S3_ACCESS_KEY;
     delete process.env.S3_SECRET_ACCESS_KEY;
+    delete process.env.S3_QUARANTINE_BUCKET;
+    delete process.env.S3_QUARANTINE_PREFIX;
     delete process.env.S3_PUBLIC_URL;
     delete process.env.APP_ENV;
     s3Send.mockRestore();
@@ -60,14 +80,20 @@ describe('StorageService', () => {
     const image = await createTestImage();
 
     await expect(
-      service.uploadPhoto('user-1', {
-        buffer: image,
-        originalname: 'avatar.JPG',
-        mimetype: 'image/jpeg',
-      }),
+      service.uploadPhoto(
+        'user-1',
+        {
+          buffer: image,
+          originalname: 'avatar.JPG',
+          mimetype: 'image/jpeg',
+        },
+        { scope: 'feedback', feedbackId: 'feedback-1' },
+      ),
     ).resolves.toMatchObject({
-      url: expect.stringMatching(/^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/uploads\/.+\.webp$/),
-      key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/),
+      url: expect.stringMatching(
+        /^https:\/\/s3\.twcstorage\.ru\/runich-test\/user-1\/feedback\/\d{4}-\d{2}-\d{2}\/feedback-1\/.+\.webp$/,
+      ),
+      key: expect.stringMatching(/^user-1\/feedback\/\d{4}-\d{2}-\d{2}\/feedback-1\/.+\.webp$/),
       contentType: 'image/webp',
     });
 
@@ -87,7 +113,18 @@ describe('StorageService', () => {
 
   it('uploads a manifest batch in input order and returns media metadata', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.create.mockResolvedValueOnce({
+      id: 'asset-1',
+      status: 'queued',
+      contentType: 'image/webp',
+    });
+    prisma.mediaModerationAsset.create.mockResolvedValueOnce({
+      id: 'asset-2',
+      status: 'queued',
+      contentType: 'image/webp',
+    });
+    const service = new StorageService(undefined, prisma as never);
     const image = await createTestImage();
     const manifest = JSON.stringify([
       { mediaId: 'media-1', role: 'media' },
@@ -104,23 +141,26 @@ describe('StorageService', () => {
         { scope: 'activity' },
         manifest,
       ),
-    ).resolves.toEqual([
+    ).resolves.toMatchObject([
       {
         mediaId: 'media-1',
         role: 'media',
-        url: expect.stringContaining('/user-1/uploads/'),
-        key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/),
+        status: 'queued',
         contentType: 'image/webp',
       },
       {
         mediaId: 'media-2',
         role: 'media',
-        url: expect.stringContaining('/user-1/uploads/'),
-        key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/),
+        status: 'queued',
         contentType: 'image/webp',
       },
     ]);
     expect(s3Send).toHaveBeenCalledTimes(2);
+    expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input).toMatchObject({
+      Bucket: 'runich-test',
+      Key: expect.stringMatching(/^moderation-quarantine\/user-1\/.+\.webp$/),
+      CacheControl: 'private, no-store',
+    });
   });
 
   it('rejects a batch when manifest length does not match files', async () => {
@@ -183,7 +223,13 @@ describe('StorageService', () => {
 
   it('cleans up successful uploads when one file in a batch fails', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.create.mockResolvedValue({ id: 'asset-1', status: 'queued', contentType: 'video/mp4' });
+    prisma.mediaModerationAsset.findFirst.mockResolvedValue({
+      quarantineKey: 'moderation-quarantine/user-1/asset-1.mp4',
+      publishedKey: null,
+    });
+    const service = new StorageService(undefined, prisma as never);
     const manifest = JSON.stringify([
       { mediaId: 'media-1', role: 'media' },
       { mediaId: 'media-2', role: 'media' },
@@ -239,7 +285,7 @@ describe('StorageService', () => {
           { mediaId: 'media-1', role: 'media' },
         ]),
       ),
-    ).rejects.toThrow('Manifest содержит дублирующие mediaId и role');
+    ).rejects.toThrow('Manifest содержит пустой, слишком длинный или дублирующий mediaId и role');
     expect(s3Send).not.toHaveBeenCalled();
   });
 
@@ -250,13 +296,19 @@ describe('StorageService', () => {
     const service = new StorageService();
 
     await expect(
-      service.uploadPhoto('user-1', {
-        buffer: Buffer.from('video'),
-        originalname: 'clip.mp4',
-        mimetype: 'video/mp4',
-      }),
+      service.uploadPhoto(
+        'user-1',
+        {
+          buffer: Buffer.from('video'),
+          originalname: 'clip.mp4',
+          mimetype: 'video/mp4',
+        },
+        { scope: 'feedback', feedbackId: 'feedback-1' },
+      ),
     ).resolves.toMatchObject({
-      url: expect.stringMatching(/^https:\/\/s3\.stage\.example\/runich-test\/user-1\/uploads\/.+\.mp4$/),
+      url: expect.stringMatching(
+        /^https:\/\/s3\.stage\.example\/runich-test\/user-1\/feedback\/\d{4}-\d{2}-\d{2}\/feedback-1\/.+\.mp4$/,
+      ),
     });
   });
 
@@ -280,12 +332,19 @@ describe('StorageService', () => {
     const image = await createTestImage();
 
     await expect(
-      service.uploadPhoto('user-1', {
-        buffer: image,
-        originalname: 'photo',
-        mimetype: 'image/png',
-      }),
-    ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/uploads\/.+\.webp$/), contentType: 'image/webp' });
+      service.uploadPhoto(
+        'user-1',
+        {
+          buffer: image,
+          originalname: 'photo',
+          mimetype: 'image/png',
+        },
+        { scope: 'feedback', feedbackId: 'feedback-1' },
+      ),
+    ).resolves.toMatchObject({
+      key: expect.stringMatching(/^user-1\/feedback\/\d{4}-\d{2}-\d{2}\/feedback-1\/.+\.webp$/),
+      contentType: 'image/webp',
+    });
   });
 
   it('rejects an upload when neither a path nor a buffer is provided', async () => {
@@ -302,8 +361,14 @@ describe('StorageService', () => {
     const service = new StorageService();
 
     await expect(
-      service.uploadPhoto('user-1', { buffer: Buffer.from('binary'), originalname: 'file', mimetype: '' }),
-    ).resolves.toMatchObject({ key: expect.stringMatching(/^user-1\/uploads\/.+\.bin$/) });
+      service.uploadPhoto(
+        'user-1',
+        { buffer: Buffer.from('binary'), originalname: 'file', mimetype: '' },
+        { scope: 'feedback', feedbackId: 'feedback-1' },
+      ),
+    ).resolves.toMatchObject({
+      key: expect.stringMatching(/^user-1\/feedback\/\d{4}-\d{2}-\d{2}\/feedback-1\/.+\.bin$/),
+    });
   });
 
   it('uses default storage settings when environment values are absent', () => {
@@ -312,6 +377,8 @@ describe('StorageService', () => {
     delete process.env.S3_BUCKET;
     delete process.env.S3_ACCESS_KEY;
     delete process.env.S3_SECRET_ACCESS_KEY;
+    delete process.env.S3_QUARANTINE_BUCKET;
+    delete process.env.S3_QUARANTINE_PREFIX;
 
     const service = new StorageService();
 
@@ -319,6 +386,8 @@ describe('StorageService', () => {
       endpoint: 'https://s3.twcstorage.ru',
       region: 'ru-1',
       bucket: '',
+      quarantineBucket: '',
+      quarantinePrefix: '',
       accessKey: '',
       secretKey: '',
       publicUrl: 'https://s3.twcstorage.ru',
@@ -371,9 +440,15 @@ describe('StorageService', () => {
     expect(s3Send).not.toHaveBeenCalled();
   });
 
-  it('uploads a profile photo directly into the dated profile folder', async () => {
+  it('uploads a profile photo into quarantine before publishing it', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.create.mockResolvedValue({
+      id: 'profile-asset',
+      status: 'queued',
+      contentType: 'image/webp',
+    });
+    const service = new StorageService(undefined, prisma as never);
     const image = await createTestImage();
 
     await expect(
@@ -383,9 +458,13 @@ describe('StorageService', () => {
         { scope: 'profile' },
       ),
     ).resolves.toMatchObject({
-      key: expect.stringMatching(/^user-1\/profile\/\d{4}-\d{2}-\d{2}\/.+\.webp$/),
+      assetId: 'profile-asset',
+      status: 'queued',
       contentType: 'image/webp',
     });
+    expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input.Key).toMatch(
+      /^moderation-quarantine\/user-1\/.+\.webp$/,
+    );
   });
 
   it('uploads feedback media into the dated feedback folder', async () => {
@@ -476,14 +555,22 @@ describe('StorageService', () => {
       for await (const chunk of body as AsyncIterable<Uint8Array>) streamedContent += Buffer.from(chunk).toString();
       return {} as never;
     });
-    const service = new StorageService();
-
-    await service.uploadPhoto('user-1', {
-      path,
-      size: 5,
-      originalname: 'video.mp4',
-      mimetype: 'video/mp4',
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.create.mockResolvedValue({
+      id: 'video-asset',
+      status: 'queued',
+      contentType: 'video/mp4',
     });
+    const service = new StorageService(undefined, prisma as never);
+
+    await expect(
+      service.uploadPhoto('user-1', {
+        path,
+        size: 5,
+        originalname: 'video.mp4',
+        mimetype: 'video/mp4',
+      }),
+    ).resolves.toMatchObject({ assetId: 'video-asset', status: 'queued', contentType: 'video/mp4' });
 
     expect(streamedContent).toBe('video');
     expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input.ContentLength).toBe(5);
@@ -783,13 +870,24 @@ describe('StorageService', () => {
   it('writes to the shared S3 bucket in stage', async () => {
     process.env.APP_ENV = 'stage';
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.create.mockResolvedValue({
+      id: 'stage-asset',
+      status: 'queued',
+      contentType: 'image/webp',
+    });
+    const service = new StorageService(undefined, prisma as never);
     const image = await createTestImage();
 
     await expect(
       service.uploadPhoto('user-1', { buffer: image, originalname: 'photo.jpg', mimetype: 'image/jpeg' }),
-    ).resolves.toMatchObject({ contentType: 'image/webp' });
+    ).resolves.toMatchObject({ assetId: 'stage-asset', status: 'queued', contentType: 'image/webp' });
     expect(s3Send).toHaveBeenCalledTimes(1);
+    expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input).toMatchObject({
+      Bucket: 'runich-test',
+      Key: expect.stringMatching(/^moderation-quarantine\/user-1\/.+\.webp$/),
+      CacheControl: 'private, no-store',
+    });
   });
 
   it('rejects image bytes that sharp cannot process', async () => {
@@ -804,5 +902,340 @@ describe('StorageService', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('returns moderation statuses and exposes a URL only for approved published assets', async () => {
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findMany.mockResolvedValue([
+      { id: 'approved-1', status: 'approved', publishedKey: 'user-1/uploads/approved.jpg', contentType: 'image/jpeg' },
+      { id: 'approved-2', status: 'approved', publishedKey: null, contentType: 'image/jpeg' },
+      { id: 'queued-1', status: 'queued', publishedKey: null, contentType: 'video/mp4' },
+    ]);
+    const service = new StorageService(undefined, prisma as never);
+
+    await expect(
+      service.getModerationUploadStatuses('user-1', ['approved-1', 'approved-2', 'queued-1']),
+    ).resolves.toEqual({
+      items: [
+        {
+          assetId: 'approved-1',
+          status: 'approved',
+          url: 'https://s3.twcstorage.ru/runich-test/user-1/uploads/approved.jpg',
+          contentType: 'image/jpeg',
+        },
+        { assetId: 'approved-2', status: 'approved', contentType: 'image/jpeg' },
+        { assetId: 'queued-1', status: 'queued', contentType: 'video/mp4' },
+      ],
+    });
+    expect(prisma.mediaModerationAsset.findMany).toHaveBeenCalledWith({
+      where: { ownerId: 'user-1', id: { in: ['approved-1', 'approved-2', 'queued-1'] } },
+      select: { id: true, status: true, publishedKey: true, contentType: true },
+    });
+    await expect(new StorageService().getModerationUploadStatuses('user-1', [])).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+  });
+
+  it('approves a reviewed asset, copies it to the public prefix, and syncs linked media', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findUnique
+      .mockResolvedValueOnce({
+        id: 'asset-1',
+        ownerId: 'user-1',
+        role: 'media',
+        status: 'review_required',
+        quarantineKey: 'moderation-quarantine/user-1/asset-1.webp',
+        publishedKey: null,
+        contentType: 'image/webp',
+        reviewedAt: null,
+        reviewerId: null,
+        reviewNote: null,
+      })
+      .mockResolvedValue({ role: 'media' });
+    const service = new StorageService(undefined, prisma as never);
+
+    await expect(service.approveModerationAsset('asset-1', 'moderator-1', '  approved  ')).resolves.toEqual({
+      url: 'https://s3.twcstorage.ru/runich-test/user-1/uploads/moderated/asset-1.webp',
+      key: 'user-1/uploads/moderated/asset-1.webp',
+    });
+    expect(s3Send.mock.calls[0]?.[0]).toBeInstanceOf(CopyObjectCommand);
+    expect((s3Send.mock.calls[0]?.[0] as CopyObjectCommand).input).toMatchObject({
+      Bucket: 'runich-test',
+      Key: 'user-1/uploads/moderated/asset-1.webp',
+      CopySource: 'runich-test/moderation-quarantine/user-1/asset-1.webp',
+    });
+    expect(prisma.mediaModerationAsset.update).toHaveBeenCalledWith({
+      where: { id: 'asset-1' },
+      data: expect.objectContaining({
+        status: 'approved',
+        reviewerId: 'moderator-1',
+        reviewNote: 'approved',
+        publishedKey: 'user-1/uploads/moderated/asset-1.webp',
+      }),
+    });
+    expect(prisma.activityMedia.updateMany).toHaveBeenCalledWith({
+      where: { mediaModerationAssetId: 'asset-1' },
+      data: {
+        url: 'https://s3.twcstorage.ru/runich-test/user-1/uploads/moderated/asset-1.webp',
+        mediaReviewStatus: 'approved',
+      },
+    });
+    expect(s3Send.mock.calls[1]?.[0]).toBeInstanceOf(DeleteObjectCommand);
+  });
+
+  it('preserves review metadata when an automated scan approves an asset without a moderator', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const reviewedAt = new Date('2026-10-20T12:00:00.000Z');
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findUnique
+      .mockResolvedValueOnce({
+        id: 'asset-auto',
+        ownerId: 'user-1',
+        role: 'media',
+        status: 'queued',
+        quarantineKey: 'moderation-quarantine/user-1/asset-auto.webp',
+        publishedKey: null,
+        contentType: 'image/webp',
+        reviewedAt,
+        reviewerId: 'automatic-scanner',
+        reviewNote: 'clean scan',
+      })
+      .mockResolvedValue({ role: 'media' });
+    const service = new StorageService(undefined, prisma as never);
+
+    await service.approveModerationAsset('asset-auto');
+
+    expect(prisma.mediaModerationAsset.update).toHaveBeenCalledWith({
+      where: { id: 'asset-auto' },
+      data: expect.objectContaining({ reviewedAt, reviewerId: 'automatic-scanner', reviewNote: 'clean scan' }),
+    });
+  });
+
+  it('keeps completed moderation decisions idempotent and rejects stale moderation actions', async () => {
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findUnique
+      .mockResolvedValueOnce({
+        id: 'asset-1',
+        status: 'approved',
+        role: 'thumbnail',
+        publishedKey: 'user-1/uploads/approved.webp',
+      })
+      .mockResolvedValueOnce({ role: 'thumbnail' })
+      .mockResolvedValueOnce({ id: 'asset-2', status: 'rejected' })
+      .mockResolvedValueOnce({ id: 'asset-3', status: 'queued' })
+      .mockResolvedValueOnce(null);
+    const service = new StorageService(undefined, prisma as never);
+
+    await expect(service.approveModerationAsset('asset-1')).resolves.toMatchObject({
+      key: 'user-1/uploads/approved.webp',
+    });
+    expect(prisma.activityMedia.updateMany).toHaveBeenCalledWith({
+      where: { thumbnailModerationAssetId: 'asset-1' },
+      data: { thumbnail: 'https://s3.twcstorage.ru/runich-test/user-1/uploads/approved.webp' },
+    });
+    await expect(service.approveModerationAsset('asset-2')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.approveModerationAsset('asset-3', 'moderator-1')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.approveModerationAsset('missing')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.publishApprovedModerationAsset('user-1', 'asset-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('rejects a reviewed media asset and removes its linked thumbnail assets', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findUnique
+      .mockResolvedValueOnce({
+        id: 'asset-1',
+        ownerId: 'user-1',
+        role: 'media',
+        status: 'review_required',
+        quarantineKey: 'moderation-quarantine/user-1/asset-1.mp4',
+      })
+      .mockResolvedValue({ role: 'media' });
+    prisma.activityMedia.findMany.mockResolvedValue([{ thumbnailModerationAssetId: 'thumbnail-1' }]);
+    prisma.mediaModerationAsset.findFirst.mockResolvedValue({
+      id: 'thumbnail-1',
+      ownerId: 'user-1',
+      quarantineKey: 'moderation-quarantine/user-1/thumbnail-1.webp',
+      publishedKey: null,
+    });
+    const service = new StorageService(undefined, prisma as never);
+
+    await service.rejectModerationAsset('asset-1', 'moderator-1', '  rejected  ');
+
+    expect(prisma.mediaModerationAsset.update).toHaveBeenCalledWith({
+      where: { id: 'asset-1' },
+      data: expect.objectContaining({ status: 'rejected', reviewerId: 'moderator-1', reviewNote: 'rejected' }),
+    });
+    expect(prisma.activityMedia.updateMany).toHaveBeenCalledWith({
+      where: { mediaModerationAssetId: 'asset-1' },
+      data: { url: null, mediaReviewStatus: 'rejected', thumbnail: null },
+    });
+    expect(prisma.mediaModerationAsset.delete).toHaveBeenCalledWith({ where: { id: 'thumbnail-1' } });
+    expect(s3Send).toHaveBeenCalledTimes(2);
+  });
+
+  it('refreshes approved, rejected, pending, and thumbnail references after activity updates', async () => {
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findUnique
+      .mockResolvedValueOnce({ status: 'approved', role: 'media', publishedKey: 'user-1/approved.mp4' })
+      .mockResolvedValueOnce({ role: 'media' })
+      .mockResolvedValueOnce({ status: 'rejected', role: 'media', publishedKey: null })
+      .mockResolvedValueOnce({ role: 'media' })
+      .mockResolvedValueOnce({ status: 'queued', role: 'media', publishedKey: null })
+      .mockResolvedValueOnce({ status: 'approved', role: 'thumbnail', publishedKey: 'user-1/thumbnail.webp' })
+      .mockResolvedValueOnce({ role: 'thumbnail' });
+    const service = new StorageService(undefined, prisma as never);
+
+    await service.refreshLinkedActivityMedia(['asset-1', null, 'asset-1', 'asset-2', 'asset-3', 'asset-4']);
+
+    expect(prisma.activityMedia.updateMany).toHaveBeenNthCalledWith(1, {
+      where: { mediaModerationAssetId: 'asset-1' },
+      data: { url: 'https://s3.twcstorage.ru/runich-test/user-1/approved.mp4', mediaReviewStatus: 'approved' },
+    });
+    expect(prisma.activityMedia.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { mediaModerationAssetId: 'asset-2' },
+      data: { url: null, mediaReviewStatus: 'rejected', thumbnail: null },
+    });
+    expect(prisma.activityMedia.updateMany).toHaveBeenNthCalledWith(3, {
+      where: { mediaModerationAssetId: 'asset-3' },
+      data: { mediaReviewStatus: 'queued' },
+    });
+    expect(prisma.activityMedia.updateMany).toHaveBeenNthCalledWith(4, {
+      where: { thumbnailModerationAssetId: 'asset-4' },
+      data: { thumbnail: 'https://s3.twcstorage.ru/runich-test/user-1/thumbnail.webp' },
+    });
+  });
+
+  it('deletes an unattached moderation asset and both object keys when it was already published', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findFirst
+      .mockResolvedValueOnce({
+        id: 'asset-1',
+        quarantineKey: 'moderation-quarantine/user-1/a.webp',
+        publishedKey: null,
+      })
+      .mockResolvedValueOnce({
+        id: 'asset-2',
+        quarantineKey: 'moderation-quarantine/user-1/b.webp',
+        publishedKey: 'user-1/b.webp',
+      });
+    prisma.activityMedia.findFirst.mockResolvedValue(null);
+    const service = new StorageService(undefined, prisma as never);
+
+    await service.deleteUnattachedModerationAsset('user-1', 'asset-1');
+    await service.deleteUnattachedModerationAsset('user-1', 'asset-2');
+
+    expect(prisma.mediaModerationAsset.delete).toHaveBeenNthCalledWith(1, { where: { id: 'asset-1' } });
+    expect(prisma.mediaModerationAsset.delete).toHaveBeenNthCalledWith(2, { where: { id: 'asset-2' } });
+    expect(s3Send).toHaveBeenCalledTimes(3);
+    await expect(new StorageService().deleteUnattachedModerationAsset('user-1', 'asset-1')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+  });
+
+  it('rejects deleting missing or attached moderation assets and skips absent activity references', async () => {
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      id: 'asset-1',
+      quarantineKey: 'moderation-quarantine/user-1/a.webp',
+      publishedKey: null,
+    });
+    prisma.activityMedia.findFirst.mockResolvedValue({ id: 'media-1' });
+    const service = new StorageService(undefined, prisma as never);
+
+    await expect(service.deleteUnattachedModerationAsset('user-1', 'missing')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(service.deleteUnattachedModerationAsset('user-1', 'asset-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await service.deleteActivityModerationAssets('user-1', [null, 'asset-1', 'asset-1', 'missing']);
+    expect(prisma.mediaModerationAsset.findFirst).toHaveBeenCalledTimes(4);
+    expect(prisma.mediaModerationAsset.delete).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [UPLOAD_LIMITS.photoBytes + 1, 'image/jpeg', 'photo.jpg', 'Размер изображения должен быть не более 15 МБ'],
+    [UPLOAD_LIMITS.videoBytes + 1, 'video/mp4', 'clip.mp4', 'Размер видео должен быть не более 50 МБ'],
+  ])('rejects an upload that exceeds its media type size limit', async (size, mimetype, originalname, message) => {
+    const service = new StorageService(undefined, createModerationPrismaMock() as never);
+
+    await expect(
+      service.uploadPhoto('user-1', { buffer: Buffer.from('content'), size, mimetype, originalname }),
+    ).rejects.toThrow(message);
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('requires Prisma and a separate quarantine prefix before uploading to a shared bucket', async () => {
+    const file = { buffer: Buffer.from('video'), originalname: 'clip.mp4', mimetype: 'video/mp4' };
+    await expect(new StorageService().uploadPhoto('user-1', file)).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    delete process.env.S3_QUARANTINE_PREFIX;
+    const service = new StorageService(undefined, createModerationPrismaMock() as never);
+    await expect(service.uploadPhoto('user-1', file)).rejects.toThrow(
+      'Для карантина в основном S3-бакете задайте S3_QUARANTINE_PREFIX',
+    );
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid quarantine path segments during service configuration', () => {
+    process.env.S3_QUARANTINE_PREFIX = 'moderation/../uploads';
+
+    expect(() => new StorageService()).toThrow('S3_QUARANTINE_PREFIX contains an invalid path segment');
+  });
+
+  it('fails when a downloaded quarantine object has no response body', async () => {
+    s3Send.mockResolvedValue({ Body: undefined } as never);
+    const service = new StorageService();
+
+    await expect(
+      service.downloadQuarantineObjectToFile('moderation-quarantine/user-1/missing.jpg', '/tmp/missing.jpg'),
+    ).rejects.toThrow('S3 не вернул карантинный объект moderation-quarantine/user-1/missing.jpg');
+  });
+
+  it('refuses to publish assets that are not approved or do not belong to the requester', async () => {
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findFirst.mockResolvedValue({ id: 'asset-1', status: 'queued' });
+    const service = new StorageService(undefined, prisma as never);
+
+    await expect(service.publishApprovedModerationAsset('owner-1', 'asset-1')).rejects.toThrow(
+      'Модератор ещё не одобрил этот файл',
+    );
+    prisma.mediaModerationAsset.findFirst.mockResolvedValueOnce(null);
+    await expect(service.publishApprovedModerationAsset('intruder', 'asset-1')).rejects.toThrow(
+      'Загруженный файл не найден',
+    );
+  });
+
+  it('treats missing moderation records and already rejected assets safely', async () => {
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'asset-rejected', status: 'rejected' })
+      .mockResolvedValueOnce({ id: 'asset-queued', status: 'queued' });
+    const service = new StorageService(undefined, prisma as never);
+
+    await expect(service.rejectModerationAsset('missing', 'moderator-1')).rejects.toThrow('Загруженный файл не найден');
+    await expect(service.rejectModerationAsset('asset-rejected', 'moderator-1')).resolves.toBeUndefined();
+    await expect(service.rejectModerationAsset('asset-queued', 'moderator-1')).rejects.toThrow(
+      'Этот файл больше не ожидает решения модератора',
+    );
+    await expect(new StorageService().rejectModerationAsset('asset-1', 'moderator-1')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+  });
+
+  it('does not refresh moderation links when storage records are unavailable', async () => {
+    await expect(new StorageService().refreshLinkedActivityMedia(['asset-1', null])).resolves.toBeUndefined();
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findUnique.mockResolvedValue(null);
+    await expect(
+      new StorageService(undefined, prisma as never).refreshLinkedActivityMedia(['missing']),
+    ).resolves.toBeUndefined();
+    expect(prisma.activityMedia.updateMany).not.toHaveBeenCalled();
   });
 });

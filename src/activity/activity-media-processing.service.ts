@@ -79,7 +79,9 @@ export class ActivityMediaProcessingService {
         mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.completed,
       };
       const media = Array.isArray(activity.media) ? activity.media : [];
-      const mediaWithoutBlurhash = media.filter((item) => !item.blurhash);
+      const mediaWithoutBlurhash = media.filter((item): item is typeof item & { url: string } =>
+        Boolean(item.url && !item.blurhash),
+      );
       if (mediaWithoutBlurhash.length) {
         await Promise.all(
           mediaWithoutBlurhash.map(async (item) => {

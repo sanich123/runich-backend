@@ -28,13 +28,18 @@ describe('ActivityService privacy', () => {
 
     await service.getActivitesByUserId('owner-1', '10', undefined, 'viewer-1');
     expect(prisma.activity.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { userId: 'owner-1', visibility: 'public' } }),
+      expect.objectContaining({ where: { userId: 'owner-1', visibility: 'public', moderationStatus: 'visible' } }),
     );
 
     await service.getMediaByUserId('owner-1', '10', undefined, 'viewer-1');
     expect(prisma.activityMedia.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId: 'owner-1', activity: { visibility: 'public' } },
+        where: {
+          userId: 'owner-1',
+          moderationStatus: 'visible',
+          url: { not: null },
+          activity: { visibility: 'public', moderationStatus: 'visible' },
+        },
       }),
     );
 
@@ -81,7 +86,11 @@ describe('ActivityService privacy', () => {
   it('hides a private activity detail from another user', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
-    prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1', visibility: 'private' });
+    prisma.activity.findUnique.mockResolvedValue({
+      userId: 'owner-1',
+      visibility: 'private',
+      moderationStatus: 'visible',
+    });
 
     await expect(service.getActivityByActivityId('activity-1', 'viewer-1')).resolves.toBeNull();
   });
@@ -89,7 +98,11 @@ describe('ActivityService privacy', () => {
   it('allows followers visibility only to users who follow the owner', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);
-    prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1', visibility: 'followers' });
+    prisma.activity.findUnique.mockResolvedValue({
+      userId: 'owner-1',
+      visibility: 'followers',
+      moderationStatus: 'visible',
+    });
     prisma.friend.findUnique.mockResolvedValue({ id: 'follow-1' });
 
     await expect(service.canAccessActivity('activity-1', 'viewer-1')).resolves.toBe(true);
@@ -214,6 +227,7 @@ describe('ActivityService privacy', () => {
       id: 'activity-1',
       userId: 'owner-1',
       visibility: 'public',
+      moderationStatus: 'visible',
       elevationGain: 88,
       kilometresSplit: [],
       averageHeartRate: 135,
@@ -245,6 +259,7 @@ describe('ActivityService privacy', () => {
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
+      moderationStatus: 'visible',
       profile: { allowActivityInteractions: false },
     });
 

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID } from 'class-validator';
 import { MEDIA_UPLOAD_ROLES, MEDIA_UPLOAD_SCOPES, type MediaUploadScope } from './type';
 
@@ -15,11 +15,17 @@ export class PhotoUploadOptionsDto {
 }
 
 export class PhotoUploadResponseDto {
-  @ApiProperty({ type: String, format: 'uri' })
-  url: string;
+  @ApiPropertyOptional({ type: String, format: 'uri', description: 'Появляется после автоматического одобрения' })
+  url?: string;
 
-  @ApiProperty({ type: String, description: 'S3 object key' })
-  key: string;
+  @ApiPropertyOptional({ type: String, description: 'S3 object key для немодерируемых вложений' })
+  key?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Идентификатор проверки медиафайла' })
+  assetId?: string;
+
+  @ApiPropertyOptional({ enum: ['queued', 'processing', 'review_required', 'approved', 'rejected', 'failed'] })
+  status?: string;
 
   @ApiProperty({ type: String, description: 'Uploaded file MIME type' })
   contentType: string;

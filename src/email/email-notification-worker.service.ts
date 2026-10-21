@@ -54,7 +54,7 @@ export class EmailNotificationWorkerService {
         return true;
       }
 
-      await notification.send(notification.payload);
+      await notification.send();
       await this.prisma.emailNotificationJob.update({
         where: { id: job.id },
         data: { status: EMAIL_NOTIFICATION_JOB_STATUS.sent, finishedAt: new Date(), startedAt: null },
@@ -114,7 +114,7 @@ export class EmailNotificationWorkerService {
         const payload = this.createPayload(like.profile, like.activity.profile, like.activity.id, {
           mapPhotoUrl: like.activity.mapPhotoUrl,
         });
-        return payload ? { payload, send: this.notifications.sendLike.bind(this.notifications) } : null;
+        return payload ? { send: () => this.notifications.sendLike(payload) } : null;
       }
       case EMAIL_NOTIFICATION_TYPE.comment: {
         const comment = await this.prisma.comment.findUnique({
@@ -146,7 +146,7 @@ export class EmailNotificationWorkerService {
           comment: comment.comment,
           mapPhotoUrl: comment.activity.mapPhotoUrl,
         });
-        return payload ? { payload, send: this.notifications.sendComment.bind(this.notifications) } : null;
+        return payload ? { send: () => this.notifications.sendComment(payload) } : null;
       }
       case EMAIL_NOTIFICATION_TYPE.commentLike: {
         const commentLike = await this.prisma.commentLike.findUnique({
@@ -179,7 +179,36 @@ export class EmailNotificationWorkerService {
           commentLike.comment.activity.id,
           { comment: commentLike.comment.comment },
         );
-        return payload ? { payload, send: this.notifications.sendCommentLike.bind(this.notifications) } : null;
+        return payload ? { send: () => this.notifications.sendCommentLike(payload) } : null;
+      }
+      case EMAIL_NOTIFICATION_TYPE.moderationReport: {
+        const report = await this.prisma.contentReport.findUnique({
+          where: { id: job.sourceId },
+          select: { id: true, targetType: true, reason: true },
+        });
+        if (!report) return null;
+        const payload = {
+          reportId: report.id,
+          requestType: 'report' as const,
+          targetType: report.targetType,
+          reason: report.reason,
+        };
+        return { send: () => this.notifications.sendModerationUpdate(payload) };
+      }
+      case EMAIL_NOTIFICATION_TYPE.moderationAppeal: {
+        const appeal = await this.prisma.moderationAppeal.findUnique({
+          where: { id: job.sourceId },
+          select: { report: { select: { id: true, targetType: true } } },
+        });
+        if (!appeal) return null;
+        const payload = {
+          reportId: appeal.report.id,
+          appealId: job.sourceId,
+          requestType: 'appeal' as const,
+          targetType: appeal.report.targetType,
+          reason: 'appeal',
+        };
+        return { send: () => this.notifications.sendModerationUpdate(payload) };
       }
       default:
         return null;

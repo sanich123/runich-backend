@@ -31,10 +31,7 @@ describe('formatValidationErrors', () => {
     );
 
     expect(formatValidationErrors(errors)).toEqual(
-      expect.arrayContaining([
-        'Не указано обязательное свойство: media[0].thumbnail',
-        'Свойство должно быть числом: locations[0].coords.latitude',
-      ]),
+      expect.arrayContaining(['Свойство должно быть числом: locations[0].coords.latitude']),
     );
   });
 

@@ -36,6 +36,7 @@ RUN apt-get update \
     libstdc++6 \
     libuv1t64 \
     libwebp7 \
+    ffmpeg \
     libx11-6 \
     libxext6 \
     libxrender1 \

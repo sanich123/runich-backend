@@ -207,11 +207,28 @@ export function hideActivityMapForViewer<T extends Record<string, unknown>>(acti
 }
 
 export function normalizeActivityCardForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {
-  const normalizedActivity = hideActivityMapForViewer(normalizeActivityCard(activity), viewerId);
+  const activityWithoutPendingMedia = hidePendingActivityMediaForViewer(activity, viewerId);
+  const normalizedActivity = hideActivityMapForViewer(normalizeActivityCard(activityWithoutPendingMedia), viewerId);
   const profile = normalizedActivity.profile as { allowActivityElevationViewing?: boolean } | undefined;
   const isOwner = typeof viewerId === 'string' && normalizedActivity.userId === viewerId;
   if (isOwner || profile?.allowActivityElevationViewing !== false) return normalizedActivity;
   return { ...normalizedActivity, elevationGain: null };
+}
+
+export function hidePendingActivityMediaForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {
+  if (typeof viewerId === 'string' && activity.userId === viewerId) return activity;
+  if (!Array.isArray(activity.media)) return activity;
+
+  return {
+    ...activity,
+    media: activity.media.filter(
+      (media: unknown) =>
+        media !== null &&
+        typeof media === 'object' &&
+        'url' in media &&
+        typeof (media as { url?: unknown }).url === 'string',
+    ),
+  } as T;
 }
 
 function getDistanceBetweenLocations(first: LocationObject, second: LocationObject) {

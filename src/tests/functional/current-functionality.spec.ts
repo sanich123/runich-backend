@@ -252,6 +252,7 @@ describe('activity, comments and statistics', () => {
       locations: undefined,
       kilometresSplit: [],
     });
+    prisma.activity.findUnique.mockResolvedValue({ ...activity, moderationStatus: 'visible' });
     await expect(service.getActivityByActivityId('a1', 'u1')).resolves.toEqual({
       ...activity,
       elevationGain: 0,
@@ -334,7 +335,12 @@ describe('activity, comments and statistics', () => {
     prisma.comment.create.mockResolvedValue({ id: 'c1' });
     prisma.comment.update.mockResolvedValue({ id: 'c1' });
     prisma.comment.delete.mockResolvedValue({ id: 'c1' });
-    prisma.comment.findUnique.mockResolvedValue({ commentLikes: [{ id: 'cl1' }] });
+    prisma.comment.findUnique.mockResolvedValue({
+      authorId: 'author-1',
+      moderationStatus: 'visible',
+      activity: { id: 'a1' },
+      commentLikes: [{ id: 'cl1' }],
+    });
     prisma.commentLike.create.mockResolvedValue({ id: 'cl1' });
     prisma.commentLike.findUnique.mockResolvedValue({ id: 'cl1' });
     prisma.commentLike.findMany.mockResolvedValue([{ id: 'cl1' }]);

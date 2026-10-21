@@ -1,5 +1,10 @@
 # Project instructions
 
+## Package registry access
+
+- When an install, upgrade, or lockfile refresh needs npm registry access, run the package-manager command with `sandbox_permissions: "require_escalated"` on the first attempt and explain that registry access is needed. Do not make a restricted-network attempt first and retry only after it fails.
+- Keep the escalated command scoped to the package-manager operation; do not combine it with unrelated shell changes.
+
 ## Repository layout
 
 - All project Git roots are inside the project/ directory; run Git commands from that directory.

@@ -46,7 +46,6 @@ export default class M extends Migration<Start, End> {
           default: lit(true),
           codecRef: { codecId: 'pg/bool@1' },
         }),
-        operationClass: 'widening',
       }),
     ];
   }
