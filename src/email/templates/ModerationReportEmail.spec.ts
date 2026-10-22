@@ -1,4 +1,5 @@
 import React from 'react';
+import { render } from '@react-email/components';
 import { EmailButton } from './EmailButton';
 import { ModerationReportEmail } from './ModerationReportEmail';
 import type { ModerationReportEmailProps } from './ModerationReportEmail';
@@ -77,5 +78,46 @@ describe('ModerationReportEmail', () => {
     expect(collectText(reportEmail)).toContain('Причина: unknown-reason');
     expect(findModeratorDashboardLink(appealEmail)?.href).toContain('showAppeals=true');
     expect(findModeratorDashboardLink(appealEmail)?.href).not.toContain('appealId=');
+  });
+
+  it('includes reporter details and the reported profile in a user report', async () => {
+    const html = await render(
+      renderEmail({
+        reportId: 'report-profile',
+        requestType: 'report',
+        targetType: 'user',
+        reason: 'harassment',
+        reporterDetails: 'Repeated unwanted messages',
+        reportedProfile: {
+          name: 'Alex',
+          surname: 'Runner',
+          bio: 'Runner profile',
+          profilePhoto: 'https://cdn.example/profile.jpg',
+        },
+      }),
+    );
+
+    expect(html).toContain('Repeated unwanted messages');
+    expect(html).toContain('Профиль, на который пожаловались');
+    expect(html).toContain('src="https://cdn.example/profile.jpg"');
+    expect(html).toContain('Alex Runner');
+    expect(html).toContain('Runner profile');
+  });
+
+  it('uses fallbacks when the reported profile has no public details', async () => {
+    const html = await render(
+      renderEmail({
+        reportId: 'report-empty-profile',
+        requestType: 'report',
+        targetType: 'user',
+        reason: 'other',
+        reportedProfile: { name: null, surname: null, bio: null, profilePhoto: null },
+      }),
+    );
+
+    expect(html).toContain('не указаны');
+    expect(html).toContain('Описание:');
+    expect(html).toContain('не указано');
+    expect(html).not.toContain('<img alt="Фото профиля"');
   });
 });

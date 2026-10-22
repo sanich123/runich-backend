@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { asyncMock, transactionMock } from 'src/tests/helpers';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
+import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
 import { MODERATOR_EMAIL } from '../moderation.constants';
 import { ModerationService } from '../moderation.service';
 
@@ -19,7 +20,11 @@ function createPrismaMock() {
       updateMany: asyncMock(),
     },
     mediaModerationAsset: { findUnique: asyncMock() },
-    moderationAction: { create: asyncMock(), findFirst: asyncMock(), findMany: asyncMock() },
+    moderationAction: {
+      create: asyncMock().mockResolvedValue({ id: 'moderation-action-1' }),
+      findFirst: asyncMock(),
+      findMany: asyncMock(),
+    },
     moderationAppeal: {
       create: asyncMock(),
       findFirst: asyncMock(),
@@ -30,6 +35,8 @@ function createPrismaMock() {
     userBlock: { deleteMany: asyncMock(), findMany: asyncMock(), upsert: asyncMock() },
     friend: { deleteMany: asyncMock() },
     profile: { findMany: asyncMock(), findUnique: asyncMock() },
+    notification: { create: asyncMock().mockResolvedValue({ id: 'notification-1' }) },
+    pushNotificationJob: { create: asyncMock() },
     emailNotificationJob: { create: asyncMock() },
   };
   return Object.assign(prisma, { $transaction: transactionMock(prisma) });
@@ -59,6 +66,13 @@ describe('ModerationService', () => {
     prisma.activity.findUnique.mockResolvedValue({ id: 'activity-1', userId: 'author-1', moderationStatus: 'visible' });
     prisma.contentReport.findFirst.mockResolvedValue(null);
     prisma.contentReport.create.mockResolvedValue(createdReport);
+    prisma.profile.findUnique.mockResolvedValue({
+      emailNotifications: false,
+      inAppNotifications: false,
+      pushNotifications: false,
+      language: 'russian',
+      user: { email: 'reporter@example.com', emailConfirmedAt: new Date() },
+    });
 
     await expect(
       service.submitReport('reporter-1', {
@@ -87,6 +101,22 @@ describe('ModerationService', () => {
         status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
       },
     });
+    expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
+      data: {
+        notificationType: EMAIL_NOTIFICATION_TYPE.reporterReceipt,
+        sourceId: 'report-1',
+        status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
+      },
+    });
+    expect(prisma.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: NOTIFICATION_TYPE.moderationReportReceived,
+          inApp: true,
+          content: expect.stringContaining('Жалоба №report-1'),
+        }),
+      }),
+    );
   });
 
   it('returns an open duplicate report and rejects missing, hidden, and self-owned targets', async () => {
@@ -386,11 +416,19 @@ describe('ModerationService', () => {
     const service = new ModerationService(prisma as never, storage as never);
     const report = {
       id: 'report-1',
+      reporterId: 'reporter-1',
       status: 'open',
       targetType: 'activity',
       targetId: 'target-1',
       subjectUserId: 'owner-1',
     };
+    prisma.profile.findUnique.mockResolvedValue({
+      emailNotifications: false,
+      inAppNotifications: false,
+      pushNotifications: false,
+      language: 'russian',
+      user: { email: 'reporter@example.com', emailConfirmedAt: new Date() },
+    });
     prisma.contentReport.findUnique.mockResolvedValue(report);
     prisma.contentReport.updateMany.mockResolvedValue({ count: 1 });
 
@@ -425,6 +463,15 @@ describe('ModerationService', () => {
         data: { moderationStatus: expectedStatus },
       });
     }
+    expect(prisma.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: NOTIFICATION_TYPE.moderationReportDecision,
+          inApp: true,
+          content: expect.stringContaining('рассмотрена'),
+        }),
+      }),
+    );
 
     prisma.contentReport.findUnique.mockResolvedValue({ ...report, targetType: 'user', subjectUserId: null });
     await expect(service.applyAction('report-1', 'mod-1', { action: 'permanent_suspend' })).rejects.toBeInstanceOf(

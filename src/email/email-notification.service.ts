@@ -6,6 +6,7 @@ import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.servic
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { NotificationEmail } from './templates';
 import { ModerationReportEmail, type ModerationReportEmailProps } from './templates/ModerationReportEmail';
+import { ReporterModerationEmail, type ReporterModerationEmailProps } from './templates/ReporterModerationEmail';
 import { EmailType } from './templates/types';
 
 export interface EmailNotificationPayload {
@@ -40,6 +41,15 @@ export class EmailNotificationService {
     const subject = payload.requestType === 'appeal' ? '[Runich] Новая апелляция' : '[Runich] Новая жалоба';
     const html = await render(ModerationReportEmail(payload));
     return sendEmail(MODERATOR_EMAIL, subject, html, [], this.latencyMetrics);
+  }
+
+  async sendReporterModerationUpdate(payload: ReporterModerationEmailProps, recipientEmail: string) {
+    const subject =
+      payload.locale === 'russian'
+        ? `[Runich] ${payload.requestType === 'received' ? 'Жалоба принята' : 'Решение по жалобе'}`
+        : `[Runich] ${payload.requestType === 'received' ? 'Report received' : 'Report decision'}`;
+    const html = await render(ReporterModerationEmail(payload));
+    return sendEmail(recipientEmail, subject, html, [], this.latencyMetrics);
   }
 
   private async send(payload: EmailNotificationPayload, type: EmailType, subject: string) {

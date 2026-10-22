@@ -109,4 +109,82 @@ describe('EmailNotificationService', () => {
     expect(html).toContain('https://runich.netlify.app');
     expect(html).toContain('Открыть приложение Runich');
   });
+
+  it('sends localized moderation receipt and decision emails to the reporting user', async () => {
+    const service = new EmailNotificationService();
+
+    await service.sendReporterModerationUpdate(
+      {
+        reportId: 'report-1',
+        targetType: 'activity',
+        reason: 'spam',
+        requestType: 'received',
+        locale: 'russian',
+      },
+      'reporter@example.com',
+    );
+    await service.sendReporterModerationUpdate(
+      {
+        reportId: 'report-2',
+        targetType: 'comment',
+        reason: 'harassment',
+        requestType: 'decision',
+        locale: 'english',
+        outcome: 'confirmed',
+      },
+      'reporter@example.com',
+    );
+
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      1,
+      'reporter@example.com',
+      '[Runich] Жалоба принята',
+      expect.stringContaining('Жалоба принята к рассмотрению'),
+      [],
+      undefined,
+    );
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      2,
+      'reporter@example.com',
+      '[Runich] Report decision',
+      expect.stringContaining('We confirmed a violation'),
+      [],
+      undefined,
+    );
+  });
+
+  it('sends report and appeal updates to the moderator mailbox', async () => {
+    const service = new EmailNotificationService();
+
+    await service.sendModerationUpdate({
+      reportId: 'report-1',
+      requestType: 'report',
+      targetType: 'activity',
+      reason: 'spam',
+    });
+    await service.sendModerationUpdate({
+      reportId: 'report-2',
+      appealId: 'appeal-1',
+      requestType: 'appeal',
+      targetType: 'comment',
+      reason: 'appeal',
+    });
+
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      '[Runich] Новая жалоба',
+      expect.stringContaining('report-1'),
+      [],
+      undefined,
+    );
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      '[Runich] Новая апелляция',
+      expect.stringContaining('appeal-1'),
+      [],
+      undefined,
+    );
+  });
 });

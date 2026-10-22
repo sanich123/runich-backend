@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
+import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
+import { createNotificationEvent } from 'src/notification/notification-event';
 import { MODERATOR_EMAILS } from './moderation.constants';
 import { StorageService } from 'src/storage/storage.service';
 import type {
@@ -21,6 +23,61 @@ import type { ModerationActionDto, ModerationAppealDecisionDto, SubmitContentRep
 const OPEN_REPORT_STATUSES: ContentReportStatus[] = ['open', 'in_review'];
 const ACTIVE_QUEUE_STATUSES: ContentReportStatus[] = ['open', 'in_review', 'appealed'];
 const MAX_BLOCKED_USERS = 500;
+type ReportLanguage = 'russian' | 'english';
+
+const REPORT_TARGET_LABELS: Record<ReportLanguage, Record<string, string>> = {
+  russian: { activity: 'тренировка', comment: 'комментарий', media: 'фото или видео', user: 'профиль' },
+  english: { activity: 'activity', comment: 'comment', media: 'photo or video', user: 'profile' },
+};
+
+const REPORT_REASON_LABELS: Record<ReportLanguage, Record<string, string>> = {
+  russian: {
+    threats: 'угрозы',
+    harassment: 'преследование',
+    hate_speech: 'язык ненависти',
+    sexual_content: 'сексуальный контент',
+    violence: 'насилие',
+    spam: 'спам',
+    other: 'другое',
+  },
+  english: {
+    threats: 'threats',
+    harassment: 'harassment',
+    hate_speech: 'hate speech',
+    sexual_content: 'sexual content',
+    violence: 'violence',
+    spam: 'spam',
+    other: 'other',
+  },
+};
+
+function createReportReceiptCopy(report: { id: string; targetType: string; reason: string }) {
+  const shortId = report.id.slice(0, 8);
+  return {
+    russian: `Жалоба №${shortId} на ${REPORT_TARGET_LABELS.russian[report.targetType] ?? report.targetType} (${REPORT_REASON_LABELS.russian[report.reason] ?? report.reason}) принята к рассмотрению. Модератор проверит материалы; обычно решение принимается в течение 7 календарных дней. В сложных случаях срок может увеличиться. О результате сообщим здесь и по электронной почте.`,
+    english: `Report ${shortId} about ${REPORT_TARGET_LABELS.english[report.targetType] ?? report.targetType} (${REPORT_REASON_LABELS.english[report.reason] ?? report.reason}) was received. A moderator will review it; decisions usually take up to 7 calendar days. Complex cases may take longer. We will notify you here and by email.`,
+  };
+}
+
+function createReportDecisionCopy(report: { id: string; targetType: string }, action: ModerationActionType) {
+  const shortId = report.id.slice(0, 8);
+  if (action === 'reject_report') {
+    return {
+      russian: `Жалоба №${shortId} рассмотрена: нарушение не подтверждено. Если появятся новые факты, отправьте новую жалобу с дополнительными сведениями.`,
+      english: `Report ${shortId} has been reviewed; we could not confirm a violation. If you have new evidence, submit a new report with the added details.`,
+    };
+  }
+  if (action === 'restore_content') {
+    return {
+      russian: `Жалоба №${shortId} рассмотрена: материал проверен и оставлен доступным. Если появятся новые факты, отправьте новую жалобу с дополнительными сведениями.`,
+      english: `Report ${shortId} has been reviewed; the content remains available. If you have new evidence, submit a new report with the added details.`,
+    };
+  }
+  return {
+    russian: `Жалоба №${shortId} рассмотрена: нарушение подтверждено, меры приняты к контенту или аккаунту. Подробности санкций конфиденциальны. Если нарушение продолжается, отправьте новую жалобу с актуальными сведениями.`,
+    english: `Report ${shortId} has been reviewed: a violation was confirmed and action was taken on the content or account. Sanction details are private. If the issue continues, submit a new report with current details.`,
+  };
+}
 
 type ModerationTarget = {
   targetType: ContentReportTargetType;
@@ -86,6 +143,20 @@ export class ModerationService {
           sourceId: report.id,
           status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
         },
+      });
+      await createNotificationEvent(transaction, {
+        recipientUserId: reporterId,
+        type: NOTIFICATION_TYPE.moderationReportReceived,
+        emailNotificationType: EMAIL_NOTIFICATION_TYPE.reporterReceipt,
+        sourceId: report.id,
+        targetType: 'moderation-report',
+        targetId: report.id,
+        localizedContent: createReportReceiptCopy({
+          id: report.id,
+          targetType: request.targetType,
+          reason: request.reason,
+        }),
+        mandatory: true,
       });
       return report;
     });
@@ -250,7 +321,7 @@ export class ModerationService {
         await transaction.user.update({ where: { id: report.subjectUserId }, data: { bannedUntil } });
       }
 
-      await transaction.moderationAction.create({
+      const moderationAction = await transaction.moderationAction.create({
         data: { reportId, actorId: moderatorId, action, note: request.note?.trim() || null },
       });
       const updatedReport = await transaction.contentReport.updateMany({
@@ -262,6 +333,16 @@ export class ModerationService {
         },
       });
       if (updatedReport.count !== 1) throw new ConflictException('Жалоба уже рассмотрена');
+      await createNotificationEvent(transaction, {
+        recipientUserId: report.reporterId ?? '',
+        type: NOTIFICATION_TYPE.moderationReportDecision,
+        emailNotificationType: EMAIL_NOTIFICATION_TYPE.reporterDecision,
+        sourceId: moderationAction.id,
+        targetType: 'moderation-report',
+        targetId: report.id,
+        localizedContent: createReportDecisionCopy(report, action),
+        mandatory: true,
+      });
     });
 
     return await this.prisma.contentReport.findUnique({ where: { id: reportId } });

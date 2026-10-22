@@ -1,4 +1,4 @@
-import { Heading, Text } from '@react-email/components';
+import { Heading, Img, Text } from '@react-email/components';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { EmailButton } from './EmailButton';
 import { EmailLayout } from './EmailLayout';
@@ -10,6 +10,13 @@ export interface ModerationReportEmailProps {
   requestType: 'report' | 'appeal';
   targetType: string;
   reason: string;
+  reporterDetails?: string | null;
+  reportedProfile?: {
+    name?: string | null;
+    surname?: string | null;
+    bio?: string | null;
+    profilePhoto?: string | null;
+  } | null;
 }
 
 export function ModerationReportEmail({
@@ -18,6 +25,8 @@ export function ModerationReportEmail({
   requestType,
   targetType,
   reason,
+  reporterDetails,
+  reportedProfile,
 }: ModerationReportEmailProps) {
   const moderationUrl = new URL(getAuthFrontendRedirectUri());
   moderationUrl.pathname = '/profile/moderation';
@@ -56,6 +65,26 @@ export function ModerationReportEmail({
         <>
           <Text style={emailStyles.paragraph}>Тип контента: {targetLabels[targetType] ?? targetType}</Text>
           <Text style={emailStyles.paragraph}>Причина: {reasonLabels[reason] ?? reason}</Text>
+          {reporterDetails ? <Text style={emailStyles.paragraph}>Пояснение: {reporterDetails}</Text> : null}
+          {targetType === 'user' && reportedProfile ? (
+            <>
+              <Text style={emailStyles.paragraph}>Профиль, на который пожаловались:</Text>
+              {reportedProfile.profilePhoto ? (
+                <Img
+                  src={reportedProfile.profilePhoto}
+                  alt="Фото профиля"
+                  width="96"
+                  height="96"
+                  style={{ borderRadius: '48px', objectFit: 'cover' }}
+                />
+              ) : null}
+              <Text style={emailStyles.paragraph}>
+                Имя и фамилия:{' '}
+                {[reportedProfile.name, reportedProfile.surname].filter(Boolean).join(' ') || 'не указаны'}
+              </Text>
+              <Text style={emailStyles.paragraph}>Описание: {reportedProfile.bio || 'не указано'}</Text>
+            </>
+          ) : null}
         </>
       ) : (
         <Text style={emailStyles.paragraph}>Поступила апелляция по жалобе {reportId}.</Text>

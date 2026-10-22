@@ -1,6 +1,10 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { NOTIFICATION_ERROR_MESSAGE, NOTIFICATION_PAGE_SIZE } from './notification.constants';
+import {
+  MANDATORY_NOTIFICATION_TYPES,
+  NOTIFICATION_ERROR_MESSAGE,
+  NOTIFICATION_PAGE_SIZE,
+} from './notification.constants';
 import { encodeNotificationCursor, parseNotificationCursor } from './notification.pagination';
 import { PushTokenDto } from './push-token.dto';
 
@@ -18,12 +22,21 @@ export class NotificationService {
       where: {
         recipientUserId: userId,
         inApp: true,
-        recipient: { profile: { inAppNotifications: true } },
-        ...(cursor
-          ? {
-              OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }],
-            }
-          : {}),
+        AND: [
+          {
+            OR: [
+              { recipient: { profile: { inAppNotifications: true } } },
+              { type: { in: [...MANDATORY_NOTIFICATION_TYPES] } },
+            ],
+          },
+          ...(cursor
+            ? [
+                {
+                  OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }],
+                },
+              ]
+            : []),
+        ],
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: take + 1,
@@ -57,7 +70,10 @@ export class NotificationService {
         recipientUserId: userId,
         inApp: true,
         readAt: null,
-        recipient: { profile: { inAppNotifications: true } },
+        OR: [
+          { recipient: { profile: { inAppNotifications: true } } },
+          { type: { in: [...MANDATORY_NOTIFICATION_TYPES] } },
+        ],
       },
     });
   }
@@ -83,7 +99,10 @@ export class NotificationService {
         recipientUserId: userId,
         inApp: true,
         readAt: null,
-        recipient: { profile: { inAppNotifications: true } },
+        OR: [
+          { recipient: { profile: { inAppNotifications: true } } },
+          { type: { in: [...MANDATORY_NOTIFICATION_TYPES] } },
+        ],
       },
       data: { readAt: new Date() },
     });

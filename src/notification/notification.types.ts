@@ -14,6 +14,8 @@ export interface NotificationEventInput {
   actorSurname?: string | null;
   actorProfilePhoto?: string | null;
   content?: string | null;
+  localizedContent?: Partial<Record<'russian' | 'english', string>>;
+  mandatory?: boolean;
 }
 
 export interface NotificationCursor {

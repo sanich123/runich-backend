@@ -2,9 +2,16 @@ export const NOTIFICATION_TYPE = {
   activityLike: 'activity-like',
   comment: 'comment',
   commentLike: 'comment-like',
+  moderationReportReceived: 'moderation-report-received',
+  moderationReportDecision: 'moderation-report-decision',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];
+
+export const MANDATORY_NOTIFICATION_TYPES = [
+  NOTIFICATION_TYPE.moderationReportReceived,
+  NOTIFICATION_TYPE.moderationReportDecision,
+] as const;
 
 export const PUSH_NOTIFICATION_JOB_STATUS = {
   queued: 'queued',
