@@ -15,7 +15,7 @@
     "start:debug": "yarn db:generate && yarn db:sync && node --inspect --import tsx src/main.ts",
     "start:prod": "node dist/main.js",
     "worker:dev": "yarn db:generate && yarn db:sync && tsx src/app/background-worker.ts",
-    "worker:prod": "node dist/background-worker.js",
+    "worker:prod": "node --import dotenv/config dist/background-worker.js",
     "build": "tsdown --config tsdown.config.ts",
     "maplibre:smoke": "xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' node scripts/maplibre-runtime-smoke.mjs",
     "prepare": "husky",

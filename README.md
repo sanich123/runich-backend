@@ -32,8 +32,8 @@ Create a local, ignored .env file:
     MAILRU_SMTP_USER=runich-app@mail.ru
     MAILRU_SMTP_PASSWORD=your-mailru-external-application-password
     RUNICH_PROCESS=api
+    # Required S3-compatible endpoint; region ru-1 is fixed in backend code.
     S3_ENDPOINT=https://s3.twcstorage.ru
-    S3_REGION=ru-1
     S3_BUCKET=your-timeweb-bucket-name
     S3_ACCESS_KEY=your-timeweb-access-key
     S3_SECRET_ACCESS_KEY=your-timeweb-secret-key
@@ -42,7 +42,6 @@ Create a local, ignored .env file:
     YANDEX_REDIRECT_URI=http://localhost:3000/auth/yandex/callback
     AUTH_FRONTEND_REDIRECT_URI=http://localhost:5173/login-from-url
     VK_CLIENT_ID=your-vk-client-id
-    VK_CLIENT_SECRET=your-vk-client-secret
     VK_REDIRECT_URI=http://localhost:3000/auth/vk/callback
 
 Initialize the database and start development mode:
@@ -125,11 +124,10 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | APP_ENV                      | Application environment: local, stage or production                                      |
 | YANDEX_SMTP_USER             | Full Yandex mailbox address used as the sender                                           |
 | YANDEX_SMTP_PASSWORD         | Yandex application password for Mail                                                     |
-| MAILRU_SMTP_USER             | Optional full Mail.ru mailbox address used for SMTP fallback                             |
-| MAILRU_SMTP_PASSWORD         | Optional Mail.ru password for an external application                                    |
+| MAILRU_SMTP_USER             | Required full Mail.ru mailbox address used for SMTP fallback                            |
+| MAILRU_SMTP_PASSWORD         | Required Mail.ru password for an external application                                   |
 | MAPBOX_ACCESS_TOKEN          | Mapbox Static Images API access token                                                    |
-| S3_ENDPOINT                  | S3-compatible endpoint, defaults to `https://s3.twcstorage.ru`                           |
-| S3_REGION                    | S3 region, defaults to `ru-1`                                                            |
+| S3_ENDPOINT                  | Required S3-compatible endpoint from `.env`                                               |
 | S3_BUCKET                    | S3 bucket name                                                                           |
 | S3_ACCESS_KEY                | Server-side S3 access key                                                                |
 | S3_SECRET_ACCESS_KEY         | Server-side S3 secret key                                                                |
@@ -140,11 +138,8 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | YANDEX_REDIRECT_URI          | Registered Yandex OAuth callback URL                                                     |
 | AUTH_FRONTEND_REDIRECT_URI   | Frontend URL for OAuth and email login credentials                                       |
 | VK_CLIENT_ID                 | VK ID application client ID                                                              |
-| VK_CLIENT_SECRET             | VK ID application secret, server-side only                                               |
 | VK_REDIRECT_URI              | Registered VK OAuth callback URL                                                         |
-| VK_API_VERSION               | Optional VK API version, defaults to 5.199                                               |
 | RUNICH_PROCESS               | Process role: api or worker                                                              |
-| SEED_USER_EMAIL              | Optional email used by the database seed                                                 |
 | LOAD_TEST_SEED_TOKEN         | Required only to enqueue the protected stage/local load-test job                         |
 | LOAD_TEST_ASSET_MANIFEST_KEY | Optional S3 key of the prepared load-test manifest                                       |
 
@@ -255,22 +250,22 @@ Incoming TCP ports 80 and 443 must be available on the server.
 Stage uses the dedicated S3 bucket and these non-secret settings:
 
     APP_ENV=stage
-    S3_ENDPOINT=https://s3.twcstorage.ru
-    S3_REGION=ru-1
     S3_BUCKET=runich-stage
-    S3_PUBLIC_URL=https://s3.twcstorage.ru/runich-stage
 
-The server `.env` contains Compose settings and a local `DATABASE_URL_DOCKER`
-pointing to the Compose `db` service. The separate `app.env` contains Railway
-stage application credentials. Keep both files on the server only with mode `0600`; never commit them. GitHub
-Actions deploy credentials belong to the `stage` environment; its SSH key must
-be scoped to the stage deployment account.
+Stage defaults `S3_PUBLIC_URL` to the endpoint plus bucket; Production sets its
+CDN URL explicitly. `S3_ENDPOINT` is required in `.env`; the S3 region `ru-1`
+is hardcoded in the backend. The server `/opt/runich-stage/.env` is the single
+source for Compose, API, and worker settings. It contains `DATABASE_URL_DOCKER`
+pointing to the Compose `db` service and must have mode `0600`; never commit it.
+The first successful deploy
+merges any remaining `app.env`, validates all required keys before migrations,
+and removes the retired file after readiness. GitHub Actions deploy credentials
+belong to the `stage` environment; its SSH key must be scoped to the stage
+deployment account.
 
-Production on Timeweb uses the same endpoint and region with:
+Production on Timeweb uses the same endpoint with:
 
     APP_ENV=production
-    S3_ENDPOINT=https://s3.twcstorage.ru
-    S3_REGION=ru-1
     S3_BUCKET=runich-production
     S3_PUBLIC_URL=https://q0tsp3wn9v.cdn.twcstorage.ru
 

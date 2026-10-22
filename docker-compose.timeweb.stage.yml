@@ -30,7 +30,7 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - app.env
+      - .env
     command: ['yarn', 'db:migrate:prod']
     environment:
       TZ: UTC
@@ -55,7 +55,7 @@ services:
         max-size: 10m
         max-file: '3'
     env_file:
-      - app.env
+      - .env
     command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'start:prod']
     environment:
       TZ: UTC
@@ -87,7 +87,7 @@ services:
         max-file: '3'
     cpus: 1.0
     env_file:
-      - app.env
+      - .env
     command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'worker:prod']
     environment:
       TZ: UTC

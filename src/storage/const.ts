@@ -1,5 +1,4 @@
-export const DEFAULT_S3_ENDPOINT = 'https://s3.twcstorage.ru';
-export const DEFAULT_S3_REGION = 'ru-1';
+export const S3_REGION = 'ru-1';
 export const MAX_DELETE_BATCH_SIZE = 1_000;
 export const MEDIA_BATCH_CONCURRENCY = 3;
 export const ACTIVITY_ROUTE_CACHE_TTL_MS = 5 * 60_000;

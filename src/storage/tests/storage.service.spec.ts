@@ -49,7 +49,7 @@ async function createTestImage() {
 describe('StorageService', () => {
   beforeEach(() => {
     process.env.S3_ENDPOINT = 'https://s3.twcstorage.ru';
-    process.env.S3_REGION = 'ru-1';
+    delete process.env.S3_REGION;
     process.env.S3_BUCKET = 'runich-test';
     process.env.S3_ACCESS_KEY = 'access-key';
     process.env.S3_SECRET_ACCESS_KEY = 'secret-key';
@@ -294,6 +294,7 @@ describe('StorageService', () => {
     process.env.S3_ENDPOINT = 'https://s3.stage.example';
     process.env.S3_REGION = 'stage-1';
     const service = new StorageService();
+    expect((service as unknown as { settings: { region: string } }).settings.region).toBe('ru-1');
 
     await expect(
       service.uploadPhoto(
@@ -371,7 +372,7 @@ describe('StorageService', () => {
     });
   });
 
-  it('uses default storage settings when environment values are absent', () => {
+  it('does not default the endpoint and keeps the code-defined region when environment values are absent', () => {
     delete process.env.S3_ENDPOINT;
     delete process.env.S3_REGION;
     delete process.env.S3_BUCKET;
@@ -383,14 +384,14 @@ describe('StorageService', () => {
     const service = new StorageService();
 
     expect((service as unknown as { settings: unknown }).settings).toEqual({
-      endpoint: 'https://s3.twcstorage.ru',
+      endpoint: '',
       region: 'ru-1',
       bucket: '',
       quarantineBucket: '',
       quarantinePrefix: '',
       accessKey: '',
       secretKey: '',
-      publicUrl: 'https://s3.twcstorage.ru',
+      publicUrl: '',
     });
   });
 

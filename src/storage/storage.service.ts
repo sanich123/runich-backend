@@ -31,8 +31,7 @@ import type { ActivityHeartRateSampleObject, ActivityMediaObject, LocationObject
 import {
   ACTIVITY_ROUTE_CACHE_MAX_ENTRIES,
   ACTIVITY_ROUTE_CACHE_TTL_MS,
-  DEFAULT_S3_ENDPOINT,
-  DEFAULT_S3_REGION,
+  S3_REGION,
   isSupportedVideoUpload,
   MAX_DELETE_BATCH_SIZE,
   MEDIA_BATCH_CONCURRENCY,
@@ -69,8 +68,8 @@ export class StorageService {
     @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
     @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
   ) {
-    const endpoint = process.env.S3_ENDPOINT?.trim() || DEFAULT_S3_ENDPOINT;
-    const region = process.env.S3_REGION?.trim() || DEFAULT_S3_REGION;
+    const endpoint = process.env.S3_ENDPOINT?.trim() || '';
+    const region = S3_REGION;
     const bucket = process.env.S3_BUCKET?.trim() || '';
     const quarantineBucket = process.env.S3_QUARANTINE_BUCKET?.trim() || '';
     const rawQuarantinePrefix = process.env.S3_QUARANTINE_PREFIX?.trim().replace(/^\/+|\/+$/g, '') || '';
@@ -83,11 +82,12 @@ export class StorageService {
     }
     const accessKey = process.env.S3_ACCESS_KEY?.trim() || '';
     const secretKey = process.env.S3_SECRET_ACCESS_KEY?.trim() || '';
-    const publicUrl = (process.env.S3_PUBLIC_URL?.trim() || `${endpoint}/${bucket}`).replace(/\/$/, '');
+    const configuredPublicUrl = process.env.S3_PUBLIC_URL?.trim();
+    const publicUrl = (configuredPublicUrl || (endpoint && bucket ? `${endpoint}/${bucket}` : '')).replace(/\/$/, '');
 
     this.settings = { endpoint, region, bucket, quarantineBucket, quarantinePrefix, accessKey, secretKey, publicUrl };
     this.client = new S3Client({
-      endpoint,
+      endpoint: endpoint || undefined,
       region,
       forcePathStyle: true,
       // Timeweb S3 is compatible with the AWS API, but its object storage does
@@ -827,6 +827,9 @@ export class StorageService {
   }
 
   getPublicUrl(key: string) {
+    if (!this.settings.endpoint) {
+      throw new ServiceUnavailableException('S3_ENDPOINT не задан в конфигурации сервера');
+    }
     return `${this.settings.publicUrl}/${key.split('/').map(encodeURIComponent).join('/')}`;
   }
 
@@ -872,7 +875,7 @@ export class StorageService {
   }
 
   private assertConfigured() {
-    if (!this.settings.bucket || !this.settings.accessKey || !this.settings.secretKey) {
+    if (!this.settings.endpoint || !this.settings.bucket || !this.settings.accessKey || !this.settings.secretKey) {
       throw new ServiceUnavailableException('S3-хранилище не настроено на сервере');
     }
     return this.settings.bucket;

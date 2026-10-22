@@ -23,7 +23,7 @@ jobs:
       url: https://stage.runich-app.ru
     env:
       STAGE_DOMAIN: stage.runich-app.ru
-      DEPLOY_IMAGE: ghcr.io/sanich123/runich-backend:${{ github.sha }}
+      DEPLOY_IMAGE: ghcr.io/sanich123/runich-backend:stage-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Check out the exact commit
@@ -86,18 +86,18 @@ jobs:
           cd /opt/runich-stage
 
           test -s .env
-          test -s app.env
-          chmod 600 .env app.env
-          if ! grep -qx 'S3_BUCKET=runich-stage' app.env; then
-            echo 'Stage app.env must use S3_BUCKET=runich-stage before configuring moderation storage' >&2
-            exit 1
+          chmod 600 .env
+          if [ -f app.env ]; then
+            chmod 600 app.env
+            docker run --rm --user "$(id -u):$(id -g)" \
+              --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
+              node scripts/validate-deployment-env.mjs \
+              --environment stage --file /deployment/.env --merge-legacy /deployment/app.env
+          else
+            docker run --rm --user "$(id -u):$(id -g)" \
+              --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
+              node scripts/validate-deployment-env.mjs --environment stage --file /deployment/.env
           fi
-          quarantine_env="$(mktemp app.env.XXXXXX)"
-          awk -F= '$1 != "S3_QUARANTINE_BUCKET" && $1 != "S3_QUARANTINE_PREFIX"' app.env > "$quarantine_env"
-          printf 'S3_QUARANTINE_BUCKET=runich-stage\nS3_QUARANTINE_PREFIX=moderation-quarantine/stage/\n' >> "$quarantine_env"
-          chmod --reference=app.env "$quarantine_env"
-          chown --reference=app.env "$quarantine_env"
-          mv "$quarantine_env" app.env
           install -o "$(id -un)" -g docker -m 0640 /tmp/docker-compose.timeweb.stage.yml ./docker-compose.timeweb.stage.yml
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.bootstrap.conf ./nginx.stage.bootstrap.conf
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.conf ./nginx.stage.tls.conf
@@ -110,6 +110,7 @@ jobs:
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
           COMPOSE=(docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml)
 
+          "${COMPOSE[@]}" config --quiet
           "${COMPOSE[@]}" pull db nginx certbot certbot_renew
           "${COMPOSE[@]}" up -d --wait db
           "${COMPOSE[@]}" up --force-recreate --abort-on-container-exit \
@@ -172,12 +173,22 @@ jobs:
             exit 1
           fi
 
+          if [ -f app.env ]; then
+            rm -f app.env
+            echo 'Removed the retired Stage app.env after the unified .env passed readiness.'
+          fi
+
           printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
           echo "Stage is healthy at commit $DEPLOY_SHA"
 
+          DEPLOY_ENV_REPORT="$(docker run --rm --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/deployment:ro" "$DEPLOY_IMAGE" \
+            node scripts/summarize-deployment-env.mjs --file /deployment/.env | paste -sd, -)"
+          export DEPLOY_ENV_REPORT
+
           email_status=0
           if "${COMPOSE[@]}" exec -T --interactive=false \
-            --env DEPLOY_SHA --env DEPLOY_RUN_URL \
+            --env DEPLOY_SHA --env DEPLOY_RUN_URL --env DEPLOY_ENV_REPORT \
             nestjs_app xvfb-run --auto-servernum \
             --server-args '-screen 0 1280x1024x24' \
             node scripts/send-deployment-success-email.mjs </dev/null; then

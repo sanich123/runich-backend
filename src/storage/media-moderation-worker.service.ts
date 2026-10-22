@@ -24,7 +24,7 @@ import {
 
 const execFileAsync = promisify(execFile);
 const POLL_INTERVAL_MS = 2_000;
-const MODEL_URL = process.env.NSFWJS_MODEL_URL?.trim() || 'https://nsfwjs.com/model/';
+const MODEL_URL = process.env.NSFWJS_MODEL_URL?.trim();
 
 type MediaAsset = {
   id: string;
@@ -61,7 +61,7 @@ export class MediaModerationWorkerService {
 
     const claimed = await this.prisma.mediaModerationAsset.updateMany({
       where: { id: asset.id, status: 'queued' },
-      data: { status: 'processing', attempts: { increment: 1 }, processingStartedAt: new Date() },
+      data: { status: 'processing', attempts: asset.attempts + 1, processingStartedAt: new Date() },
     });
     if (!claimed.count) return true;
 

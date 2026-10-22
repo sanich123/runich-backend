@@ -1,5 +1,5 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { DEFAULT_S3_ENDPOINT, DEFAULT_S3_REGION } from 'src/storage/const';
+import { S3_REGION } from 'src/storage/const';
 import {
   MOCK_ACTIVITY_COUNT,
   MOCK_ACTIVITY_PHOTO_KEYS,
@@ -97,7 +97,7 @@ function isMockActivityTemplate(value: unknown): value is MockActivityManifestEn
 }
 
 export function getPublicUrl(key: string) {
-  const endpoint = process.env.S3_ENDPOINT?.trim() || DEFAULT_S3_ENDPOINT;
+  const endpoint = getS3Endpoint();
   const bucket = process.env.S3_BUCKET?.trim() || '';
   const publicUrl = (process.env.S3_PUBLIC_URL?.trim() || endpoint + '/' + bucket).replace(/\/$/, '');
   const encodedKey = key.split('/').map(encodeURIComponent).join('/');
@@ -108,14 +108,20 @@ export function getMockActivityPhotoUrls() {
   return MOCK_ACTIVITY_PHOTO_KEYS.map(getPublicUrl);
 }
 
+function getS3Endpoint() {
+  const endpoint = process.env.S3_ENDPOINT?.trim();
+  if (!endpoint) throw new Error('S3_ENDPOINT is required');
+  return endpoint;
+}
+
 export async function loadMockActivityTemplates(): Promise<MockActivityTemplate[]> {
-  const endpoint = process.env.S3_ENDPOINT?.trim() || DEFAULT_S3_ENDPOINT;
-  const region = process.env.S3_REGION?.trim() || DEFAULT_S3_REGION;
+  const endpoint = getS3Endpoint();
+  const region = S3_REGION;
   const bucket = process.env.S3_BUCKET?.trim() || '';
   const accessKey = process.env.S3_ACCESS_KEY?.trim() || '';
   const secretKey = process.env.S3_SECRET_ACCESS_KEY?.trim() || '';
   if (!bucket || !accessKey || !secretKey) {
-    throw new Error('S3 credentials are required to load mock activity templates');
+    throw new Error('S3_BUCKET and S3 credentials are required to load mock activity templates');
   }
 
   const client = new S3Client({
