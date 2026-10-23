@@ -78,6 +78,25 @@ jobs:
 
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" 'bash -s' <<'REMOTE'
+            set -euo pipefail
+            cd /opt/runich-backend/project
+            if ! grep -qx 'S3_BUCKET=runich-production' .env; then
+              echo 'Production .env must use S3_BUCKET=runich-production before configuring quarantine' >&2
+              exit 1
+            fi
+            quarantine_env="$(mktemp .env.XXXXXX)"
+            awk -F= '$1 != "S3_QUARANTINE_BUCKET" && $1 != "S3_QUARANTINE_PREFIX" { print }' .env > "$quarantine_env"
+            printf 'S3_QUARANTINE_BUCKET=runich-stage\nS3_QUARANTINE_PREFIX=moderation-quarantine/production/\n' >> "$quarantine_env"
+            chmod --reference=.env "$quarantine_env"
+            chown --reference=.env "$quarantine_env"
+            mv "$quarantine_env" .env
+            grep -qx 'S3_QUARANTINE_BUCKET=runich-stage' .env
+            grep -qx 'S3_QUARANTINE_PREFIX=moderation-quarantine/production/' .env
+          REMOTE
+
+          ssh -i "$HOME/.ssh/id_ed25519" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_IMAGE='$DEPLOY_IMAGE' DEPLOY_TREE_SHA='$TREE_SHA' bash -s" <<'REMOTE'
             set -euo pipefail
@@ -103,8 +122,21 @@ jobs:
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
             test "$(git rev-parse 'HEAD^{tree}')" = "$DEPLOY_TREE_SHA"
+            test -s .env
+            chmod 600 .env
+            auth_frontend_env="$(mktemp .env.XXXXXX)"
+            awk -F= '$1 != "AUTH_FRONTEND_REDIRECT_URI" { print }' .env > "$auth_frontend_env"
+            printf 'AUTH_FRONTEND_REDIRECT_URI=https://runich-app.ru/login-from-url\n' >> "$auth_frontend_env"
+            chmod --reference=.env "$auth_frontend_env"
+            chown --reference=.env "$auth_frontend_env"
+            mv "$auth_frontend_env" .env
+            docker run --rm --user "$(id -u):$(id -g)" --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
+              node scripts/validate-deployment-env.mjs --environment production --file /deployment/.env
             touch logs.log
             chmod 0644 logs.log
+
+            export BACKEND_IMAGE="$DEPLOY_IMAGE"
+            docker compose -f docker-compose.timeweb.yml config --quiet
 
             # Run the same migration job Stage ran before replacing either process.
             BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose \
@@ -186,7 +218,22 @@ jobs:
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd /opt/runich-backend/project && DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' docker compose -f docker-compose.timeweb.yml exec -T --env DEPLOY_SHA --env DEPLOY_RUN_URL nestjs_app xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' node scripts/send-deployment-success-email.mjs"
+            "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/runich-backend/project
+          running_container="$(docker compose -f docker-compose.timeweb.yml ps -q nestjs_app)"
+          test -n "$running_container"
+          DEPLOY_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$running_container")"
+          export BACKEND_IMAGE="$DEPLOY_IMAGE"
+          DEPLOY_ENV_REPORT="$(docker run --rm --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/deployment:ro" "$DEPLOY_IMAGE" \
+            node scripts/summarize-deployment-env.mjs --file /deployment/.env | paste -sd, -)"
+          export DEPLOY_ENV_REPORT
+          docker compose -f docker-compose.timeweb.yml exec -T \
+            --env DEPLOY_SHA --env DEPLOY_RUN_URL --env DEPLOY_ENV_REPORT \
+            nestjs_app xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' \
+            node scripts/send-deployment-success-email.mjs
+          REMOTE
 
 
       - name: Clean up Production Docker resources after notification

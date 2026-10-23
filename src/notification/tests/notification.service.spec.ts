@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { jest } from '@jest/globals';
 import { asyncMock } from 'src/tests/helpers';
 import { NotificationService } from '../notification.service';
+import { MANDATORY_NOTIFICATION_TYPES } from '../notification.constants';
 
 describe('NotificationService', () => {
   const transaction = {
@@ -37,7 +38,14 @@ describe('NotificationService', () => {
         where: {
           recipientUserId: 'recipient-1',
           inApp: true,
-          recipient: { profile: { inAppNotifications: true } },
+          AND: [
+            {
+              OR: [
+                { recipient: { profile: { inAppNotifications: true } } },
+                { type: { in: [...MANDATORY_NOTIFICATION_TYPES] } },
+              ],
+            },
+          ],
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: 2,
@@ -59,7 +67,22 @@ describe('NotificationService', () => {
     expect(prisma.notification.findMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
         take: 51,
-        where: expect.objectContaining({ OR: expect.any(Array) }),
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            {
+              OR: [
+                { recipient: { profile: { inAppNotifications: true } } },
+                { type: { in: [...MANDATORY_NOTIFICATION_TYPES] } },
+              ],
+            },
+            {
+              OR: [
+                { createdAt: { lt: new Date('2026-10-14T10:00:00.000Z') } },
+                { createdAt: new Date('2026-10-14T10:00:00.000Z'), id: { lt: 'cursor-1' } },
+              ],
+            },
+          ]),
+        }),
       }),
     );
   });
@@ -79,7 +102,10 @@ describe('NotificationService', () => {
         recipientUserId: 'recipient-1',
         inApp: true,
         readAt: null,
-        recipient: { profile: { inAppNotifications: true } },
+        OR: [
+          { recipient: { profile: { inAppNotifications: true } } },
+          { type: { in: [...MANDATORY_NOTIFICATION_TYPES] } },
+        ],
       },
     });
     expect(prisma.notification.updateMany).toHaveBeenCalledWith(
@@ -88,7 +114,10 @@ describe('NotificationService', () => {
           recipientUserId: 'recipient-1',
           inApp: true,
           readAt: null,
-          recipient: { profile: { inAppNotifications: true } },
+          OR: [
+            { recipient: { profile: { inAppNotifications: true } } },
+            { type: { in: [...MANDATORY_NOTIFICATION_TYPES] } },
+          ],
         },
         data: { readAt: expect.any(Date) },
       }),

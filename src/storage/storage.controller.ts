@@ -3,10 +3,13 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Inject,
+  Param,
   Post,
+  Query,
   Req,
   UploadedFile,
   UploadedFiles,
@@ -31,6 +34,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
+import { ParamsId } from 'src/common/dto/params-validation';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { photoUploadFileFilter } from './photo-upload-file-filter';
 import {
@@ -48,6 +52,28 @@ import { StorageService } from './storage.service';
 @UseGuards(JwtAuthGuard)
 export class StorageController {
   constructor(@Inject(StorageService) private readonly storageService: StorageService) {}
+
+  @Get('status')
+  @RateLimit(RATE_LIMITS.mediaUploadStatus.limit, RATE_LIMITS.mediaUploadStatus.ttl)
+  @ApiOperation({ summary: 'Get the current user moderation status for uploaded media' })
+  async getUploadStatus(@Query('ids') ids: string | undefined, @Req() request: AuthenticatedRequest) {
+    const assetIds =
+      ids
+        ?.split(',')
+        .map((assetId) => assetId.trim())
+        .filter(Boolean) ?? [];
+    if (!assetIds.length || assetIds.length > UPLOAD_LIMITS.mediaBatchFiles) {
+      throw new BadRequestException('Укажите от 1 до 10 идентификаторов загрузки');
+    }
+    return await this.storageService.getModerationUploadStatuses(getAuthenticatedUserId(request), assetIds);
+  }
+
+  @Post(':id/publish')
+  @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)
+  @ApiOperation({ summary: 'Publish media explicitly approved by a moderator' })
+  async publishApprovedUpload(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
+    return await this.storageService.publishApprovedModerationAsset(getAuthenticatedUserId(request), id);
+  }
 
   @Post('batch')
   @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)
@@ -153,5 +179,14 @@ export class StorageController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePhoto(@Body() { url }: DeletePhotoDto, @Req() request: AuthenticatedRequest) {
     await this.storageService.deletePhoto(getAuthenticatedUserId(request), url);
+  }
+
+  @Delete(':id')
+  @RateLimit(RATE_LIMITS.photoDelete.limit, RATE_LIMITS.photoDelete.ttl)
+  @ApiOperation({ summary: 'Delete a user-owned moderation upload that is not attached to an activity' })
+  @ApiNoContentResponse({ description: 'Pending upload deleted' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteModerationUpload(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
+    await this.storageService.deleteUnattachedModerationAsset(getAuthenticatedUserId(request), id);
   }
 }

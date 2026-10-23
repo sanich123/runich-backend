@@ -36,6 +36,7 @@ RUN apt-get update \
     libstdc++6 \
     libuv1t64 \
     libwebp7 \
+    ffmpeg \
     libx11-6 \
     libxext6 \
     libxrender1 \
@@ -76,6 +77,8 @@ COPY --from=builder /usr/src/app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /usr/src/app/assets ./assets
 COPY --from=builder /usr/src/app/scripts/send-deployment-success-email.mjs ./scripts/send-deployment-success-email.mjs
 COPY --from=builder /usr/src/app/scripts/send-daily-metrics-email.mjs ./scripts/send-daily-metrics-email.mjs
+COPY --from=builder /usr/src/app/scripts/validate-deployment-env.mjs ./scripts/validate-deployment-env.mjs
+COPY --from=builder /usr/src/app/scripts/summarize-deployment-env.mjs ./scripts/summarize-deployment-env.mjs
 
 EXPOSE 3000
 

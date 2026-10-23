@@ -2,6 +2,7 @@ import {
   getElevationGainFromKilometreSplits,
   getElevationGainFromLocations,
   createActivityChartLocations,
+  hidePendingActivityMediaForViewer,
   normalizeActivityCard,
   normalizeActivityCardForViewer,
   normalizeActivityDetails,
@@ -88,6 +89,66 @@ describe('activity utilities', () => {
     expect(
       normalizeActivityCardForViewer({ ...activity, profile: { allowActivityElevationViewing: true } }, 'viewer-1'),
     ).toMatchObject({ elevationGain: 40 });
+  });
+
+  it('shows blurhash-only pending media to others and full moderation state to its owner', () => {
+    const activity = {
+      id: 'activity-1',
+      userId: 'owner-1',
+      media: [
+        null,
+        'invalid',
+        {
+          id: 'queued',
+          url: 'https://quarantine.example/photo.jpg',
+          thumbnail: 'https://quarantine.example/thumbnail.jpg',
+          blurhash: 'blurhash-queued',
+          mediaReviewStatus: 'queued',
+          mediaModerationAssetId: 'asset-queued',
+          thumbnailModerationAssetId: 'asset-thumbnail',
+        },
+        {
+          id: 'approved',
+          url: 'https://cdn.example/approved.jpg',
+          mediaReviewStatus: 'approved',
+        },
+        { id: 'legacy', url: 'https://cdn.example/legacy.jpg' },
+        { id: 'rejected', url: null, mediaReviewStatus: 'rejected' },
+        { id: 'failed', url: null, mediaReviewStatus: 'failed' },
+        { id: 'without-status', url: null },
+      ],
+    };
+
+    expect(hidePendingActivityMediaForViewer(activity, 'viewer-1')).toEqual({
+      ...activity,
+      media: [
+        {
+          id: 'queued',
+          url: null,
+          thumbnail: null,
+          blurhash: 'blurhash-queued',
+          mediaReviewStatus: 'queued',
+        },
+        { id: 'approved', url: 'https://cdn.example/approved.jpg', mediaReviewStatus: 'approved' },
+        { id: 'legacy', url: 'https://cdn.example/legacy.jpg' },
+      ],
+    });
+    expect(hidePendingActivityMediaForViewer(activity, 'owner-1').media).toEqual([
+      {
+        id: 'queued',
+        url: 'https://quarantine.example/photo.jpg',
+        thumbnail: 'https://quarantine.example/thumbnail.jpg',
+        blurhash: 'blurhash-queued',
+        mediaReviewStatus: 'queued',
+      },
+      { id: 'approved', url: 'https://cdn.example/approved.jpg', mediaReviewStatus: 'approved' },
+      { id: 'legacy', url: 'https://cdn.example/legacy.jpg' },
+      { id: 'rejected', url: null, mediaReviewStatus: 'rejected' },
+      { id: 'failed', url: null, mediaReviewStatus: 'failed' },
+      { id: 'without-status', url: null },
+    ]);
+    const withoutMedia = { ...activity, media: undefined };
+    expect(hidePendingActivityMediaForViewer(withoutMedia)).toBe(withoutMedia);
   });
 
   it('creates privacy-filtered chart samples without exposing route coordinates', () => {

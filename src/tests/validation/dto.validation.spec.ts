@@ -162,7 +162,7 @@ describe('request DTO validation', () => {
       sport: 'run',
       media: [{ url: 42 }],
     });
-    await expectInvalid(ActivityDto, {
+    await expectValid(ActivityDto, {
       duration: 1,
       distance: 1,
       speed: 1,

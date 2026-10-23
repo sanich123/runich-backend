@@ -48,7 +48,7 @@ export function NotificationEmail({
         </Section>
       )}
 
-      <EmailButton href={activityUrl ?? 'https://runich.netlify.app'} variant="notification">
+      <EmailButton href={activityUrl ?? 'https://runich-app.ru'} variant="notification">
         {activityUrl ? 'Открыть активность в Runich' : 'Открыть приложение Runich'}
       </EmailButton>
     </EmailLayout>

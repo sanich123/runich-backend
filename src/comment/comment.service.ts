@@ -1,4 +1,5 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { ModerationAccessService } from 'src/moderation/moderation-access.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
@@ -23,11 +24,14 @@ export class CommentService {
     private readonly activityService: ActivityService,
     @Inject(CommentLikeService)
     commentLikeService?: CommentLikeService,
+    @Optional() @Inject(ModerationAccessService) moderationAccess?: ModerationAccessService,
   ) {
     this.commentLikeService = commentLikeService ?? new CommentLikeService(this.prisma);
+    this.moderationAccess = moderationAccess ?? new ModerationAccessService(this.prisma);
   }
 
   private readonly commentLikeService: CommentLikeService;
+  private readonly moderationAccess: ModerationAccessService;
 
   private async ensureActivityAccess(activityId: string, currentUserId?: string) {
     if (currentUserId && !(await this.activityService.canAccessActivity(activityId, currentUserId))) {
@@ -36,13 +40,16 @@ export class CommentService {
   }
 
   private async ensureCommentAccess(commentId: string, currentUserId?: string) {
-    if (!currentUserId) return;
-
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
-      select: { activity: { select: { id: true } } },
+      select: { authorId: true, moderationStatus: true, activity: { select: { id: true } } },
     });
-    if (!comment || !(await this.activityService.canAccessActivity(comment.activity.id, currentUserId))) {
+    if (!comment || comment.moderationStatus !== 'visible') throw new NotFoundException('Комментарий не найден');
+    if (!currentUserId) return;
+    if (
+      (await this.moderationAccess.areBlocked(currentUserId, comment.authorId)) ||
+      !(await this.activityService.canAccessActivity(comment.activity.id, currentUserId))
+    ) {
       throw new NotFoundException('Комментарий не найден');
     }
   }
@@ -51,17 +58,16 @@ export class CommentService {
     try {
       await this.ensureActivityAccess(id, currentUserId);
       const pageSize = Number(limit);
+      const blockedUserIds = currentUserId ? await this.moderationAccess.blockedUserIds(currentUserId) : [];
       const activity = await this.prisma.activity.findUnique({
         where: { id },
         select: {
           comments: {
-            ...(cursor
-              ? {
-                  where: {
-                    OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }],
-                  },
-                }
-              : {}),
+            where: {
+              moderationStatus: 'visible',
+              ...(blockedUserIds.length ? { authorId: { notIn: blockedUserIds } } : {}),
+              ...(cursor ? { OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }] } : {}),
+            },
             orderBy: [{ date: 'desc' }, { id: 'desc' }],
             select: {
               date: true,
@@ -71,7 +77,10 @@ export class CommentService {
               profileId: true,
               id: true,
               profile: { select: COMMENT_PROFILE_SELECT },
-              commentLikes: { select: { authorId: true, id: true } },
+              commentLikes: {
+                ...(blockedUserIds.length ? { where: { authorId: { notIn: blockedUserIds } } } : {}),
+                select: { authorId: true, id: true },
+              },
             },
             take: pageSize + 1,
           },
@@ -100,15 +109,14 @@ export class CommentService {
   async getCommentsLengthbyActivityId(id: string, currentUserId?: string) {
     try {
       await this.ensureActivityAccess(id, currentUserId);
-      const activity = await this.prisma.activity.findUnique({
-        where: { id },
-        select: { _count: { select: { comments: true } } },
+      const blockedUserIds = currentUserId ? await this.moderationAccess.blockedUserIds(currentUserId) : [];
+      return await this.prisma.comment.count({
+        where: {
+          activityId: id,
+          moderationStatus: 'visible',
+          ...(blockedUserIds.length ? { authorId: { notIn: blockedUserIds } } : {}),
+        },
       });
-      if (!activity) {
-        if (currentUserId) throw new NotFoundException('Активность не найдена');
-        return 0;
-      }
-      return activity._count.comments;
     } catch (error) {
       handleServiceError(error);
     }
@@ -189,13 +197,17 @@ export class CommentService {
         where: { id },
         select: {
           comment: true,
+          authorId: true,
+          moderationStatus: true,
           profile: { select: COMMENT_PROFILE_SELECT },
           activity: { select: { id: true } },
         },
       });
+      if (!comment || comment.moderationStatus !== 'visible') throw new NotFoundException('Комментарий не найден');
       if (
         currentUserId &&
-        (!comment || !(await this.activityService.canAccessActivity(comment.activity.id, currentUserId)))
+        ((await this.moderationAccess.areBlocked(currentUserId, comment.authorId)) ||
+          !(await this.activityService.canAccessActivity(comment.activity.id, currentUserId)))
       ) {
         throw new NotFoundException('Комментарий не найден');
       }
@@ -238,16 +250,24 @@ export class CommentService {
 
   async getCommentLikesLengthByCommentId(id: string, currentUserId?: string) {
     try {
+      const blockedUserIds = currentUserId ? await this.moderationAccess.blockedUserIds(currentUserId) : [];
       const comment = await this.prisma.comment.findUnique({
         where: { id },
         select: {
+          authorId: true,
+          moderationStatus: true,
           activity: { select: { id: true } },
-          commentLikes: { select: { authorId: true, id: true } },
+          commentLikes: {
+            ...(blockedUserIds.length ? { where: { authorId: { notIn: blockedUserIds } } } : {}),
+            select: { authorId: true, id: true },
+          },
         },
       });
+      if (!comment || comment.moderationStatus !== 'visible') throw new NotFoundException('Комментарий не найден');
       if (
         currentUserId &&
-        (!comment || !(await this.activityService.canAccessActivity(comment.activity.id, currentUserId)))
+        ((await this.moderationAccess.areBlocked(currentUserId, comment.authorId)) ||
+          !(await this.activityService.canAccessActivity(comment.activity.id, currentUserId)))
       ) {
         throw new NotFoundException('Комментарий не найден');
       }

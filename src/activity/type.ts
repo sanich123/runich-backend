@@ -54,7 +54,7 @@ export type ActivityMediaProcessingRecord = {
   id: string;
   media: Array<{
     position: number;
-    url: string;
+    url: string | null;
     thumbnail: string | null;
     blurhash: string | null;
   }>;

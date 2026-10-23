@@ -2,6 +2,55 @@ import { jest } from '@jest/globals';
 import { ModelRepository } from '../database-repository';
 
 describe('ModelRepository', () => {
+  it('counts filtered relations and restores their names under _count', async () => {
+    const countQueries: Record<string, Promise<number>> = {};
+    const commentFilterValues: unknown[] = [];
+    const activityCollection = {
+      include: jest.fn((relation: string, configure: (branch: never) => Promise<number>) => {
+        const relationCollection = {
+          where: jest.fn((buildPredicate: (fields: never) => unknown) => {
+            const fields = {
+              moderationStatus: {
+                eq: jest.fn((value: unknown) => {
+                  commentFilterValues.push(value);
+                  return { field: 'moderationStatus', value };
+                }),
+              },
+            };
+            buildPredicate(fields as never);
+            return relationCollection;
+          }),
+          count: jest.fn(async () => (relation === 'comments' ? 4 : 7)),
+        };
+        countQueries[relation] = configure(relationCollection as never);
+        return activityCollection;
+      }),
+      all: async () => [
+        {
+          id: 'activity-1',
+          comments: await countQueries.comments,
+          likes: await countQueries.likes,
+        },
+      ],
+    };
+    const client = { orm: { public: { Activity: activityCollection } } };
+    const repository = new ModelRepository(client as never, 'Activity');
+
+    await expect(
+      repository.findMany({
+        select: {
+          _count: {
+            select: {
+              comments: { where: { moderationStatus: 'visible' } },
+              likes: true,
+            },
+          },
+        },
+      }),
+    ).resolves.toEqual([{ id: 'activity-1', _count: { comments: 4, likes: 7 } }]);
+    expect(commentFilterValues).toEqual(['visible']);
+  });
+
   it('writes createMany rows in one parameterized insert', async () => {
     const execute = jest
       .fn<(plan: unknown) => Promise<{ affectedRows: number }>>()

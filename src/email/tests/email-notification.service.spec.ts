@@ -3,9 +3,11 @@ import { render } from '@react-email/components';
 import { EmailType } from '../templates/types';
 
 const sendEmail = jest.fn<(...args: unknown[]) => Promise<void>>().mockResolvedValue(undefined);
+const adminAccess = { listEmailsWithPermission: async () => ['moderator@example.com'] };
 
 jest.unstable_mockModule('src/common/email/nodemailer', () => ({ sendEmail }));
 
+jest.unstable_mockModule('src/admin/admin-access.service', () => ({ AdminAccessService: class {} }));
 const { EmailNotificationService } = await import('../email-notification.service');
 const { NotificationEmail } = await import('../templates/NotificationEmail');
 
@@ -23,7 +25,7 @@ describe('EmailNotificationService', () => {
   });
 
   it('sends all activity notification types with recipient details and activity links', async () => {
-    const service = new EmailNotificationService();
+    const service = new EmailNotificationService(adminAccess as never);
     const payload = {
       activityId: 'activity-123',
       actorName: 'Alice',
@@ -74,7 +76,7 @@ describe('EmailNotificationService', () => {
   });
 
   it('renders fallback actor details when optional payload fields are empty', async () => {
-    const service = new EmailNotificationService();
+    const service = new EmailNotificationService(adminAccess as never);
 
     await service.sendLike({
       activityId: 'activity-456',
@@ -106,7 +108,85 @@ describe('EmailNotificationService', () => {
 
     expect(html).toContain('Nice route');
     expect(html).toContain('alt="Изображение активности"');
-    expect(html).toContain('https://runich.netlify.app');
+    expect(html).toContain('https://runich-app.ru');
     expect(html).toContain('Открыть приложение Runich');
+  });
+
+  it('sends localized moderation receipt and decision emails to the reporting user', async () => {
+    const service = new EmailNotificationService(adminAccess as never);
+
+    await service.sendReporterModerationUpdate(
+      {
+        reportId: 'report-1',
+        targetType: 'activity',
+        reason: 'spam',
+        requestType: 'received',
+        locale: 'russian',
+      },
+      'reporter@example.com',
+    );
+    await service.sendReporterModerationUpdate(
+      {
+        reportId: 'report-2',
+        targetType: 'comment',
+        reason: 'harassment',
+        requestType: 'decision',
+        locale: 'english',
+        outcome: 'confirmed',
+      },
+      'reporter@example.com',
+    );
+
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      1,
+      'reporter@example.com',
+      '[Runich] Жалоба принята',
+      expect.stringContaining('Жалоба принята к рассмотрению'),
+      [],
+      undefined,
+    );
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      2,
+      'reporter@example.com',
+      '[Runich] Report decision',
+      expect.stringContaining('We confirmed a violation'),
+      [],
+      undefined,
+    );
+  });
+
+  it('sends report and appeal updates to the moderator mailbox', async () => {
+    const service = new EmailNotificationService(adminAccess as never);
+
+    await service.sendModerationUpdate({
+      reportId: 'report-1',
+      requestType: 'report',
+      targetType: 'activity',
+      reason: 'spam',
+    });
+    await service.sendModerationUpdate({
+      reportId: 'report-2',
+      appealId: 'appeal-1',
+      requestType: 'appeal',
+      targetType: 'comment',
+      reason: 'appeal',
+    });
+
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      '[Runich] Новая жалоба',
+      expect.stringContaining('report-1'),
+      [],
+      undefined,
+    );
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      '[Runich] Новая апелляция',
+      expect.stringContaining('appeal-1'),
+      [],
+      undefined,
+    );
   });
 });

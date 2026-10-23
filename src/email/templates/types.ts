@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 export interface EmailLayoutProps {
   preview: string;
+  locale?: 'russian' | 'english';
   children: ReactNode;
 }
 

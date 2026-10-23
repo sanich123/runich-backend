@@ -4,7 +4,16 @@ import { EMAIL_DELIVERY_NOTICE } from '../../common/email/constants';
 import { emailLayoutStyles, emailLogoUrl } from './const';
 import type { EmailLayoutProps } from './types';
 
-export function EmailLayout({ preview, children }: EmailLayoutProps) {
+export function EmailLayout({ preview, locale = 'russian', children }: EmailLayoutProps) {
+  const footerNotice =
+    locale === 'english'
+      ? 'This email may land in your spam folder. If you cannot find it in your inbox, check spam and verify your email address.'
+      : EMAIL_DELIVERY_NOTICE;
+  const footerText =
+    locale === 'english'
+      ? 'You received this email because you use Runich.'
+      : 'Вы получили это письмо, потому что использовали Runich.';
+
   return (
     <Html>
       <Head />
@@ -18,8 +27,8 @@ export function EmailLayout({ preview, children }: EmailLayoutProps) {
           <Section style={emailLayoutStyles.content}>{children}</Section>
 
           <Section style={emailLayoutStyles.footer}>
-            <Text style={emailLayoutStyles.footerNotice}>{EMAIL_DELIVERY_NOTICE}</Text>
-            <Text style={emailLayoutStyles.footerText}>Вы получили это письмо, потому что использовали Runich.</Text>
+            <Text style={emailLayoutStyles.footerNotice}>{footerNotice}</Text>
+            <Text style={emailLayoutStyles.footerText}>{footerText}</Text>
           </Section>
         </Container>
       </Body>

@@ -48,7 +48,14 @@ type ModelName =
   | 'Friend'
   | 'Comment'
   | 'CommentLike'
-  | 'Like';
+  | 'Like'
+  | 'ContentReport'
+  | 'UserBlock'
+  | 'ModerationAction'
+  | 'ModerationAppeal'
+  | 'MediaModerationAsset'
+  | 'AdminRoleAssignment'
+  | 'AdminAccessAudit';
 
 const relationModels: Record<ModelName, Record<string, ModelName>> = {
   User: {
@@ -62,6 +69,10 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
     receivedNotifications: 'Notification',
     sentNotifications: 'Notification',
     pushDeviceTokens: 'PushDeviceToken',
+    adminRoleAssignments: 'AdminRoleAssignment',
+    grantedAdminRoleAssignments: 'AdminRoleAssignment',
+    adminAccessAuditAsActor: 'AdminAccessAudit',
+    adminAccessAuditAsTarget: 'AdminAccessAudit',
   },
   Profile: {
     activities: 'Activity',
@@ -88,6 +99,13 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
   Notification: { recipient: 'User', actor: 'User', pushJob: 'PushNotificationJob' },
   PushDeviceToken: { user: 'User' },
   PushNotificationJob: { notification: 'Notification' },
+  ContentReport: {},
+  UserBlock: {},
+  ModerationAction: {},
+  ModerationAppeal: {},
+  MediaModerationAsset: {},
+  AdminRoleAssignment: { user: 'User', grantedBy: 'User' },
+  AdminAccessAudit: { actor: 'User', target: 'User' },
 };
 
 const dateFields: Record<ModelName, ReadonlySet<string>> = {
@@ -123,6 +141,13 @@ const dateFields: Record<ModelName, ReadonlySet<string>> = {
   Notification: new Set(['createdAt', 'readAt']),
   PushDeviceToken: new Set(['createdAt', 'updatedAt']),
   PushNotificationJob: new Set(['availableAt', 'createdAt', 'startedAt', 'finishedAt']),
+  ContentReport: new Set(['createdAt', 'reviewedAt']),
+  UserBlock: new Set(['createdAt']),
+  ModerationAction: new Set(['createdAt']),
+  ModerationAppeal: new Set(['createdAt', 'reviewedAt']),
+  MediaModerationAsset: new Set(['processingStartedAt', 'scannedAt', 'reviewedAt', 'createdAt']),
+  AdminRoleAssignment: new Set(['createdAt', 'updatedAt']),
+  AdminAccessAudit: new Set(['createdAt']),
 };
 
 function normalizeInput(model: ModelName, value: unknown): unknown {
@@ -286,8 +311,15 @@ function applyOptions(
   for (const [relation, config] of Object.entries(includes)) {
     if (relation === '_count') {
       for (const [countRelation, countConfig] of Object.entries((config as AnyRecord)?.select ?? {})) {
-        if (countConfig !== true || !relationModels[model][countRelation]) continue;
-        result = result.include(countRelation, (branch: AnyRecord) => branch.count());
+        const childModel = relationModels[model][countRelation];
+        if (!childModel || (countConfig !== true && (!countConfig || typeof countConfig !== 'object'))) continue;
+        const countWhere = countConfig === true ? undefined : (countConfig as AnyRecord).where;
+        result = result.include(countRelation, (branch: AnyRecord) =>
+          (countWhere
+            ? branch.where((fields: AnyRecord) => buildPredicate(fields, childModel, countWhere))
+            : branch
+          ).count(),
+        );
         countSpecs.push({ relation: countRelation });
       }
       continue;
@@ -530,6 +562,13 @@ export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics
     comment: new ModelRepository(client, 'Comment', latencyMetrics),
     commentLike: new ModelRepository(client, 'CommentLike', latencyMetrics),
     like: new ModelRepository(client, 'Like', latencyMetrics),
+    contentReport: new ModelRepository(client, 'ContentReport', latencyMetrics),
+    userBlock: new ModelRepository(client, 'UserBlock', latencyMetrics),
+    moderationAction: new ModelRepository(client, 'ModerationAction', latencyMetrics),
+    moderationAppeal: new ModelRepository(client, 'ModerationAppeal', latencyMetrics),
+    mediaModerationAsset: new ModelRepository(client, 'MediaModerationAsset', latencyMetrics),
+    adminRoleAssignment: new ModelRepository(client, 'AdminRoleAssignment', latencyMetrics),
+    adminAccessAudit: new ModelRepository(client, 'AdminAccessAudit', latencyMetrics),
   };
 }
 

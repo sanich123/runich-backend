@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { ModerationAccessService } from 'src/moderation/moderation-access.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { Filtering } from './filter.decorator';
@@ -8,7 +9,14 @@ import { buildProfileWhere } from './utils';
 
 @Injectable()
 export class AccountService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional() @Inject(ModerationAccessService) moderationAccess?: ModerationAccessService,
+  ) {
+    this.moderationAccess = moderationAccess ?? new ModerationAccessService(this.prisma);
+  }
+
+  private readonly moderationAccess: ModerationAccessService;
 
   async getFilteredAccounts(
     take = String(DEFAULT_PROFILE_PAGE_SIZE),
@@ -20,8 +28,14 @@ export class AccountService {
     const visibilityWhere = currentUserId
       ? { OR: [{ profileSearchVisible: true }, { userId: currentUserId }] }
       : { profileSearchVisible: true };
+    const blockedUserIds = currentUserId ? await this.moderationAccess.blockedUserIds(currentUserId) : [];
     const where = {
-      AND: [filterWhere, visibilityWhere, ...(cursor ? [{ id: { gt: cursor.id } }] : [])],
+      AND: [
+        filterWhere,
+        visibilityWhere,
+        ...(blockedUserIds.length ? [{ userId: { notIn: blockedUserIds } }] : []),
+        ...(cursor ? [{ id: { gt: cursor.id } }] : []),
+      ],
     };
 
     try {

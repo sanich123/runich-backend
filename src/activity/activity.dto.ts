@@ -28,16 +28,28 @@ import { IsIanaTimeZoneConstraint } from 'src/common/validation/iana-time-zone.v
 import { ACTIVITY_VISIBILITY, type ActivityVisibility } from './activity-visibility';
 
 class ActivityMediaDto {
-  @ApiProperty({ type: String })
+  @ApiPropertyOptional({ type: String, description: 'Опубликованный URL уже прошедшего проверку медиафайла' })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  url: string;
+  url?: string;
 
-  @ApiProperty({ type: String, nullable: true })
+  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Идентификатор загруженного файла на проверке' })
+  @IsOptional()
+  @IsUUID()
+  assetId?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Идентификатор проверяемой миниатюры видео' })
+  @IsOptional()
+  @IsUUID()
+  thumbnailAssetId?: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
   @ValidateIf((_object, value) => value !== null)
   @IsDefined()
   @IsString()
-  thumbnail: string | null;
+  thumbnail?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsString()
@@ -160,8 +172,11 @@ class ActivityKilometreSplitDto {
 }
 
 export type ActivityMediaObject = {
-  url: string;
-  thumbnail: string | null;
+  url?: string;
+  thumbnail?: string | null;
+  assetId?: string;
+  thumbnailAssetId?: string;
+  mediaReviewStatus?: 'queued' | 'processing' | 'review_required' | 'approved' | 'rejected' | 'failed' | null;
   blurhash?: string | null;
 };
 
@@ -256,9 +271,10 @@ export class ActivityDto {
       properties: {
         url: { type: 'string' },
         thumbnail: { type: 'string', nullable: true },
+        assetId: { type: 'string', format: 'uuid' },
+        thumbnailAssetId: { type: 'string', format: 'uuid' },
         blurhash: { type: 'string' },
       },
-      required: ['url', 'thumbnail'],
     },
   })
   @IsOptional()
@@ -466,14 +482,20 @@ class ActivityMediaItemDto {
   @ApiPropertyOptional({ type: String, format: 'uuid' })
   activityId?: string;
 
-  @ApiProperty({ type: String })
-  url: string;
+  @ApiPropertyOptional({ type: String, nullable: true })
+  url: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   thumbnail: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   blurhash?: string | null;
+
+  @ApiPropertyOptional({
+    enum: ['queued', 'processing', 'review_required', 'approved', 'rejected', 'failed'],
+    nullable: true,
+  })
+  mediaReviewStatus?: 'queued' | 'processing' | 'review_required' | 'approved' | 'rejected' | 'failed' | null;
 }
 
 class ActivityCoordinatesResponseDto {

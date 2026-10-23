@@ -81,4 +81,42 @@ describe('createNotificationEvent', () => {
     });
     expect(transaction.notification.create).not.toHaveBeenCalled();
   });
+
+  it('delivers mandatory moderation notifications when notification preferences are disabled', async () => {
+    const transaction = createTransaction({
+      emailNotifications: false,
+      inAppNotifications: false,
+      pushNotifications: true,
+      user: { email: 'reporter@example.com', emailConfirmedAt: new Date() },
+    });
+    const event = {
+      ...input,
+      type: 'moderation-report-received' as const,
+      emailNotificationType: 'reporter-receipt' as const,
+      mandatory: true,
+    };
+
+    await expect(createNotificationEvent(transaction as never, event)).resolves.toEqual({ id: 'notification-1' });
+
+    expect(transaction.emailNotificationJob.create).toHaveBeenCalledWith({
+      data: { notificationType: 'reporter-receipt', sourceId: 'like-1', status: 'queued' },
+    });
+    expect(transaction.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ inApp: true }) }),
+    );
+    expect(transaction.pushNotificationJob.create).not.toHaveBeenCalled();
+  });
+
+  it('uses localized notification copy for the recipient language', async () => {
+    const transaction = createTransaction({ language: 'russian' });
+
+    await createNotificationEvent(transaction as never, {
+      ...input,
+      localizedContent: { russian: 'Жалоба получена', english: 'Report received' },
+    });
+
+    expect(transaction.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ content: 'Жалоба получена' }) }),
+    );
+  });
 });

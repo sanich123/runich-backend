@@ -9,11 +9,17 @@ describe('EmailNotificationWorkerService', () => {
     like: { findUnique: asyncMock() },
     comment: { findUnique: asyncMock() },
     commentLike: { findUnique: asyncMock() },
+    contentReport: { findUnique: asyncMock() },
+    profile: { findUnique: asyncMock() },
+    moderationAction: { findUnique: asyncMock() },
+    moderationAppeal: { findUnique: asyncMock() },
   };
   const notifications = {
     sendLike: asyncMock(),
     sendComment: asyncMock(),
     sendCommentLike: asyncMock(),
+    sendModerationUpdate: asyncMock(),
+    sendReporterModerationUpdate: asyncMock(),
   };
   const worker = new EmailNotificationWorkerService(prisma as never, notifications as never);
 
@@ -30,6 +36,8 @@ describe('EmailNotificationWorkerService', () => {
     notifications.sendLike.mockResolvedValue(undefined);
     notifications.sendComment.mockResolvedValue(undefined);
     notifications.sendCommentLike.mockResolvedValue(undefined);
+    notifications.sendModerationUpdate.mockResolvedValue(undefined);
+    notifications.sendReporterModerationUpdate.mockResolvedValue(undefined);
   });
 
   afterEach(() => jest.restoreAllMocks());
@@ -189,6 +197,150 @@ describe('EmailNotificationWorkerService', () => {
         recipientName: 'Carol',
       }),
     );
+  });
+
+  it('sends a moderator report email with reporter details and the reported profile', async () => {
+    prisma.emailNotificationJob.findFirst.mockResolvedValue({
+      id: 'job-report',
+      notificationType: 'moderation-report',
+      sourceId: 'report-1',
+      attempts: 0,
+    });
+    prisma.contentReport.findUnique.mockResolvedValue({
+      id: 'report-1',
+      targetId: 'reported-user',
+      targetType: 'user',
+      reason: 'harassment',
+      details: 'Repeated unwanted messages',
+    });
+    prisma.profile.findUnique.mockResolvedValue({
+      name: 'Alex',
+      surname: 'Runner',
+      bio: 'Runner profile',
+      profilePhoto: 'profile.jpg',
+    });
+
+    await worker.processNextJob();
+
+    expect(notifications.sendModerationUpdate).toHaveBeenCalledWith({
+      reportId: 'report-1',
+      requestType: 'report',
+      targetType: 'user',
+      reason: 'harassment',
+      reporterDetails: 'Repeated unwanted messages',
+      reportedProfile: {
+        name: 'Alex',
+        surname: 'Runner',
+        bio: 'Runner profile',
+        profilePhoto: 'profile.jpg',
+      },
+    });
+  });
+
+  it('sends a reporter receipt in the account language and skips unconfirmed reporters', async () => {
+    prisma.emailNotificationJob.findFirst.mockResolvedValue({
+      id: 'job-receipt',
+      notificationType: 'reporter-receipt',
+      sourceId: 'report-1',
+      attempts: 0,
+    });
+    prisma.contentReport.findUnique.mockResolvedValue({
+      id: 'report-1',
+      targetType: 'activity',
+      reason: 'spam',
+      reporter: {
+        email: 'reporter@example.com',
+        emailConfirmedAt: new Date(),
+        profile: { language: 'russian' },
+      },
+    });
+
+    await worker.processNextJob();
+
+    expect(notifications.sendReporterModerationUpdate).toHaveBeenCalledWith(
+      {
+        reportId: 'report-1',
+        targetType: 'activity',
+        reason: 'spam',
+        requestType: 'received',
+        locale: 'russian',
+      },
+      'reporter@example.com',
+    );
+
+    prisma.contentReport.findUnique.mockResolvedValue({
+      id: 'report-2',
+      targetType: 'comment',
+      reason: 'other',
+      reporter: { email: 'unconfirmed@example.com', emailConfirmedAt: null, profile: { language: 'english' } },
+    });
+    await worker.processNextJob();
+
+    expect(notifications.sendReporterModerationUpdate).toHaveBeenCalledTimes(1);
+    expect(prisma.emailNotificationJob.update).toHaveBeenLastCalledWith({
+      where: { id: 'job-receipt' },
+      data: expect.objectContaining({ status: 'skipped' }),
+    });
+  });
+
+  it.each([
+    ['reject_report', 'not-confirmed'],
+    ['restore_content', 'content-restored'],
+    ['remove_content', 'confirmed'],
+  ] as const)('sends a reporter decision for %s with outcome %s', async (action, outcome) => {
+    prisma.emailNotificationJob.findFirst.mockResolvedValue({
+      id: `job-${action}`,
+      notificationType: 'reporter-decision',
+      sourceId: 'moderation-action-1',
+      attempts: 0,
+    });
+    prisma.moderationAction.findUnique.mockResolvedValue({
+      action,
+      report: {
+        id: 'report-1',
+        targetType: 'comment',
+        reason: 'harassment',
+        reporter: {
+          email: 'reporter@example.com',
+          emailConfirmedAt: new Date(),
+          profile: { language: 'english' },
+        },
+      },
+    });
+
+    await worker.processNextJob();
+
+    expect(notifications.sendReporterModerationUpdate).toHaveBeenLastCalledWith(
+      {
+        reportId: 'report-1',
+        targetType: 'comment',
+        reason: 'harassment',
+        requestType: 'decision',
+        locale: 'english',
+        outcome,
+      },
+      'reporter@example.com',
+    );
+  });
+
+  it('sends the moderator email for a moderation appeal', async () => {
+    prisma.emailNotificationJob.findFirst.mockResolvedValue({
+      id: 'job-appeal',
+      notificationType: 'moderation-appeal',
+      sourceId: 'appeal-1',
+      attempts: 0,
+    });
+    prisma.moderationAppeal.findUnique.mockResolvedValue({ report: { id: 'report-1', targetType: 'comment' } });
+
+    await worker.processNextJob();
+
+    expect(notifications.sendModerationUpdate).toHaveBeenCalledWith({
+      reportId: 'report-1',
+      appealId: 'appeal-1',
+      requestType: 'appeal',
+      targetType: 'comment',
+      reason: 'appeal',
+    });
   });
 
   it('skips notification delivery when the recipient disabled email notifications', async () => {

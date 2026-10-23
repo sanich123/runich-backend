@@ -34,13 +34,29 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         this.scheduleLastSeenUpdate(payload.sessionId, payload.userId);
       }
 
-      return { id: session.userId, sessionId: payload.sessionId };
+      const user = await this.prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { id: true, bannedUntil: true },
+      });
+      if (!user) throw new UnauthorizedException('Требуется авторизация');
+      return {
+        id: session.userId,
+        sessionId: payload.sessionId,
+        ...(user.bannedUntil && user.bannedUntil > new Date() ? { bannedUntil: user.bannedUntil } : {}),
+      };
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: payload.userId }, select: { id: true } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, bannedUntil: true },
+    });
     if (!user) throw new UnauthorizedException('Требуется авторизация');
 
-    return { ...user, sessionId: payload.sessionId };
+    return {
+      ...user,
+      sessionId: payload.sessionId,
+      ...(user.bannedUntil && user.bannedUntil > new Date() ? { bannedUntil: user.bannedUntil } : {}),
+    };
   }
 
   private scheduleLastSeenUpdate(sessionId: string, userId: string) {

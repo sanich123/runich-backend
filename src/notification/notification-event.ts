@@ -12,12 +12,16 @@ export async function createNotificationEvent(transaction: PrismaService, input:
       emailNotifications: true,
       inAppNotifications: true,
       pushNotifications: true,
-      user: { select: { email: true } },
+      language: true,
+      user: { select: { email: true, emailConfirmedAt: true } },
     },
   });
   if (!recipient) return null;
 
-  if (input.emailNotificationType && recipient.emailNotifications === true && recipient.user?.email) {
+  const emailEnabled = input.mandatory
+    ? Boolean(recipient.user?.email && recipient.user.emailConfirmedAt)
+    : recipient.emailNotifications === true && Boolean(recipient.user?.email);
+  if (input.emailNotificationType && emailEnabled) {
     await transaction.emailNotificationJob.create({
       data: {
         notificationType: input.emailNotificationType,
@@ -27,8 +31,8 @@ export async function createNotificationEvent(transaction: PrismaService, input:
     });
   }
 
-  const pushEnabled = recipient.pushNotifications === true;
-  const inAppEnabled = recipient.inAppNotifications;
+  const pushEnabled = !input.mandatory && recipient.pushNotifications === true;
+  const inAppEnabled = input.mandatory === true || recipient.inAppNotifications;
   if (!inAppEnabled && !pushEnabled) return null;
 
   const notification = await transaction.notification.create({
@@ -43,7 +47,9 @@ export async function createNotificationEvent(transaction: PrismaService, input:
       actorName: input.actorName,
       actorSurname: input.actorSurname,
       actorProfilePhoto: input.actorProfilePhoto,
-      content: input.content?.slice(0, 1000),
+      content: (
+        input.localizedContent?.[recipient.language === 'russian' ? 'russian' : 'english'] ?? input.content
+      )?.slice(0, 1000),
       inApp: inAppEnabled,
     },
     select: { id: true },

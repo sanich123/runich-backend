@@ -21,6 +21,28 @@ if (!commit || !runUrl) {
   throw new Error('DEPLOY_SHA and DEPLOY_RUN_URL must be provided for a deployment notice.');
 }
 
+const deploymentEnvEntries = (process.env.DEPLOY_ENV_REPORT ?? '')
+  .split(',')
+  .map((entry) => {
+    const match = /^([A-Za-z_][A-Za-z0-9_]*):(set|empty)$/.exec(entry);
+    return match ? { key: match[1], status: match[2] } : undefined;
+  })
+  .filter((entry): entry is { key: string; status: string } => entry !== undefined);
+const deploymentEnvText = deploymentEnvEntries.length
+  ? [
+      'Deployment .env keys (values are intentionally omitted):',
+      ...deploymentEnvEntries.map(({ key, status }) => `  ${key}: ${status}`),
+    ].join('\n')
+  : 'Deployment .env key status is unavailable.';
+const deploymentEnvHtml = deploymentEnvEntries.length
+  ? `<table style="border-collapse:collapse;width:100%;margin:0 0 24px"><tbody>${deploymentEnvEntries
+      .map(
+        ({ key, status }) =>
+          `<tr><td style="padding:4px 12px 4px 0;color:#52606d">${escapeHtml(key)}</td><td style="padding:4px 0;font-weight:600">${escapeHtml(status)}</td></tr>`,
+      )
+      .join('')}</tbody></table>`
+  : '<p style="margin:0 0 24px;color:#8a1c1c">Environment key status is unavailable.</p>';
+
 async function renderDeploymentTestMap() {
   try {
     const viewport = calculateStaticMapViewport(DEPLOYMENT_TEST_ROUTE);
@@ -67,6 +89,7 @@ const message = (sender: string) => ({
     `Environment: ${environment}`,
     `Commit: ${commit}`,
     `GitHub Actions run: ${runUrl}`,
+    deploymentEnvText,
     metricsText,
     'The deployment test route map is included as an inline image.',
   ].join('\n'),
@@ -78,6 +101,9 @@ const message = (sender: string) => ({
     `<p style="margin:4px 0"><strong>Environment:</strong> ${escapeHtml(environment)}</p>`,
     `<p style="margin:4px 0"><strong>Commit:</strong> ${escapeHtml(commit)}</p>`,
     `<p style="margin:4px 0 20px"><a href="${escapeHtml(runUrl)}">GitHub Actions run</a></p>`,
+    '<h2 style="margin:0 0 10px;font-size:17px">Deployment environment key status</h2>',
+    '<p style="margin:0 0 8px;color:#52606d">Values are omitted; only variable names and whether each is set are included.</p>',
+    deploymentEnvHtml,
     '<h2 style="margin:0 0 10px;font-size:17px">Operational snapshot</h2>',
     metricsHtml,
     '<h2 style="margin:0 0 10px;font-size:17px">Deployment test route</h2>',

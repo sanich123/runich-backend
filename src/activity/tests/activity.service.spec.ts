@@ -34,6 +34,7 @@ function createPrismaMock() {
     },
     $transaction: jest.fn(),
     friend: { findMany: asyncMock() },
+    userBlock: { findFirst: asyncMock(), findMany: asyncMock() },
     $queryRaw: asyncMock(),
   };
   prisma.$transaction.mockImplementation((async (callback: (client: unknown) => Promise<unknown>) =>
@@ -115,6 +116,7 @@ describe('ActivityService', () => {
         keys: ['user-1/activities/activity-1/photo.jpg'],
         photos: [{ url: 'https://cdn.example/photo.jpg', thumbnail: 'https://cdn.example/photo-thumb.jpg' }],
       }),
+      refreshLinkedActivityMedia: asyncMock(),
     };
     const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
     const activityDate = new Date('2026-09-28T12:00:00.000Z');
@@ -134,6 +136,7 @@ describe('ActivityService', () => {
       },
     ];
     prisma.activityMedia.create.mockResolvedValue(persistedMedia[0]);
+    prisma.activityMedia.findMany.mockResolvedValue(persistedMedia);
 
     await expect(
       service.appendActivityMedia('activity-1', 'user-1', [
@@ -376,6 +379,7 @@ describe('ActivityService', () => {
         checksum: 'a'.repeat(64),
       }),
       deleteObjectByKey: asyncMock(),
+      refreshLinkedActivityMedia: asyncMock(),
     };
     const service = new ActivityService(prisma as never, account as never, undefined, storage as never);
     prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
@@ -439,6 +443,8 @@ describe('ActivityService', () => {
         {
           url: 'https://s3.twcstorage.ru/runich-test/user-1/photo.jpg',
           thumbnail: 'https://s3.twcstorage.ru/runich-test/user-1/photo-thumb.jpg',
+          mediaModerationAssetId: 'asset-1',
+          thumbnailModerationAssetId: 'thumbnail-1',
         },
       ],
     });
@@ -447,6 +453,7 @@ describe('ActivityService', () => {
       getOwnedKey: jest.fn((_userId: string, url: string) =>
         url.endsWith('thumb.jpg') ? 'user-1/photo-thumb.jpg' : 'user-1/photo.jpg',
       ),
+      deleteActivityModerationAssets: asyncMock(),
     };
     const cleanup = { enqueueObjectCleanup: asyncMock() };
     const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, cleanup as never);
@@ -461,6 +468,21 @@ describe('ActivityService', () => {
     expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith('user-1', 'user-1/photo.jpg', transaction);
     expect(cleanup.enqueueObjectCleanup).toHaveBeenCalledWith('user-1', 'user-1/photo-thumb.jpg', transaction);
     expect(transaction.activity.delete).toHaveBeenCalledWith({ where: { id: 'activity-1', userId: 'user-1' } });
+    expect(storage.deleteActivityModerationAssets).toHaveBeenCalledWith('user-1', ['asset-1', 'thumbnail-1']);
+  });
+
+  it('deletes unattached moderation assets when deleting an activity without cleanup worker', async () => {
+    const prisma = createPrismaMock();
+    const storage = { deleteActivityModerationAssets: asyncMock() };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    prisma.activity.findFirst.mockResolvedValue({
+      media: [{ mediaModerationAssetId: 'asset-1', thumbnailModerationAssetId: null }],
+    });
+    prisma.activity.delete.mockResolvedValue({ id: 'activity-1' });
+
+    await expect(service.deleteActivityById('activity-1', 'user-1')).resolves.toEqual({ id: 'activity-1' });
+    expect(storage.deleteActivityModerationAssets).toHaveBeenCalledWith('user-1', ['asset-1', null]);
+    expect(prisma.activity.delete).toHaveBeenCalledWith({ where: { id: 'activity-1', userId: 'user-1' } });
   });
 
   it('reads a stored route while keeping the locations endpoint response unchanged', async () => {
@@ -1317,8 +1339,11 @@ describe('ActivityService', () => {
     expect(prisma.activity.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 21 }));
 
     await service.getAllActivitiesWithFriends('user-1');
-    expect(prisma.$queryRaw).toHaveBeenLastCalledWith(
-      expect.anything(),
+    expect(prisma.$queryRaw.mock.calls.at(-1)?.slice(1)).toEqual([
+      'user-1',
+      'user-1',
+      'user-1',
+      'user-1',
       'user-1',
       'user-1',
       true,
@@ -1326,7 +1351,7 @@ describe('ActivityService', () => {
       null,
       null,
       21,
-    );
+    ]);
   });
 
   it('uses a stable cursor for activities and media pages', async () => {
@@ -1411,7 +1436,7 @@ describe('ActivityService', () => {
     expect(prisma.activity.findMany).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        where: { userId: 'user-1', isFavorite: true },
+        where: { userId: 'user-1', isFavorite: true, moderationStatus: 'visible' },
         orderBy: [{ date: 'desc' }, { id: 'desc' }],
         take: 2,
         select: expect.objectContaining({ isFavorite: true }),
@@ -1431,6 +1456,7 @@ describe('ActivityService', () => {
         where: {
           userId: 'user-1',
           isFavorite: true,
+          moderationStatus: 'visible',
           OR: [{ date: { lt: newestDate } }, { date: newestDate, id: { lt: 'favorite-2' } }],
         },
         take: 2,
@@ -1544,5 +1570,95 @@ describe('ActivityService', () => {
     prisma.activity.findUnique.mockRejectedValue(error);
 
     await expect(service.getLocationsByActivityId('a1')).rejects.toBe(error);
+  });
+
+  it('persists queued moderation references without requiring a public media URL', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const service = new ActivityService(prisma as never, account as never);
+
+    await expect(
+      service.createActivity(
+        {
+          ...activityDto,
+          media: [{ assetId: 'asset-1', thumbnailAssetId: 'thumbnail-1', mediaReviewStatus: 'queued' }],
+        } as never,
+        'user-1',
+      ),
+    ).rejects.toThrow('Сервис хранения проверяемого медиа не настроен');
+  });
+
+  it('builds only valid activity media rows and applies defaults to quarantined assets', () => {
+    const service = new ActivityService(createPrismaMock() as never, {} as never);
+    const getActivityMediaRows = (
+      service as unknown as {
+        getActivityMediaRows: (
+          activityId: unknown,
+          userId: unknown,
+          activityDate: unknown,
+          media: unknown,
+        ) => Record<string, unknown>[];
+      }
+    ).getActivityMediaRows.bind(service);
+    const activityDate = new Date('2026-10-21T12:00:00.000Z');
+
+    expect(getActivityMediaRows(undefined, 'user-1', activityDate, [])).toEqual([]);
+    expect(getActivityMediaRows('activity-1', undefined, activityDate, [])).toEqual([]);
+    expect(getActivityMediaRows('activity-1', 'user-1', 42, [])).toEqual([]);
+    expect(getActivityMediaRows('activity-1', 'user-1', activityDate, null)).toEqual([]);
+    expect(
+      getActivityMediaRows('activity-1', 'user-1', activityDate, [
+        'https://cdn.example/photo.jpg',
+        null,
+        4,
+        {},
+        { url: 'https://cdn.example/photo-2.jpg', thumbnail: 'thumb', blurhash: 'hash' },
+        { assetId: 'asset-1', thumbnailAssetId: 'thumb-asset-1' },
+        { assetId: 'asset-2', url: 'https://cdn.example/approved.jpg', mediaReviewStatus: 'approved' },
+      ]),
+    ).toEqual([
+      {
+        activityId: 'activity-1',
+        userId: 'user-1',
+        activityDate,
+        position: 0,
+        url: 'https://cdn.example/photo.jpg',
+        thumbnail: null,
+        blurhash: null,
+      },
+      {
+        activityId: 'activity-1',
+        userId: 'user-1',
+        activityDate,
+        position: 4,
+        url: 'https://cdn.example/photo-2.jpg',
+        thumbnail: 'thumb',
+        blurhash: 'hash',
+      },
+      {
+        activityId: 'activity-1',
+        userId: 'user-1',
+        activityDate,
+        position: 5,
+        url: null,
+        thumbnail: null,
+        blurhash: null,
+        mediaModerationAssetId: 'asset-1',
+        thumbnailModerationAssetId: 'thumb-asset-1',
+        mediaReviewStatus: 'queued',
+      },
+      {
+        activityId: 'activity-1',
+        userId: 'user-1',
+        activityDate,
+        position: 6,
+        url: 'https://cdn.example/approved.jpg',
+        thumbnail: null,
+        blurhash: null,
+        mediaModerationAssetId: 'asset-2',
+        thumbnailModerationAssetId: null,
+        mediaReviewStatus: 'approved',
+      },
+    ]);
   });
 });

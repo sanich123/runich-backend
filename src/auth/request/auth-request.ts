@@ -5,6 +5,7 @@ export type AuthenticatedRequest = Request & {
     id: string;
     userId?: string;
     sessionId?: string;
+    bannedUntil?: Date;
   };
 };
 

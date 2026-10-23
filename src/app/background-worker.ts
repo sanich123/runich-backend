@@ -12,6 +12,7 @@ import { LoadTestSeedService } from 'src/load-test/load-test.service';
 import { observeInstrument } from 'src/common/observe/observe.config';
 import { EmailNotificationWorkerService } from 'src/email/email-notification-worker.service';
 import { PushNotificationWorkerService } from 'src/notification/push-notification-worker.service';
+import { MediaModerationWorkerService } from 'src/storage/media-moderation-worker.service';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(BackgroundWorkerModule, {
@@ -25,6 +26,7 @@ async function bootstrap() {
   const loadTestSeedService = app.get(LoadTestSeedService);
   const emailNotificationWorkerService = app.get(EmailNotificationWorkerService);
   const pushNotificationWorkerService = app.get(PushNotificationWorkerService);
+  const mediaModerationWorkerService = app.get(MediaModerationWorkerService);
   const stopWorker = () => {
     migrationService.requestStop();
     mediaProcessingService.requestStop();
@@ -33,6 +35,7 @@ async function bootstrap() {
     loadTestSeedService.requestStop();
     emailNotificationWorkerService.requestStop();
     pushNotificationWorkerService.requestStop();
+    mediaModerationWorkerService.requestStop();
   };
 
   process.once('SIGINT', stopWorker);
@@ -47,6 +50,7 @@ async function bootstrap() {
       ...(getAppEnvironment() === 'production' ? [] : [loadTestSeedService.runWorker()]),
       emailNotificationWorkerService.runWorker(),
       pushNotificationWorkerService.runWorker(),
+      mediaModerationWorkerService.runWorker(),
     ]);
   } finally {
     process.off('SIGINT', stopWorker);

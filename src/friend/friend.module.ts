@@ -4,9 +4,10 @@ import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { FriendController } from './friend.controller';
 import { FriendService } from './friend.service';
 import { AccountModule } from '../account/account.module';
+import { ModerationModule } from 'src/moderation/moderation.module';
 
 @Module({
-  imports: [PrismaModule, AccountModule, PassportModule.register({ defaultStrategy: 'jwt' })],
+  imports: [PrismaModule, AccountModule, ModerationModule, PassportModule.register({ defaultStrategy: 'jwt' })],
   controllers: [FriendController],
   providers: [FriendService],
   exports: [FriendService],

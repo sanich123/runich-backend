@@ -23,7 +23,8 @@ jobs:
       url: https://stage.runich-app.ru
     env:
       STAGE_DOMAIN: stage.runich-app.ru
-      DEPLOY_IMAGE: ghcr.io/sanich123/runich-backend:${{ github.sha }}
+      STAGE_WEB_DOMAIN: stage-web.runich-app.ru
+      DEPLOY_IMAGE: ghcr.io/sanich123/runich-backend:stage-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Check out the exact commit
@@ -74,32 +75,65 @@ jobs:
             "${SSH[@]}" "$TARGET" 'set -eu; cd /opt/runich-stage; umask 077; IFS= read -r token; tmp="$(mktemp .env.XXXXXX)"; sed "/^GRAFANA_LOKI_TOKEN=/d" .env > "$tmp"; printf "GRAFANA_LOKI_TOKEN=%s\\n" "$token" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token'
           unset GRAFANA_LOKI_TOKEN
 
+          # The Stage host has limited disk space. Remove unused Docker objects
+          # before streaming the new image; named database and certificate volumes
+          # are preserved because this prune does not include --volumes.
+          "${SSH[@]}" "$TARGET" 'set -euo pipefail; echo "Disk before Docker cleanup:"; df -h /; docker system df; docker system prune --all --force; echo "Disk after Docker cleanup:"; df -h /; docker system df'
+
           # Stream the already-built image over the pinned SSH connection. This avoids
           # storing a registry credential on the server or making the package public.
           docker save "$DEPLOY_IMAGE" | gzip -1 | "${SSH[@]}" "$TARGET" 'gzip -d | docker load'
           unset STAGE_DEPLOY_SSH_KEY
 
-          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf nginx.stage.conf deploy/grafana/config.alloy "$TARGET:/tmp/"
+          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf nginx.stage.conf nginx.stage.web.conf deploy/grafana/config.alloy "$TARGET:/tmp/"
 
-          "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
+          "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' STAGE_WEB_DOMAIN='$STAGE_WEB_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
           set -euo pipefail
           cd /opt/runich-stage
 
           test -s .env
-          test -s app.env
-          chmod 600 .env app.env
+          chmod 600 .env
+          set_auth_frontend_redirect() {
+            file="$1"
+            tmp="$(mktemp .env.XXXXXX)"
+            awk -F= '$1 != "AUTH_FRONTEND_REDIRECT_URI" { print }' "$file" > "$tmp"
+            printf 'AUTH_FRONTEND_REDIRECT_URI=https://stage-web.runich-app.ru/login-from-url\n' >> "$tmp"
+            chmod --reference="$file" "$tmp"
+            chown --reference="$file" "$tmp"
+            mv "$tmp" "$file"
+          }
+          set_auth_frontend_redirect .env
+          if [ -f app.env ]; then
+            set_auth_frontend_redirect app.env
+          fi
+          if [ -f app.env ]; then
+            chmod 600 app.env
+            docker run --rm --user "$(id -u):$(id -g)" \
+              --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
+              node scripts/validate-deployment-env.mjs \
+              --environment stage --file /deployment/.env --merge-legacy /deployment/app.env
+          else
+            docker run --rm --user "$(id -u):$(id -g)" \
+              --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
+              node scripts/validate-deployment-env.mjs --environment stage --file /deployment/.env
+          fi
           install -o "$(id -un)" -g docker -m 0640 /tmp/docker-compose.timeweb.stage.yml ./docker-compose.timeweb.stage.yml
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.bootstrap.conf ./nginx.stage.bootstrap.conf
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.conf ./nginx.stage.tls.conf
+          install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.web.conf ./nginx.stage.web.conf
+          install -d -o "$(id -un)" -g docker -m 0750 ./nginx.stage.web.d
+          install -d -o "$(id -un)" -g docker -m 0755 ./web-stage/releases
+          chmod 0755 ./web-stage ./web-stage/releases
           install -d -o "$(id -un)" -g docker -m 0750 ./deploy/grafana
           install -o "$(id -un)" -g docker -m 0644 /tmp/config.alloy ./deploy/grafana/config.alloy
           touch logs.log
           chmod 0644 logs.log
-          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/nginx.stage.conf /tmp/config.alloy
+          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/nginx.stage.conf /tmp/nginx.stage.web.conf /tmp/config.alloy
 
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
           COMPOSE=(docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml)
 
+          "${COMPOSE[@]}" config --quiet
           "${COMPOSE[@]}" pull db nginx certbot certbot_renew
           "${COMPOSE[@]}" up -d --wait db
           "${COMPOSE[@]}" up --force-recreate --abort-on-container-exit \
@@ -123,6 +157,17 @@ jobs:
             "${COMPOSE[@]}" up -d --force-recreate nginx
             touch .stage-cert-ready
           fi
+
+          if ! "${COMPOSE[@]}" exec -T --interactive=false nginx test -s "/etc/letsencrypt/live/$STAGE_WEB_DOMAIN/fullchain.pem" </dev/null; then
+            "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps certbot \
+              certonly --webroot --webroot-path /var/www/certbot \
+              --domain "$STAGE_WEB_DOMAIN" --cert-name "$STAGE_WEB_DOMAIN" \
+              --non-interactive --agree-tos --register-unsafely-without-email </dev/null
+          fi
+
+          install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.web.conf ./nginx.stage.web.d/runich-web.conf
+          "${COMPOSE[@]}" exec -T --interactive=false nginx nginx -t </dev/null
+          "${COMPOSE[@]}" exec -T --interactive=false nginx nginx -s reload </dev/null
 
           "${COMPOSE[@]}" up -d --force-recreate certbot_renew
 
@@ -162,12 +207,28 @@ jobs:
             exit 1
           fi
 
+          if ! curl --silent --show-error --max-time 10 \
+            --resolve "$STAGE_WEB_DOMAIN:443:127.0.0.1" "https://$STAGE_WEB_DOMAIN/" >/dev/null; then
+            echo 'Stage web HTTPS certificate/route check failed.' >&2
+            exit 1
+          fi
+
+          if [ -f app.env ]; then
+            rm -f app.env
+            echo 'Removed the retired Stage app.env after the unified .env passed readiness.'
+          fi
+
           printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
           echo "Stage is healthy at commit $DEPLOY_SHA"
 
+          DEPLOY_ENV_REPORT="$(docker run --rm --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/deployment:ro" "$DEPLOY_IMAGE" \
+            node scripts/summarize-deployment-env.mjs --file /deployment/.env | paste -sd, -)"
+          export DEPLOY_ENV_REPORT
+
           email_status=0
           if "${COMPOSE[@]}" exec -T --interactive=false \
-            --env DEPLOY_SHA --env DEPLOY_RUN_URL \
+            --env DEPLOY_SHA --env DEPLOY_RUN_URL --env DEPLOY_ENV_REPORT \
             nestjs_app xvfb-run --auto-servernum \
             --server-args '-screen 0 1280x1024x24' \
             node scripts/send-deployment-success-email.mjs </dev/null; then

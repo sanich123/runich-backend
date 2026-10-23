@@ -50,8 +50,29 @@ Workflow:
 4. отправляет deployment-письмо и очищает Docker-кэш.
 
 Stage хранит PostgreSQL и Let's Encrypt в named volumes. Не удаляйте их.
-`/opt/runich-stage/.env` содержит Compose-настройки, `app.env` — настройки API и
-worker; оба файла должны иметь режим `0600`.
+`/opt/runich-stage/.env` — единственный источник настроек Compose, API и worker;
+файл должен иметь режим `0600`. При первом успешном Stage-деплое оставшийся
+`app.env` объединяется в `.env`, проверяется до миграции и удаляется после
+проверки readiness. Валидатор проверяет обязательные ключи для БД, API, S3,
+модерации, OAuth, почты и Grafana, а также ожидаемые настройки конкретной среды.
+Observe остаётся необязательным и включается только при наличии обеих его
+переменных. Mail.ru SMTP fallback обязателен в обеих средах.
+
+Обязательны в обеих средах: `DATABASE_URL_DOCKER`, `APP_ENV`, `JWT_SECRET`,
+`S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_ACCESS_KEY`,
+`S3_QUARANTINE_BUCKET`,
+`S3_QUARANTINE_PREFIX`, `YANDEX_SMTP_USER`, `YANDEX_SMTP_PASSWORD`,
+`YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`, `YANDEX_REDIRECT_URI`,
+`VK_CLIENT_ID`, `VK_REDIRECT_URI`, `MAPBOX_ACCESS_TOKEN` и
+`GRAFANA_LOKI_TOKEN`. Stage дополнительно требует `POSTGRES_USER`,
+`POSTGRES_PASSWORD` и `POSTGRES_DB`. Mail.ru SMTP fallback требует оба ключа:
+`MAILRU_SMTP_USER` и `MAILRU_SMTP_PASSWORD`. Пара Observe должна быть либо
+полностью задана, либо полностью отсутствовать. `NSFWJS_MODEL_URL`,
+`AUTH_FRONTEND_REDIRECT_URI` и ключ mock-seed остаются опциональными; без
+`NSFWJS_MODEL_URL` worker использует встроенную модель.
+`S3_ENDPOINT` обязателен в `.env`; регион `ru-1` задан в коде и в `.env` не
+хранится. Stage может не задавать `S3_PUBLIC_URL` — он строится из endpoint и
+bucket; Production задаёт его явно, чтобы ссылки шли через CDN.
 
 ### Production
 
@@ -131,8 +152,8 @@ compose logs --tail=100 nestjs_app background_worker
 curl --fail --silent --show-error http://127.0.0.1:3000/health/ready
 ```
 
-Production `.env` и Stage `.env`/`app.env` не должны попадать в Git. В Stage
-используется bucket `runich-stage`, в Production — `runich-production`.
+Production `.env` и Stage `.env` не должны попадать в Git. В Stage используется
+bucket `runich-stage`, в Production — `runich-production`.
 
 ## SMTP и deployment-письмо
 
@@ -142,8 +163,8 @@ Production `.env` и Stage `.env`/`app.env` не должны попадать �
 ```text
 YANDEX_SMTP_USER
 YANDEX_SMTP_PASSWORD
-MAILRU_SMTP_USER       # optional fallback
-MAILRU_SMTP_PASSWORD   # optional fallback
+MAILRU_SMTP_USER       # required fallback
+MAILRU_SMTP_PASSWORD   # required fallback
 ```
 
 Deployment-письмо запускается внутри API-контейнера под Xvfb и включает карту

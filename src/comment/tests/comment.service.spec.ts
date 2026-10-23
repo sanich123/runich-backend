@@ -16,6 +16,7 @@ function createPrismaMock() {
     commentLike: { create: asyncMock(), findUnique: asyncMock(), delete: asyncMock(), findMany: asyncMock() },
     profile: { findUnique: asyncMock() },
     emailNotificationJob: { create: asyncMock() },
+    userBlock: { findFirst: asyncMock(), findMany: asyncMock() },
     notification: { create: asyncMock() },
     pushDeviceToken: { findFirst: asyncMock() },
     pushNotificationJob: { create: asyncMock() },
@@ -34,10 +35,12 @@ describe('CommentService', () => {
       comments: [{ ...comment, commentLikes: [like] }],
       _count: { comments: 2 },
     });
+    prisma.comment.count.mockResolvedValue(2);
     prisma.comment.create.mockResolvedValue(comment);
     prisma.comment.delete.mockResolvedValue(comment);
     prisma.comment.update.mockResolvedValue(comment);
     prisma.comment.findUnique.mockResolvedValue({
+      moderationStatus: 'visible',
       comment: 'Hello',
       profile: { name: 'Ann', surname: 'Runner' },
       activity: { id: 'activity-1' },
@@ -105,6 +108,7 @@ describe('CommentService', () => {
         select: {
           comments: expect.objectContaining({
             where: {
+              moderationStatus: 'visible',
               OR: [
                 { date: { lt: new Date('2026-08-20T11:00:00.000Z') } },
                 { date: new Date('2026-08-20T11:00:00.000Z'), id: { lt: 'cursor-comment' } },
@@ -194,6 +198,7 @@ describe('CommentService', () => {
       { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
     );
     prisma.comment.findUnique.mockResolvedValue({
+      moderationStatus: 'visible',
       comment: 'Hello',
       profile: { name: 'Ann', surname: 'Runner' },
       activity: { id: 'activity-1' },
@@ -214,6 +219,7 @@ describe('CommentService', () => {
       { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
     );
     prisma.comment.findUnique.mockResolvedValue({
+      moderationStatus: 'visible',
       activity: { id: 'activity-1' },
       commentLikes: [{ id: 'like-1', authorId: 'author-1' }],
     });
@@ -221,6 +227,77 @@ describe('CommentService', () => {
     await expect(service.getCommentLikesLengthByCommentId('comment-1', 'owner-1')).resolves.toEqual([
       { id: 'like-1', authorId: 'author-1' },
     ]);
+    expect(prisma.comment.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('filters blocked authors from comment lists, counts, and likes', async () => {
+    const prisma = createPrismaMock();
+    const activityService = { canAccessActivity: asyncMock().mockResolvedValue(true) };
+    const moderationAccess = {
+      areBlocked: asyncMock().mockResolvedValue(false),
+      blockedUserIds: asyncMock().mockResolvedValue(['blocked-user']),
+    };
+    const service = new CommentService(
+      prisma as never,
+      {} as never,
+      activityService as never,
+      undefined,
+      moderationAccess as never,
+    );
+    prisma.activity.findUnique.mockResolvedValue({ comments: [{ id: 'comment-1', commentLikes: [] }] });
+    prisma.comment.count.mockResolvedValue(1);
+    prisma.comment.findUnique.mockResolvedValue({
+      authorId: 'comment-author',
+      moderationStatus: 'visible',
+      activity: { id: 'activity-1' },
+      commentLikes: [{ id: 'like-1', authorId: 'visible-user' }],
+    });
+
+    await service.getCommentsbyActivityId('activity-1', '10', undefined, 'viewer-1');
+    expect(prisma.activity.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: {
+          comments: expect.objectContaining({
+            where: expect.objectContaining({
+              moderationStatus: 'visible',
+              authorId: { notIn: ['blocked-user'] },
+            }),
+            select: expect.objectContaining({
+              commentLikes: {
+                where: { authorId: { notIn: ['blocked-user'] } },
+                select: { authorId: true, id: true },
+              },
+            }),
+          }),
+        },
+      }),
+    );
+    await expect(service.getCommentsLengthbyActivityId('activity-1', 'viewer-1')).resolves.toBe(1);
+    expect(prisma.comment.count).toHaveBeenCalledWith({
+      where: { activityId: 'activity-1', moderationStatus: 'visible', authorId: { notIn: ['blocked-user'] } },
+    });
+    await expect(service.getCommentLikesLengthByCommentId('comment-1', 'viewer-1')).resolves.toEqual([
+      { id: 'like-1', authorId: 'visible-user' },
+    ]);
+    expect(prisma.comment.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          commentLikes: { where: { authorId: { notIn: ['blocked-user'] } }, select: { authorId: true, id: true } },
+        }),
+      }),
+    );
+
+    moderationAccess.areBlocked.mockResolvedValue(true);
+    await expect(service.getCommentByCommentId('comment-1', 'viewer-1')).rejects.toBeInstanceOf(NotFoundException);
+    expect(activityService.canAccessActivity).toHaveBeenCalledTimes(3);
+  });
+
+  it('hides a moderated comment even from an anonymous direct request', async () => {
+    const prisma = createPrismaMock();
+    const service = new CommentService(prisma as never, {} as never, {} as never);
+    prisma.comment.findUnique.mockResolvedValue({ moderationStatus: 'hidden' });
+
+    await expect(service.getCommentByCommentId('comment-1')).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.comment.findUnique).toHaveBeenCalledTimes(1);
   });
 
