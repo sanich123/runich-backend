@@ -73,9 +73,9 @@ export function shouldSeedMockData() {
 export function getCorsOrigins() {
   switch (getAppEnvironment()) {
     case 'production':
-      return ['https://runich-app.ru', 'https://runich.netlify.app', ...LOCAL_CORS_ORIGINS];
+      return ['https://runich-app.ru', ...LOCAL_CORS_ORIGINS];
     case 'stage':
-      return ['https://stage-web.runich-app.ru', 'https://stage--runich.netlify.app', ...LOCAL_CORS_ORIGINS];
+      return ['https://stage-web.runich-app.ru', ...LOCAL_CORS_ORIGINS];
     case 'local':
       return LOCAL_CORS_ORIGINS;
   }

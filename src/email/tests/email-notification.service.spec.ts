@@ -108,7 +108,7 @@ describe('EmailNotificationService', () => {
 
     expect(html).toContain('Nice route');
     expect(html).toContain('alt="Изображение активности"');
-    expect(html).toContain('https://runich.netlify.app');
+    expect(html).toContain('https://runich-app.ru');
     expect(html).toContain('Открыть приложение Runich');
   });
 

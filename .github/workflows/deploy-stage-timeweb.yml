@@ -153,7 +153,7 @@ jobs:
             touch .stage-cert-ready
           fi
 
-          if ! "${COMPOSE[@]}" exec -T nginx test -s "/etc/letsencrypt/live/$STAGE_WEB_DOMAIN/fullchain.pem"; then
+          if ! "${COMPOSE[@]}" exec -T --interactive=false nginx test -s "/etc/letsencrypt/live/$STAGE_WEB_DOMAIN/fullchain.pem" </dev/null; then
             "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps certbot \
               certonly --webroot --webroot-path /var/www/certbot \
               --domain "$STAGE_WEB_DOMAIN" --cert-name "$STAGE_WEB_DOMAIN" \
@@ -161,8 +161,8 @@ jobs:
           fi
 
           install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.web.conf ./nginx.stage.web.d/runich-web.conf
-          "${COMPOSE[@]}" exec -T nginx nginx -t
-          "${COMPOSE[@]}" exec -T nginx nginx -s reload
+          "${COMPOSE[@]}" exec -T --interactive=false nginx nginx -t </dev/null
+          "${COMPOSE[@]}" exec -T --interactive=false nginx nginx -s reload </dev/null
 
           "${COMPOSE[@]}" up -d --force-recreate certbot_renew
 

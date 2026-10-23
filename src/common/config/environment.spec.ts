@@ -69,7 +69,6 @@ describe('environment config', () => {
     process.env.APP_ENV = 'stage';
     expect(getCorsOrigins()).toEqual([
       'https://stage-web.runich-app.ru',
-      'https://stage--runich.netlify.app',
       /^https?:\/\/localhost(?::\d+)?$/,
       /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
       /^https?:\/\/\[::1\](?::\d+)?$/,
@@ -78,7 +77,6 @@ describe('environment config', () => {
     process.env.APP_ENV = 'production';
     expect(getCorsOrigins()).toEqual([
       'https://runich-app.ru',
-      'https://runich.netlify.app',
       /^https?:\/\/localhost(?::\d+)?$/,
       /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
       /^https?:\/\/\[::1\](?::\d+)?$/,
