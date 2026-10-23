@@ -117,7 +117,8 @@ jobs:
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.conf ./nginx.stage.tls.conf
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.web.conf ./nginx.stage.web.conf
           install -d -o "$(id -un)" -g docker -m 0750 ./nginx.stage.web.d
-          install -d -o "$(id -un)" -g docker -m 0750 ./web-stage/releases
+          install -d -o "$(id -un)" -g docker -m 0755 ./web-stage/releases
+          chmod 0755 ./web-stage ./web-stage/releases
           install -d -o "$(id -un)" -g docker -m 0750 ./deploy/grafana
           install -o "$(id -un)" -g docker -m 0644 /tmp/config.alloy ./deploy/grafana/config.alloy
           touch logs.log
