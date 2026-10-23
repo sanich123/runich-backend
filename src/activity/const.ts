@@ -53,7 +53,15 @@ export const ACTIVITY_CARD_SELECT = {
   isFavorite: true,
   media: {
     where: { moderationStatus: 'visible' },
-    select: { id: true, url: true, thumbnail: true, blurhash: true, mediaReviewStatus: true },
+    select: {
+      id: true,
+      url: true,
+      thumbnail: true,
+      blurhash: true,
+      mediaReviewStatus: true,
+      mediaModerationAssetId: true,
+      thumbnailModerationAssetId: true,
+    },
     orderBy: { position: 'asc' },
   },
   mapPhotoUrl: true,

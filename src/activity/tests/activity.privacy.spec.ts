@@ -37,7 +37,6 @@ describe('ActivityService privacy', () => {
         where: {
           userId: 'owner-1',
           moderationStatus: 'visible',
-          url: { not: null },
           activity: { visibility: 'public', moderationStatus: 'visible' },
         },
       }),
@@ -155,6 +154,105 @@ describe('ActivityService privacy', () => {
       ],
     });
     expect(prisma.profile.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns only a blurhash placeholder for queued media and omits rejected media for other viewers', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activityMedia.findMany.mockResolvedValue([
+      {
+        id: 'queued-media',
+        activityId: 'activity-1',
+        activityDate: new Date('2026-10-01T12:00:00.000Z'),
+        position: 0,
+        url: 'https://quarantine.example/private-photo.jpg',
+        thumbnail: 'https://quarantine.example/private-thumbnail.jpg',
+        blurhash: 'blurhash-1',
+        mediaReviewStatus: 'queued',
+        mediaModerationAssetId: 'asset-1',
+      },
+      {
+        id: 'approved-media',
+        activityId: 'activity-1',
+        activityDate: new Date('2026-10-01T12:00:00.000Z'),
+        position: 1,
+        url: 'https://cdn.example/approved-photo.jpg',
+        thumbnail: null,
+        blurhash: 'blurhash-2',
+        mediaReviewStatus: 'approved',
+      },
+      {
+        id: 'rejected-media',
+        activityId: 'activity-1',
+        activityDate: new Date('2026-10-01T12:00:00.000Z'),
+        position: 2,
+        url: null,
+        thumbnail: null,
+        blurhash: 'blurhash-3',
+        mediaReviewStatus: 'rejected',
+        mediaModerationAssetId: 'asset-3',
+      },
+    ]);
+
+    const result = await service.getMediaByUserId('owner-1', '10', undefined, 'viewer-1');
+    expect(result).toMatchObject({
+      media: [
+        {
+          id: 'queued-media',
+          url: null,
+          thumbnail: null,
+          blurhash: 'blurhash-1',
+          mediaReviewStatus: 'queued',
+        },
+        { id: 'approved-media', url: 'https://cdn.example/approved-photo.jpg' },
+      ],
+    });
+    expect(prisma.activityMedia.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.not.objectContaining({ url: expect.anything() }) }),
+    );
+    expect(JSON.stringify(result)).not.toContain('quarantine.example');
+    expect(result?.media[0]).not.toHaveProperty('mediaModerationAssetId');
+  });
+
+  it('resolves quarantine media and thumbnail previews only for their owner', async () => {
+    const prisma = createPrismaMock();
+    const storage = {
+      getOwnerModerationPreviewUrls: asyncMock().mockResolvedValue({
+        'asset-1': 'https://owner-preview.example/photo.jpg',
+        'asset-2': 'https://owner-preview.example/thumbnail.jpg',
+      }),
+    };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    prisma.activityMedia.findMany.mockResolvedValue([
+      {
+        id: 'queued-media',
+        activityId: 'activity-1',
+        activityDate: new Date('2026-10-01T12:00:00.000Z'),
+        position: 0,
+        url: null,
+        thumbnail: null,
+        blurhash: 'blurhash-1',
+        mediaReviewStatus: 'queued',
+        mediaModerationAssetId: 'asset-1',
+        thumbnailModerationAssetId: 'asset-2',
+      },
+    ]);
+
+    const result = await service.getMediaByUserId('owner-1', '10', undefined, 'owner-1');
+    expect(result).toMatchObject({
+      media: [
+        {
+          id: 'queued-media',
+          url: 'https://owner-preview.example/photo.jpg',
+          thumbnail: 'https://owner-preview.example/thumbnail.jpg',
+          blurhash: 'blurhash-1',
+          mediaReviewStatus: 'queued',
+        },
+      ],
+    });
+    expect(storage.getOwnerModerationPreviewUrls).toHaveBeenCalledWith('owner-1', ['asset-1', 'asset-2']);
+    expect(result?.media[0]).not.toHaveProperty('mediaModerationAssetId');
+    expect(result?.media[0]).not.toHaveProperty('thumbnailModerationAssetId');
   });
 
   it('returns only enabled chart metrics and does not couple chart pace to route replay privacy', async () => {

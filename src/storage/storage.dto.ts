@@ -18,6 +18,16 @@ export class PhotoUploadResponseDto {
   @ApiPropertyOptional({ type: String, format: 'uri', description: 'Появляется после автоматического одобрения' })
   url?: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uri',
+    description: 'Временная ссылка на карантин, доступная автору загрузки',
+  })
+  previewUrl?: string;
+
+  @ApiPropertyOptional({ type: String, description: 'Blurhash для показа медиа во время проверки' })
+  blurhash?: string | null;
+
   @ApiPropertyOptional({ type: String, description: 'S3 object key для немодерируемых вложений' })
   key?: string;
 

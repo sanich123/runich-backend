@@ -88,14 +88,21 @@ export class MediaModerationWorkerService {
     } catch (error) {
       const attempts = asset.attempts + 1;
       const exhausted = attempts >= MEDIA_MODERATION_RETRY_LIMIT;
-      await this.prisma.mediaModerationAsset.updateMany({
-        where: { id: asset.id, status: 'processing' },
-        data: {
-          status: exhausted ? 'failed' : 'queued',
-          processingStartedAt: null,
-          ...(exhausted ? { scannedAt: new Date() } : {}),
-        },
-      });
+      if (exhausted) {
+        await this.queueForReview(
+          asset,
+          {},
+          null,
+          new Date(),
+          `Автоматическая проверка завершилась ошибкой после ${attempts} попыток. Требуется ручная проверка.`,
+          'other',
+        );
+      } else {
+        await this.prisma.mediaModerationAsset.updateMany({
+          where: { id: asset.id, status: 'processing' },
+          data: { status: 'queued', processingStartedAt: null },
+        });
+      }
       this.logger.error(
         `Не удалось проверить media upload ${asset.id}${exhausted ? ' после повторов' : ', будет повторная попытка'}`,
         error instanceof Error ? error.stack : String(error),
@@ -232,6 +239,7 @@ export class MediaModerationWorkerService {
     frameCount: number | null,
     scannedAt: Date,
     reason: string,
+    reportReason: 'sexual_content' | 'other' = 'sexual_content',
   ) {
     await this.prisma.$transaction(async (transaction) => {
       const report = await transaction.contentReport.findFirst({
@@ -257,7 +265,7 @@ export class MediaModerationWorkerService {
           targetId: asset.id,
           mediaUploadId: asset.id,
           subjectUserId: asset.ownerId,
-          reason: 'sexual_content',
+          reason: reportReason,
           details: `Автоматическая проверка NSFWJS: ${reason}.${frameCount === null ? '' : ` Кадров проверено: ${frameCount}.`} Решение принимает модератор.`,
           priority: 'high',
         },

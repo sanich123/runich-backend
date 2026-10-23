@@ -21,6 +21,8 @@ export type MediaUploadManifestEntry = {
 
 export type UploadedPhotoBatch = {
   url?: string;
+  previewUrl?: string;
+  blurhash?: string | null;
   key?: string;
   assetId?: string;
   status?: 'queued' | 'processing' | 'review_required' | 'approved' | 'rejected' | 'failed';

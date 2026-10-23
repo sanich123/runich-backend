@@ -9,6 +9,20 @@ function getImageService(url: string) {
   return url.includes('api.mapbox.com') ? 'mapbox' : 'image';
 }
 
+export async function blurhashFromBuffer(buffer: Buffer): Promise<string | null> {
+  try {
+    const image = await sharp(buffer)
+      .resize(BLURHASH_WIDTH, BLURHASH_HEIGHT, { fit: 'inside' })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    return encode(new Uint8ClampedArray(image.data), image.info.width, image.info.height, 4, 3);
+  } catch {
+    return null;
+  }
+}
+
 export async function blurhashFromUrl(url: string, latencyMetrics?: LatencyMetricsService): Promise<string | null> {
   try {
     const service = getImageService(url);

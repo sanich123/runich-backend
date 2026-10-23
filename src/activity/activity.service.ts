@@ -46,6 +46,13 @@ type HomeFeedCursors = {
   followers?: HomeFeedCursor;
   favorites?: HomeFeedCursor;
 };
+type ActivityMediaWithModerationReferences = {
+  url: string | null;
+  thumbnail: string | null;
+  mediaModerationAssetId: string | null;
+  thumbnailModerationAssetId: string | null;
+  [key: string]: unknown;
+};
 
 @Injectable()
 export class ActivityService {
@@ -713,7 +720,25 @@ export class ActivityService {
         where: { id: { in: createdMedia.map(({ id }) => id) } },
         orderBy: { position: 'asc' },
       });
-      return { success: true, media: refreshedMedia };
+      const mediaForResponse = await Promise.all(
+        refreshedMedia.map(async (media: ActivityMediaWithModerationReferences) => {
+          const { mediaModerationAssetId, thumbnailModerationAssetId, ...responseMedia } = media;
+          const [url, thumbnail] = await Promise.all([
+            media.url
+              ? Promise.resolve(media.url)
+              : mediaModerationAssetId
+                ? this.storageService!.getOwnerModerationPreviewUrl(userId, mediaModerationAssetId)
+                : Promise.resolve(null),
+            media.thumbnail
+              ? Promise.resolve(media.thumbnail)
+              : thumbnailModerationAssetId
+                ? this.storageService!.getOwnerModerationPreviewUrl(userId, thumbnailModerationAssetId)
+                : Promise.resolve(null),
+          ]);
+          return { ...responseMedia, ...(url ? { url } : {}), ...(thumbnail ? { thumbnail } : {}) };
+        }),
+      );
+      return { success: true, media: mediaForResponse };
     } catch (error) {
       await Promise.all(promotedKeys.map((key) => this.deleteUploadedRoute(key)));
       handleServiceError(error);

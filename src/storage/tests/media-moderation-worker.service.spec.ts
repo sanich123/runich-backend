@@ -120,7 +120,7 @@ describe('MediaModerationWorkerService', () => {
     });
   });
 
-  it('retries scan failures and marks an upload failed after the retry limit', async () => {
+  it('retries scan failures and sends exhausted uploads to manual review', async () => {
     const prisma = createPrismaMock();
     const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const worker = new MediaModerationWorkerService(prisma as never, {} as never);
@@ -139,10 +139,34 @@ describe('MediaModerationWorkerService', () => {
       ...queuedAsset,
       attempts: MEDIA_MODERATION_RETRY_LIMIT - 1,
     });
+    prisma.contentReport.findFirst.mockResolvedValue(null);
+    prisma.contentReport.create.mockResolvedValue({ id: 'scan-failure-report' });
     await worker.processNextAsset();
-    expect(prisma.mediaModerationAsset.updateMany).toHaveBeenLastCalledWith({
-      where: { id: 'asset-1', status: 'processing' },
-      data: { status: 'failed', processingStartedAt: null, scannedAt: expect.any(Date) },
+    expect(prisma.mediaModerationAsset.update).toHaveBeenCalledWith({
+      where: { id: 'asset-1' },
+      data: expect.objectContaining({
+        status: 'review_required',
+        scores: {},
+        frameCount: null,
+        scannedAt: expect.any(Date),
+        processingStartedAt: null,
+      }),
+    });
+    expect(prisma.contentReport.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        targetType: 'media_upload',
+        targetId: 'asset-1',
+        reason: 'other',
+        details: expect.stringContaining('Требуется ручная проверка'),
+      }),
+      select: { id: true },
+    });
+    expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
+      data: {
+        notificationType: EMAIL_NOTIFICATION_TYPE.moderationReport,
+        sourceId: 'scan-failure-report',
+        status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
+      },
     });
     expect(loggerError).toHaveBeenCalledTimes(2);
     loggerError.mockRestore();

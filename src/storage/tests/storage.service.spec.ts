@@ -462,6 +462,8 @@ describe('StorageService', () => {
       assetId: 'profile-asset',
       status: 'queued',
       contentType: 'image/webp',
+      previewUrl: expect.stringMatching(/^https:\/\/s3\.twcstorage\.ru\/runich-test\/moderation-quarantine\/user-1\//),
+      blurhash: expect.any(String),
     });
     expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input.Key).toMatch(
       /^moderation-quarantine\/user-1\/.+\.webp$/,
@@ -935,6 +937,78 @@ describe('StorageService', () => {
     await expect(new StorageService().getModerationUploadStatuses('user-1', [])).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
+  });
+
+  it('returns quarantine previews only for the owning user and only while an asset is reviewable', async () => {
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.findMany.mockResolvedValue([
+      {
+        id: 'approved',
+        status: 'approved',
+        quarantineKey: 'moderation-quarantine/user-1/approved.webp',
+        publishedKey: 'user-1/uploads/approved.webp',
+      },
+      {
+        id: 'queued',
+        status: 'queued',
+        quarantineKey: 'moderation-quarantine/user-1/queued.webp',
+        publishedKey: null,
+      },
+      {
+        id: 'processing',
+        status: 'processing',
+        quarantineKey: 'moderation-quarantine/user-1/processing.webp',
+        publishedKey: null,
+      },
+      {
+        id: 'review-required',
+        status: 'review_required',
+        quarantineKey: 'moderation-quarantine/user-1/review-required.webp',
+        publishedKey: null,
+      },
+      {
+        id: 'failed',
+        status: 'failed',
+        quarantineKey: 'moderation-quarantine/user-1/failed.webp',
+        publishedKey: null,
+      },
+      {
+        id: 'rejected',
+        status: 'rejected',
+        quarantineKey: 'moderation-quarantine/user-1/rejected.webp',
+        publishedKey: null,
+      },
+    ]);
+    const service = new StorageService(undefined, prisma as never);
+
+    const previews = await service.getOwnerModerationPreviewUrls('user-1', [
+      null,
+      'approved',
+      'queued',
+      'approved',
+      undefined,
+      'processing',
+      'review-required',
+      'failed',
+      'rejected',
+    ]);
+
+    expect(previews.approved).toBe('https://s3.twcstorage.ru/runich-test/user-1/uploads/approved.webp');
+    expect(previews.queued).toContain('/moderation-quarantine/user-1/queued.webp?');
+    expect(previews.processing).toContain('/moderation-quarantine/user-1/processing.webp?');
+    expect(previews['review-required']).toContain('/moderation-quarantine/user-1/review-required.webp?');
+    expect(previews.failed).toContain('/moderation-quarantine/user-1/failed.webp?');
+    expect(previews).not.toHaveProperty('rejected');
+    expect(prisma.mediaModerationAsset.findMany).toHaveBeenCalledWith({
+      where: {
+        ownerId: 'user-1',
+        id: { in: ['approved', 'queued', 'processing', 'review-required', 'failed', 'rejected'] },
+      },
+      select: { id: true, status: true, quarantineKey: true, publishedKey: true },
+    });
+    await expect(service.getOwnerModerationPreviewUrls('user-1', [null, undefined])).resolves.toEqual({});
+    await expect(new StorageService().getOwnerModerationPreviewUrls('user-1', ['asset-1'])).resolves.toEqual({});
+    await expect(service.getOwnerModerationPreviewUrl('user-1', null)).resolves.toBeNull();
   });
 
   it('approves a reviewed asset, copies it to the public prefix, and syncs linked media', async () => {

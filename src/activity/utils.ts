@@ -216,18 +216,28 @@ export function normalizeActivityCardForViewer<T extends Record<string, unknown>
 }
 
 export function hidePendingActivityMediaForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {
-  if (typeof viewerId === 'string' && activity.userId === viewerId) return activity;
   if (!Array.isArray(activity.media)) return activity;
+  const isOwner = typeof viewerId === 'string' && activity.userId === viewerId;
 
   return {
     ...activity,
-    media: activity.media.filter(
-      (media: unknown) =>
-        media !== null &&
-        typeof media === 'object' &&
-        'url' in media &&
-        typeof (media as { url?: unknown }).url === 'string',
-    ),
+    media: activity.media.flatMap((media: unknown) => {
+      if (media === null || typeof media !== 'object' || Array.isArray(media)) return [];
+      const safeMedia = { ...(media as Record<string, unknown>) };
+      const mediaAssetId = safeMedia.mediaModerationAssetId;
+      delete safeMedia.mediaModerationAssetId;
+      delete safeMedia.thumbnailModerationAssetId;
+      if (isOwner) return [safeMedia];
+
+      const isLegacyPublicMedia =
+        !mediaAssetId &&
+        (safeMedia.mediaReviewStatus === null || safeMedia.mediaReviewStatus === undefined) &&
+        typeof safeMedia.url === 'string';
+      if (safeMedia.mediaReviewStatus === 'approved' || isLegacyPublicMedia) return [safeMedia];
+      if (safeMedia.mediaReviewStatus === 'rejected' || safeMedia.mediaReviewStatus === 'failed') return [];
+      if (typeof safeMedia.mediaReviewStatus !== 'string') return [];
+      return [{ ...safeMedia, url: null, thumbnail: null }];
+    }),
   } as T;
 }
 

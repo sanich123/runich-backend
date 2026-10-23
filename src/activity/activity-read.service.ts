@@ -133,7 +133,8 @@ export class ActivityReadService {
         !(await this.accessService.canAccessActivityData(activity, currentUserId))
       )
         return null;
-      const activityForResponse = hidePendingActivityMediaForViewer({ ...activity }, currentUserId);
+      const activityWithOwnerPreviews = await this.resolveActivityMediaForViewer({ ...activity }, currentUserId);
+      const activityForResponse = hidePendingActivityMediaForViewer(activityWithOwnerPreviews, currentUserId);
       delete activityForResponse.moderationStatus;
       const normalizedActivity = hideActivityMapForViewer(
         normalizeActivityDetails(activityForResponse as Record<string, unknown>),
@@ -178,7 +179,6 @@ export class ActivityReadService {
         where: {
           userId: id,
           moderationStatus: 'visible',
-          ...(currentUserId === id ? {} : { url: { not: null } }),
           ...(Object.keys(visibilityFilter).length
             ? { activity: { ...visibilityFilter, moderationStatus: 'visible' } }
             : { activity: { moderationStatus: 'visible' } }),
@@ -203,6 +203,8 @@ export class ActivityReadService {
           thumbnail: true,
           blurhash: true,
           mediaReviewStatus: true,
+          mediaModerationAssetId: true,
+          thumbnailModerationAssetId: true,
         },
       });
       const hasMore = media.length > pageSize;
@@ -215,17 +217,37 @@ export class ActivityReadService {
         thumbnail: string | null;
         blurhash: string | null;
         mediaReviewStatus: string | null;
+        mediaModerationAssetId: string | null;
+        thumbnailModerationAssetId: string | null;
       }>;
       const lastMedia = slicedMedia.at(-1);
+      const mediaForResponse = await this.resolveMediaForViewer(
+        slicedMedia.map(
+          ({
+            id: mediaId,
+            activityId,
+            url,
+            thumbnail,
+            blurhash,
+            mediaReviewStatus,
+            mediaModerationAssetId,
+            thumbnailModerationAssetId,
+          }) => ({
+            id: mediaId,
+            activityId,
+            url,
+            thumbnail,
+            blurhash,
+            mediaReviewStatus,
+            mediaModerationAssetId,
+            thumbnailModerationAssetId,
+          }),
+        ),
+        id,
+        currentUserId,
+      );
       return {
-        media: slicedMedia.map(({ id: mediaId, activityId, url, thumbnail, blurhash, mediaReviewStatus }) => ({
-          id: mediaId,
-          activityId,
-          url,
-          thumbnail,
-          blurhash,
-          mediaReviewStatus,
-        })),
+        media: mediaForResponse,
         hasMore,
         nextCursor:
           hasMore && lastMedia
@@ -240,6 +262,70 @@ export class ActivityReadService {
     } catch (error) {
       handleServiceError(error);
     }
+  }
+
+  private async resolveActivityMediaForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {
+    if (!Array.isArray(activity.media)) return activity;
+    const ownerId = typeof activity.userId === 'string' ? activity.userId : '';
+    return {
+      ...activity,
+      media: await this.resolveMediaForViewer(activity.media, ownerId, viewerId),
+    } as T;
+  }
+
+  private async resolveMediaForViewer(mediaItems: unknown[], ownerId: string, viewerId?: string) {
+    const isOwner = Boolean(ownerId && viewerId === ownerId);
+    const ownerAssetIds = mediaItems.flatMap((item) => {
+      if (item === null || typeof item !== 'object' || Array.isArray(item)) return [];
+      const media = item as Record<string, unknown>;
+      return [media.mediaModerationAssetId, media.thumbnailModerationAssetId].filter(
+        (assetId): assetId is string => typeof assetId === 'string',
+      );
+    });
+    const ownerPreviewUrls =
+      isOwner && viewerId && this.storageService && ownerAssetIds.length
+        ? await this.storageService.getOwnerModerationPreviewUrls(viewerId, ownerAssetIds)
+        : {};
+    const resolvedMedia = await Promise.all(
+      mediaItems.map(async (item) => {
+        if (item === null || typeof item !== 'object' || Array.isArray(item)) return null;
+        const media = { ...(item as Record<string, unknown>) };
+        const mediaAssetId = typeof media.mediaModerationAssetId === 'string' ? media.mediaModerationAssetId : null;
+        const thumbnailAssetId =
+          typeof media.thumbnailModerationAssetId === 'string' ? media.thumbnailModerationAssetId : null;
+        delete media.mediaModerationAssetId;
+        delete media.thumbnailModerationAssetId;
+
+        if (!isOwner) {
+          const isApproved = media.mediaReviewStatus === 'approved';
+          const isLegacyPublicMedia =
+            !mediaAssetId &&
+            (media.mediaReviewStatus === null || media.mediaReviewStatus === undefined) &&
+            typeof media.url === 'string';
+          if (!isApproved && !isLegacyPublicMedia) {
+            if (media.mediaReviewStatus === 'rejected' || media.mediaReviewStatus === 'failed') return null;
+            if (typeof media.mediaReviewStatus !== 'string') return null;
+            return { ...media, url: null, thumbnail: null };
+          }
+          return media;
+        }
+
+        const previewUrl =
+          typeof media.url === 'string' ? media.url : mediaAssetId ? ownerPreviewUrls[mediaAssetId] : null;
+        const previewThumbnail =
+          typeof media.thumbnail === 'string'
+            ? media.thumbnail
+            : thumbnailAssetId
+              ? ownerPreviewUrls[thumbnailAssetId]
+              : null;
+        return {
+          ...media,
+          ...(previewUrl ? { url: previewUrl } : {}),
+          ...(previewThumbnail ? { thumbnail: previewThumbnail } : {}),
+        };
+      }),
+    );
+    return resolvedMedia.filter((media): media is Record<string, unknown> => media !== null);
   }
 
   async getFavoriteActivities(
@@ -264,9 +350,16 @@ export class ActivityReadService {
         select: ACTIVITY_CARD_SELECT,
       });
       const hasMore = activitiesWithExtraItem.length > Number(take);
-      const activities = activitiesWithExtraItem
-        .slice(0, Number(take))
-        .map((activity: Record<string, unknown>) => normalizeActivityCardForViewer(activity, currentUserId));
+      const activities = await Promise.all(
+        activitiesWithExtraItem
+          .slice(0, Number(take))
+          .map(async (activity: Record<string, unknown>) =>
+            normalizeActivityCardForViewer(
+              await this.resolveActivityMediaForViewer(activity, currentUserId),
+              currentUserId,
+            ),
+          ),
+      );
       return {
         activities,
         hasMore,
@@ -302,9 +395,16 @@ export class ActivityReadService {
         select: ACTIVITY_CARD_SELECT,
       });
       const hasMore = activitiesWithExtraItem.length > Number(take);
-      const activities = activitiesWithExtraItem
-        .slice(0, Number(take))
-        .map((activity: Record<string, unknown>) => normalizeActivityCardForViewer(activity, currentUserId));
+      const activities = await Promise.all(
+        activitiesWithExtraItem
+          .slice(0, Number(take))
+          .map(async (activity: Record<string, unknown>) =>
+            normalizeActivityCardForViewer(
+              await this.resolveActivityMediaForViewer(activity, currentUserId),
+              currentUserId,
+            ),
+          ),
+      );
       return {
         activities,
         hasMore,
@@ -346,8 +446,13 @@ export class ActivityReadService {
         orderBy: { date: 'desc' },
         select: ACTIVITY_CARD_SELECT,
       });
-      return activities.map((activity: Record<string, unknown>) =>
-        normalizeActivityCardForViewer(activity, currentUserId),
+      return await Promise.all(
+        activities.map(async (activity: Record<string, unknown>) =>
+          normalizeActivityCardForViewer(
+            await this.resolveActivityMediaForViewer(activity, currentUserId),
+            currentUserId,
+          ),
+        ),
       );
     } catch (error) {
       handleServiceError(error);
@@ -380,7 +485,9 @@ export class ActivityReadService {
                   'url', am."url",
                   'thumbnail', am."thumbnail",
                   'blurhash', am."blurhash",
-                  'mediaReviewStatus', am."media_review_status"
+                  'mediaReviewStatus', am."media_review_status",
+                  'mediaModerationAssetId', am."media_moderation_asset_id",
+                  'thumbnailModerationAssetId', am."thumbnail_moderation_asset_id"
                 )
                 ORDER BY am."position" ASC
               )
@@ -464,9 +571,16 @@ export class ActivityReadService {
         LIMIT ${Number(take) + 1}::int
       `;
       const hasMore = activitiesWithExtraItem.length > Number(take);
-      const activities = activitiesWithExtraItem
-        .slice(0, Number(take))
-        .map((activity: ActivityFeedSqlRow) => normalizeActivityCardForViewer(activity, currentUserId));
+      const activities = await Promise.all(
+        activitiesWithExtraItem
+          .slice(0, Number(take))
+          .map(async (activity: ActivityFeedSqlRow) =>
+            normalizeActivityCardForViewer(
+              await this.resolveActivityMediaForViewer(activity, currentUserId),
+              currentUserId,
+            ),
+          ),
+      );
       const currentUserProfile =
         typeof this.accountService.getAccountByUserId === 'function'
           ? await this.accountService.getAccountByUserId(currentUserId)

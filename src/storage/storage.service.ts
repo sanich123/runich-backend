@@ -25,6 +25,7 @@ import { dirname, extname } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { normalizeImage } from 'src/common/images/image-processing';
+import { blurhashFromBuffer } from 'src/common/images/blurhash';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { ActivityHeartRateSampleObject, ActivityMediaObject, LocationObject } from 'src/activity/activity.dto';
@@ -126,6 +127,7 @@ export class StorageService {
       if (!input) throw new BadRequestException('Не удалось прочитать загруженный файл');
 
       const normalizedImage = file.mimetype.startsWith('image/') ? await this.normalizeImage(input) : undefined;
+      const blurhash = normalizedImage ? await blurhashFromBuffer(normalizedImage) : null;
       const extension = normalizedImage ? 'webp' : this.getExtension(file.originalname, file.mimetype);
       const mediaId = manifestEntry?.mediaId ?? randomUUID();
       const role = manifestEntry?.role ?? 'media';
@@ -140,6 +142,7 @@ export class StorageService {
           contentType: normalizedImage ? 'image/webp' : file.mimetype,
           contentLength: normalizedImage?.length ?? fileSize,
           body: normalizedImage ?? (file.path ? (stream = createReadStream(file.path)) : file.buffer!),
+          blurhash,
         });
       }
 
@@ -236,6 +239,7 @@ export class StorageService {
     contentType: string;
     contentLength: number;
     body: Buffer | Uint8Array | Readable;
+    blurhash?: string | null;
   }) {
     if (!this.prisma) throw new ServiceUnavailableException('Проверка загружаемых медиафайлов не настроена');
     const publicBucket = this.assertConfigured();
@@ -246,6 +250,7 @@ export class StorageService {
 
     const assetId = randomUUID();
     const quarantineKey = `${this.settings.quarantinePrefix}${input.userId}/${assetId}.${input.extension}`;
+    const previewUrl = await this.getQuarantinePreviewUrl(quarantineKey);
     await this.measureS3('putQuarantineObject', () =>
       this.client.send(
         new PutObjectCommand({
@@ -273,7 +278,13 @@ export class StorageService {
         },
         select: { id: true, status: true, contentType: true },
       });
-      return { assetId: asset.id, status: asset.status, contentType: asset.contentType };
+      return {
+        assetId: asset.id,
+        status: asset.status,
+        contentType: asset.contentType,
+        previewUrl,
+        ...(input.blurhash ? { blurhash: input.blurhash } : {}),
+      };
     } catch (error) {
       await this.deleteQuarantineObject(quarantineKey).catch(() => undefined);
       throw error;
@@ -343,6 +354,32 @@ export class StorageService {
         contentType: asset.contentType,
       })),
     };
+  }
+
+  async getOwnerModerationPreviewUrl(ownerId: string, assetId: string | null | undefined) {
+    if (!assetId) return null;
+    return (await this.getOwnerModerationPreviewUrls(ownerId, [assetId]))[assetId] ?? null;
+  }
+
+  async getOwnerModerationPreviewUrls(ownerId: string, assetIds: Array<string | null | undefined>) {
+    if (!this.prisma) return {};
+    const uniqueAssetIds = [...new Set(assetIds.filter((assetId): assetId is string => Boolean(assetId)))];
+    if (!uniqueAssetIds.length) return {};
+    const assets = await this.prisma.mediaModerationAsset.findMany({
+      where: { ownerId, id: { in: uniqueAssetIds } },
+      select: { id: true, status: true, quarantineKey: true, publishedKey: true },
+    });
+    const previewUrls: Record<string, string> = {};
+    await Promise.all(
+      assets.map(async (asset: { id: string; status: string; quarantineKey: string; publishedKey: string | null }) => {
+        if (asset.status === 'approved' && asset.publishedKey) {
+          previewUrls[asset.id] = this.getPublicUrl(asset.publishedKey);
+        } else if (['queued', 'processing', 'review_required', 'failed'].includes(asset.status)) {
+          previewUrls[asset.id] = await this.getQuarantinePreviewUrl(asset.quarantineKey);
+        }
+      }),
+    );
+    return previewUrls;
   }
 
   async downloadQuarantineObjectToFile(key: string, filePath: string) {
