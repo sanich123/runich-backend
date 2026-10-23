@@ -23,6 +23,7 @@ jobs:
       url: https://stage.runich-app.ru
     env:
       STAGE_DOMAIN: stage.runich-app.ru
+      STAGE_WEB_DOMAIN: stage-web.runich-app.ru
       DEPLOY_IMAGE: ghcr.io/sanich123/runich-backend:stage-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
@@ -79,14 +80,27 @@ jobs:
           docker save "$DEPLOY_IMAGE" | gzip -1 | "${SSH[@]}" "$TARGET" 'gzip -d | docker load'
           unset STAGE_DEPLOY_SSH_KEY
 
-          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf nginx.stage.conf deploy/grafana/config.alloy "$TARGET:/tmp/"
+          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf nginx.stage.conf nginx.stage.web.conf deploy/grafana/config.alloy "$TARGET:/tmp/"
 
-          "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
+          "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' STAGE_WEB_DOMAIN='$STAGE_WEB_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
           set -euo pipefail
           cd /opt/runich-stage
 
           test -s .env
           chmod 600 .env
+          set_auth_frontend_redirect() {
+            file="$1"
+            tmp="$(mktemp .env.XXXXXX)"
+            awk -F= '$1 != "AUTH_FRONTEND_REDIRECT_URI" { print }' "$file" > "$tmp"
+            printf 'AUTH_FRONTEND_REDIRECT_URI=https://stage-web.runich-app.ru/login-from-url\n' >> "$tmp"
+            chmod --reference="$file" "$tmp"
+            chown --reference="$file" "$tmp"
+            mv "$tmp" "$file"
+          }
+          set_auth_frontend_redirect .env
+          if [ -f app.env ]; then
+            set_auth_frontend_redirect app.env
+          fi
           if [ -f app.env ]; then
             chmod 600 app.env
             docker run --rm --user "$(id -u):$(id -g)" \
@@ -101,11 +115,14 @@ jobs:
           install -o "$(id -un)" -g docker -m 0640 /tmp/docker-compose.timeweb.stage.yml ./docker-compose.timeweb.stage.yml
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.bootstrap.conf ./nginx.stage.bootstrap.conf
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.conf ./nginx.stage.tls.conf
+          install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.web.conf ./nginx.stage.web.conf
+          install -d -o "$(id -un)" -g docker -m 0750 ./nginx.stage.web.d
+          install -d -o "$(id -un)" -g docker -m 0750 ./web-stage/releases
           install -d -o "$(id -un)" -g docker -m 0750 ./deploy/grafana
           install -o "$(id -un)" -g docker -m 0644 /tmp/config.alloy ./deploy/grafana/config.alloy
           touch logs.log
           chmod 0644 logs.log
-          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/nginx.stage.conf /tmp/config.alloy
+          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/nginx.stage.conf /tmp/nginx.stage.web.conf /tmp/config.alloy
 
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
           COMPOSE=(docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml)
@@ -134,6 +151,17 @@ jobs:
             "${COMPOSE[@]}" up -d --force-recreate nginx
             touch .stage-cert-ready
           fi
+
+          if ! "${COMPOSE[@]}" exec -T nginx test -s "/etc/letsencrypt/live/$STAGE_WEB_DOMAIN/fullchain.pem"; then
+            "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps certbot \
+              certonly --webroot --webroot-path /var/www/certbot \
+              --domain "$STAGE_WEB_DOMAIN" --cert-name "$STAGE_WEB_DOMAIN" \
+              --non-interactive --agree-tos --register-unsafely-without-email </dev/null
+          fi
+
+          install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.web.conf ./nginx.stage.web.d/runich-web.conf
+          "${COMPOSE[@]}" exec -T nginx nginx -t
+          "${COMPOSE[@]}" exec -T nginx nginx -s reload
 
           "${COMPOSE[@]}" up -d --force-recreate certbot_renew
 
@@ -170,6 +198,12 @@ jobs:
           if ! curl --fail --silent --show-error --max-time 10 \
             --resolve "$STAGE_DOMAIN:443:127.0.0.1" "https://$STAGE_DOMAIN/health/ready" >/dev/null; then
             echo 'Stage HTTPS readiness failed.' >&2
+            exit 1
+          fi
+
+          if ! curl --silent --show-error --max-time 10 \
+            --resolve "$STAGE_WEB_DOMAIN:443:127.0.0.1" "https://$STAGE_WEB_DOMAIN/" >/dev/null; then
+            echo 'Stage web HTTPS certificate/route check failed.' >&2
             exit 1
           fi
 

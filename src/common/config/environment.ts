@@ -40,8 +40,8 @@ const LOCAL_CORS_ORIGINS = [
 
 const DEFAULT_AUTH_FRONTEND_REDIRECT_URIS: Record<AppEnvironment, string> = {
   local: 'http://localhost:5173/login-from-url',
-  stage: 'https://stage--runich.netlify.app/login-from-url',
-  production: 'https://runich.netlify.app/login-from-url',
+  stage: 'https://stage-web.runich-app.ru/login-from-url',
+  production: 'https://runich-app.ru/login-from-url',
 };
 
 export function getAppEnvironment(): AppEnvironment {
@@ -73,9 +73,9 @@ export function shouldSeedMockData() {
 export function getCorsOrigins() {
   switch (getAppEnvironment()) {
     case 'production':
-      return ['https://runich.netlify.app', ...LOCAL_CORS_ORIGINS];
+      return ['https://runich-app.ru', 'https://runich.netlify.app', ...LOCAL_CORS_ORIGINS];
     case 'stage':
-      return ['https://stage--runich.netlify.app', ...LOCAL_CORS_ORIGINS];
+      return ['https://stage-web.runich-app.ru', 'https://stage--runich.netlify.app', ...LOCAL_CORS_ORIGINS];
     case 'local':
       return LOCAL_CORS_ORIGINS;
   }

@@ -40,7 +40,7 @@ describe('environment config', () => {
     expect(getAuthFrontendRedirectUri()).toBe('https://example.test/callback');
 
     delete process.env.AUTH_FRONTEND_REDIRECT_URI;
-    expect(getAuthFrontendRedirectUri()).toBe('https://stage--runich.netlify.app/login-from-url');
+    expect(getAuthFrontendRedirectUri()).toBe('https://stage-web.runich-app.ru/login-from-url');
   });
 
   it('enables Swagger and mock data only outside production', () => {
@@ -68,6 +68,7 @@ describe('environment config', () => {
 
     process.env.APP_ENV = 'stage';
     expect(getCorsOrigins()).toEqual([
+      'https://stage-web.runich-app.ru',
       'https://stage--runich.netlify.app',
       /^https?:\/\/localhost(?::\d+)?$/,
       /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
@@ -76,6 +77,7 @@ describe('environment config', () => {
 
     process.env.APP_ENV = 'production';
     expect(getCorsOrigins()).toEqual([
+      'https://runich-app.ru',
       'https://runich.netlify.app',
       /^https?:\/\/localhost(?::\d+)?$/,
       /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,

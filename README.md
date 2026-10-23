@@ -164,8 +164,8 @@ environment-specific:
 | Environment | `YANDEX_REDIRECT_URI` and `VK_REDIRECT_URI`            | `AUTH_FRONTEND_REDIRECT_URI`                       |
 | ----------- | ------------------------------------------------------ | -------------------------------------------------- |
 | local       | `http://localhost:3000/auth/{provider}/callback`       | `http://localhost:5173/login-from-url`             |
-| stage       | `https://stage.runich-app.ru/auth/{provider}/callback` | `https://stage--runich.netlify.app/login-from-url` |
-| production  | `https://api.runich-app.ru/auth/{provider}/callback`   | `https://runich.netlify.app/login-from-url`        |
+| stage       | `https://stage.runich-app.ru/auth/{provider}/callback` | `https://stage-web.runich-app.ru/login-from-url`   |
+| production  | `https://api.runich-app.ru/auth/{provider}/callback`   | `https://runich-app.ru/login-from-url`             |
 
 Replace `{provider}` with `yandex` or `vk` when registering the callback in
 the corresponding provider dashboard. The provider callback is always an API
