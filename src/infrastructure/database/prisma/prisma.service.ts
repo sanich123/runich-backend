@@ -37,6 +37,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   readonly moderationAction!: DatabaseRepositories['moderationAction'];
   readonly moderationAppeal!: DatabaseRepositories['moderationAppeal'];
   readonly mediaModerationAsset!: DatabaseRepositories['mediaModerationAsset'];
+  readonly adminRoleAssignment!: DatabaseRepositories['adminRoleAssignment'];
+  readonly adminAccessAudit!: DatabaseRepositories['adminAccessAudit'];
 
   constructor(@Optional() @Inject(LatencyMetricsService) latencyMetrics?: LatencyMetricsService) {
     this.client = databaseClient;

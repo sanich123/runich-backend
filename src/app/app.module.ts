@@ -19,6 +19,7 @@ import { LoadTestModule } from 'src/load-test/load-test.module';
 import { observeImports } from 'src/common/observe/observe.config';
 import { NotificationModule } from 'src/notification/notification.module';
 import { ModerationModule } from 'src/moderation/moderation.module';
+import { AdminModule } from 'src/admin/admin.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ModerationModule } from 'src/moderation/moderation.module';
     EmailModule,
     NotificationModule,
     ModerationModule,
+    AdminModule,
     AuthModule,
     HealthModule,
     StorageModule,

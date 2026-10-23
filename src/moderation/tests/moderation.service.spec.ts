@@ -2,7 +2,6 @@ import { BadRequestException, ConflictException, ForbiddenException, NotFoundExc
 import { asyncMock, transactionMock } from 'src/tests/helpers';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
-import { MODERATOR_EMAIL } from '../moderation.constants';
 import { ModerationService } from '../moderation.service';
 
 function createPrismaMock() {
@@ -43,22 +42,6 @@ function createPrismaMock() {
 }
 
 describe('ModerationService', () => {
-  it('grants moderator access only to the confirmed configured email', async () => {
-    const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
-    prisma.user.findUnique.mockResolvedValue({
-      email: ` ${MODERATOR_EMAIL.toUpperCase()} `,
-      emailConfirmedAt: new Date(),
-    });
-
-    await expect(service.getModeratorAccess('moderator-1')).resolves.toEqual({ isModerator: true });
-
-    prisma.user.findUnique.mockResolvedValue({ email: MODERATOR_EMAIL, emailConfirmedAt: null });
-    await expect(service.getModeratorAccess('moderator-1')).resolves.toEqual({ isModerator: false });
-    prisma.user.findUnique.mockResolvedValue(null);
-    await expect(service.getModeratorAccess('unknown')).resolves.toEqual({ isModerator: false });
-  });
-
   it('creates one report and queues a moderator email without exposing the reporter in the email job', async () => {
     const prisma = createPrismaMock();
     const service = new ModerationService(prisma as never, {} as never);

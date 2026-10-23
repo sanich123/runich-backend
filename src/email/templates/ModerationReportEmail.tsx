@@ -29,7 +29,7 @@ export function ModerationReportEmail({
   reportedProfile,
 }: ModerationReportEmailProps) {
   const moderationUrl = new URL(getAuthFrontendRedirectUri());
-  moderationUrl.pathname = '/profile/moderation';
+  moderationUrl.pathname = '/admin';
   moderationUrl.search = '';
   moderationUrl.hash = '';
   moderationUrl.searchParams.set('reportId', reportId);

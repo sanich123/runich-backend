@@ -1,0 +1,108 @@
+// use prisma-8
+
+model Activity {
+  id                  Uuid                 @id(map: "Activity_pkey") @default(sql`gen_random_uuid()`)
+  date                TimestamptzString(6) @default(now())
+  timeZone            VarChar(64)?         @map("time_zone")
+  createdAt           TimestamptzString(6) @default(now())
+  updatedAt           TimestamptzString(6)
+  description         String?
+  distance            Float
+  elevationGain       Float?
+  duration            Int
+  emotion             String?
+  routeStorageKey     VarChar(512)?        @map("route_storage_key")
+  routeFormatVersion  Int?                 @map("route_format_version")
+  routePointCount     Int?                 @map("route_point_count")
+  routeSizeBytes      Int?                 @map("route_size_bytes")
+  routeChecksum       VarChar(64)?         @map("route_checksum")
+  heartRateStorageKey VarChar(512)?        @map("heart_rate_storage_key")
+  userId              Uuid                 @map("user_id")
+  speed               Float
+  sport               String
+  title               String?
+  kilometresSplit     Jsonb?
+  mapPhotoUrl         String?
+  routeOnlyMapPhotoUrl String?             @map("route_only_map_photo_url")
+  mediaProcessingStatus VarChar(16)       @default("queued") @map("media_processing_status")
+  locationName        String?             @map("location_name")
+  weatherTemperature  Float?              @map("weather_temperature")
+  weatherWindSpeed    Float?              @map("weather_wind_speed")
+  weatherCode         Int?                @map("weather_code")
+  caloriesActive      Int?                @map("calories_active")
+  locationEnrichmentStatus VarChar(16)    @default("queued") @map("location_enrichment_status")
+  visibility          ActivityVisibility   @default(public)
+  hideMap             Boolean              @default(false) @map("hide_map")
+  isFavorite          Boolean              @default(false) @map("is_favorite")
+  mapPhotoUrlBlurhash String?
+  profileId           Uuid
+  source              VarChar(32)?
+  sourceActivityId    VarChar(128)?
+  steps               Int?
+  averageHeartRate    Int?                 @map("average_heart_rate")
+  minHeartRate        Int?                 @map("min_heart_rate")
+  maxHeartRate        Int?                 @map("max_heart_rate")
+  moderationStatus    ModerationContentStatus @default(visible) @map("moderation_status")
+  comments            Comment[]
+  likes               Like[]
+  media               ActivityMedia[]
+  contentReports      ContentReport[]      @relation("ContentReportActivity")
+  profile             Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Activity_profileId_fkey", index: false)
+  user                User                 @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Activity_user_id_fkey", index: false)
+
+  @@unique([userId, source, sourceActivityId], map: "Activity_user_id_source_sourceActivityId_key")
+  @@index([userId, date, id], map: "Activity_user_id_date_id_idx")
+  @@index([userId, visibility, date, id], map: "Activity_user_id_visibility_date_id_idx")
+  @@index([visibility, date, id], map: "Activity_visibility_date_id_idx")
+  @@map("Activity")
+}
+
+model ActivityMedia {
+  id                          Uuid                     @id(map: "ActivityMedia_pkey") @default(sql`gen_random_uuid()`)
+  activityId                  Uuid                     @map("activity_id")
+  userId                      Uuid                     @map("user_id")
+  activityDate                TimestamptzString(6)     @map("activity_date")
+  position                    Int
+  url                         String?
+  thumbnail                   String?
+  blurhash                    String?
+  moderationStatus            ModerationContentStatus  @default(visible) @map("moderation_status")
+  mediaModerationAssetId      Uuid?                    @unique @map("media_moderation_asset_id")
+  thumbnailModerationAssetId  Uuid?                    @unique @map("thumbnail_moderation_asset_id")
+  mediaReviewStatus           MediaModerationStatus?   @map("media_review_status")
+  createdAt                   TimestamptzString(6)     @default(now()) @map("created_at")
+  activity                    Activity                 @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "ActivityMedia_activity_id_fkey", index: false)
+  mediaModerationAsset        MediaModerationAsset?    @relation("ActivityMediaMediaAsset", fields:[mediaModerationAssetId], references:[id], onDelete: SetNull)
+  thumbnailModerationAsset    MediaModerationAsset?    @relation("ActivityMediaThumbnailAsset", fields:[thumbnailModerationAssetId], references:[id], onDelete: SetNull)
+  contentReports              ContentReport[]          @relation("ContentReportMedia")
+
+  @@unique([activityId, position], map: "ActivityMedia_activity_id_position_key")
+  @@index([userId, activityDate, activityId, position], map: "ActivityMedia_user_id_activity_date_idx")
+  @@index([activityId], map: "ActivityMedia_activity_id_idx")
+  @@map("ActivityMedia")
+}
+
+model ActivityMigrationJob {
+  id                  Uuid                  @id(map: "ActivityMigrationJob_pkey") @default(sql`gen_random_uuid()`)
+  userId              Uuid                  @map("user_id")
+  profileId           Uuid
+  archivePath         VarChar(2048)?
+  status              VarChar(32)
+  uploadBytesReceived Int                   @default(0) @map("upload_bytes_received")
+  uploadBytesTotal    Int                   @default(0) @map("upload_bytes_total")
+  uploadUpdatedAt     TimestamptzString(6)?  @map("upload_updated_at")
+  totalActivities     Int                   @default(0)
+  processedActivities Int                   @default(0)
+  importedActivities  Int                   @default(0)
+  skippedActivities   Int                   @default(0)
+  errorMessage        String?
+  createdAt           TimestamptzString(6)  @default(now())
+  startedAt           TimestamptzString(6)?
+  finishedAt          TimestamptzString(6)?
+  profile             Profile               @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "ActivityMigrationJob_profileId_fkey", index: false)
+  user                User                  @relation(fields:[userId], references:[id], onDelete: Cascade, map: "ActivityMigrationJob_user_id_fkey", index: false)
+
+  @@index([status, createdAt], map: "ActivityMigrationJob_status_createdAt_idx")
+  @@index([userId, createdAt], map: "ActivityMigrationJob_user_id_createdAt_idx")
+  @@map("ActivityMigrationJob")
+}

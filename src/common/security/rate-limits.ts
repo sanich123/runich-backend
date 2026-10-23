@@ -12,6 +12,7 @@ export const RATE_LIMITS = {
   feedbackUpload: { limit: 5, ttl: 10 * 60_000 },
   contentReport: { limit: 5, ttl: 10 * 60_000 },
   userBlock: { limit: 20, ttl: 10 * 60_000 },
+  adminAccess: { limit: 20, ttl: 60_000 },
 } as const;
 
 export function RateLimit(limit: number, ttl: number): MethodDecorator {

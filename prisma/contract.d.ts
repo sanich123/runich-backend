@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'32bf1c2fb08dbc31f537920a31bc6cb67cc94a2fe55a09c4069bb2747797dfcf'>;
+  StorageHashBase<'ee87d74127e76bc9e86c47ee60feabc170f0e913cc0ac7892337f26bb162c69d'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -579,6 +579,31 @@ export namespace Models {
     user: public_User;
     readonly [RelationKeys]?: 'profile' | 'user';
   };
+  export type public_AdminAccessAudit = {
+    action: FieldOutputTypes['public']['AdminAccessAudit']['action'];
+    actorEmail: FieldOutputTypes['public']['AdminAccessAudit']['actorEmail'];
+    actorUserId: FieldOutputTypes['public']['AdminAccessAudit']['actorUserId'];
+    createdAt: FieldOutputTypes['public']['AdminAccessAudit']['createdAt'];
+    id: FieldOutputTypes['public']['AdminAccessAudit']['id'];
+    role: FieldOutputTypes['public']['AdminAccessAudit']['role'];
+    targetEmail: FieldOutputTypes['public']['AdminAccessAudit']['targetEmail'];
+    targetUserId: FieldOutputTypes['public']['AdminAccessAudit']['targetUserId'];
+    actor: public_User | null;
+    target: public_User | null;
+    readonly [RelationKeys]?: 'actor' | 'target';
+  };
+  export type public_AdminRoleAssignment = {
+    createdAt: FieldOutputTypes['public']['AdminRoleAssignment']['createdAt'];
+    grantedByUserId: FieldOutputTypes['public']['AdminRoleAssignment']['grantedByUserId'];
+    id: FieldOutputTypes['public']['AdminRoleAssignment']['id'];
+    isActive: FieldOutputTypes['public']['AdminRoleAssignment']['isActive'];
+    role: FieldOutputTypes['public']['AdminRoleAssignment']['role'];
+    updatedAt: FieldOutputTypes['public']['AdminRoleAssignment']['updatedAt'];
+    userId: FieldOutputTypes['public']['AdminRoleAssignment']['userId'];
+    grantedBy: public_User | null;
+    user: public_User;
+    readonly [RelationKeys]?: 'grantedBy' | 'user';
+  };
   export type public_AuthExchange = {
     codeHash: FieldOutputTypes['public']['AuthExchange']['codeHash'];
     consumedAt: FieldOutputTypes['public']['AuthExchange']['consumedAt'];
@@ -922,12 +947,16 @@ export namespace Models {
     updatedAt: FieldOutputTypes['public']['User']['updatedAt'];
     activities: public_Activity[];
     activityMigrationJobs: public_ActivityMigrationJob[];
+    adminAccessAuditAsActor: public_AdminAccessAudit[];
+    adminAccessAuditAsTarget: public_AdminAccessAudit[];
+    adminRoleAssignments: public_AdminRoleAssignment[];
     assignedContentReports: public_ContentReport[];
     authExchanges: public_AuthExchange[];
     blocksCreated: public_UserBlock[];
     blocksReceived: public_UserBlock[];
     contentReportsForUser: public_ContentReport[];
     friends: public_Friend[];
+    grantedAdminRoleAssignments: public_AdminRoleAssignment[];
     mediaModerationAssets: public_MediaModerationAsset[];
     moderationActions: public_ModerationAction[];
     moderationAppeals: public_ModerationAppeal[];
@@ -944,12 +973,16 @@ export namespace Models {
     readonly [RelationKeys]?:
       | 'activities'
       | 'activityMigrationJobs'
+      | 'adminAccessAuditAsActor'
+      | 'adminAccessAuditAsTarget'
+      | 'adminRoleAssignments'
       | 'assignedContentReports'
       | 'authExchanges'
       | 'blocksCreated'
       | 'blocksReceived'
       | 'contentReportsForUser'
       | 'friends'
+      | 'grantedAdminRoleAssignments'
       | 'mediaModerationAssets'
       | 'moderationActions'
       | 'moderationAppeals'
@@ -1005,6 +1038,8 @@ export declare const models: {
     Activity: Models.public_Activity;
     ActivityMedia: Models.public_ActivityMedia;
     ActivityMigrationJob: Models.public_ActivityMigrationJob;
+    AdminAccessAudit: Models.public_AdminAccessAudit;
+    AdminRoleAssignment: Models.public_AdminRoleAssignment;
     AuthExchange: Models.public_AuthExchange;
     Comment: Models.public_Comment;
     CommentLike: Models.public_CommentLike;
@@ -1733,6 +1768,236 @@ type ContractBase = Omit<
                     readonly columns: readonly ['id'];
                   };
                   readonly name: 'ActivityMigrationJob_user_id_fkey';
+                },
+              ];
+            };
+            readonly AdminAccessAudit: {
+              columns: {
+                readonly action: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 16 };
+                  readonly many: false;
+                };
+                readonly actor_email: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 255 };
+                  readonly many: false;
+                };
+                readonly actor_user_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'gen_random_uuid()';
+                  };
+                  readonly many: false;
+                };
+                readonly role: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 32 };
+                  readonly many: false;
+                };
+                readonly target_email: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 255 };
+                  readonly many: false;
+                };
+                readonly target_user_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+              };
+              primaryKey: {
+                readonly columns: readonly ['id'];
+                readonly name: 'AdminAccessAudit_pkey';
+              };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'AdminAccessAudit_actor_user_id_idx_c46ca325';
+                  readonly prefix: 'AdminAccessAudit_actor_user_id_idx';
+                  readonly columns: readonly ['actor_user_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'AdminAccessAudit_created_at_idx';
+                  readonly columns: readonly ['created_at'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'AdminAccessAudit_target_user_id_idx_cc615011';
+                  readonly prefix: 'AdminAccessAudit_target_user_id_idx';
+                  readonly columns: readonly ['target_user_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'AdminAccessAudit';
+                    readonly columns: readonly ['actor_user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Users';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'AdminAccessAudit_actor_user_id_fkey';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'AdminAccessAudit';
+                    readonly columns: readonly ['target_user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Users';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'AdminAccessAudit_target_user_id_fkey';
+                },
+              ];
+            };
+            readonly AdminRoleAssignments: {
+              columns: {
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly granted_by_user_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'gen_random_uuid()';
+                  };
+                  readonly many: false;
+                };
+                readonly is_active: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
+                readonly role: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 32 };
+                  readonly many: false;
+                };
+                readonly updated_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly user_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: {
+                readonly columns: readonly ['id'];
+                readonly name: 'AdminRoleAssignments_pkey';
+              };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['user_id', 'role'];
+                  readonly name: 'AdminRoleAssignments_user_id_role_key';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'AdminRoleAssignments_granted_by_user_id_idx_d055b00f';
+                  readonly prefix: 'AdminRoleAssignments_granted_by_user_id_idx';
+                  readonly columns: readonly ['granted_by_user_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'AdminRoleAssignments_user_id_idx_6c952402';
+                  readonly prefix: 'AdminRoleAssignments_user_id_idx';
+                  readonly columns: readonly ['user_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'AdminRoleAssignments_user_id_is_active_idx';
+                  readonly columns: readonly ['user_id', 'is_active'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'AdminRoleAssignments';
+                    readonly columns: readonly ['user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Users';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'AdminRoleAssignments_user_id_fkey';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'AdminRoleAssignments';
+                    readonly columns: readonly ['granted_by_user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Users';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'AdminRoleAssignments_granted_by_user_id_fkey';
                 },
               ];
             };
@@ -4709,6 +4974,14 @@ type ContractBase = Omit<
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'ActivityMigrationJob';
     };
+    readonly AdminAccessAudit: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'AdminAccessAudit';
+    };
+    readonly AdminRoleAssignments: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'AdminRoleAssignment';
+    };
     readonly AuthExchange: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'AuthExchange';
@@ -5373,6 +5646,173 @@ type ContractBase = Omit<
                 readonly uploadBytesReceived: { readonly column: 'upload_bytes_received' };
                 readonly uploadBytesTotal: { readonly column: 'upload_bytes_total' };
                 readonly uploadUpdatedAt: { readonly column: 'upload_updated_at' };
+                readonly userId: { readonly column: 'user_id' };
+              };
+            };
+          };
+          readonly AdminAccessAudit: {
+            readonly fields: {
+              readonly action: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 16 };
+                };
+              };
+              readonly actorEmail: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 255 };
+                };
+              };
+              readonly actorUserId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly role: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 32 };
+                };
+              };
+              readonly targetEmail: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 255 };
+                };
+              };
+              readonly targetUserId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+            };
+            readonly relations: {
+              readonly actor: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['actorUserId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly target: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['targetUserId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'AdminAccessAudit';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly action: { readonly column: 'action' };
+                readonly actorEmail: { readonly column: 'actor_email' };
+                readonly actorUserId: { readonly column: 'actor_user_id' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly id: { readonly column: 'id' };
+                readonly role: { readonly column: 'role' };
+                readonly targetEmail: { readonly column: 'target_email' };
+                readonly targetUserId: { readonly column: 'target_user_id' };
+              };
+            };
+          };
+          readonly AdminRoleAssignment: {
+            readonly fields: {
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly grantedByUserId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly isActive: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly role: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 32 };
+                };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+            };
+            readonly relations: {
+              readonly grantedBy: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['grantedByUserId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'AdminRoleAssignments';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly grantedByUserId: { readonly column: 'granted_by_user_id' };
+                readonly id: { readonly column: 'id' };
+                readonly isActive: { readonly column: 'is_active' };
+                readonly role: { readonly column: 'role' };
+                readonly updatedAt: { readonly column: 'updated_at' };
                 readonly userId: { readonly column: 'user_id' };
               };
             };
@@ -7570,6 +8010,39 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['userId'];
                 };
               };
+              readonly adminAccessAuditAsActor: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'AdminAccessAudit';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['actorUserId'];
+                };
+              };
+              readonly adminAccessAuditAsTarget: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'AdminAccessAudit';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['targetUserId'];
+                };
+              };
+              readonly adminRoleAssignments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'AdminRoleAssignment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
               readonly assignedContentReports: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -7634,6 +8107,17 @@ type ContractBase = Omit<
                 readonly on: {
                   readonly localFields: readonly ['id'];
                   readonly targetFields: readonly ['userId'];
+                };
+              };
+              readonly grantedAdminRoleAssignments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'AdminRoleAssignment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['grantedByUserId'];
                 };
               };
               readonly mediaModerationAssets: {

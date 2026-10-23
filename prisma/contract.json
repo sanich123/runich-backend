@@ -16,6 +16,14 @@
       "model": "ActivityMigrationJob",
       "namespace": "public"
     },
+    "AdminAccessAudit": {
+      "model": "AdminAccessAudit",
+      "namespace": "public"
+    },
+    "AdminRoleAssignments": {
+      "model": "AdminRoleAssignment",
+      "namespace": "public"
+    },
     "AuthExchange": {
       "model": "AuthExchange",
       "namespace": "public"
@@ -1352,6 +1360,268 @@
               },
               "namespaceId": "public",
               "table": "ActivityMigrationJob"
+            }
+          },
+          "AdminAccessAudit": {
+            "fields": {
+              "action": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 16
+                  }
+                }
+              },
+              "actorEmail": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 255
+                  }
+                }
+              },
+              "actorUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "role": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 32
+                  }
+                }
+              },
+              "targetEmail": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 255
+                  }
+                }
+              },
+              "targetUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "actor": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "actorUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "target": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "targetUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "action": {
+                  "column": "action"
+                },
+                "actorEmail": {
+                  "column": "actor_email"
+                },
+                "actorUserId": {
+                  "column": "actor_user_id"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "role": {
+                  "column": "role"
+                },
+                "targetEmail": {
+                  "column": "target_email"
+                },
+                "targetUserId": {
+                  "column": "target_user_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "AdminAccessAudit"
+            }
+          },
+          "AdminRoleAssignment": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "grantedByUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "isActive": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "role": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 32
+                  }
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "grantedBy": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "grantedByUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "grantedByUserId": {
+                  "column": "granted_by_user_id"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "isActive": {
+                  "column": "is_active"
+                },
+                "role": {
+                  "column": "role"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                },
+                "userId": {
+                  "column": "user_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "AdminRoleAssignments"
             }
           },
           "AuthExchange": {
@@ -4792,6 +5062,51 @@
                   "namespace": "public"
                 }
               },
+              "adminAccessAuditAsActor": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "actorUserId"
+                  ]
+                },
+                "to": {
+                  "model": "AdminAccessAudit",
+                  "namespace": "public"
+                }
+              },
+              "adminAccessAuditAsTarget": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "targetUserId"
+                  ]
+                },
+                "to": {
+                  "model": "AdminAccessAudit",
+                  "namespace": "public"
+                }
+              },
+              "adminRoleAssignments": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "AdminRoleAssignment",
+                  "namespace": "public"
+                }
+              },
               "assignedContentReports": {
                 "cardinality": "1:N",
                 "on": {
@@ -4879,6 +5194,21 @@
                 },
                 "to": {
                   "model": "Friend",
+                  "namespace": "public"
+                }
+              },
+              "grantedAdminRoleAssignments": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "grantedByUserId"
+                  ]
+                },
+                "to": {
+                  "model": "AdminRoleAssignment",
                   "namespace": "public"
                 }
               },
@@ -6376,6 +6706,298 @@
                 "name": "ActivityMigrationJob_pkey"
               },
               "uniques": []
+            },
+            "AdminAccessAudit": {
+              "columns": {
+                "action": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 16
+                  }
+                },
+                "actor_email": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 255
+                  }
+                },
+                "actor_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "role": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 32
+                  }
+                },
+                "target_email": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 255
+                  }
+                },
+                "target_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "AdminAccessAudit_actor_user_id_idx_c46ca325"
+                  },
+                  "name": "AdminAccessAudit_actor_user_id_fkey",
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "actor_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "AdminAccessAudit"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "AdminAccessAudit_target_user_id_idx_cc615011"
+                  },
+                  "name": "AdminAccessAudit_target_user_id_fkey",
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "target_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "AdminAccessAudit"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "actor_user_id"
+                  ],
+                  "name": "AdminAccessAudit_actor_user_id_idx_c46ca325",
+                  "prefix": "AdminAccessAudit_actor_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "created_at"
+                  ],
+                  "name": "AdminAccessAudit_created_at_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "target_user_id"
+                  ],
+                  "name": "AdminAccessAudit_target_user_id_idx_cc615011",
+                  "prefix": "AdminAccessAudit_target_user_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ],
+                "name": "AdminAccessAudit_pkey"
+              },
+              "uniques": []
+            },
+            "AdminRoleAssignments": {
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "granted_by_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "is_active": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "role": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 32
+                  }
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "AdminRoleAssignments_user_id_idx_6c952402"
+                  },
+                  "name": "AdminRoleAssignments_user_id_fkey",
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "AdminRoleAssignments"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "AdminRoleAssignments_granted_by_user_id_idx_d055b00f"
+                  },
+                  "name": "AdminRoleAssignments_granted_by_user_id_fkey",
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "granted_by_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "AdminRoleAssignments"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "granted_by_user_id"
+                  ],
+                  "name": "AdminRoleAssignments_granted_by_user_id_idx_d055b00f",
+                  "prefix": "AdminRoleAssignments_granted_by_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "user_id"
+                  ],
+                  "name": "AdminRoleAssignments_user_id_idx_6c952402",
+                  "prefix": "AdminRoleAssignments_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "user_id",
+                    "is_active"
+                  ],
+                  "name": "AdminRoleAssignments_user_id_is_active_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ],
+                "name": "AdminRoleAssignments_pkey"
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "user_id",
+                    "role"
+                  ],
+                  "name": "AdminRoleAssignments_user_id_role_key"
+                }
+              ]
             },
             "AuthExchange": {
               "columns": {
@@ -10024,7 +10646,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "32bf1c2fb08dbc31f537920a31bc6cb67cc94a2fe55a09c4069bb2747797dfcf"
+    "storageHash": "ee87d74127e76bc9e86c47ee60feabc170f0e913cc0ac7892337f26bb162c69d"
   },
   "capabilities": {
     "postgres": {

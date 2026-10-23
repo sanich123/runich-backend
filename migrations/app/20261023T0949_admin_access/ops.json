@@ -1,0 +1,610 @@
+[
+  {
+    "id": "table.AdminAccessAudit",
+    "label": "Create table \"AdminAccessAudit\"",
+    "summary": "Creates table \"AdminAccessAudit\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "AdminAccessAudit"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"AdminAccessAudit\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AdminAccessAudit\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"AdminAccessAudit\"",
+        "sql": "CREATE TABLE \"public\".\"AdminAccessAudit\" (\n  \"action\" character varying(16) NOT NULL,\n  \"actor_email\" character varying(255) NOT NULL,\n  \"actor_user_id\" uuid,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"role\" character varying(32) NOT NULL,\n  \"target_email\" character varying(255) NOT NULL,\n  \"target_user_id\" uuid,\n  CONSTRAINT \"AdminAccessAudit_pkey\" PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"AdminAccessAudit\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"AdminAccessAudit\"",
+          "r",
+          "p"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.AdminRoleAssignments",
+    "label": "Create table \"AdminRoleAssignments\"",
+    "summary": "Creates table \"AdminRoleAssignments\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "AdminRoleAssignments"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"AdminRoleAssignments\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AdminRoleAssignments\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"AdminRoleAssignments\"",
+        "sql": "CREATE TABLE \"public\".\"AdminRoleAssignments\" (\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"granted_by_user_id\" uuid,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"is_active\" bool DEFAULT true NOT NULL,\n  \"role\" character varying(32) NOT NULL,\n  \"updated_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"user_id\" uuid NOT NULL,\n  CONSTRAINT \"AdminRoleAssignments_pkey\" PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"AdminRoleAssignments\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"AdminRoleAssignments\"",
+          "r",
+          "p"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.AdminRoleAssignments.AdminRoleAssignments_user_id_role_key",
+    "label": "Add unique constraint on \"AdminRoleAssignments\" (user_id, role)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "AdminRoleAssignments_user_id_role_key",
+        "table": "AdminRoleAssignments"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"AdminRoleAssignments_user_id_role_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AdminRoleAssignments_user_id_role_key",
+          "public",
+          "\"public\".\"AdminRoleAssignments\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"AdminRoleAssignments_user_id_role_key\"",
+        "sql": "ALTER TABLE \"public\".\"AdminRoleAssignments\" ADD CONSTRAINT \"AdminRoleAssignments_user_id_role_key\" UNIQUE (\"user_id\", \"role\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify unique constraint \"AdminRoleAssignments_user_id_role_key\" exists on (user_id, role)",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb)) AS \"result\"",
+        "params": [
+          "AdminRoleAssignments_user_id_role_key",
+          "public",
+          "\"public\".\"AdminRoleAssignments\"",
+          "u",
+          "[\"user_id\",\"role\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.AdminAccessAudit.AdminAccessAudit_actor_user_id_idx_c46ca325",
+    "label": "Create index \"AdminAccessAudit_actor_user_id_idx_c46ca325\" on \"AdminAccessAudit\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "AdminAccessAudit_actor_user_id_idx_c46ca325",
+        "table": "AdminAccessAudit"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"AdminAccessAudit_actor_user_id_idx_c46ca325\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AdminAccessAudit_actor_user_id_idx_c46ca325\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"AdminAccessAudit_actor_user_id_idx_c46ca325\"",
+        "sql": "CREATE INDEX \"AdminAccessAudit_actor_user_id_idx_c46ca325\" ON \"public\".\"AdminAccessAudit\" (\"actor_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"AdminAccessAudit_actor_user_id_idx_c46ca325\" exists on \"AdminAccessAudit\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"AdminAccessAudit_actor_user_id_idx_c46ca325\"",
+          "i",
+          "I",
+          "\"public\".\"AdminAccessAudit\"",
+          "btree",
+          "[\"actor_user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.AdminAccessAudit.AdminAccessAudit_created_at_idx",
+    "label": "Create index \"AdminAccessAudit_created_at_idx\" on \"AdminAccessAudit\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "AdminAccessAudit_created_at_idx",
+        "table": "AdminAccessAudit"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"AdminAccessAudit_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AdminAccessAudit_created_at_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"AdminAccessAudit_created_at_idx\"",
+        "sql": "CREATE INDEX \"AdminAccessAudit_created_at_idx\" ON \"public\".\"AdminAccessAudit\" (\"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"AdminAccessAudit_created_at_idx\" exists on \"AdminAccessAudit\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"AdminAccessAudit_created_at_idx\"",
+          "i",
+          "I",
+          "\"public\".\"AdminAccessAudit\"",
+          "btree",
+          "[\"created_at\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.AdminAccessAudit.AdminAccessAudit_target_user_id_idx_cc615011",
+    "label": "Create index \"AdminAccessAudit_target_user_id_idx_cc615011\" on \"AdminAccessAudit\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "AdminAccessAudit_target_user_id_idx_cc615011",
+        "table": "AdminAccessAudit"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"AdminAccessAudit_target_user_id_idx_cc615011\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AdminAccessAudit_target_user_id_idx_cc615011\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"AdminAccessAudit_target_user_id_idx_cc615011\"",
+        "sql": "CREATE INDEX \"AdminAccessAudit_target_user_id_idx_cc615011\" ON \"public\".\"AdminAccessAudit\" (\"target_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"AdminAccessAudit_target_user_id_idx_cc615011\" exists on \"AdminAccessAudit\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"AdminAccessAudit_target_user_id_idx_cc615011\"",
+          "i",
+          "I",
+          "\"public\".\"AdminAccessAudit\"",
+          "btree",
+          "[\"target_user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.AdminRoleAssignments.AdminRoleAssignments_granted_by_user_id_idx_d055b00f",
+    "label": "Create index \"AdminRoleAssignments_granted_by_user_id_idx_d055b00f\" on \"AdminRoleAssignments\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "AdminRoleAssignments_granted_by_user_id_idx_d055b00f",
+        "table": "AdminRoleAssignments"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"AdminRoleAssignments_granted_by_user_id_idx_d055b00f\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AdminRoleAssignments_granted_by_user_id_idx_d055b00f\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"AdminRoleAssignments_granted_by_user_id_idx_d055b00f\"",
+        "sql": "CREATE INDEX \"AdminRoleAssignments_granted_by_user_id_idx_d055b00f\" ON \"public\".\"AdminRoleAssignments\" (\"granted_by_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"AdminRoleAssignments_granted_by_user_id_idx_d055b00f\" exists on \"AdminRoleAssignments\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"AdminRoleAssignments_granted_by_user_id_idx_d055b00f\"",
+          "i",
+          "I",
+          "\"public\".\"AdminRoleAssignments\"",
+          "btree",
+          "[\"granted_by_user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.AdminRoleAssignments.AdminRoleAssignments_user_id_idx_6c952402",
+    "label": "Create index \"AdminRoleAssignments_user_id_idx_6c952402\" on \"AdminRoleAssignments\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "AdminRoleAssignments_user_id_idx_6c952402",
+        "table": "AdminRoleAssignments"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"AdminRoleAssignments_user_id_idx_6c952402\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AdminRoleAssignments_user_id_idx_6c952402\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"AdminRoleAssignments_user_id_idx_6c952402\"",
+        "sql": "CREATE INDEX \"AdminRoleAssignments_user_id_idx_6c952402\" ON \"public\".\"AdminRoleAssignments\" (\"user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"AdminRoleAssignments_user_id_idx_6c952402\" exists on \"AdminRoleAssignments\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"AdminRoleAssignments_user_id_idx_6c952402\"",
+          "i",
+          "I",
+          "\"public\".\"AdminRoleAssignments\"",
+          "btree",
+          "[\"user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.AdminRoleAssignments.AdminRoleAssignments_user_id_is_active_idx",
+    "label": "Create index \"AdminRoleAssignments_user_id_is_active_idx\" on \"AdminRoleAssignments\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "AdminRoleAssignments_user_id_is_active_idx",
+        "table": "AdminRoleAssignments"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"AdminRoleAssignments_user_id_is_active_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AdminRoleAssignments_user_id_is_active_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"AdminRoleAssignments_user_id_is_active_idx\"",
+        "sql": "CREATE INDEX \"AdminRoleAssignments_user_id_is_active_idx\" ON \"public\".\"AdminRoleAssignments\" (\"user_id\", \"is_active\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"AdminRoleAssignments_user_id_is_active_idx\" exists on \"AdminRoleAssignments\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"AdminRoleAssignments_user_id_is_active_idx\"",
+          "i",
+          "I",
+          "\"public\".\"AdminRoleAssignments\"",
+          "btree",
+          "[\"user_id\",\"is_active\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.AdminAccessAudit.AdminAccessAudit_actor_user_id_fkey",
+    "label": "Add foreign key \"AdminAccessAudit_actor_user_id_fkey\" on \"AdminAccessAudit\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "AdminAccessAudit_actor_user_id_fkey",
+        "table": "AdminAccessAudit"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"AdminAccessAudit_actor_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AdminAccessAudit_actor_user_id_fkey",
+          "public",
+          "\"public\".\"AdminAccessAudit\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"AdminAccessAudit_actor_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"AdminAccessAudit\"\nADD CONSTRAINT \"AdminAccessAudit_actor_user_id_fkey\"\nFOREIGN KEY (\"actor_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"AdminAccessAudit_actor_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "AdminAccessAudit_actor_user_id_fkey",
+          "public",
+          "\"public\".\"AdminAccessAudit\"",
+          "f",
+          "[\"actor_user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "n",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.AdminAccessAudit.AdminAccessAudit_target_user_id_fkey",
+    "label": "Add foreign key \"AdminAccessAudit_target_user_id_fkey\" on \"AdminAccessAudit\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "AdminAccessAudit_target_user_id_fkey",
+        "table": "AdminAccessAudit"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"AdminAccessAudit_target_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AdminAccessAudit_target_user_id_fkey",
+          "public",
+          "\"public\".\"AdminAccessAudit\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"AdminAccessAudit_target_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"AdminAccessAudit\"\nADD CONSTRAINT \"AdminAccessAudit_target_user_id_fkey\"\nFOREIGN KEY (\"target_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"AdminAccessAudit_target_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "AdminAccessAudit_target_user_id_fkey",
+          "public",
+          "\"public\".\"AdminAccessAudit\"",
+          "f",
+          "[\"target_user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "n",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.AdminRoleAssignments.AdminRoleAssignments_user_id_fkey",
+    "label": "Add foreign key \"AdminRoleAssignments_user_id_fkey\" on \"AdminRoleAssignments\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "AdminRoleAssignments_user_id_fkey",
+        "table": "AdminRoleAssignments"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"AdminRoleAssignments_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AdminRoleAssignments_user_id_fkey",
+          "public",
+          "\"public\".\"AdminRoleAssignments\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"AdminRoleAssignments_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"AdminRoleAssignments\"\nADD CONSTRAINT \"AdminRoleAssignments_user_id_fkey\"\nFOREIGN KEY (\"user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"AdminRoleAssignments_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "AdminRoleAssignments_user_id_fkey",
+          "public",
+          "\"public\".\"AdminRoleAssignments\"",
+          "f",
+          "[\"user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.AdminRoleAssignments.AdminRoleAssignments_granted_by_user_id_fkey",
+    "label": "Add foreign key \"AdminRoleAssignments_granted_by_user_id_fkey\" on \"AdminRoleAssignments\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "AdminRoleAssignments_granted_by_user_id_fkey",
+        "table": "AdminRoleAssignments"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"AdminRoleAssignments_granted_by_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AdminRoleAssignments_granted_by_user_id_fkey",
+          "public",
+          "\"public\".\"AdminRoleAssignments\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"AdminRoleAssignments_granted_by_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"AdminRoleAssignments\"\nADD CONSTRAINT \"AdminRoleAssignments_granted_by_user_id_fkey\"\nFOREIGN KEY (\"granted_by_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"AdminRoleAssignments_granted_by_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "AdminRoleAssignments_granted_by_user_id_fkey",
+          "public",
+          "\"public\".\"AdminRoleAssignments\"",
+          "f",
+          "[\"granted_by_user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "n",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "data.initial-admin-superusers",
+    "label": "Grant initial admin superuser access",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Users"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "set the initial admin users as superusers",
+        "sql": "UPDATE \"public\".\"Users\"\nSET \"is_super_admin\" = true\nWHERE lower(\"email\") IN ('runich.app@yandex.ru', 'varon-in@yandex.ru', 'aovoronin.piano@gmail.com')"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify all configured admin users are superusers",
+        "sql": "SELECT count(DISTINCT lower(\"email\")) = 3 AS \"result\"\nFROM \"public\".\"Users\"\nWHERE lower(\"email\") IN ('runich.app@yandex.ru', 'varon-in@yandex.ru', 'aovoronin.piano@gmail.com')\n  AND \"is_super_admin\" = true"
+      }
+    ]
+  }
+]

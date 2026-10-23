@@ -44,14 +44,6 @@ import { ModeratorGuard } from './moderator.guard';
 export class ModerationController {
   constructor(@Inject(ModerationService) private readonly moderationService: ModerationService) {}
 
-  @Get('access')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Check moderator access for the current user' })
-  @ApiOkResponse({ description: 'Moderator access status' })
-  async getModeratorAccess(@Req() request: AuthenticatedRequest) {
-    return await this.moderationService.getModeratorAccess(getAuthenticatedUserId(request));
-  }
-
   @Post('reports')
   @UseGuards(JwtAuthGuard)
   @RateLimit(RATE_LIMITS.contentReport.limit, RATE_LIMITS.contentReport.ttl)

@@ -41,7 +41,7 @@ describe('ModerationReportEmail', () => {
     expect(collectText(email)).toContain('Новая жалоба в Runich');
     expect(collectText(email)).toContain('Тип контента: Тренировка');
     expect(collectText(email)).toContain('Причина: Преследование');
-    expect(findModeratorDashboardLink(email)?.href).toBe('http://localhost:5173/profile/moderation?reportId=report-1');
+    expect(findModeratorDashboardLink(email)?.href).toBe('http://localhost:5173/admin?reportId=report-1');
   });
 
   it('builds an appeal email with an appeal deep link and omits report-only details', () => {

@@ -53,7 +53,9 @@ type ModelName =
   | 'UserBlock'
   | 'ModerationAction'
   | 'ModerationAppeal'
-  | 'MediaModerationAsset';
+  | 'MediaModerationAsset'
+  | 'AdminRoleAssignment'
+  | 'AdminAccessAudit';
 
 const relationModels: Record<ModelName, Record<string, ModelName>> = {
   User: {
@@ -67,6 +69,10 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
     receivedNotifications: 'Notification',
     sentNotifications: 'Notification',
     pushDeviceTokens: 'PushDeviceToken',
+    adminRoleAssignments: 'AdminRoleAssignment',
+    grantedAdminRoleAssignments: 'AdminRoleAssignment',
+    adminAccessAuditAsActor: 'AdminAccessAudit',
+    adminAccessAuditAsTarget: 'AdminAccessAudit',
   },
   Profile: {
     activities: 'Activity',
@@ -98,6 +104,8 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
   ModerationAction: {},
   ModerationAppeal: {},
   MediaModerationAsset: {},
+  AdminRoleAssignment: { user: 'User', grantedBy: 'User' },
+  AdminAccessAudit: { actor: 'User', target: 'User' },
 };
 
 const dateFields: Record<ModelName, ReadonlySet<string>> = {
@@ -138,6 +146,8 @@ const dateFields: Record<ModelName, ReadonlySet<string>> = {
   ModerationAction: new Set(['createdAt']),
   ModerationAppeal: new Set(['createdAt', 'reviewedAt']),
   MediaModerationAsset: new Set(['processingStartedAt', 'scannedAt', 'reviewedAt', 'createdAt']),
+  AdminRoleAssignment: new Set(['createdAt', 'updatedAt']),
+  AdminAccessAudit: new Set(['createdAt']),
 };
 
 function normalizeInput(model: ModelName, value: unknown): unknown {
@@ -557,6 +567,8 @@ export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics
     moderationAction: new ModelRepository(client, 'ModerationAction', latencyMetrics),
     moderationAppeal: new ModelRepository(client, 'ModerationAppeal', latencyMetrics),
     mediaModerationAsset: new ModelRepository(client, 'MediaModerationAsset', latencyMetrics),
+    adminRoleAssignment: new ModelRepository(client, 'AdminRoleAssignment', latencyMetrics),
+    adminAccessAudit: new ModelRepository(client, 'AdminAccessAudit', latencyMetrics),
   };
 }
 

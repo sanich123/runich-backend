@@ -9,7 +9,7 @@ const databaseUrl = process.env.DATABASE_URL ?? 'postgresql://placeholder:placeh
 
 export default definePrismaConfig({
   orm: defineConfig({
-    contract: 'prisma/contract.prisma',
+    contract: './prisma/**/*.prisma',
     db: {
       connection: databaseUrl,
     },

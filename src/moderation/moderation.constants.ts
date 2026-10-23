@@ -1,6 +1,3 @@
-export const MODERATOR_EMAIL = 'runich.app@yandex.ru';
-export const MODERATOR_EMAILS = new Set([MODERATOR_EMAIL]);
-
 export const CONTENT_REPORT_TARGET_TYPES = ['activity', 'comment', 'media', 'user'] as const;
 export const MODERATION_TARGET_TYPES = [...CONTENT_REPORT_TARGET_TYPES, 'media_upload'] as const;
 export const CONTENT_REPORT_REASONS = [

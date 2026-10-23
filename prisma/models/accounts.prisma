@@ -1,0 +1,195 @@
+// use prisma-8
+
+model User {
+  id                       Uuid                   @id(map: "Users_pkey") @default(sql`gen_random_uuid()`)
+  instanceId               Uuid?                  @map("instance_id")
+  aud                      VarChar(255)?
+  role                     VarChar(255)?
+  email                    VarChar(255)
+  encryptedPassword        VarChar(255)?          @map("encrypted_password")
+  emailConfirmedAt         TimestamptzString(6)?  @map("email_confirmed_at")
+  invitedAt                TimestamptzString(6)?  @map("invited_at")
+  confirmationToken        VarChar(255)?          @map("confirmation_token")
+  confirmationSentAt       TimestamptzString(6)?  @map("confirmation_sent_at")
+  recoveryToken            VarChar(255)?          @map("recovery_token")
+  recoverySentAt           TimestamptzString(6)?  @map("recovery_sent_at")
+  emailChangeTokenNew      VarChar(255)?          @map("email_change_token_new")
+  emailChange              VarChar(255)?          @map("email_change")
+  emailChangeSentAt        TimestamptzString(6)?  @map("email_change_sent_at")
+  lastSignInAt             TimestamptzString(6)?  @map("last_sign_in_at")
+  rawAppMetaData           Jsonb?                 @map("raw_app_meta_data")
+  rawUserMetaData          Jsonb?                 @map("raw_user_meta_data")
+  isSuperAdmin             Boolean?               @map("is_super_admin")
+  createdAt                TimestamptzString(6)?  @map("created_at")
+  updatedAt                TimestamptzString(6)?  @map("updated_at")
+  phone                    String?
+  phoneConfirmedAt         TimestamptzString(6)?  @map("phone_confirmed_at")
+  phoneChange              String?                @default("") @map("phone_change")
+  phoneChangeToken         VarChar(255)?          @default("") @map("phone_change_token")
+  phoneChangeSentAt        TimestamptzString(6)?  @map("phone_change_sent_at")
+  emailChangeTokenCurrent  VarChar(255)?          @default("") @map("email_change_token_current")
+  emailChangeConfirmStatus SmallInt?              @default(0) @map("email_change_confirm_status")
+  bannedUntil              TimestamptzString(6)?  @map("banned_until")
+  reauthenticationToken    VarChar(255)?          @default("") @map("reauthentication_token")
+  reauthenticationSentAt   TimestamptzString(6)?  @map("reauthentication_sent_at")
+  deletedAt                TimestamptzString(6)?  @map("deleted_at")
+  authProvider             VarChar(32)?           @map("auth_provider")
+  activities               Activity[]
+  activityMigrationJobs    ActivityMigrationJob[]
+  authExchanges            AuthExchange[]
+  friends                  Friend[]
+  profile                  Profile?
+  userSessions             UserSession[]
+  subscriptions            Subscription[]
+  receivedNotifications    Notification[]      @relation("NotificationRecipient")
+  sentNotifications       Notification[]      @relation("NotificationActor")
+  pushDeviceTokens        PushDeviceToken[]
+  submittedContentReports ContentReport[]    @relation("ContentReportReporter")
+  reportedContentSubjects ContentReport[]    @relation("ContentReportSubject")
+  assignedContentReports ContentReport[]     @relation("ContentReportAssignee")
+  contentReportsForUser  ContentReport[]     @relation("ContentReportTargetUser")
+  blocksCreated          UserBlock[]         @relation("UserBlockBlocker")
+  blocksReceived         UserBlock[]         @relation("UserBlockBlocked")
+  moderationActions      ModerationAction[]  @relation("ModerationActionActor")
+  moderationAppeals      ModerationAppeal[]  @relation("ModerationAppealAppellant")
+  reviewedModerationAppeals ModerationAppeal[] @relation("ModerationAppealReviewer")
+  mediaModerationAssets  MediaModerationAsset[] @relation("MediaModerationAssetOwner")
+  reviewedMediaModerationAssets MediaModerationAsset[] @relation("MediaModerationAssetReviewer")
+  adminRoleAssignments AdminRoleAssignment[] @relation("AdminRoleAssignmentTarget")
+  grantedAdminRoleAssignments AdminRoleAssignment[] @relation("AdminRoleAssignmentGrantor")
+  adminAccessAuditAsActor AdminAccessAudit[] @relation("AdminAccessAuditActor")
+  adminAccessAuditAsTarget AdminAccessAudit[] @relation("AdminAccessAuditTarget")
+
+  @@unique([email], map: "Users_email_key")
+  @@unique([phone], map: "Users_phone_key")
+  @@index(expression: sql`email gin_trgm_ops`, type: "gin", name: "Users_email_trgm_idx")
+  @@map("Users")
+}
+
+model Profile {
+  id                    Uuid                   @id(map: "Profile_pkey") @default(sql`gen_random_uuid()`)
+  createdAt             TimestamptzString(6)   @default(now()) @map("created_at")
+  name                  String?
+  userId                Uuid                   @map("user_id")
+  bio                   String?
+  birthday              DateString?
+  city                  String?
+  gender                String?
+  height                String?
+  age                   String?
+  restingHeartRate      String?                @map("resting_heart_rate")
+  maxHeartRate          String?                @map("max_heart_rate")
+  profilePhoto          String?
+  sport                 String?
+  surname               String?
+  updatedAt             TimestamptzString(6)?
+  weight                String?
+  email                 String?
+  language              String?
+  emailNotifications    Boolean?               @default(false)
+  pushNotifications     Boolean                 @default(false) @map("push_notifications")
+  inAppNotifications    Boolean                 @default(true) @map("in_app_notifications")
+  profilePhotoBlurhash  String?
+  profileSearchVisible Boolean                @default(true) @map("profile_search_visible")
+  allowActivityInteractions Boolean           @default(true) @map("allow_activity_interactions")
+  allowActivityReplayViewing Boolean          @default(true) @map("allow_activity_replay_viewing")
+  allowActivityHeartRateViewing Boolean       @default(true) @map("allow_activity_heart_rate_viewing")
+  allowActivityElevationViewing Boolean       @default(true) @map("allow_activity_elevation_viewing")
+  allowActivityPaceViewing Boolean            @default(true) @map("allow_activity_pace_viewing")
+  allowActivitySharing Boolean                @default(true) @map("allow_activity_sharing")
+  hideActivityStatistics Boolean              @default(false) @map("hide_activity_statistics")
+  hideFollowingList Boolean                   @default(false) @map("hide_following_list")
+  hideProfilePhotos Boolean                   @default(false) @map("hide_profile_photos")
+  allowNewFollowers Boolean                   @default(true) @map("allow_new_followers")
+  activities            Activity[]
+  activityMigrationJobs ActivityMigrationJob[]
+  comments              Comment[]
+  commentLikes          CommentLike[]
+  friends               Friend[]
+  likes                 Like[]
+  user                  User                   @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Profile_user_id_fkey")
+
+  @@unique([userId], map: "Profile_user_id_key")
+  @@index(expression: sql`name gin_trgm_ops`, type: "gin", name: "Profile_name_trgm_idx")
+  @@index(expression: sql`surname gin_trgm_ops`, type: "gin", name: "Profile_surname_trgm_idx")
+  @@index(expression: sql`email gin_trgm_ops`, type: "gin", name: "Profile_email_trgm_idx")
+  @@map("Profile")
+}
+
+model AuthExchange {
+  id         Uuid                  @id(map: "AuthExchange_pkey") @default(sql`gen_random_uuid()`)
+  userId     Uuid                  @map("user_id")
+  codeHash   VarChar(128)          @map("code_hash")
+  purpose    VarChar(32)
+  expiresAt  TimestamptzString(6)  @map("expires_at")
+  consumedAt TimestamptzString(6)? @map("consumed_at")
+  createdAt  TimestamptzString(6)  @default(now()) @map("created_at")
+  user       User                  @relation(fields:[userId], references:[id], onDelete: Cascade, map: "AuthExchange_user_id_fkey", index: false)
+
+  @@unique([codeHash], map: "AuthExchange_code_hash_key")
+  @@index([expiresAt], map: "AuthExchange_expires_at_idx")
+  @@index([userId, purpose], map: "AuthExchange_user_id_purpose_idx")
+  @@map("AuthExchange")
+}
+
+model UserSession {
+  id             Uuid                  @id(map: "UserSession_pkey") @default(sql`gen_random_uuid()`)
+  userId         Uuid                  @map("user_id")
+  refreshHash    VarChar(128)          @map("refresh_hash")
+  deviceId       VarChar(128)          @map("device_id")
+  deviceName     VarChar(255)?         @map("device_name")
+  platform       VarChar(64)?
+  deviceModel    VarChar(128)?         @map("device_model")
+  manufacturer   VarChar(128)?
+  osName         VarChar(64)?          @map("os_name")
+  osVersion      VarChar(64)?          @map("os_version")
+  deviceType     VarChar(64)?          @map("device_type")
+  appVersion     VarChar(32)?          @map("app_version")
+  appBuild       VarChar(32)?          @map("app_build")
+  userAgent      VarChar(512)?         @map("user_agent")
+  ipAddress      VarChar(128)?         @map("ip_address")
+  lastSeenAt     TimestamptzString(6)  @default(now()) @map("last_seen_at")
+  lastLatitude   Float?                @map("last_latitude")
+  lastLongitude  Float?                @map("last_longitude")
+  lastLocationAt TimestamptzString(6)? @map("last_location_at")
+  createdAt      TimestamptzString(6)  @default(now()) @map("created_at")
+  revokedAt      TimestamptzString(6)? @map("revoked_at")
+  user           User                  @relation(fields:[userId], references:[id], onDelete: Cascade, map: "UserSession_user_id_fkey")
+
+  @@unique([refreshHash], map: "UserSession_refresh_hash_key")
+  @@index([userId, deviceId], map: "UserSession_user_id_device_id_idx")
+  @@index([userId], map: "UserSession_user_id_idx")
+  @@map("UserSession")
+}
+
+model AdminRoleAssignment {
+  id               Uuid                 @id(map: "AdminRoleAssignments_pkey") @default(sql`gen_random_uuid()`)
+  userId           Uuid                 @map("user_id")
+  role             VarChar(32)
+  isActive         Boolean              @default(true) @map("is_active")
+  grantedByUserId  Uuid?                @map("granted_by_user_id")
+  createdAt        TimestamptzString(6) @default(now()) @map("created_at")
+  updatedAt        TimestamptzString(6) @default(now()) @map("updated_at")
+  user             User                 @relation("AdminRoleAssignmentTarget", fields: [userId], references: [id], onDelete: Cascade, map: "AdminRoleAssignments_user_id_fkey")
+  grantedBy        User?                @relation("AdminRoleAssignmentGrantor", fields: [grantedByUserId], references: [id], onDelete: SetNull, map: "AdminRoleAssignments_granted_by_user_id_fkey")
+
+  @@unique([userId, role], map: "AdminRoleAssignments_user_id_role_key")
+  @@index([userId, isActive], map: "AdminRoleAssignments_user_id_is_active_idx")
+  @@map("AdminRoleAssignments")
+}
+
+model AdminAccessAudit {
+  id           Uuid                 @id(map: "AdminAccessAudit_pkey") @default(sql`gen_random_uuid()`)
+  actorUserId  Uuid?                @map("actor_user_id")
+  targetUserId Uuid?                @map("target_user_id")
+  actorEmail   VarChar(255)          @map("actor_email")
+  targetEmail  VarChar(255)          @map("target_email")
+  role         VarChar(32)
+  action       VarChar(16)
+  createdAt    TimestamptzString(6) @default(now()) @map("created_at")
+  actor        User?                @relation("AdminAccessAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull, map: "AdminAccessAudit_actor_user_id_fkey")
+  target       User?                @relation("AdminAccessAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull, map: "AdminAccessAudit_target_user_id_fkey")
+
+  @@index([createdAt], map: "AdminAccessAudit_created_at_idx")
+  @@map("AdminAccessAudit")
+}

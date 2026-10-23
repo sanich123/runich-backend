@@ -10,7 +10,6 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
 import { createNotificationEvent } from 'src/notification/notification-event';
-import { MODERATOR_EMAILS } from './moderation.constants';
 import { StorageService } from 'src/storage/storage.service';
 import type {
   ContentReportReason,
@@ -95,15 +94,6 @@ export class ModerationService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(StorageService) private readonly storage: StorageService,
   ) {}
-
-  async getModeratorAccess(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, emailConfirmedAt: true },
-    });
-    const email = user?.email?.trim().toLowerCase();
-    return { isModerator: Boolean(email && user?.emailConfirmedAt && MODERATOR_EMAILS.has(email)) };
-  }
 
   async submitReport(reporterId: string, request: SubmitContentReportDto) {
     const target = await this.resolveReportTarget(request.targetType, request.targetId);

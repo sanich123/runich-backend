@@ -3,9 +3,11 @@ import { render } from '@react-email/components';
 import { EmailType } from '../templates/types';
 
 const sendEmail = jest.fn<(...args: unknown[]) => Promise<void>>().mockResolvedValue(undefined);
+const adminAccess = { listEmailsWithPermission: async () => ['moderator@example.com'] };
 
 jest.unstable_mockModule('src/common/email/nodemailer', () => ({ sendEmail }));
 
+jest.unstable_mockModule('src/admin/admin-access.service', () => ({ AdminAccessService: class {} }));
 const { EmailNotificationService } = await import('../email-notification.service');
 const { NotificationEmail } = await import('../templates/NotificationEmail');
 
@@ -23,7 +25,7 @@ describe('EmailNotificationService', () => {
   });
 
   it('sends all activity notification types with recipient details and activity links', async () => {
-    const service = new EmailNotificationService();
+    const service = new EmailNotificationService(adminAccess as never);
     const payload = {
       activityId: 'activity-123',
       actorName: 'Alice',
@@ -74,7 +76,7 @@ describe('EmailNotificationService', () => {
   });
 
   it('renders fallback actor details when optional payload fields are empty', async () => {
-    const service = new EmailNotificationService();
+    const service = new EmailNotificationService(adminAccess as never);
 
     await service.sendLike({
       activityId: 'activity-456',
@@ -111,7 +113,7 @@ describe('EmailNotificationService', () => {
   });
 
   it('sends localized moderation receipt and decision emails to the reporting user', async () => {
-    const service = new EmailNotificationService();
+    const service = new EmailNotificationService(adminAccess as never);
 
     await service.sendReporterModerationUpdate(
       {
@@ -154,7 +156,7 @@ describe('EmailNotificationService', () => {
   });
 
   it('sends report and appeal updates to the moderator mailbox', async () => {
-    const service = new EmailNotificationService();
+    const service = new EmailNotificationService(adminAccess as never);
 
     await service.sendModerationUpdate({
       reportId: 'report-1',

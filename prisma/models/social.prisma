@@ -1,0 +1,74 @@
+// use prisma-8
+
+model Comment {
+  id           Uuid                 @id(map: "Comment_pkey") @default(sql`gen_random_uuid()`)
+  date         TimestamptzString(6) @default(now())
+  comment      String
+  authorId     String
+  activityId   Uuid
+  profileId    Uuid
+  moderationStatus ModerationContentStatus @default(visible) @map("moderation_status")
+  commentLikes CommentLike[]
+  activity     Activity             @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "Comment_activityId_fkey", index: false)
+  profile      Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Comment_profileId_fkey", index: false)
+  contentReports ContentReport[]    @relation("ContentReportComment")
+
+  @@index([activityId, date, id], map: "Comment_activityId_idx")
+  @@map("Comment")
+}
+
+model CommentLike {
+  id        Uuid                 @id(map: "CommentLike_pkey") @default(sql`gen_random_uuid()`)
+  date      TimestamptzString(6) @default(now())
+  authorId  String
+  commentId Uuid
+  profileId Uuid
+  comment   Comment              @relation(fields:[commentId], references:[id], onDelete: Cascade, map: "CommentLike_commentId_fkey")
+  profile   Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "CommentLike_profileId_fkey", index: false)
+
+  @@unique([authorId, commentId], map: "CommentLike_authorId_commentId_key")
+  @@index([commentId], map: "CommentLike_commentId_idx")
+  @@map("CommentLike")
+}
+
+model Friend {
+  id        Uuid                 @id(map: "Friend_pkey") @default(sql`gen_random_uuid()`)
+  createdAt TimestamptzString(6) @default(now())
+  updatedAt TimestamptzString(6)
+  userId    Uuid                 @map("user_id")
+  friendId  Uuid
+  profileId Uuid
+  profile   Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Friend_profileId_fkey", index: false)
+  user      User                 @relation(fields:[userId], references:[id], onDelete: Cascade, map: "Friend_user_id_fkey", index: false)
+
+  @@index([friendId], map: "Friend_friendId_idx")
+  @@unique([userId, friendId], map: "Friend_user_id_friendId_key")
+  @@map("Friend")
+}
+
+model Like {
+  id         Uuid                 @id(map: "Like_pkey") @default(sql`gen_random_uuid()`)
+  date       TimestamptzString(6) @default(now())
+  authorId   String
+  activityId Uuid
+  profileId  Uuid
+  activity   Activity             @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "Like_activityId_fkey")
+  profile    Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Like_profileId_fkey", index: false)
+
+  @@index([activityId], map: "Like_activityId_idx")
+  @@unique([authorId, activityId], map: "Like_authorId_activityId_key")
+  @@map("Like")
+}
+
+model UserBlock {
+  id        Uuid                 @id @default(sql`gen_random_uuid()`)
+  blockerId Uuid                 @map("blocker_id")
+  blockedId Uuid                 @map("blocked_id")
+  createdAt TimestamptzString(6) @default(now()) @map("created_at")
+  blocker   User                 @relation("UserBlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User                 @relation("UserBlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId], map: "UserBlock_blocker_blocked_key")
+  @@index([blockedId, blockerId], map: "UserBlock_blocked_blocker_idx")
+  @@map("UserBlock")
+}

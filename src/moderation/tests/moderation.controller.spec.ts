@@ -5,7 +5,6 @@ import { ModerationController } from '../moderation.controller';
 
 describe('ModerationController', () => {
   const service = {
-    getModeratorAccess: asyncMock(),
     submitReport: asyncMock(),
     getBlockedUsers: asyncMock(),
     blockUser: asyncMock(),
@@ -23,12 +22,10 @@ describe('ModerationController', () => {
 
   it('passes authenticated user identity and requests through the user endpoints', async () => {
     const request = { user: { id: 'user-1', userId: 'authenticated-user-1' } } as never;
-    service.getModeratorAccess.mockResolvedValue({ isModerator: true });
     service.submitReport.mockResolvedValue({ id: 'report-1' });
     service.getBlockedUsers.mockResolvedValue({ items: [] });
     service.submitAppeal.mockResolvedValue({ id: 'appeal-1' });
 
-    await expect(controller.getModeratorAccess(request)).resolves.toEqual({ isModerator: true });
     await expect(controller.submitReport({ targetType: 'comment' } as never, request)).resolves.toEqual({
       id: 'report-1',
     });
@@ -39,7 +36,6 @@ describe('ModerationController', () => {
       controller.submitAppeal({ id: 'report-1' } as never, { reason: 'A reason' } as never, request),
     ).resolves.toEqual({ id: 'appeal-1' });
 
-    expect(service.getModeratorAccess).toHaveBeenCalledWith('authenticated-user-1');
     expect(service.submitReport).toHaveBeenCalledWith('authenticated-user-1', { targetType: 'comment' });
     expect(service.blockUser).toHaveBeenCalledWith('authenticated-user-1', 'blocked-1');
     expect(service.unblockUser).toHaveBeenCalledWith('authenticated-user-1', 'blocked-1');
