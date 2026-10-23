@@ -75,6 +75,11 @@ jobs:
             "${SSH[@]}" "$TARGET" 'set -eu; cd /opt/runich-stage; umask 077; IFS= read -r token; tmp="$(mktemp .env.XXXXXX)"; sed "/^GRAFANA_LOKI_TOKEN=/d" .env > "$tmp"; printf "GRAFANA_LOKI_TOKEN=%s\\n" "$token" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token'
           unset GRAFANA_LOKI_TOKEN
 
+          # The Stage host has limited disk space. Remove unused Docker objects
+          # before streaming the new image; named database and certificate volumes
+          # are preserved because this prune does not include --volumes.
+          "${SSH[@]}" "$TARGET" 'set -euo pipefail; echo "Disk before Docker cleanup:"; df -h /; docker system df; docker system prune --all --force; echo "Disk after Docker cleanup:"; df -h /; docker system df'
+
           # Stream the already-built image over the pinned SSH connection. This avoids
           # storing a registry credential on the server or making the package public.
           docker save "$DEPLOY_IMAGE" | gzip -1 | "${SSH[@]}" "$TARGET" 'gzip -d | docker load'
