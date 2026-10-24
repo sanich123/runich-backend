@@ -46,6 +46,33 @@ services:
       retries: 12
       start_period: 30s
 
+  nginx:
+    image: nginx:1.30.6-alpine-slim
+    restart: always
+    depends_on:
+      nestjs_app:
+        condition: service_healthy
+    environment:
+      API_DOMAIN: api.runich-app.ru
+      WEB_DOMAIN: runich-app.ru
+      API_UPSTREAM: nestjs_app:3000
+      WEB_ROOT: /var/www/runich-web-production
+      NGINX_ENVSUBST_FILTER: '^(API_DOMAIN|WEB_DOMAIN|API_UPSTREAM|WEB_ROOT)$'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./deploy/nginx/runich.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /opt/runich-web-production:/var/www/runich-web-production:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+
   background_worker:
     depends_on:
       db_migrate:
@@ -100,6 +127,32 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./deploy/grafana/config.alloy:/etc/alloy/config.alloy:ro
       - grafana_alloy_data:/var/lib/alloy/data
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
+
+  certbot_renew:
+    image: certbot/certbot:latest
+    restart: always
+    init: true
+    pid: service:nginx
+    depends_on:
+      nginx:
+        condition: service_started
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - >-
+        while true; do
+          certbot renew --webroot -w /var/www/certbot
+          --deploy-hook "kill -HUP 1" || true;
+          sleep 12h;
+        done
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
 
 volumes:
   grafana_alloy_data:

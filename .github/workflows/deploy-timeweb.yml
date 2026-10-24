@@ -145,14 +145,36 @@ jobs:
             chmod 0644 logs.log
 
             export BACKEND_IMAGE="$DEPLOY_IMAGE"
-            docker compose -f docker-compose.timeweb.yml config --quiet
+            COMPOSE=(docker compose -f docker-compose.timeweb.yml)
+            "${COMPOSE[@]}" config --quiet
+            "${COMPOSE[@]}" pull nginx certbot certbot_renew
+
+            test -s /opt/runich-web-production/current/index.html
+            for certificate_domain in api.runich-app.ru runich-app.ru; do
+              openssl x509 -in "/etc/letsencrypt/live/$certificate_domain/fullchain.pem" \
+                -checkend 0 -noout
+              "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps --entrypoint sh certbot \
+                -c 'test -s "/etc/letsencrypt/live/$1/fullchain.pem" && test -s "/etc/letsencrypt/live/$1/privkey.pem"' \
+                sh "$certificate_domain"
+            done
+
+            if ! "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps nginx nginx -V 2>&1 \
+              | grep -q -- '--with-http_v3_module'; then
+              echo 'The Production Nginx image does not include the HTTP/3 module.' >&2
+              exit 1
+            fi
+            "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps nginx nginx -t
+            if ! sudo -n -l /usr/local/sbin/runich-production-nginx-cutover >/dev/null 2>&1 \
+              || [ ! -x /usr/local/sbin/runich-production-nginx-cutover ]; then
+              echo 'Install the Production Nginx cutover helper and its exact sudoers rule before deploying.' >&2
+              exit 1
+            fi
 
             # Run the same migration job Stage ran before replacing either process.
-            BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose \
-              -f docker-compose.timeweb.yml up --no-build --force-recreate \
+            BACKEND_IMAGE="$DEPLOY_IMAGE" "${COMPOSE[@]}" \
+              up --no-build --force-recreate \
               --abort-on-container-exit --exit-code-from db_migrate db_migrate
-            BACKEND_IMAGE="$DEPLOY_IMAGE" docker compose \
-              -f docker-compose.timeweb.yml up \
+            BACKEND_IMAGE="$DEPLOY_IMAGE" "${COMPOSE[@]}" up \
               -d --force-recreate --remove-orphans --no-build nestjs_app background_worker
 
             for attempt in $(seq 1 30); do
@@ -160,7 +182,45 @@ jobs:
                 http://127.0.0.1:3000/health/ready >/dev/null \
                 && test "$(docker compose -f docker-compose.timeweb.yml ps --status running --services background_worker)" = \
                   "background_worker"; then
-                docker compose -f docker-compose.timeweb.yml up \
+                # The root helper stops the old host Nginx and host Certbot
+                # timer. The containerized pair now owns TCP/UDP 443 and renewals.
+                sudo -n /usr/local/sbin/runich-production-nginx-cutover
+                "${COMPOSE[@]}" up \
+                  -d --force-recreate nginx certbot_renew
+
+                for ingress_attempt in $(seq 1 30); do
+                  if curl --fail --silent --show-error --max-time 5 \
+                    --resolve api.runich-app.ru:443:127.0.0.1 \
+                    https://api.runich-app.ru/health/ready >/dev/null \
+                    && curl --fail --silent --show-error --max-time 5 \
+                      --resolve runich-app.ru:443:127.0.0.1 \
+                      https://runich-app.ru/ >/dev/null; then
+                    break
+                  fi
+                  if [ "$ingress_attempt" -eq 30 ]; then
+                    echo 'Production Docker Nginx HTTPS readiness failed.' >&2
+                    "${COMPOSE[@]}" ps
+                    "${COMPOSE[@]}" logs --tail=100 nginx
+                    exit 1
+                  fi
+                  sleep 2
+                done
+
+                if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
+                  --resolve api.runich-app.ru:443:127.0.0.1 \
+                  https://api.runich-app.ru/health/ready \
+                  | grep -iq '^alt-svc:.*h3='; then
+                  echo 'Production API does not advertise HTTP/3.' >&2
+                  exit 1
+                fi
+                if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
+                  --resolve runich-app.ru:443:127.0.0.1 https://runich-app.ru/ \
+                  | grep -iq '^alt-svc:.*h3='; then
+                  echo 'Production web does not advertise HTTP/3.' >&2
+                  exit 1
+                fi
+
+                "${COMPOSE[@]}" up \
                   -d --no-deps --force-recreate grafana_alloy
                 alloy_running=false
                 for alloy_attempt in $(seq 1 15); do
@@ -191,15 +251,33 @@ jobs:
       - name: Verify production HTTPS readiness
         run: |
           set -euo pipefail
+          ready=false
           for attempt in $(seq 1 30); do
             if curl --fail --silent --show-error --max-time 10 "$PRODUCTION_API_URL" >/dev/null; then
-              echo "Production HTTPS readiness passed: $PRODUCTION_API_URL"
-              exit 0
+              ready=true
+              break
             fi
             sleep 2
           done
-          echo "Production HTTPS readiness failed: $PRODUCTION_API_URL" >&2
-          exit 1
+          if [ "$ready" != true ]; then
+            echo "Production HTTPS readiness failed: $PRODUCTION_API_URL" >&2
+            exit 1
+          fi
+          if ! curl --silent --show-error --max-time 10 -D - -o /dev/null "$PRODUCTION_API_URL" \
+            | grep -iq '^alt-svc:.*h3='; then
+            echo 'Production API does not advertise HTTP/3.' >&2
+            exit 1
+          fi
+          if ! curl --fail --silent --show-error --max-time 10 https://runich-app.ru/ >/dev/null; then
+            echo 'Production web HTTPS readiness failed.' >&2
+            exit 1
+          fi
+          if ! curl --silent --show-error --max-time 10 -D - -o /dev/null https://runich-app.ru/ \
+            | grep -iq '^alt-svc:.*h3='; then
+            echo 'Production web does not advertise HTTP/3.' >&2
+            exit 1
+          fi
+          echo 'Production API and web HTTPS/HTTP/3 advertisement checks passed.'
 
       - name: Send deployment success email from Production server
         id: send_success_email
@@ -235,12 +313,24 @@ jobs:
           test -n "$running_container"
           DEPLOY_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$running_container")"
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
+          TLS_CERTIFICATE_EXPIRY=''
+          for certificate_domain in api.runich-app.ru runich-app.ru; do
+            certificate_path="/etc/letsencrypt/live/$certificate_domain/fullchain.pem"
+            certificate_expiry="$(openssl x509 -in "$certificate_path" -noout -enddate | sed 's/^notAfter=//')"
+            if [ -z "$certificate_expiry" ]; then
+              echo "Could not read the expiry date for $certificate_domain." >&2
+              exit 1
+            fi
+            TLS_CERTIFICATE_EXPIRY+="$certificate_domain: $certificate_expiry"
+            TLS_CERTIFICATE_EXPIRY+=$'\n'
+          done
+          export TLS_CERTIFICATE_EXPIRY
           DEPLOY_ENV_REPORT="$(docker run --rm --user "$(id -u):$(id -g)" \
             --volume "$PWD:/deployment:ro" "$DEPLOY_IMAGE" \
             node scripts/summarize-deployment-env.mjs --file /deployment/.env | paste -sd, -)"
           export DEPLOY_ENV_REPORT
           docker compose -f docker-compose.timeweb.yml exec -T \
-            --env DEPLOY_SHA --env DEPLOY_RUN_URL --env DEPLOY_ENV_REPORT \
+            --env DEPLOY_SHA --env DEPLOY_RUN_URL --env DEPLOY_ENV_REPORT --env TLS_CERTIFICATE_EXPIRY \
             nestjs_app xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' \
             node scripts/send-deployment-success-email.mjs
           REMOTE
