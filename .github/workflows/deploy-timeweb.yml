@@ -18,7 +18,7 @@ jobs:
   deploy:
     name: Deploy backend
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       PRODUCTION_API_URL: https://api.runich-app.ru/health/ready
 
@@ -42,12 +42,14 @@ jobs:
           docker push "$DEPLOY_IMAGE"
           docker logout ghcr.io >/dev/null
 
-      - name: Deploy the Production image over SSH
+      - name: Pull and deploy the Production image
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
           GRAFANA_LOKI_TOKEN: ${{ secrets.GRAFANA_LOKI_TOKEN }}
         run: |
           set -euo pipefail
@@ -56,6 +58,7 @@ jobs:
           : "${DEPLOY_USER:?GitHub Secret DEPLOY_USER is required}"
           : "${DEPLOY_SSH_KEY:?GitHub Secret DEPLOY_SSH_KEY is required}"
           : "${DEPLOY_KNOWN_HOSTS:?GitHub Secret DEPLOY_KNOWN_HOSTS is required}"
+          : "${GITHUB_TOKEN:?GitHub token is required to pull the private Production image}"
           : "${GRAFANA_LOKI_TOKEN:?GitHub Actions secret GRAFANA_LOKI_TOKEN is required}"
 
           install -m 700 -d "$HOME/.ssh"
@@ -64,10 +67,12 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 644 "$HOME/.ssh/known_hosts"
 
-          docker save "$DEPLOY_IMAGE" | gzip -1 |
+          printf '%s\n' "$GITHUB_TOKEN" |
             ssh -i "$HOME/.ssh/id_ed25519" \
               -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-              "$DEPLOY_USER@$DEPLOY_HOST" 'gzip -d | docker load'
+              "$DEPLOY_USER@$DEPLOY_HOST" \
+              "set -euo pipefail; umask 077; config_dir=\$(mktemp -d); trap 'rm -rf \"\$config_dir\"' EXIT; DOCKER_CONFIG=\"\$config_dir\" docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null; DOCKER_CONFIG=\"\$config_dir\" docker pull '$DEPLOY_IMAGE'"
+          unset GITHUB_TOKEN
 
           printf '%s\n' "$GRAFANA_LOKI_TOKEN" |
             ssh -i "$HOME/.ssh/id_ed25519" \
