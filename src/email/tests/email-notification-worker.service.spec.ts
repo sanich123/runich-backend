@@ -212,6 +212,16 @@ describe('EmailNotificationWorkerService', () => {
       targetType: 'user',
       reason: 'harassment',
       details: 'Repeated unwanted messages',
+      reporterId: 'reporter-1',
+      subjectUserId: 'reported-user',
+      reporter: { id: 'reporter-1', profile: { name: 'Sam', surname: 'Reporter' } },
+      subjectUser: {
+        id: 'reported-user',
+        profile: { name: 'Alex', surname: 'Runner', bio: 'Runner profile', profilePhoto: 'profile.jpg' },
+      },
+      activity: null,
+      comment: null,
+      media: null,
     });
     prisma.profile.findUnique.mockResolvedValue({
       name: 'Alex',
@@ -226,8 +236,13 @@ describe('EmailNotificationWorkerService', () => {
       reportId: 'report-1',
       requestType: 'report',
       targetType: 'user',
+      targetId: 'reported-user',
       reason: 'harassment',
       reporterDetails: 'Repeated unwanted messages',
+      reporter: { id: 'reporter-1', name: 'Sam', surname: 'Reporter' },
+      reportedUser: { id: 'reported-user', name: 'Alex', surname: 'Runner' },
+      reportedContent: 'Runner profile',
+      reportedMediaUrl: null,
       reportedProfile: {
         name: 'Alex',
         surname: 'Runner',

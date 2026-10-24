@@ -38,7 +38,7 @@ describe('ModerationReportEmail', () => {
       reason: 'harassment',
     });
 
-    expect(collectText(email)).toContain('Новая жалоба в Runich');
+    expect(collectText(email)).toContain('Жалоба на тренировку в Runich');
     expect(collectText(email)).toContain('Тип контента: Тренировка');
     expect(collectText(email)).toContain('Причина: Преследование');
     expect(findModeratorDashboardLink(email)?.href).toBe('http://localhost:5173/admin?reportId=report-1');
@@ -86,8 +86,12 @@ describe('ModerationReportEmail', () => {
         reportId: 'report-profile',
         requestType: 'report',
         targetType: 'user',
+        targetId: 'profile-1',
         reason: 'harassment',
         reporterDetails: 'Repeated unwanted messages',
+        reporter: { id: 'reporter-1', name: 'Sam', surname: 'Reporter' },
+        reportedUser: { id: 'reported-user-1', name: 'Alex', surname: 'Runner' },
+        reportedContent: 'Runner profile',
         reportedProfile: {
           name: 'Alex',
           surname: 'Runner',
@@ -98,6 +102,9 @@ describe('ModerationReportEmail', () => {
     );
 
     expect(html).toContain('Repeated unwanted messages');
+    expect(html).toContain('Кто пожаловался: Sam Reporter (ID: reporter-1)');
+    expect(html).toContain('ID контента: profile-1');
+    expect(html).toContain('Автор контента: Alex Runner (ID: reported-user-1)');
     expect(html).toContain('Профиль, на который пожаловались');
     expect(html).toContain('src="https://cdn.example/profile.jpg"');
     expect(html).toContain('Alex Runner');

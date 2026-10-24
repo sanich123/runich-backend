@@ -8,6 +8,7 @@ import { NotificationEmail } from './templates';
 import { ModerationReportEmail, type ModerationReportEmailProps } from './templates/ModerationReportEmail';
 import { ReporterModerationEmail, type ReporterModerationEmailProps } from './templates/ReporterModerationEmail';
 import { EmailType } from './templates/types';
+import { getModerationReportTitle } from './email-notification.constants';
 
 export interface EmailNotificationPayload {
   activityId: string;
@@ -41,7 +42,10 @@ export class EmailNotificationService {
   }
 
   async sendModerationUpdate(payload: ModerationReportEmailProps) {
-    const subject = payload.requestType === 'appeal' ? '[Runich] Новая апелляция' : '[Runich] Новая жалоба';
+    const subject =
+      payload.requestType === 'appeal'
+        ? '[Runich] Новая апелляция'
+        : `[Runich] ${getModerationReportTitle(payload.targetType)}`;
     const html = await render(ModerationReportEmail(payload));
     const recipients = await this.adminAccess.listEmailsWithPermission('moderation.manage');
     if (!recipients.length) throw new Error('Не найдены пользователи с правом модерации');

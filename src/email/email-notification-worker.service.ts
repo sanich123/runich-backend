@@ -184,23 +184,64 @@ export class EmailNotificationWorkerService {
       case EMAIL_NOTIFICATION_TYPE.moderationReport: {
         const report = await this.prisma.contentReport.findUnique({
           where: { id: job.sourceId },
-          select: { id: true, targetId: true, targetType: true, reason: true, details: true },
+          select: {
+            id: true,
+            targetId: true,
+            targetType: true,
+            reason: true,
+            details: true,
+            reporterId: true,
+            subjectUserId: true,
+            reporter: { select: { id: true, profile: { select: { name: true, surname: true } } } },
+            subjectUser: {
+              select: {
+                id: true,
+                profile: { select: { name: true, surname: true, bio: true, profilePhoto: true } },
+              },
+            },
+            activity: { select: { title: true, description: true } },
+            comment: { select: { comment: true } },
+            media: { select: { url: true, thumbnail: true, mediaReviewStatus: true } },
+          },
         });
         if (!report) return null;
-        const reportedProfile =
-          report.targetType === 'user'
-            ? await this.prisma.profile.findUnique({
-                where: { userId: report.targetId },
-                select: { name: true, surname: true, bio: true, profilePhoto: true },
-              })
-            : null;
+        const reportedContent =
+          report.targetType === 'activity'
+            ? [report.activity?.title, report.activity?.description].filter(Boolean).join('\n') || null
+            : report.targetType === 'comment'
+              ? report.comment?.comment ?? null
+              : report.targetType === 'user'
+                ? report.subjectUser?.profile?.bio ?? null
+                : null;
         const payload = {
           reportId: report.id,
           requestType: 'report' as const,
           targetType: report.targetType,
+          targetId: report.targetId,
           reason: report.reason,
           reporterDetails: report.details,
-          reportedProfile,
+          reporter: report.reporter
+            ? {
+                id: report.reporter.id,
+                name: report.reporter.profile?.name,
+                surname: report.reporter.profile?.surname,
+              }
+            : report.reporterId
+              ? { id: report.reporterId }
+              : null,
+          reportedUser: report.subjectUser
+            ? {
+                id: report.subjectUser.id,
+                name: report.subjectUser.profile?.name,
+                surname: report.subjectUser.profile?.surname,
+              }
+            : report.subjectUserId
+              ? { id: report.subjectUserId }
+              : null,
+          reportedContent,
+          reportedMediaUrl:
+            report.media?.mediaReviewStatus === 'rejected' ? null : (report.media?.thumbnail ?? report.media?.url ?? null),
+          reportedProfile: report.targetType === 'user' ? report.subjectUser?.profile ?? null : null,
         };
         return { send: () => this.notifications.sendModerationUpdate(payload) };
       }
