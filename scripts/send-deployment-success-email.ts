@@ -13,6 +13,13 @@ const mapContentId = 'runich-deployment-test-route@runich';
 const environment = process.env.APP_ENV?.trim();
 const commit = process.env.DEPLOY_SHA?.trim();
 const runUrl = process.env.DEPLOY_RUN_URL?.trim();
+const tlsCertificateExpiryEntries = (process.env.TLS_CERTIFICATE_EXPIRY ?? '')
+  .split('\n')
+  .map((line) => {
+    const match = /^([^:\n]+):\s*(.+)$/.exec(line.trim());
+    return match ? { domain: match[1], expiry: match[2] } : undefined;
+  })
+  .filter((entry): entry is { domain: string; expiry: string } => entry !== undefined);
 
 if (environment !== 'stage' && environment !== 'production') {
   throw new Error('APP_ENV must be stage or production to send a deployment notice.');
@@ -20,6 +27,16 @@ if (environment !== 'stage' && environment !== 'production') {
 if (!commit || !runUrl) {
   throw new Error('DEPLOY_SHA and DEPLOY_RUN_URL must be provided for a deployment notice.');
 }
+if (tlsCertificateExpiryEntries.length === 0) {
+  throw new Error('TLS_CERTIFICATE_EXPIRY must include the deployed certificate expiry dates.');
+}
+const tlsCertificateExpiryText = [
+  'TLS certificate expiry:',
+  ...tlsCertificateExpiryEntries.map(({ domain, expiry }) => `  ${domain}: ${expiry}`),
+].join('\n');
+const tlsCertificateExpiryHtml = `<ul style="margin:0 0 24px;padding-left:20px">${tlsCertificateExpiryEntries
+  .map(({ domain, expiry }) => `<li><strong>${escapeHtml(domain)}:</strong> ${escapeHtml(expiry)}</li>`)
+  .join('')}</ul>`;
 
 const deploymentEnvEntries = (process.env.DEPLOY_ENV_REPORT ?? '')
   .split(',')
@@ -89,6 +106,7 @@ const message = (sender: string) => ({
     `Environment: ${environment}`,
     `Commit: ${commit}`,
     `GitHub Actions run: ${runUrl}`,
+    tlsCertificateExpiryText,
     deploymentEnvText,
     metricsText,
     'The deployment test route map is included as an inline image.',
@@ -101,6 +119,8 @@ const message = (sender: string) => ({
     `<p style="margin:4px 0"><strong>Environment:</strong> ${escapeHtml(environment)}</p>`,
     `<p style="margin:4px 0"><strong>Commit:</strong> ${escapeHtml(commit)}</p>`,
     `<p style="margin:4px 0 20px"><a href="${escapeHtml(runUrl)}">GitHub Actions run</a></p>`,
+    '<h2 style="margin:0 0 10px;font-size:17px">TLS certificate validity</h2>',
+    tlsCertificateExpiryHtml,
     '<h2 style="margin:0 0 10px;font-size:17px">Deployment environment key status</h2>',
     '<p style="margin:0 0 8px;color:#52606d">Values are omitted; only variable names and whether each is set are included.</p>',
     deploymentEnvHtml,

@@ -49,6 +49,14 @@ Workflow:
 3. проверяет API, worker, Grafana Alloy и `https://stage.runich-app.ru/health/ready`;
 4. отправляет deployment-письмо и очищает Docker-кэш.
 
+Stage and Production use the same pinned Docker Nginx image
+(`nginx:1.30.6-alpine-slim`) and `deploy/nginx/runich.conf.template` for both
+the API and static web virtual hosts. Only the domains, web-root path and API
+upstream vary by environment. Both advertise HTTP/3, accept QUIC on UDP 443,
+and keep HTTP/2/HTTP/1.1 on TCP 443. The Stage workflow checks the image's
+HTTP/3 module, validates the rendered config and checks `Alt-Svc` on both
+hosts. The Timeweb firewall must allow inbound UDP 443.
+
 Stage хранит PostgreSQL и Let's Encrypt в named volumes. Не удаляйте их.
 `/opt/runich-stage/.env` — единственный источник настроек Compose, API и worker;
 файл должен иметь режим `0600`. При первом успешном Stage-деплое оставшийся
@@ -79,8 +87,30 @@ bucket; Production задаёт его явно, чтобы ссылки шли 
 Push в `master` или `workflow_dispatch` запускает
 `.github/workflows/deploy-timeweb.yml`. Actions собирает образ
 `production-<commit-sha>-<run-id>-<attempt>`, передаёт его на сервер, проверяет
-чистый checkout, запускает миграцию, API, worker и Alloy, затем проверяет
-локальный и публичный readiness. PostgreSQL — внешний Timeweb DBaaS, не Compose.
+чистый checkout, запускает миграцию, API, worker, Docker Nginx, Certbot renewal
+service и Alloy, затем проверяет локальный и публичный readiness. PostgreSQL —
+внешний Timeweb DBaaS. Production and Stage share the pinned Nginx image and
+the config template described above.
+
+The first Docker Nginx deployment stops and disables host Nginx and the host
+Certbot timer; Docker Nginx then owns both API and web TLS on TCP/UDP 443.
+Certbot renews from the same `/etc/letsencrypt` mount and signals the Nginx
+container to reload. Keep inbound TCP 80/443 and UDP 443 open.
+
+Before the first Production deployment of this change, install the narrow root
+helper:
+
+```bash
+cd /opt/runich-backend/project
+sudo install -o root -g root -m 0755 scripts/production-nginx-cutover.sh \
+  /usr/local/sbin/runich-production-nginx-cutover
+```
+
+Allow the Production deploy account to invoke only
+`/usr/local/sbin/runich-production-nginx-cutover` without a password in
+sudoers, then validate the file with `visudo -cf`. The helper checks both
+Production certificates, creates the shared ACME webroot, and disables the old
+host services.
 
 После readiness workflow пишет `.deployed-sha`, очищает Docker-образы и
 BuildKit-кэш, затем отправляет deployment-письмо. Ошибка SMTP на финальном шаге

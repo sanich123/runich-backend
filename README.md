@@ -241,11 +241,16 @@ tested as a separate workload.
 The `stage` branch deploys to the Timeweb server with a colocated PostgreSQL
 container. `.github/workflows/deploy-stage-timeweb.yml` builds an immutable
 image for the exact pushed commit, runs the checked-in Prisma migration, and
-checks API, worker and HTTPS readiness. It publishes the image for production
-only after those checks pass. The database and Let's Encrypt state live in
-persistent Docker volumes. Nginx serves
-`https://stage.runich-app.ru`; Certbot renews its certificate automatically.
-Incoming TCP ports 80 and 443 must be available on the server.
+checks API, worker and HTTPS readiness. The database and Let's Encrypt state
+live in persistent Docker volumes.
+
+Stage and Production use the same pinned Nginx image
+(`nginx:1.30.6-alpine-slim`) and the same template at
+`deploy/nginx/runich.conf.template`. Each environment supplies its API and web
+domains, web root and API upstream. Both hosts enable HTTP/2 and HTTP/3,
+advertise HTTP/3 with `Alt-Svc`, and use TCP 80/443 plus UDP 443. The firewall
+must allow inbound UDP 443 for clients to negotiate HTTP/3. Stage's separate
+HTTP-only bootstrap config is used only when issuing its certificates.
 
 Stage uses the dedicated S3 bucket and these non-secret settings:
 

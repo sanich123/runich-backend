@@ -93,7 +93,7 @@ jobs:
           unset GITHUB_TOKEN
           unset STAGE_DEPLOY_SSH_KEY
 
-          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf nginx.stage.conf nginx.stage.web.conf deploy/grafana/config.alloy "$TARGET:/tmp/"
+          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf deploy/nginx/runich.conf.template deploy/grafana/config.alloy "$TARGET:/tmp/"
 
           "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' STAGE_WEB_DOMAIN='$STAGE_WEB_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
           set -euo pipefail
@@ -127,19 +127,27 @@ jobs:
           fi
           install -o "$(id -un)" -g docker -m 0640 /tmp/docker-compose.timeweb.stage.yml ./docker-compose.timeweb.stage.yml
           install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.bootstrap.conf ./nginx.stage.bootstrap.conf
-          install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.conf ./nginx.stage.tls.conf
-          install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.web.conf ./nginx.stage.web.conf
-          install -d -o "$(id -un)" -g docker -m 0750 ./nginx.stage.web.d
+          install -d -o "$(id -un)" -g docker -m 0750 ./deploy/nginx
+          install -o "$(id -un)" -g docker -m 0644 /tmp/runich.conf.template ./deploy/nginx/runich.conf.template
           install -d -o "$(id -un)" -g docker -m 0755 ./web-stage/releases
           chmod 0755 ./web-stage ./web-stage/releases
+          install -d -o "$(id -un)" -g docker -m 0755 ./certbot-webroot
           install -d -o "$(id -un)" -g docker -m 0750 ./deploy/grafana
           install -o "$(id -un)" -g docker -m 0644 /tmp/config.alloy ./deploy/grafana/config.alloy
           touch logs.log
           chmod 0644 logs.log
-          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/nginx.stage.conf /tmp/nginx.stage.web.conf /tmp/config.alloy
+          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/runich.conf.template /tmp/config.alloy
 
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
           COMPOSE=(docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml)
+          BOOTSTRAP_COMPOSE=(docker compose --project-name runich-stage --profile bootstrap -f docker-compose.timeweb.stage.yml)
+          bootstrap_active=false
+          stop_bootstrap_on_exit() {
+            if [ "$bootstrap_active" = true ]; then
+              "${BOOTSTRAP_COMPOSE[@]}" stop nginx_bootstrap || true
+            fi
+          }
+          trap stop_bootstrap_on_exit EXIT
 
           "${COMPOSE[@]}" config --quiet
           "${COMPOSE[@]}" pull db nginx certbot certbot_renew
@@ -148,34 +156,42 @@ jobs:
             --exit-code-from db_migrate db_migrate
           "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nestjs_app background_worker
 
-          if [ -s .stage-cert-ready ]; then
-            install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.tls.conf ./nginx.active.conf
-          else
-            install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.bootstrap.conf ./nginx.active.conf
+          if ! "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps nginx nginx -V 2>&1 \
+            | grep -q -- '--with-http_v3_module'; then
+            echo 'The Stage Nginx image does not include the HTTP/3 module.' >&2
+            exit 1
           fi
 
-          "${COMPOSE[@]}" up -d --force-recreate nginx
+          certificates_ready=true
+          for certificate_domain in "$STAGE_DOMAIN" "$STAGE_WEB_DOMAIN"; do
+            if ! "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps --entrypoint sh certbot \
+              -c 'test -s "/etc/letsencrypt/live/$1/fullchain.pem" && test -s "/etc/letsencrypt/live/$1/privkey.pem"' \
+              sh "$certificate_domain" </dev/null; then
+              certificates_ready=false
+            fi
+          done
 
-          if [ ! -s .stage-cert-ready ]; then
-            "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps certbot \
-              certonly --webroot --webroot-path /var/www/certbot \
-              --domain "$STAGE_DOMAIN" --cert-name "$STAGE_DOMAIN" \
-              --non-interactive --agree-tos --register-unsafely-without-email </dev/null
-            install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.tls.conf ./nginx.active.conf
-            "${COMPOSE[@]}" up -d --force-recreate nginx
-            touch .stage-cert-ready
+          if [ "$certificates_ready" != true ]; then
+            "${COMPOSE[@]}" stop nginx || true
+            "${BOOTSTRAP_COMPOSE[@]}" up -d --force-recreate nginx_bootstrap
+            bootstrap_active=true
+            for certificate_domain in "$STAGE_DOMAIN" "$STAGE_WEB_DOMAIN"; do
+              if ! "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps --entrypoint sh certbot \
+                -c 'test -s "/etc/letsencrypt/live/$1/fullchain.pem" && test -s "/etc/letsencrypt/live/$1/privkey.pem"' \
+                sh "$certificate_domain" </dev/null; then
+                "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps certbot \
+                  certonly --webroot --webroot-path /var/www/certbot \
+                  --domain "$certificate_domain" --cert-name "$certificate_domain" \
+                  --non-interactive --agree-tos --register-unsafely-without-email </dev/null
+              fi
+            done
+            "${BOOTSTRAP_COMPOSE[@]}" stop nginx_bootstrap
+            bootstrap_active=false
+            "${BOOTSTRAP_COMPOSE[@]}" rm -f nginx_bootstrap
           fi
 
-          if ! "${COMPOSE[@]}" exec -T --interactive=false nginx test -s "/etc/letsencrypt/live/$STAGE_WEB_DOMAIN/fullchain.pem" </dev/null; then
-            "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps certbot \
-              certonly --webroot --webroot-path /var/www/certbot \
-              --domain "$STAGE_WEB_DOMAIN" --cert-name "$STAGE_WEB_DOMAIN" \
-              --non-interactive --agree-tos --register-unsafely-without-email </dev/null
-          fi
-
-          install -o "$(id -un)" -g docker -m 0644 ./nginx.stage.web.conf ./nginx.stage.web.d/runich-web.conf
-          "${COMPOSE[@]}" exec -T --interactive=false nginx nginx -t </dev/null
-          "${COMPOSE[@]}" exec -T --interactive=false nginx nginx -s reload </dev/null
+          "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps nginx nginx -t
+          "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nginx
 
           "${COMPOSE[@]}" up -d --force-recreate certbot_renew
 
@@ -215,9 +231,23 @@ jobs:
             exit 1
           fi
 
+          if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
+            --resolve "$STAGE_DOMAIN:443:127.0.0.1" "https://$STAGE_DOMAIN/health/ready" \
+            | grep -i '^alt-svc:.*h3=' >/dev/null; then
+            echo 'Stage API does not advertise HTTP/3.' >&2
+            exit 1
+          fi
+
           if ! curl --silent --show-error --max-time 10 \
             --resolve "$STAGE_WEB_DOMAIN:443:127.0.0.1" "https://$STAGE_WEB_DOMAIN/" >/dev/null; then
             echo 'Stage web HTTPS certificate/route check failed.' >&2
+            exit 1
+          fi
+
+          if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
+            --resolve "$STAGE_WEB_DOMAIN:443:127.0.0.1" "https://$STAGE_WEB_DOMAIN/" \
+            | grep -i '^alt-svc:.*h3=' >/dev/null; then
+            echo 'Stage web does not advertise HTTP/3.' >&2
             exit 1
           fi
 
@@ -229,6 +259,21 @@ jobs:
           printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
           echo "Stage is healthy at commit $DEPLOY_SHA"
 
+          TLS_CERTIFICATE_EXPIRY=''
+          for certificate_domain in "$STAGE_DOMAIN" "$STAGE_WEB_DOMAIN"; do
+            certificate_output="$("${COMPOSE[@]}" run --rm -T --interactive=false --no-deps certbot \
+              certificates --cert-name "$certificate_domain")"
+            certificate_expiry="$(printf '%s\n' "$certificate_output" \
+              | sed -nE 's/^[[:space:]]*Expiry Date: (.*) \(VALID:.*\)$/\1/p' | head -n 1)"
+            if [ -z "$certificate_expiry" ]; then
+              echo "Could not read the expiry date for $certificate_domain." >&2
+              exit 1
+            fi
+            TLS_CERTIFICATE_EXPIRY+="$certificate_domain: $certificate_expiry"
+            TLS_CERTIFICATE_EXPIRY+=$'\n'
+          done
+          export TLS_CERTIFICATE_EXPIRY
+
           DEPLOY_ENV_REPORT="$(docker run --rm --user "$(id -u):$(id -g)" \
             --volume "$PWD:/deployment:ro" "$DEPLOY_IMAGE" \
             node scripts/summarize-deployment-env.mjs --file /deployment/.env | paste -sd, -)"
@@ -236,7 +281,7 @@ jobs:
 
           email_status=0
           if "${COMPOSE[@]}" exec -T --interactive=false \
-            --env DEPLOY_SHA --env DEPLOY_RUN_URL --env DEPLOY_ENV_REPORT \
+            --env DEPLOY_SHA --env DEPLOY_RUN_URL --env DEPLOY_ENV_REPORT --env TLS_CERTIFICATE_EXPIRY \
             nestjs_app xvfb-run --auto-servernum \
             --server-args '-screen 0 1280x1024x24' \
             node scripts/send-deployment-success-email.mjs </dev/null; then
