@@ -393,6 +393,37 @@ describe('ModerationService', () => {
     await expect(service.getReportDetails('missing')).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('includes ordered activity media in the context moderators review', async () => {
+    const prisma = createPrismaMock();
+    const service = new ModerationService(prisma as never, {} as never);
+    const media = [
+      { id: 'media-1', url: 'first-image', thumbnail: 'first-thumbnail' },
+      { id: 'media-2', url: 'second-video', thumbnail: 'second-thumbnail' },
+    ];
+    prisma.contentReport.findUnique.mockResolvedValue({
+      id: 'report-1',
+      targetId: 'activity-1',
+      targetType: 'activity',
+    });
+    prisma.activity.findUnique.mockResolvedValue({ title: 'Race', media });
+    prisma.moderationAction.findMany.mockResolvedValue([]);
+
+    await expect(service.getReportDetails('report-1')).resolves.toMatchObject({ context: { media } });
+    expect(prisma.activity.findUnique).toHaveBeenCalledWith({
+      where: { id: 'activity-1' },
+      select: {
+        title: true,
+        description: true,
+        userId: true,
+        moderationStatus: true,
+        media: {
+          orderBy: { position: 'asc' },
+          select: { id: true, url: true, thumbnail: true },
+        },
+      },
+    });
+  });
+
   it('validates moderator actions and records content decisions for each supported target type', async () => {
     const prisma = createPrismaMock();
     const storage = { approveModerationAsset: asyncMock(), rejectModerationAsset: asyncMock() };

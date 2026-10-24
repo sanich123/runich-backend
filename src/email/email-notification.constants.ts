@@ -2,12 +2,15 @@ const MODERATION_REPORT_TARGET_TITLES: Record<string, string> = {
   activity: 'тренировку',
   comment: 'комментарий',
   media: 'фото или видео',
+  media_upload: 'фото или видео',
   user: 'профиль',
 };
 
 export function getModerationReportTitle(targetType: string) {
   return `Жалоба на ${MODERATION_REPORT_TARGET_TITLES[targetType] ?? targetType}`;
 }
+
+export const MODERATION_EMAIL_RECIPIENT = 'runich.app@yandex.ru';
 
 export const EMAIL_NOTIFICATION_TYPE = {
   activityLike: 'activity-like',

@@ -214,9 +214,10 @@ describe('EmailNotificationWorkerService', () => {
       details: 'Repeated unwanted messages',
       reporterId: 'reporter-1',
       subjectUserId: 'reported-user',
-      reporter: { id: 'reporter-1', profile: { name: 'Sam', surname: 'Reporter' } },
+      reporter: { id: 'reporter-1', email: 'sam@example.com', profile: { name: 'Sam', surname: 'Reporter' } },
       subjectUser: {
         id: 'reported-user',
+        email: 'alex@example.com',
         profile: { name: 'Alex', surname: 'Runner', bio: 'Runner profile', profilePhoto: 'profile.jpg' },
       },
       activity: null,
@@ -239,8 +240,8 @@ describe('EmailNotificationWorkerService', () => {
       targetId: 'reported-user',
       reason: 'harassment',
       reporterDetails: 'Repeated unwanted messages',
-      reporter: { id: 'reporter-1', name: 'Sam', surname: 'Reporter' },
-      reportedUser: { id: 'reported-user', name: 'Alex', surname: 'Runner' },
+      reporter: { id: 'reporter-1', email: 'sam@example.com', name: 'Sam', surname: 'Reporter' },
+      reportedUser: { id: 'reported-user', email: 'alex@example.com', name: 'Alex', surname: 'Runner' },
       reportedContent: 'Runner profile',
       reportedMediaUrl: null,
       reportedProfile: {
@@ -252,7 +253,53 @@ describe('EmailNotificationWorkerService', () => {
     });
   });
 
-  it('sends a reporter receipt in the account language and skips unconfirmed reporters', async () => {
+  it('resolves the uploader and labels an automatic media review in the moderator email', async () => {
+    prisma.emailNotificationJob.findFirst.mockResolvedValue({
+      id: 'job-media-review',
+      notificationType: 'moderation-report',
+      sourceId: 'report-media-upload',
+      attempts: 0,
+    });
+    prisma.contentReport.findUnique.mockResolvedValue({
+      id: 'report-media-upload',
+      targetId: 'asset-1',
+      targetType: 'media_upload',
+      reason: 'sexual_content',
+      details: 'Автоматическая проверка NSFWJS: Porn=0.99. Кадров проверено: 18.',
+      reporterId: null,
+      subjectUserId: 'owner-1',
+      reporter: null,
+      subjectUser: null,
+      mediaUpload: {
+        owner: {
+          id: 'owner-1',
+          email: 'owner@example.com',
+          profile: { name: 'Alex', surname: 'Runner', bio: null, profilePhoto: null },
+        },
+      },
+      activity: null,
+      comment: null,
+      media: null,
+    });
+
+    await worker.processNextJob();
+
+    expect(notifications.sendModerationUpdate).toHaveBeenCalledWith({
+      reportId: 'report-media-upload',
+      requestType: 'report',
+      targetType: 'media_upload',
+      targetId: 'asset-1',
+      reason: 'sexual_content',
+      reporterDetails: 'Автоматическая проверка NSFWJS: Porn=0.99. Кадров проверено: 18.',
+      reporter: null,
+      reportedUser: { id: 'owner-1', email: 'owner@example.com', name: 'Alex', surname: 'Runner' },
+      reportedContent: null,
+      reportedMediaUrl: null,
+      reportedProfile: null,
+    });
+  });
+
+  it('sends reporter receipts to the moderation mailbox without requiring email confirmation', async () => {
     prisma.emailNotificationJob.findFirst.mockResolvedValue({
       id: 'job-receipt',
       notificationType: 'reporter-receipt',
@@ -263,38 +310,38 @@ describe('EmailNotificationWorkerService', () => {
       id: 'report-1',
       targetType: 'activity',
       reason: 'spam',
-      reporter: {
-        email: 'reporter@example.com',
-        emailConfirmedAt: new Date(),
-        profile: { language: 'russian' },
-      },
+      reporter: { profile: { language: 'russian' } },
     });
 
     await worker.processNextJob();
 
-    expect(notifications.sendReporterModerationUpdate).toHaveBeenCalledWith(
-      {
-        reportId: 'report-1',
-        targetType: 'activity',
-        reason: 'spam',
-        requestType: 'received',
-        locale: 'russian',
-      },
-      'reporter@example.com',
-    );
+    expect(notifications.sendReporterModerationUpdate).toHaveBeenCalledWith({
+      reportId: 'report-1',
+      targetType: 'activity',
+      reason: 'spam',
+      requestType: 'received',
+      locale: 'russian',
+    });
 
     prisma.contentReport.findUnique.mockResolvedValue({
       id: 'report-2',
       targetType: 'comment',
       reason: 'other',
-      reporter: { email: 'unconfirmed@example.com', emailConfirmedAt: null, profile: { language: 'english' } },
+      reporter: { profile: { language: 'english' } },
     });
     await worker.processNextJob();
 
-    expect(notifications.sendReporterModerationUpdate).toHaveBeenCalledTimes(1);
+    expect(notifications.sendReporterModerationUpdate).toHaveBeenCalledTimes(2);
+    expect(notifications.sendReporterModerationUpdate).toHaveBeenLastCalledWith({
+      reportId: 'report-2',
+      targetType: 'comment',
+      reason: 'other',
+      requestType: 'received',
+      locale: 'english',
+    });
     expect(prisma.emailNotificationJob.update).toHaveBeenLastCalledWith({
       where: { id: 'job-receipt' },
-      data: expect.objectContaining({ status: 'skipped' }),
+      data: expect.objectContaining({ status: 'sent' }),
     });
   });
 
@@ -325,17 +372,14 @@ describe('EmailNotificationWorkerService', () => {
 
     await worker.processNextJob();
 
-    expect(notifications.sendReporterModerationUpdate).toHaveBeenLastCalledWith(
-      {
-        reportId: 'report-1',
-        targetType: 'comment',
-        reason: 'harassment',
-        requestType: 'decision',
-        locale: 'english',
-        outcome,
-      },
-      'reporter@example.com',
-    );
+    expect(notifications.sendReporterModerationUpdate).toHaveBeenLastCalledWith({
+      reportId: 'report-1',
+      targetType: 'comment',
+      reason: 'harassment',
+      requestType: 'decision',
+      locale: 'english',
+      outcome,
+    });
   });
 
   it('sends the moderator email for a moderation appeal', async () => {

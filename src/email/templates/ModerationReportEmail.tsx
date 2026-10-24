@@ -13,8 +13,8 @@ export interface ModerationReportEmailProps {
   targetId?: string;
   reason: string;
   reporterDetails?: string | null;
-  reporter?: { id?: string | null; name?: string | null; surname?: string | null } | null;
-  reportedUser?: { id?: string | null; name?: string | null; surname?: string | null } | null;
+  reporter?: { id?: string | null; email?: string | null; name?: string | null; surname?: string | null } | null;
+  reportedUser?: { id?: string | null; email?: string | null; name?: string | null; surname?: string | null } | null;
   reportedContent?: string | null;
   reportedMediaUrl?: string | null;
   reportedProfile?: {
@@ -51,12 +51,14 @@ export function ModerationReportEmail({
 
   const title = requestType === 'appeal' ? 'Новая апелляция' : getModerationReportTitle(targetType);
   const preview = `${title} в Runich`;
-  const reporterName = [reporter?.name, reporter?.surname].filter(Boolean).join(' ') || 'не указано';
-  const reportedUserName = [reportedUser?.name, reportedUser?.surname].filter(Boolean).join(' ') || 'не указан';
+  const reporterName = [reporter?.name, reporter?.surname].filter(Boolean).join(' ') || reporter?.email || 'не указано';
+  const reportedUserName =
+    [reportedUser?.name, reportedUser?.surname].filter(Boolean).join(' ') || reportedUser?.email || 'не указан';
   const targetLabels: Record<string, string> = {
     activity: 'Тренировка',
     comment: 'Комментарий',
     media: 'Фото или видео',
+    media_upload: 'Фото или видео',
     user: 'Профиль',
   };
   const reasonLabels: Record<string, string> = {
@@ -77,9 +79,13 @@ export function ModerationReportEmail({
       <Text style={emailStyles.paragraph}>Поступило новое обращение на модерацию.</Text>
       {requestType === 'report' ? (
         <>
-          <Text style={emailStyles.paragraph}>
-            Кто пожаловался: {reporterName} (ID: {reporter?.id ?? 'не указан'})
-          </Text>
+          {targetType === 'media_upload' ? (
+            <Text style={emailStyles.paragraph}>Источник: автоматическая проверка NSFWJS</Text>
+          ) : (
+            <Text style={emailStyles.paragraph}>
+              Кто пожаловался: {reporterName} (ID: {reporter?.id ?? 'не указан'})
+            </Text>
+          )}
           <Text style={emailStyles.paragraph}>Тип контента: {targetLabels[targetType] ?? targetType}</Text>
           <Text style={emailStyles.paragraph}>ID контента: {targetId ?? 'не указан'}</Text>
           <Text style={emailStyles.paragraph}>

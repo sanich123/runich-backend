@@ -38,7 +38,7 @@ export class AdminController {
 
   @Get('users')
   @UseGuards(JwtAuthGuard, AdminRolesGuard)
-  @ApiOperation({ summary: 'List current admin users or find a user by exact email' })
+  @ApiOperation({ summary: 'List current admin users or find users by part of an email address' })
   @ApiOkResponse({ description: 'Users and their active admin roles' })
   async listUsers(@Query('email') email?: string, @Query('take') take?: string) {
     const pageSize = Number(validateOptionalIntegerQuery(take, 'take', { min: 1, max: 100 }) ?? 50);

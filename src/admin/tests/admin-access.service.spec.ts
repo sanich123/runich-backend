@@ -103,10 +103,10 @@ describe('AdminAccessService', () => {
     expect(prisma.user.findMany).toHaveBeenCalledTimes(1);
   });
 
-  it('searches by normalized exact email and merges assigned and superuser roles', async () => {
+  it('searches by a normalized partial email and merges assigned and superuser roles', async () => {
     prisma.user.findMany.mockResolvedValue([
       { id: 'target-1', email: 'TARGET@example.test', isSuperAdmin: false },
-      { id: 'target-2', email: 'other@example.test', isSuperAdmin: false },
+      { id: 'target-2', email: 'target.team@example.test', isSuperAdmin: false },
       { id: 'target-3', email: 'target@example.test', isSuperAdmin: true },
     ]);
     prisma.adminRoleAssignment.findMany.mockResolvedValue([
@@ -115,11 +115,16 @@ describe('AdminAccessService', () => {
       { userId: 'target-1', role: 'bad-role' },
     ]);
 
-    await expect(service.listUsers('target@example.test', 10)).resolves.toEqual([
-      { id: 'target-3', email: 'target@example.test', roles: ['superuser'] },
-      { id: 'target-1', email: 'TARGET@example.test', roles: ['moderator'] },
-    ]);
-    expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 20 }));
+    const users = await service.listUsers('target', 10);
+    expect(users).toEqual(
+      expect.arrayContaining([
+        { id: 'target-1', email: 'TARGET@example.test', roles: ['moderator'] },
+        { id: 'target-2', email: 'target.team@example.test', roles: [] },
+        { id: 'target-3', email: 'target@example.test', roles: ['superuser'] },
+      ]),
+    );
+    expect(users).toHaveLength(3);
+    expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ orderBy: { email: 'asc' }, take: 10 }));
   });
 
   it('lists existing admins, sorts by email, and returns an empty list when no admins exist', async () => {
