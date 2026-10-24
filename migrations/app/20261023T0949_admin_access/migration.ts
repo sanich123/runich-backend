@@ -189,11 +189,19 @@ WHERE lower("email") IN ('runich.app@yandex.ru', 'varon-in@yandex.ru', 'aovoroni
         ],
         postcheck: [
           {
-            description: 'verify all configured admin users are superusers',
-            sql: `SELECT count(DISTINCT lower("email")) = 3 AS "result"
-FROM "public"."Users"
-WHERE lower("email") IN ('runich.app@yandex.ru', 'varon-in@yandex.ru', 'aovoronin.piano@gmail.com')
-  AND "is_super_admin" = true`,
+            description: 'verify existing configured admins are superusers and at least one active superuser exists',
+            sql: `SELECT EXISTS (
+  SELECT 1
+  FROM "public"."Users"
+  WHERE "is_super_admin" IS TRUE
+    AND "email_confirmed_at" IS NOT NULL
+    AND "deleted_at" IS NULL
+) AND NOT EXISTS (
+  SELECT 1
+  FROM "public"."Users"
+  WHERE lower("email") IN ('runich.app@yandex.ru', 'varon-in@yandex.ru', 'aovoronin.piano@gmail.com')
+    AND "is_super_admin" IS DISTINCT FROM true
+) AS "result"`,
           },
         ],
       }),

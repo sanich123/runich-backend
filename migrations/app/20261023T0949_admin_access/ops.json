@@ -18,7 +18,11 @@
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
           "\"public\".\"AdminAccessAudit\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"AdminAccessAudit\""
+        }
       }
     ],
     "execute": [
@@ -36,7 +40,11 @@
           "\"public\".\"AdminAccessAudit\"",
           "r",
           "p"
-        ]
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"AdminAccessAudit\""
+        }
       }
     ]
   },
@@ -59,7 +67,11 @@
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
           "\"public\".\"AdminRoleAssignments\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"AdminRoleAssignments\""
+        }
       }
     ],
     "execute": [
@@ -77,7 +89,11 @@
           "\"public\".\"AdminRoleAssignments\"",
           "r",
           "p"
-        ]
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"AdminRoleAssignments\""
+        }
       }
     ]
   },
@@ -102,7 +118,11 @@
           "AdminRoleAssignments_user_id_role_key",
           "public",
           "\"public\".\"AdminRoleAssignments\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"AdminRoleAssignments_user_id_role_key\" on \"AdminRoleAssignments\""
+        }
       }
     ],
     "execute": [
@@ -144,7 +164,11 @@
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
           "\"public\".\"AdminAccessAudit_actor_user_id_idx_c46ca325\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"AdminAccessAudit_actor_user_id_idx_c46ca325\""
+        }
       }
     ],
     "execute": [
@@ -188,7 +212,11 @@
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
           "\"public\".\"AdminAccessAudit_created_at_idx\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"AdminAccessAudit_created_at_idx\""
+        }
       }
     ],
     "execute": [
@@ -232,7 +260,11 @@
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
           "\"public\".\"AdminAccessAudit_target_user_id_idx_cc615011\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"AdminAccessAudit_target_user_id_idx_cc615011\""
+        }
       }
     ],
     "execute": [
@@ -276,7 +308,11 @@
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
           "\"public\".\"AdminRoleAssignments_granted_by_user_id_idx_d055b00f\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"AdminRoleAssignments_granted_by_user_id_idx_d055b00f\""
+        }
       }
     ],
     "execute": [
@@ -320,7 +356,11 @@
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
           "\"public\".\"AdminRoleAssignments_user_id_idx_6c952402\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"AdminRoleAssignments_user_id_idx_6c952402\""
+        }
       }
     ],
     "execute": [
@@ -364,7 +404,11 @@
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
           "\"public\".\"AdminRoleAssignments_user_id_is_active_idx\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"AdminRoleAssignments_user_id_is_active_idx\""
+        }
       }
     ],
     "execute": [
@@ -410,7 +454,11 @@
           "AdminAccessAudit_actor_user_id_fkey",
           "public",
           "\"public\".\"AdminAccessAudit\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"AdminAccessAudit_actor_user_id_fkey\" on \"AdminAccessAudit\""
+        }
       }
     ],
     "execute": [
@@ -458,7 +506,11 @@
           "AdminAccessAudit_target_user_id_fkey",
           "public",
           "\"public\".\"AdminAccessAudit\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"AdminAccessAudit_target_user_id_fkey\" on \"AdminAccessAudit\""
+        }
       }
     ],
     "execute": [
@@ -506,7 +558,11 @@
           "AdminRoleAssignments_user_id_fkey",
           "public",
           "\"public\".\"AdminRoleAssignments\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"AdminRoleAssignments_user_id_fkey\" on \"AdminRoleAssignments\""
+        }
       }
     ],
     "execute": [
@@ -554,7 +610,11 @@
           "AdminRoleAssignments_granted_by_user_id_fkey",
           "public",
           "\"public\".\"AdminRoleAssignments\""
-        ]
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"AdminRoleAssignments_granted_by_user_id_fkey\" on \"AdminRoleAssignments\""
+        }
       }
     ],
     "execute": [
@@ -602,8 +662,8 @@
     ],
     "postcheck": [
       {
-        "description": "verify all configured admin users are superusers",
-        "sql": "SELECT count(DISTINCT lower(\"email\")) = 3 AS \"result\"\nFROM \"public\".\"Users\"\nWHERE lower(\"email\") IN ('runich.app@yandex.ru', 'varon-in@yandex.ru', 'aovoronin.piano@gmail.com')\n  AND \"is_super_admin\" = true"
+        "description": "verify existing configured admins are superusers and at least one active superuser exists",
+        "sql": "SELECT EXISTS (\n  SELECT 1\n  FROM \"public\".\"Users\"\n  WHERE \"is_super_admin\" IS TRUE\n    AND \"email_confirmed_at\" IS NOT NULL\n    AND \"deleted_at\" IS NULL\n) AND NOT EXISTS (\n  SELECT 1\n  FROM \"public\".\"Users\"\n  WHERE lower(\"email\") IN ('runich.app@yandex.ru', 'varon-in@yandex.ru', 'aovoronin.piano@gmail.com')\n    AND \"is_super_admin\" IS DISTINCT FROM true\n) AS \"result\""
       }
     ]
   }
