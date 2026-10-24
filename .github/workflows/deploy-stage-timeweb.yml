@@ -233,7 +233,7 @@ jobs:
 
           if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
             --resolve "$STAGE_DOMAIN:443:127.0.0.1" "https://$STAGE_DOMAIN/health/ready" \
-            | grep -iq '^alt-svc:.*h3='; then
+            | grep -i '^alt-svc:.*h3=' >/dev/null; then
             echo 'Stage API does not advertise HTTP/3.' >&2
             exit 1
           fi
@@ -246,7 +246,7 @@ jobs:
 
           if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
             --resolve "$STAGE_WEB_DOMAIN:443:127.0.0.1" "https://$STAGE_WEB_DOMAIN/" \
-            | grep -iq '^alt-svc:.*h3='; then
+            | grep -i '^alt-svc:.*h3=' >/dev/null; then
             echo 'Stage web does not advertise HTTP/3.' >&2
             exit 1
           fi
