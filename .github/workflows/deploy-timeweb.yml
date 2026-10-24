@@ -70,6 +70,7 @@ jobs:
           printf '%s\n' "$GITHUB_TOKEN" |
             ssh -i "$HOME/.ssh/id_ed25519" \
               -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \
               "$DEPLOY_USER@$DEPLOY_HOST" \
               "set -euo pipefail; umask 077; config_dir=\$(mktemp -d); trap 'rm -rf \"\$config_dir\"' EXIT; DOCKER_CONFIG=\"\$config_dir\" docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null; DOCKER_CONFIG=\"\$config_dir\" docker pull '$DEPLOY_IMAGE'"
           unset GITHUB_TOKEN
@@ -77,12 +78,14 @@ jobs:
           printf '%s\n' "$GRAFANA_LOKI_TOKEN" |
             ssh -i "$HOME/.ssh/id_ed25519" \
               -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \
               "$DEPLOY_USER@$DEPLOY_HOST" \
               'set -euo pipefail; cd /opt/runich-backend/project; IFS= read -r token; tmp="$(mktemp .env.XXXXXX)"; awk -F= '\''$1 != "GRAFANA_LOKI_TOKEN" { print }'\'' .env > "$tmp"; printf "GRAFANA_LOKI_TOKEN=%s\\n" "$token" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token; grep -q "^GRAFANA_LOKI_TOKEN=..*" .env'
           unset GRAFANA_LOKI_TOKEN
 
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \
             "$DEPLOY_USER@$DEPLOY_HOST" 'bash -s' <<'REMOTE'
             set -euo pipefail
             cd /opt/runich-backend/project
@@ -102,6 +105,7 @@ jobs:
 
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_IMAGE='$DEPLOY_IMAGE' DEPLOY_TREE_SHA='$TREE_SHA' bash -s" <<'REMOTE'
             set -euo pipefail
@@ -222,6 +226,7 @@ jobs:
           DEPLOY_RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
           set -euo pipefail
@@ -267,6 +272,7 @@ jobs:
           # Cleanup is best effort, and neither external database nor volumes are pruned.
           if ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \
             "$DEPLOY_USER@$DEPLOY_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
           cd /opt/runich-backend/project
