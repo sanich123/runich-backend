@@ -234,7 +234,16 @@ export class ModerationService {
     if (report.targetType === 'activity') {
       context = await this.prisma.activity.findUnique({
         where: { id: report.targetId },
-        select: { title: true, description: true, userId: true, moderationStatus: true },
+        select: {
+          title: true,
+          description: true,
+          userId: true,
+          moderationStatus: true,
+          media: {
+            orderBy: { position: 'asc' },
+            select: { id: true, url: true, thumbnail: true },
+          },
+        },
       });
     } else if (report.targetType === 'comment') {
       context = await this.prisma.comment.findUnique({

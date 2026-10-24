@@ -81,11 +81,10 @@ export class AdminAccessService {
       const matches = await this.prisma.user.findMany({
         where: { email: { contains: email, mode: 'insensitive' }, deletedAt: null },
         select: { id: true, email: true, isSuperAdmin: true },
-        take: Math.max(take * 2, 20),
+        orderBy: { email: 'asc' },
+        take,
       });
-      users = matches
-        .filter(({ email: candidate }: { email: string }) => candidate.trim().toLowerCase() === email)
-        .slice(0, take);
+      users = matches;
     } else {
       const assignments = await this.prisma.adminRoleAssignment.findMany({
         where: { isActive: true },

@@ -25,7 +25,7 @@ describe('AdminController', () => {
     expect(service.getAccess).toHaveBeenCalledWith('authenticated-user');
   });
 
-  it('normalizes exact email search and validates page size', async () => {
+  it('normalizes email search and validates page size', async () => {
     service.listUsers.mockResolvedValue([]);
 
     await expect(controller.listUsers(undefined, undefined)).resolves.toEqual([]);

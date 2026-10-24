@@ -184,23 +184,81 @@ export class EmailNotificationWorkerService {
       case EMAIL_NOTIFICATION_TYPE.moderationReport: {
         const report = await this.prisma.contentReport.findUnique({
           where: { id: job.sourceId },
-          select: { id: true, targetId: true, targetType: true, reason: true, details: true },
+          select: {
+            id: true,
+            targetId: true,
+            targetType: true,
+            reason: true,
+            details: true,
+            reporterId: true,
+            subjectUserId: true,
+            reporter: { select: { id: true, email: true, profile: { select: { name: true, surname: true } } } },
+            subjectUser: {
+              select: {
+                id: true,
+                email: true,
+                profile: { select: { name: true, surname: true, bio: true, profilePhoto: true } },
+              },
+            },
+            activity: { select: { title: true, description: true } },
+            comment: { select: { comment: true } },
+            media: { select: { url: true, thumbnail: true, mediaReviewStatus: true } },
+            mediaUpload: {
+              select: {
+                owner: {
+                  select: {
+                    id: true,
+                    email: true,
+                    profile: { select: { name: true, surname: true, bio: true, profilePhoto: true } },
+                  },
+                },
+              },
+            },
+          },
         });
         if (!report) return null;
-        const reportedProfile =
-          report.targetType === 'user'
-            ? await this.prisma.profile.findUnique({
-                where: { userId: report.targetId },
-                select: { name: true, surname: true, bio: true, profilePhoto: true },
-              })
-            : null;
+        const reportedContent =
+          report.targetType === 'activity'
+            ? [report.activity?.title, report.activity?.description].filter(Boolean).join('\n') || null
+            : report.targetType === 'comment'
+              ? (report.comment?.comment ?? null)
+              : report.targetType === 'user'
+                ? (report.subjectUser?.profile?.bio ?? null)
+                : null;
+        const contentAuthor = report.subjectUser ?? report.mediaUpload?.owner;
         const payload = {
           reportId: report.id,
           requestType: 'report' as const,
           targetType: report.targetType,
+          targetId: report.targetId,
           reason: report.reason,
           reporterDetails: report.details,
-          reportedProfile,
+          reporter: report.reporter
+            ? {
+                id: report.reporter.id,
+                email: report.reporter.email,
+                name: report.reporter.profile?.name,
+                surname: report.reporter.profile?.surname,
+              }
+            : report.reporterId
+              ? { id: report.reporterId }
+              : null,
+          reportedUser: contentAuthor
+            ? {
+                id: contentAuthor.id,
+                email: contentAuthor.email,
+                name: contentAuthor.profile?.name,
+                surname: contentAuthor.profile?.surname,
+              }
+            : report.subjectUserId
+              ? { id: report.subjectUserId }
+              : null,
+          reportedContent,
+          reportedMediaUrl:
+            report.media?.mediaReviewStatus === 'rejected'
+              ? null
+              : (report.media?.thumbnail ?? report.media?.url ?? null),
+          reportedProfile: report.targetType === 'user' ? (report.subjectUser?.profile ?? null) : null,
         };
         return { send: () => this.notifications.sendModerationUpdate(payload) };
       }
@@ -213,15 +271,13 @@ export class EmailNotificationWorkerService {
             reason: true,
             reporter: {
               select: {
-                email: true,
-                emailConfirmedAt: true,
                 profile: { select: { language: true } },
               },
             },
           },
         });
         const reporter = report?.reporter;
-        if (!report || !reporter?.email || !reporter.emailConfirmedAt) return null;
+        if (!report || !reporter) return null;
         const locale: 'russian' | 'english' = reporter.profile?.language === 'russian' ? 'russian' : 'english';
         const payload = {
           reportId: report.id,
@@ -230,7 +286,7 @@ export class EmailNotificationWorkerService {
           requestType: 'received' as const,
           locale,
         };
-        return { send: () => this.notifications.sendReporterModerationUpdate(payload, reporter.email) };
+        return { send: () => this.notifications.sendReporterModerationUpdate(payload) };
       }
       case EMAIL_NOTIFICATION_TYPE.reporterDecision: {
         const action = await this.prisma.moderationAction.findUnique({
@@ -244,8 +300,6 @@ export class EmailNotificationWorkerService {
                 reason: true,
                 reporter: {
                   select: {
-                    email: true,
-                    emailConfirmedAt: true,
                     profile: { select: { language: true } },
                   },
                 },
@@ -255,7 +309,7 @@ export class EmailNotificationWorkerService {
         });
         const report = action?.report;
         const reporter = report?.reporter;
-        if (!action || !report || !reporter?.email || !reporter.emailConfirmedAt) return null;
+        if (!action || !report || !reporter) return null;
         const locale: 'russian' | 'english' = reporter.profile?.language === 'russian' ? 'russian' : 'english';
         const payload = {
           reportId: report.id,
@@ -270,7 +324,7 @@ export class EmailNotificationWorkerService {
                 ? ('content-restored' as const)
                 : ('confirmed' as const),
         };
-        return { send: () => this.notifications.sendReporterModerationUpdate(payload, reporter.email) };
+        return { send: () => this.notifications.sendReporterModerationUpdate(payload) };
       }
       case EMAIL_NOTIFICATION_TYPE.moderationAppeal: {
         const appeal = await this.prisma.moderationAppeal.findUnique({
