@@ -19,6 +19,10 @@
 - `yarn test:cov` is the full Jest coverage check and enforces the configured global thresholds of at least 85% for branches, functions, lines, and statements.
 - If coverage is below 85%, add meaningful behavior tests for uncovered code until the full test run passes. Do not lower thresholds or exclude code just to make coverage pass.
 - Fix failures and rerun the affected checks after the final code changes. If a check cannot run or remains failing, report the exact command and reason; do not describe verification as passing.
+
+## One-off deployment scenarios
+
+- Remove temporary migration, bootstrap, and cutover scripts, workflow branches, and documentation once their one-time need has been verified as complete. Keep recovery procedures only when they remain an explicitly supported operational path.
 # NestJS Best Practices
 
 **Version 1.2.0**

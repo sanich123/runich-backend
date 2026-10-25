@@ -134,60 +134,6 @@ function normalizeDeploymentEnv(filePath, environment) {
   }
 }
 
-function mergeLegacyStageEnv(envFilePath, legacyFilePath) {
-  const main = readEnvFile(envFilePath, '.env');
-  const legacy = readEnvFile(legacyFilePath, 'app.env');
-  if (!main || !legacy || process.exitCode) return;
-
-  const conflicts = [];
-  const appendedLines = [];
-  const replacementLines = new Map();
-  for (const [key, entry] of legacy.keys) {
-    // Compose sets DATABASE_URL explicitly. The Stage deployment also
-    // normalizes these environment-specific settings before validation.
-    if (
-      [
-        'APP_ENV',
-        'DATABASE_URL',
-        'GRAFANA_LOKI_TOKEN',
-        'S3_QUARANTINE_BUCKET',
-        'S3_QUARANTINE_PREFIX',
-        'S3_REGION',
-      ].includes(key)
-    ) continue;
-
-    if (!main.keys.has(key)) {
-      appendedLines.push(entry.line);
-      continue;
-    }
-
-    if (main.values[key] === legacy.values[key]) continue;
-    if (!main.values[key]?.trim() && legacy.values[key]?.trim()) {
-      replacementLines.set(main.keys.get(key).lineNumber - 1, entry.line);
-      continue;
-    }
-    if (legacy.values[key]?.trim()) conflicts.push(key);
-  }
-
-  if (conflicts.length) {
-    fail(`app.env conflicts with .env for: ${[...new Set(conflicts)].sort().join(', ')}. Resolve these keys before migration.`);
-    return;
-  }
-
-  if (!appendedLines.length && !replacementLines.size) {
-    console.log('[env validation] legacy app.env already matches .env; no merge needed.');
-    return;
-  }
-
-  const mergedLines = main.source.split(/\r?\n/).map((line, index) => replacementLines.get(index) ?? line);
-  const mergedSource = `${[...mergedLines, ...appendedLines].join('\n').replace(/\s*$/, '')}\n`;
-  if (!writeEnvAtomically(envFilePath, mergedSource)) return;
-
-  console.log(
-    `[env validation] merged ${appendedLines.length} missing app.env keys and replaced ${replacementLines.size} empty .env values from legacy app.env.`,
-  );
-}
-
 function validateEnvironment(file, environment) {
   const requiredKeys = [
     ...REQUIRED_APP_KEYS,
@@ -304,7 +250,6 @@ function parseArgs(args) {
     const arg = args[index];
     if (arg === '--environment') options.environment = args[++index];
     else if (arg === '--file') options.file = args[++index];
-    else if (arg === '--merge-legacy') options.mergeLegacy = args[++index];
     else {
       fail(`unknown argument: ${arg}`);
       return undefined;
@@ -319,18 +264,13 @@ function parseArgs(args) {
     fail('--file must point to the deployment .env file.');
     return undefined;
   }
-  if (options.mergeLegacy && options.environment !== 'stage') {
-    fail('--merge-legacy is supported only for Stage.');
-    return undefined;
-  }
   return options;
 }
 
 const options = parseArgs(process.argv.slice(2));
 if (options) {
   const envFilePath = resolve(options.file);
-  if (options.mergeLegacy) mergeLegacyStageEnv(envFilePath, resolve(options.mergeLegacy));
-  if (!process.exitCode) normalizeDeploymentEnv(envFilePath, options.environment);
+  normalizeDeploymentEnv(envFilePath, options.environment);
   if (!process.exitCode) {
     const file = readEnvFile(envFilePath, '.env');
     if (file) {

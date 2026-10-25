@@ -67,33 +67,33 @@ jobs:
           printf '%s\n' "$STAGE_DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 644 "$HOME/.ssh/known_hosts"
 
-          # Keep the connection alive while remote image pulls can go quiet for minutes.
+          # Поддерживаем соединение, пока загрузка образа на сервере может не передавать данные несколько минут.
           SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=120)
           SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=120)
           TARGET="$STAGE_DEPLOY_USER@$STAGE_DEPLOY_HOST"
           DEPLOY_RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
-          # Keep the Loki token in the encrypted repository secret and server
-          # .env. Transfer it through SSH stdin, not process arguments.
+          # Храним токен Loki в зашифрованном секрете репозитория и в файле .env на сервере.
+          # Передаем его через stdin SSH, а не в аргументах процесса.
           printf '%s\n' "$GRAFANA_LOKI_TOKEN" |
             "${SSH[@]}" "$TARGET" 'set -eu; cd /opt/runich-stage; umask 077; IFS= read -r token; tmp="$(mktemp .env.XXXXXX)"; sed "/^GRAFANA_LOKI_TOKEN=/d" .env > "$tmp"; printf "GRAFANA_LOKI_TOKEN=%s\\n" "$token" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token'
           unset GRAFANA_LOKI_TOKEN
 
-          # The Stage host has limited disk space. Remove unused Docker objects
-          # before streaming the new image; named database and certificate volumes
-          # are preserved because this prune does not include --volumes.
+          # На сервере Stage мало места на диске. Удаляем неиспользуемые объекты Docker
+          # перед передачей нового образа. Именованные тома базы данных и сертификатов
+          # сохраняются, поскольку при очистке не используется параметр --volumes.
           "${SSH[@]}" "$TARGET" 'set -euo pipefail; echo "Disk before Docker cleanup:"; df -h /; docker system df; docker system prune --all --force; echo "Disk after Docker cleanup:"; df -h /; docker system df'
 
-          # Pull the exact immutable image from GHCR on the Stage server. The job token
-          # travels over SSH stdin, and the temporary Docker credentials are removed
-          # when the pull command exits.
+          # Загружаем на сервер Stage точный неизменяемый образ из GHCR. Токен задачи
+          # передается через stdin SSH, а временные учетные данные Docker удаляются
+          # после завершения команды загрузки.
           printf '%s\n' "$GITHUB_TOKEN" |
             "${SSH[@]}" "$TARGET" \
               "set -euo pipefail; umask 077; config_dir=\$(mktemp -d); trap 'rm -rf \"\$config_dir\"' EXIT; DOCKER_CONFIG=\"\$config_dir\" docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null; DOCKER_CONFIG=\"\$config_dir\" docker pull '$DEPLOY_IMAGE'"
           unset GITHUB_TOKEN
           unset STAGE_DEPLOY_SSH_KEY
 
-          "${SCP[@]}" docker-compose.timeweb.stage.yml nginx.stage.bootstrap.conf deploy/nginx/runich.conf.template deploy/grafana/config.alloy "$TARGET:/tmp/"
+          "${SCP[@]}" docker-compose.timeweb.stage.yml deploy/nginx/runich.conf.template deploy/grafana/config.alloy "$TARGET:/tmp/"
 
           "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' STAGE_WEB_DOMAIN='$STAGE_WEB_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
           set -euo pipefail
@@ -111,22 +111,10 @@ jobs:
             mv "$tmp" "$file"
           }
           set_auth_frontend_redirect .env
-          if [ -f app.env ]; then
-            set_auth_frontend_redirect app.env
-          fi
-          if [ -f app.env ]; then
-            chmod 600 app.env
-            docker run --rm --user "$(id -u):$(id -g)" \
-              --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
-              node scripts/validate-deployment-env.mjs \
-              --environment stage --file /deployment/.env --merge-legacy /deployment/app.env
-          else
-            docker run --rm --user "$(id -u):$(id -g)" \
-              --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
-              node scripts/validate-deployment-env.mjs --environment stage --file /deployment/.env
-          fi
+          docker run --rm --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
+            node scripts/validate-deployment-env.mjs --environment stage --file /deployment/.env
           install -o "$(id -un)" -g docker -m 0640 /tmp/docker-compose.timeweb.stage.yml ./docker-compose.timeweb.stage.yml
-          install -o "$(id -un)" -g docker -m 0644 /tmp/nginx.stage.bootstrap.conf ./nginx.stage.bootstrap.conf
           install -d -o "$(id -un)" -g docker -m 0750 ./deploy/nginx
           install -o "$(id -un)" -g docker -m 0644 /tmp/runich.conf.template ./deploy/nginx/runich.conf.template
           install -d -o "$(id -un)" -g docker -m 0755 ./web-stage/releases
@@ -136,25 +124,13 @@ jobs:
           install -o "$(id -un)" -g docker -m 0644 /tmp/config.alloy ./deploy/grafana/config.alloy
           touch logs.log
           chmod 0644 logs.log
-          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/nginx.stage.bootstrap.conf /tmp/runich.conf.template /tmp/config.alloy
+          rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/runich.conf.template /tmp/config.alloy
 
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
           COMPOSE=(docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml)
-          BOOTSTRAP_COMPOSE=(docker compose --project-name runich-stage --profile bootstrap -f docker-compose.timeweb.stage.yml)
-          bootstrap_active=false
-          stop_bootstrap_on_exit() {
-            if [ "$bootstrap_active" = true ]; then
-              "${BOOTSTRAP_COMPOSE[@]}" stop nginx_bootstrap || true
-            fi
-          }
-          trap stop_bootstrap_on_exit EXIT
 
           "${COMPOSE[@]}" config --quiet
           "${COMPOSE[@]}" pull db nginx certbot certbot_renew
-          "${COMPOSE[@]}" up -d --wait db
-          "${COMPOSE[@]}" up --force-recreate --abort-on-container-exit \
-            --exit-code-from db_migrate db_migrate
-          "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nestjs_app background_worker
 
           if ! "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps nginx nginx -V 2>&1 \
             | grep -q -- '--with-http_v3_module'; then
@@ -170,25 +146,15 @@ jobs:
               certificates_ready=false
             fi
           done
-
           if [ "$certificates_ready" != true ]; then
-            "${COMPOSE[@]}" stop nginx || true
-            "${BOOTSTRAP_COMPOSE[@]}" up -d --force-recreate nginx_bootstrap
-            bootstrap_active=true
-            for certificate_domain in "$STAGE_DOMAIN" "$STAGE_WEB_DOMAIN"; do
-              if ! "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps --entrypoint sh certbot \
-                -c 'test -s "/etc/letsencrypt/live/$1/fullchain.pem" && test -s "/etc/letsencrypt/live/$1/privkey.pem"' \
-                sh "$certificate_domain" </dev/null; then
-                "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps certbot \
-                  certonly --webroot --webroot-path /var/www/certbot \
-                  --domain "$certificate_domain" --cert-name "$certificate_domain" \
-                  --non-interactive --agree-tos --register-unsafely-without-email </dev/null
-              fi
-            done
-            "${BOOTSTRAP_COMPOSE[@]}" stop nginx_bootstrap
-            bootstrap_active=false
-            "${BOOTSTRAP_COMPOSE[@]}" rm -f nginx_bootstrap
+            echo 'Stage TLS certificates are missing; provision them before deploying.' >&2
+            exit 1
           fi
+
+          "${COMPOSE[@]}" up -d --wait db
+          "${COMPOSE[@]}" up --force-recreate --abort-on-container-exit \
+            --exit-code-from db_migrate db_migrate
+          "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nestjs_app background_worker
 
           "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps nginx nginx -t
           "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nginx
@@ -251,11 +217,6 @@ jobs:
             exit 1
           fi
 
-          if [ -f app.env ]; then
-            rm -f app.env
-            echo 'Removed the retired Stage app.env after the unified .env passed readiness.'
-          fi
-
           printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
           echo "Stage is healthy at commit $DEPLOY_SHA"
 
@@ -291,10 +252,10 @@ jobs:
             echo 'Stage deployment success email failed; continuing with cleanup.' >&2
           fi
 
-          # The stage host has limited disk space. Keep active containers and
-          # all named volumes (PostgreSQL and Let's Encrypt), but remove old
-          # images, stopped containers, unused networks, and build cache only
-          # after deployment readiness checks and the email attempt.
+          # На сервере Stage мало места на диске. Оставляем работающие контейнеры
+          # и все именованные тома (PostgreSQL и Let's Encrypt), а старые образы,
+          # остановленные контейнеры, неиспользуемые сети и кэш сборки удаляем
+          # только после проверок готовности развертывания и попытки отправить письмо.
           echo 'Docker disk usage before cleanup:'
           docker system df || echo 'Could not inspect Docker disk usage before cleanup.' >&2
           docker system prune --all --force || \

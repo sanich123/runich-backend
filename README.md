@@ -249,8 +249,7 @@ Stage and Production use the same pinned Nginx image
 `deploy/nginx/runich.conf.template`. Each environment supplies its API and web
 domains, web root and API upstream. Both hosts enable HTTP/2 and HTTP/3,
 advertise HTTP/3 with `Alt-Svc`, and use TCP 80/443 plus UDP 443. The firewall
-must allow inbound UDP 443 for clients to negotiate HTTP/3. Stage's separate
-HTTP-only bootstrap config is used only when issuing its certificates.
+must allow inbound UDP 443 for clients to negotiate HTTP/3.
 
 Stage uses the dedicated S3 bucket and these non-secret settings:
 
@@ -262,11 +261,11 @@ CDN URL explicitly. `S3_ENDPOINT` is required in `.env`; the S3 region `ru-1`
 is hardcoded in the backend. The server `/opt/runich-stage/.env` is the single
 source for Compose, API, and worker settings. It contains `DATABASE_URL_DOCKER`
 pointing to the Compose `db` service and must have mode `0600`; never commit it.
-The first successful deploy
-merges any remaining `app.env`, validates all required keys before migrations,
-and removes the retired file after readiness. GitHub Actions deploy credentials
-belong to the `stage` environment; its SSH key must be scoped to the stage
-deployment account.
+GitHub Actions validates all required keys in `.env` before migrations. Deploy
+credentials belong to the `stage` environment; its SSH key must be scoped to the
+stage deployment account. Both Stage TLS certificates must already exist in the
+Let's Encrypt volume; the workflow checks them before applying migrations, and
+the `certbot_renew` service handles renewals.
 
 Production on Timeweb uses the same endpoint with:
 
