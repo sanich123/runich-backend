@@ -117,28 +117,12 @@ jobs:
               exit 1
             fi
 
-            # This file used to be created manually on the host before it became
-            # part of the repository. Preserve that legacy untracked copy so the
-            # exact-commit checkout can materialize the tracked version.
-            if ! git ls-files --error-unmatch docker-compose.timeweb.yml >/dev/null 2>&1 \
-              && [ -f docker-compose.timeweb.yml ]; then
-              LEGACY_COMPOSE_BACKUP="/tmp/docker-compose.timeweb.yml.$(date +%s)"
-              mv -- docker-compose.timeweb.yml "$LEGACY_COMPOSE_BACKUP"
-              echo "Moved legacy untracked compose file to $LEGACY_COMPOSE_BACKUP"
-            fi
-
             git fetch --prune origin master
             git checkout --detach "$DEPLOY_SHA"
             test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
             test "$(git rev-parse 'HEAD^{tree}')" = "$DEPLOY_TREE_SHA"
             test -s .env
             chmod 600 .env
-            auth_frontend_env="$(mktemp .env.XXXXXX)"
-            awk -F= '$1 != "AUTH_FRONTEND_REDIRECT_URI" { print }' .env > "$auth_frontend_env"
-            printf 'AUTH_FRONTEND_REDIRECT_URI=https://runich-app.ru/login-from-url\n' >> "$auth_frontend_env"
-            chmod --reference=.env "$auth_frontend_env"
-            chown --reference=.env "$auth_frontend_env"
-            mv "$auth_frontend_env" .env
             docker run --rm --user "$(id -u):$(id -g)" --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
               node scripts/validate-deployment-env.mjs --environment production --file /deployment/.env
             touch logs.log
@@ -164,13 +148,8 @@ jobs:
               exit 1
             fi
             "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps nginx nginx -t
-            if ! sudo -n -l /usr/local/sbin/runich-production-nginx-cutover >/dev/null 2>&1 \
-              || [ ! -x /usr/local/sbin/runich-production-nginx-cutover ]; then
-              echo 'Install the Production Nginx cutover helper and its exact sudoers rule before deploying.' >&2
-              exit 1
-            fi
 
-            # Run the same migration job Stage ran before replacing either process.
+            # Запускаем ту же задачу миграции, что и на Stage, до замены любого из процессов.
             BACKEND_IMAGE="$DEPLOY_IMAGE" "${COMPOSE[@]}" \
               up --no-build --force-recreate \
               --abort-on-container-exit --exit-code-from db_migrate db_migrate
@@ -182,9 +161,7 @@ jobs:
                 http://127.0.0.1:3000/health/ready >/dev/null \
                 && test "$(docker compose -f docker-compose.timeweb.yml ps --status running --services background_worker)" = \
                   "background_worker"; then
-                # The root helper stops the old host Nginx and host Certbot
-                # timer. The containerized pair now owns TCP/UDP 443 and renewals.
-                sudo -n /usr/local/sbin/runich-production-nginx-cutover
+                # Контейнеры обслуживают TCP/UDP 443 и обновляют сертификаты.
                 "${COMPOSE[@]}" up \
                   -d --force-recreate nginx certbot_renew
 
@@ -335,7 +312,6 @@ jobs:
             node scripts/send-deployment-success-email.mjs
           REMOTE
 
-
       - name: Clean up Production Docker resources after notification
         if: ${{ always() && steps.send_success_email.outcome != 'skipped' }}
         env:
@@ -358,8 +334,8 @@ jobs:
           chmod 644 "$HOME/.ssh/known_hosts"
           unset DEPLOY_SSH_KEY
 
-          # This runs after the email step even if that script reports a failure.
-          # Cleanup is best effort, and neither external database nor volumes are pruned.
+          # Этот шаг запускается после отправки письма, даже если скрипт сообщил об ошибке.
+          # Очистка выполняется по возможности; внешняя база и тома Docker не удаляются.
           if ssh -i "$HOME/.ssh/id_ed25519" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \

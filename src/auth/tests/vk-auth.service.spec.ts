@@ -30,15 +30,6 @@ describe('VkAuthService', () => {
 
   afterEach(() => jest.restoreAllMocks());
 
-  it.each(['VK_CLIENT_ID', 'VK_REDIRECT_URI', 'JWT_SECRET'])('rejects VK start when %s is missing', (variable) => {
-    delete process.env[variable];
-    const response = { redirect: jest.fn() } as RedirectResponse;
-
-    expect(() => service.start(response as unknown as Parameters<typeof service.start>[0])).toThrow(
-      'Авторизация через VK не настроена',
-    );
-  });
-
   it('builds a VK ID authorization URL with S256 PKCE', () => {
     const response = { redirect: jest.fn() } as RedirectResponse;
 

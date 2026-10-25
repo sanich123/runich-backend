@@ -3,6 +3,7 @@ import {
   getAuthFrontendRedirectUri,
   getCorsOrigins,
   isSwaggerEnabled,
+  loadApiStartupConfiguration,
   shouldSeedMockData,
 } from './environment';
 
@@ -41,6 +42,31 @@ describe('environment config', () => {
 
     delete process.env.AUTH_FRONTEND_REDIRECT_URI;
     expect(getAuthFrontendRedirectUri()).toBe('https://stage-web.runich-app.ru/login-from-url');
+  });
+
+  it.each([
+    'DATABASE_URL',
+    'JWT_SECRET',
+    'YANDEX_CLIENT_ID',
+    'YANDEX_CLIENT_SECRET',
+    'YANDEX_REDIRECT_URI',
+    'VK_CLIENT_ID',
+    'VK_REDIRECT_URI',
+  ])('fails API startup when %s is missing', (missingKey) => {
+    process.env.DATABASE_URL = 'postgresql://app:secret@localhost:5432/runich';
+    process.env.JWT_SECRET = 'jwt-secret';
+    for (const key of [
+      'YANDEX_CLIENT_ID',
+      'YANDEX_CLIENT_SECRET',
+      'YANDEX_REDIRECT_URI',
+      'VK_CLIENT_ID',
+      'VK_REDIRECT_URI',
+    ]) {
+      process.env[key] = 'configured';
+    }
+    delete process.env[missingKey];
+
+    expect(() => loadApiStartupConfiguration()).toThrow(missingKey);
   });
 
   it('enables Swagger and mock data only outside production', () => {

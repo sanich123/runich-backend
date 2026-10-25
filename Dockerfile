@@ -1,8 +1,8 @@
 ARG NODE_IMAGE=node:26.10.0-bookworm-slim
 
-# MapLibre Native publishes the Node binary for glibc-based Ubuntu 24.04, not
-# Alpine/musl. Reuse the official Node distribution while keeping Ubuntu 24.04
-# as the actual builder and runtime base.
+# MapLibre Native публикует бинарный модуль Node.js для Ubuntu 24.04 с glibc,
+# но не для Alpine/musl. Используем официальный дистрибутив Node.js, сохраняя
+# Ubuntu 24.04 в качестве базового образа для сборки и запуска.
 FROM ${NODE_IMAGE} AS node-runtime
 
 FROM ubuntu:24.04 AS yarn-base
@@ -57,8 +57,8 @@ COPY . .
 
 RUN yarn db:generate && yarn prisma migration check && yarn build
 
-# Fail the image build if the native MapLibre module cannot load/render in the
-# same Linux runtime that will execute production imports.
+# Завершаем сборку образа с ошибкой, если нативный модуль MapLibre не загружается
+# или не выполняет рендеринг в той же среде Linux, где он будет работать в Production.
 RUN yarn maplibre:smoke
 
 FROM yarn-base AS runtime
@@ -67,8 +67,9 @@ ENV NODE_ENV=production
 
 LABEL org.opencontainers.image.source="https://github.com/sanich123/runich-backend"
 
-# Reuse the dependencies already installed and built by the builder. A second
-# production-only Yarn install exceeds the memory available on Timeweb.
+# Используем зависимости, уже установленные и собранные на этапе сборки.
+# Повторная установка только зависимостей Production через Yarn превышает объем
+# доступной памяти на Timeweb.
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/prisma ./prisma

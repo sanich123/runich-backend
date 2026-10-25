@@ -6,6 +6,14 @@ export interface ApiStartupConfiguration {
   port: number;
 }
 
+const REQUIRED_AUTH_ENVIRONMENT_KEYS = [
+  'YANDEX_CLIENT_ID',
+  'YANDEX_CLIENT_SECRET',
+  'YANDEX_REDIRECT_URI',
+  'VK_CLIENT_ID',
+  'VK_REDIRECT_URI',
+];
+
 function requireEnvironmentValue(name: string) {
   const value = process.env[name];
   if (!value?.trim()) throw new Error(`Обязательная переменная окружения ${name} не задана`);
@@ -25,6 +33,8 @@ export function getHttpPort() {
 }
 
 export function loadApiStartupConfiguration(): ApiStartupConfiguration {
+  REQUIRED_AUTH_ENVIRONMENT_KEYS.forEach(requireEnvironmentValue);
+
   return {
     databaseUrl: requireEnvironmentValue('DATABASE_URL'),
     jwtSecret: getJwtSecret(),

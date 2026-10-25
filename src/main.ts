@@ -33,8 +33,8 @@ async function bootstrap() {
     ...(observeInstrument ? { instrument: observeInstrument } : {}),
   });
   app.enableShutdownHooks();
-  // Railway terminates the public connection at a proxy. Trust the first proxy
-  // hop so request IPs, rate limiting and session metadata use the client IP.
+  // Railway завершает публичное соединение на прокси. Доверяем первому узлу прокси,
+  // чтобы IP запроса, ограничение частоты и данные сессии использовали IP клиента.
   app.set('trust proxy', 1);
   app.use(json({ limit: MAX_JSON_BODY_BYTES }));
   app.use(urlencoded({ extended: true, limit: MAX_JSON_BODY_BYTES }));

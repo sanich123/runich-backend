@@ -1,4 +1,4 @@
-# compiled output
+# Скомпилированные файлы
 /dist
 
 /node_modules
@@ -8,7 +8,7 @@
 !.yarn/patches/
 .yarn/patches/*
 !.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch
-# Logs
+# Журналы
 logs
 *.log
 npm-debug.log*
@@ -17,13 +17,13 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-# OS
+# Файлы операционной системы
 .DS_Store
 
-# Tests
+# Тесты
 /coverage
 /.nyc_output
-# IDEs and editors
+# IDE и редакторы
 /.idea
 .project
 .classpath
@@ -32,7 +32,7 @@ lerna-debug.log*
 .settings/
 *.sublime-workspace
 
-# IDE - VSCode
+# IDE — VS Code
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -40,6 +40,6 @@ lerna-debug.log*
 !.vscode/extensions.json
 .vercel
 
-# Generated Prisma contract artifacts
+# Сгенерированные файлы контракта Prisma
 /prisma/contract.json
 /prisma/contract.d.ts

@@ -2,7 +2,7 @@ name: Send daily Production metrics
 
 on:
   schedule:
-    - cron: '0 6 * * *' # 09:00 Europe/Moscow
+    - cron: '0 6 * * *' # 09:00 по Москве
   workflow_dispatch:
 
 concurrency:

@@ -59,10 +59,11 @@ hosts. The Timeweb firewall must allow inbound UDP 443.
 
 Stage хранит PostgreSQL и Let's Encrypt в named volumes. Не удаляйте их.
 `/opt/runich-stage/.env` — единственный источник настроек Compose, API и worker;
-файл должен иметь режим `0600`. При первом успешном Stage-деплое оставшийся
-`app.env` объединяется в `.env`, проверяется до миграции и удаляется после
-проверки readiness. Валидатор проверяет обязательные ключи для БД, API, S3,
-модерации, OAuth, почты и Grafana, а также ожидаемые настройки конкретной среды.
+файл должен иметь режим `0600`. Валидатор проверяет обязательные ключи для БД,
+API, S3, модерации, OAuth, почты и Grafana, а также настройки среды до миграции.
+Оба TLS-сертификата должны существовать в томе Let's Encrypt до запуска деплоя;
+workflow проверяет их до миграции. Регулярное продление выполняет контейнер
+`certbot_renew`.
 Observe остаётся необязательным и включается только при наличии обеих его
 переменных. Mail.ru SMTP fallback обязателен в обеих средах.
 
@@ -75,9 +76,10 @@ Observe остаётся необязательным и включается т
 `GRAFANA_LOKI_TOKEN`. Stage дополнительно требует `POSTGRES_USER`,
 `POSTGRES_PASSWORD` и `POSTGRES_DB`. Mail.ru SMTP fallback требует оба ключа:
 `MAILRU_SMTP_USER` и `MAILRU_SMTP_PASSWORD`. Пара Observe должна быть либо
-полностью задана, либо полностью отсутствовать. `NSFWJS_MODEL_URL`,
-`AUTH_FRONTEND_REDIRECT_URI` и ключ mock-seed остаются опциональными; без
-`NSFWJS_MODEL_URL` worker использует встроенную модель.
+полностью задана, либо полностью отсутствовать. `NSFWJS_MODEL_URL` и ключ
+mock-seed остаются опциональными; без `NSFWJS_MODEL_URL` worker использует
+встроенную модель. На Stage и Production адрес фронтенда выбирается по `APP_ENV`;
+`AUTH_FRONTEND_REDIRECT_URI` в deployment `.env` не нужен.
 `S3_ENDPOINT` обязателен в `.env`; регион `ru-1` задан в коде и в `.env` не
 хранится. Stage может не задавать `S3_PUBLIC_URL` — он строится из endpoint и
 bucket; Production задаёт его явно, чтобы ссылки шли через CDN.
@@ -92,25 +94,10 @@ service и Alloy, затем проверяет локальный и публи
 внешний Timeweb DBaaS. Production and Stage share the pinned Nginx image and
 the config template described above.
 
-The first Docker Nginx deployment stops and disables host Nginx and the host
-Certbot timer; Docker Nginx then owns both API and web TLS on TCP/UDP 443.
-Certbot renews from the same `/etc/letsencrypt` mount and signals the Nginx
-container to reload. Keep inbound TCP 80/443 and UDP 443 open.
-
-Before the first Production deployment of this change, install the narrow root
-helper:
-
-```bash
-cd /opt/runich-backend/project
-sudo install -o root -g root -m 0755 scripts/production-nginx-cutover.sh \
-  /usr/local/sbin/runich-production-nginx-cutover
-```
-
-Allow the Production deploy account to invoke only
-`/usr/local/sbin/runich-production-nginx-cutover` without a password in
-sudoers, then validate the file with `visudo -cf`. The helper checks both
-Production certificates, creates the shared ACME webroot, and disables the old
-host services.
+Docker Nginx owns API and web TLS on TCP/UDP 443. Host Nginx and host Certbot
+timers are disabled; keep them disabled so Docker can bind TCP 80/443. The
+Certbot renewal container uses the shared `/etc/letsencrypt` mount and signals
+Nginx to reload. Keep inbound TCP 80/443 and UDP 443 open.
 
 После readiness workflow пишет `.deployed-sha`, очищает Docker-образы и
 BuildKit-кэш, затем отправляет deployment-письмо. Ошибка SMTP на финальном шаге
