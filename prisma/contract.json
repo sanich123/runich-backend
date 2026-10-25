@@ -48,6 +48,10 @@
       "model": "Friend",
       "namespace": "public"
     },
+    "GoogleVisionMonthlyUsage": {
+      "model": "GoogleVisionMonthlyUsage",
+      "namespace": "public"
+    },
     "Like": {
       "model": "Like",
       "namespace": "public"
@@ -2597,6 +2601,40 @@
               },
               "namespaceId": "public",
               "table": "Friend"
+            }
+          },
+          "GoogleVisionMonthlyUsage": {
+            "fields": {
+              "monthKey": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 7
+                  }
+                }
+              },
+              "usedUnits": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "monthKey": {
+                  "column": "month_key"
+                },
+                "usedUnits": {
+                  "column": "used_units"
+                }
+              },
+              "namespaceId": "public",
+              "table": "GoogleVisionMonthlyUsage"
             }
           },
           "Like": {
@@ -8003,6 +8041,35 @@
                 }
               ]
             },
+            "GoogleVisionMonthlyUsage": {
+              "columns": {
+                "month_key": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 7
+                  }
+                },
+                "used_units": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "month_key"
+                ]
+              },
+              "uniques": []
+            },
             "Like": {
               "columns": {
                 "activityId": {
@@ -10646,7 +10713,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "ee87d74127e76bc9e86c47ee60feabc170f0e913cc0ac7892337f26bb162c69d"
+    "storageHash": "b9fea1a401b872f4d1c8369913db9de66706270ea50df045a55ef0d6a1e75eac"
   },
   "capabilities": {
     "postgres": {

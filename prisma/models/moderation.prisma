@@ -71,6 +71,13 @@ model MediaModerationAsset {
   @@map("MediaModerationAsset")
 }
 
+model GoogleVisionMonthlyUsage {
+  monthKey  VarChar(7) @id @map("month_key")
+  usedUnits Int        @default(0) @map("used_units")
+
+  @@map("GoogleVisionMonthlyUsage")
+}
+
 model ModerationAction {
   id        Uuid                 @id @default(sql`gen_random_uuid()`)
   reportId  Uuid                 @map("report_id")

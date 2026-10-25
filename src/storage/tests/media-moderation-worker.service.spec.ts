@@ -1,9 +1,13 @@
 import { Logger } from '@nestjs/common';
 import { jest } from '@jest/globals';
-import { writeFile } from 'node:fs/promises';
 import { asyncMock, transactionMock } from 'src/tests/helpers';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
-import { MEDIA_MODERATION_MODEL_VERSION, MEDIA_MODERATION_RETRY_LIMIT } from '../media-moderation-thresholds';
+import {
+  MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION,
+  MEDIA_MODERATION_MODEL_VERSION,
+  MEDIA_MODERATION_RETRY_LIMIT,
+} from '../media-moderation-thresholds';
+import { getMediaModerationProviderName, getMediaModerationReviewReason } from '../media-moderation-worker.helpers';
 import { MediaModerationWorkerService } from '../media-moderation-worker.service';
 
 function createPrismaMock() {
@@ -24,7 +28,24 @@ const queuedAsset = {
   attempts: 0,
 };
 
+function spyOnScanner(worker: MediaModerationWorkerService) {
+  const scanner = (worker as unknown as { scanner: { scan: (asset: unknown) => Promise<unknown> } }).scanner;
+  return jest.spyOn(scanner, 'scan');
+}
+
 describe('MediaModerationWorkerService', () => {
+  it('reports the provider for Google Vision, NSFWJS, and mixed scans', () => {
+    expect(getMediaModerationProviderName(MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION)).toBe(
+      'Google Cloud Vision SafeSearch',
+    );
+    expect(getMediaModerationProviderName(MEDIA_MODERATION_MODEL_VERSION)).toBe('NSFWJS');
+    expect(
+      getMediaModerationProviderName(
+        `${MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION}+${MEDIA_MODERATION_MODEL_VERSION}`,
+      ),
+    ).toBe('Google Cloud Vision SafeSearch и NSFWJS');
+  });
+
   it('returns false when the queue is empty and does not claim an upload already claimed by another worker', async () => {
     const prisma = createPrismaMock();
     const worker = new MediaModerationWorkerService(prisma as never, {} as never);
@@ -41,8 +62,7 @@ describe('MediaModerationWorkerService', () => {
     const prisma = createPrismaMock();
     const storage = { approveModerationAsset: asyncMock() };
     const worker = new MediaModerationWorkerService(prisma as never, storage as never);
-    const scanAsset = jest.spyOn(worker as unknown as { scanAsset: (asset: unknown) => Promise<unknown> }, 'scanAsset');
-    scanAsset.mockResolvedValue({ scores: { Drawing: 0.98, Porn: 0.01 }, frameCount: null });
+    spyOnScanner(worker).mockResolvedValue({ scores: { Drawing: 0.98, Porn: 0.01 }, frameCount: null });
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(queuedAsset);
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
 
@@ -63,8 +83,7 @@ describe('MediaModerationWorkerService', () => {
   it('sends uncertain results to moderator review and queues a notification email once', async () => {
     const prisma = createPrismaMock();
     const worker = new MediaModerationWorkerService(prisma as never, {} as never);
-    const scanAsset = jest.spyOn(worker as unknown as { scanAsset: (asset: unknown) => Promise<unknown> }, 'scanAsset');
-    scanAsset.mockResolvedValue({ scores: { Porn: 0.8, Sexy: 0.65 }, frameCount: 12 });
+    spyOnScanner(worker).mockResolvedValue({ scores: { Porn: 0.8, Sexy: 0.65 }, frameCount: 12 });
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(queuedAsset);
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
     prisma.contentReport.findFirst.mockResolvedValue(null);
@@ -105,8 +124,7 @@ describe('MediaModerationWorkerService', () => {
   it('sends an uncertain image to review without claiming a video frame count', async () => {
     const prisma = createPrismaMock();
     const worker = new MediaModerationWorkerService(prisma as never, {} as never);
-    const scanAsset = jest.spyOn(worker as unknown as { scanAsset: (asset: unknown) => Promise<unknown> }, 'scanAsset');
-    scanAsset.mockResolvedValue({ scores: { Porn: 0.8 }, frameCount: null });
+    spyOnScanner(worker).mockResolvedValue({ scores: { Porn: 0.8 }, frameCount: null });
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(queuedAsset);
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
     prisma.contentReport.findFirst.mockResolvedValue(null);
@@ -124,8 +142,7 @@ describe('MediaModerationWorkerService', () => {
     const prisma = createPrismaMock();
     const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const worker = new MediaModerationWorkerService(prisma as never, {} as never);
-    const scanAsset = jest.spyOn(worker as unknown as { scanAsset: (asset: unknown) => Promise<unknown> }, 'scanAsset');
-    scanAsset.mockRejectedValue(new Error('model unavailable'));
+    spyOnScanner(worker).mockRejectedValue(new Error('model unavailable'));
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
 
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(queuedAsset);
@@ -172,55 +189,37 @@ describe('MediaModerationWorkerService', () => {
     loggerError.mockRestore();
   });
 
-  it('dispatches image and video uploads to their matching scanner paths', async () => {
+  it('dispatches queued images and videos to the scanner', async () => {
     const prisma = createPrismaMock();
-    const storage = {
-      downloadQuarantineObjectToFile: jest.fn(async (_key: string, path: string) =>
-        writeFile(path, Buffer.from('media')),
-      ),
-    };
-    const worker = new MediaModerationWorkerService(prisma as never, storage as never);
-    const scanner = worker as unknown as {
-      getModel: () => Promise<unknown>;
-      classify: (model: unknown, path: string) => Promise<Record<string, number>>;
-      scanVideo: (
-        model: unknown,
-        path: string,
-        directory: string,
-      ) => Promise<{ scores: Record<string, number>; frameCount: number }>;
-      scanAsset: (asset: typeof queuedAsset) => Promise<{ scores: Record<string, number>; frameCount: number | null }>;
-    };
-    const model = {};
-    jest.spyOn(scanner, 'getModel').mockResolvedValue(model);
-    const classify = jest.spyOn(scanner, 'classify').mockResolvedValue({ Drawing: 0.99 });
-    const scanVideo = jest.spyOn(scanner, 'scanVideo').mockResolvedValue({ scores: { Drawing: 0.98 }, frameCount: 2 });
+    const worker = new MediaModerationWorkerService(prisma as never, { approveModerationAsset: asyncMock() } as never);
+    const scan = spyOnScanner(worker)
+      .mockResolvedValueOnce({ scores: { Drawing: 0.99 }, frameCount: null })
+      .mockResolvedValueOnce({ scores: { Drawing: 0.98 }, frameCount: 2 });
+    const videoAsset = { ...queuedAsset, id: 'asset-video', contentType: 'video/mp4' };
+    prisma.mediaModerationAsset.findFirst.mockResolvedValueOnce(queuedAsset).mockResolvedValueOnce(videoAsset);
+    prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
 
-    await expect(scanner.scanAsset(queuedAsset)).resolves.toEqual({ scores: { Drawing: 0.99 }, frameCount: null });
-    await expect(scanner.scanAsset({ ...queuedAsset, contentType: 'video/mp4' })).resolves.toEqual({
-      scores: { Drawing: 0.98 },
-      frameCount: 2,
-    });
-    expect(classify).toHaveBeenCalledTimes(1);
-    expect(scanVideo).toHaveBeenCalledTimes(1);
-    expect(storage.downloadQuarantineObjectToFile).toHaveBeenCalledTimes(2);
+    await worker.processNextAsset();
+    await worker.processNextAsset();
+
+    expect(scan).toHaveBeenNthCalledWith(1, queuedAsset);
+    expect(scan).toHaveBeenNthCalledWith(2, videoAsset);
   });
 
   it('handles non-Error scan failures and reports score categories that need review', async () => {
     const prisma = createPrismaMock();
     const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const worker = new MediaModerationWorkerService(prisma as never, {} as never);
-    const scanAsset = jest.spyOn(worker as unknown as { scanAsset: (asset: unknown) => Promise<unknown> }, 'scanAsset');
-    scanAsset.mockRejectedValue('model unavailable');
+    spyOnScanner(worker).mockRejectedValue('model unavailable');
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(queuedAsset);
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
 
     await worker.processNextAsset();
 
     expect(loggerError).toHaveBeenCalledWith(expect.stringContaining('asset-1'), 'model unavailable');
-    const scanner = worker as unknown as { getReviewReason: (scores: Record<string, number>) => string | null };
-    expect(scanner.getReviewReason({})).toBeNull();
-    expect(scanner.getReviewReason({ Porn: 0.99 })).toContain('Porn=0.99');
-    expect(scanner.getReviewReason({ Porn: 0.99, Hentai: 0.8 })).toBe('Porn=0.99, Hentai=0.80');
+    expect(getMediaModerationReviewReason({})).toBeNull();
+    expect(getMediaModerationReviewReason({ Porn: 0.99 })).toContain('Porn=0.99');
+    expect(getMediaModerationReviewReason({ Porn: 0.99, Hentai: 0.8 })).toBe('Porn=0.99, Hentai=0.80');
     loggerError.mockRestore();
   });
 
