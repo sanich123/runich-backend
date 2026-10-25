@@ -53,6 +53,21 @@ server {
     http3 on;
     server_name ${WEB_DOMAIN};
 
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_comp_level 5;
+    gzip_types
+        application/javascript
+        application/json
+        application/manifest+json
+        application/wasm
+        application/xml
+        image/svg+xml
+        text/css
+        text/plain
+        text/xml;
+
     ssl_certificate /etc/letsencrypt/live/${WEB_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${WEB_DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
