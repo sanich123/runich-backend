@@ -91,13 +91,12 @@ export class StorageService {
       endpoint: endpoint || undefined,
       region,
       forcePathStyle: true,
-      // Timeweb S3 is compatible with the AWS API, but its object storage does
-      // not require the optional flexible checksum headers that newer AWS SDK
-      // versions add to PutObject requests. Avoid signing those headers unless
-      // an operation explicitly requires a checksum.
+      // Timeweb S3 совместим с AWS API, но не требует дополнительных заголовков
+      // контрольных сумм, которые новые версии AWS SDK добавляют к PutObject.
+      // Добавляем их только для операций, которым контрольная сумма нужна явно.
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',
-      credentials: accessKey && secretKey ? { accessKeyId: accessKey, secretAccessKey: secretKey } : undefined,
+      credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
     });
   }
 

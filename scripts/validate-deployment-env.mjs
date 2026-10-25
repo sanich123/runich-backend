@@ -112,13 +112,23 @@ function normalizeDeploymentEnv(filePath, environment) {
     S3_QUARANTINE_PREFIX: `moderation-quarantine/${environment}/`,
   };
   const managedKeys = new Set(Object.keys(managedValues));
+  const obsoleteKeys = new Set([
+    'AUTH_FRONTEND_REDIRECT_URI',
+    'DATABASE_URL',
+    'LOG_FILE_PATH',
+    'RUNICH_PROCESS',
+    'TZ',
+    'VK_CLIENT_SECRET',
+    ...(environment === 'production' ? ['BACKEND_IMAGE', 'POSTGRES_DB', 'POSTGRES_PASSWORD', 'POSTGRES_USER'] : []),
+  ]);
   const existingValuesMatch = Object.entries(managedValues).every(([key, value]) => file.values[key] === value);
   const hasRegionSetting = file.keys.has('S3_REGION');
-  if (existingValuesMatch && !hasRegionSetting) return;
+  const hasObsoleteSettings = [...obsoleteKeys].some((key) => file.keys.has(key));
+  if (existingValuesMatch && !hasRegionSetting && !hasObsoleteSettings) return;
 
   const managedLineNumbers = new Set(
     [...file.keys.entries()]
-      .filter(([key]) => managedKeys.has(key) || key === 'S3_REGION')
+      .filter(([key]) => managedKeys.has(key) || key === 'S3_REGION' || obsoleteKeys.has(key))
       .map(([, entry]) => entry.lineNumber),
   );
   const preservedLines = file.source.split(/\r?\n/).filter((_, index) => !managedLineNumbers.has(index + 1));
@@ -126,11 +136,11 @@ function normalizeDeploymentEnv(filePath, environment) {
     .map(([key, value]) => `${key}=${value}`)
     .join('\n')}\n`;
   if (writeEnvAtomically(filePath, normalizedSource)) {
-    console.log(
-      hasRegionSetting
-        ? '[env validation] normalized APP_ENV and quarantine settings; removed S3_REGION because the region is code-defined.'
-        : '[env validation] normalized APP_ENV and quarantine settings.',
-    );
+    const changes = [];
+    if (!existingValuesMatch) changes.push('normalized APP_ENV and quarantine settings');
+    if (hasRegionSetting) changes.push('removed S3_REGION because the region is code-defined');
+    if (hasObsoleteSettings) changes.push('removed redundant deployment settings');
+    console.log(`[env validation] ${changes.join('; ')}.`);
   }
 }
 
@@ -152,9 +162,7 @@ function validateEnvironment(file, environment) {
 
   const expectedBucket = environment === 'stage' ? 'runich-stage' : 'runich-production';
   const expectedPublicUrl =
-    environment === 'stage'
-      ? 'https://s3.twcstorage.ru/runich-stage'
-      : 'https://q0tsp3wn9v.cdn.twcstorage.ru';
+    environment === 'stage' ? 'https://s3.twcstorage.ru/runich-stage' : 'https://q0tsp3wn9v.cdn.twcstorage.ru';
   const expectedQuarantinePrefix = `moderation-quarantine/${environment}/`;
   if (file.values.S3_BUCKET !== expectedBucket) fail(`S3_BUCKET must be ${expectedBucket}.`);
   const configuredPublicUrl = file.values.S3_PUBLIC_URL?.trim();
@@ -238,7 +246,7 @@ function validateEnvironment(file, environment) {
           fail('Stage DATABASE_URL_DOCKER user must match POSTGRES_USER.');
         }
       } catch {
-        // The more specific DATABASE_URL_DOCKER error above is sufficient.
+        // Более точная ошибка для DATABASE_URL_DOCKER уже выведена выше.
       }
     }
   }

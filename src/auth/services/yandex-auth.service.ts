@@ -1,4 +1,4 @@
-import { Inject, Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
@@ -13,15 +13,10 @@ export class YandexAuthService {
   ) {}
 
   start(response: Response) {
-    const clientId = process.env.YANDEX_CLIENT_ID;
-    const redirectUri = process.env.YANDEX_REDIRECT_URI;
-    if (!clientId || !redirectUri) {
-      throw new ServiceUnavailableException('Авторизация через Яндекс не настроена');
-    }
     const url = new URL('https://oauth.yandex.ru/authorize');
     url.searchParams.set('response_type', 'code');
-    url.searchParams.set('client_id', clientId);
-    url.searchParams.set('redirect_uri', redirectUri);
+    url.searchParams.set('client_id', process.env.YANDEX_CLIENT_ID!);
+    url.searchParams.set('redirect_uri', process.env.YANDEX_REDIRECT_URI!);
     url.searchParams.set('force_confirm', 'yes');
     return response.redirect(url.toString());
   }
@@ -40,8 +35,8 @@ export class YandexAuthService {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        client_id: process.env.YANDEX_CLIENT_ID ?? '',
-        client_secret: process.env.YANDEX_CLIENT_SECRET ?? '',
+        client_id: process.env.YANDEX_CLIENT_ID!,
+        client_secret: process.env.YANDEX_CLIENT_SECRET!,
       }),
     });
     if (!tokenResponse.ok) throw new UnauthorizedException('Не удалось получить токен Яндекс');

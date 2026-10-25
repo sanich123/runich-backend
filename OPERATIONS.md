@@ -76,9 +76,10 @@ Observe остаётся необязательным и включается т
 `GRAFANA_LOKI_TOKEN`. Stage дополнительно требует `POSTGRES_USER`,
 `POSTGRES_PASSWORD` и `POSTGRES_DB`. Mail.ru SMTP fallback требует оба ключа:
 `MAILRU_SMTP_USER` и `MAILRU_SMTP_PASSWORD`. Пара Observe должна быть либо
-полностью задана, либо полностью отсутствовать. `NSFWJS_MODEL_URL`,
-`AUTH_FRONTEND_REDIRECT_URI` и ключ mock-seed остаются опциональными; без
-`NSFWJS_MODEL_URL` worker использует встроенную модель.
+полностью задана, либо полностью отсутствовать. `NSFWJS_MODEL_URL` и ключ
+mock-seed остаются опциональными; без `NSFWJS_MODEL_URL` worker использует
+встроенную модель. На Stage и Production адрес фронтенда выбирается по `APP_ENV`;
+`AUTH_FRONTEND_REDIRECT_URI` в deployment `.env` не нужен.
 `S3_ENDPOINT` обязателен в `.env`; регион `ru-1` задан в коде и в `.env` не
 хранится. Stage может не задавать `S3_PUBLIC_URL` — он строится из endpoint и
 bucket; Production задаёт его явно, чтобы ссылки шли через CDN.

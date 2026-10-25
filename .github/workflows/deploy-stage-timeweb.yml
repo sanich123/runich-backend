@@ -101,16 +101,6 @@ jobs:
 
           test -s .env
           chmod 600 .env
-          set_auth_frontend_redirect() {
-            file="$1"
-            tmp="$(mktemp .env.XXXXXX)"
-            awk -F= '$1 != "AUTH_FRONTEND_REDIRECT_URI" { print }' "$file" > "$tmp"
-            printf 'AUTH_FRONTEND_REDIRECT_URI=https://stage-web.runich-app.ru/login-from-url\n' >> "$tmp"
-            chmod --reference="$file" "$tmp"
-            chown --reference="$file" "$tmp"
-            mv "$tmp" "$file"
-          }
-          set_auth_frontend_redirect .env
           docker run --rm --user "$(id -u):$(id -g)" \
             --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
             node scripts/validate-deployment-env.mjs --environment stage --file /deployment/.env

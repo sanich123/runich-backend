@@ -3,12 +3,8 @@ services:
     image: ${BACKEND_IMAGE:-runich-backend:local}
     restart: 'no'
     init: true
-    env_file:
-      - .env
     command: ['yarn', 'db:migrate:prod']
     environment:
-      TZ: UTC
-      APP_ENV: production
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}
 
   nestjs_app:
@@ -17,8 +13,8 @@ services:
         condition: service_completed_successfully
     image: ${BACKEND_IMAGE:-runich-backend:local}
     restart: always
-    # xvfb-run ожидает сигнал SIGUSR1 от Xvfb. Поэтому контейнеру нужен отдельный
-    # init-процесс: xvfb-run не должен быть PID 1, иначе Docker не доставит сигнал готовности.
+    # xvfb-run ожидает сигнал SIGUSR1 от Xvfb, поэтому контейнеру нужен отдельный
+    # init-процесс: Docker должен доставить сигнал готовности процессу Xvfb.
     init: true
     logging:
       driver: json-file
@@ -99,7 +95,7 @@ services:
   grafana_alloy:
     image: grafana/alloy:v1.20.1
     restart: always
-    user: "0:0"
+    user: '0:0'
     command:
       - run
       - --server.http.listen-addr=127.0.0.1:12345

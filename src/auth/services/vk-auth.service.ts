@@ -1,4 +1,4 @@
-import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, createHash } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -18,11 +18,8 @@ export class VkAuthService {
   ) {}
 
   start(response: Response) {
-    const clientId = process.env.VK_CLIENT_ID;
-    const redirectUri = process.env.VK_REDIRECT_URI;
-    if (!clientId || !redirectUri || !process.env.JWT_SECRET) {
-      throw new ServiceUnavailableException('Авторизация через VK не настроена');
-    }
+    const clientId = process.env.VK_CLIENT_ID!;
+    const redirectUri = process.env.VK_REDIRECT_URI!;
 
     const codeVerifier = randomBytes(32).toString('base64url');
     const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
@@ -60,15 +57,18 @@ export class VkAuthService {
 
     if (!deviceId) return this.redirectError(response, frontendUrl, 'VK не вернул device_id', 'missing_device_id');
 
+    const clientId = process.env.VK_CLIENT_ID!;
+    const redirectUri = process.env.VK_REDIRECT_URI!;
+
     try {
       const tokenResponse = await fetch(VK_TOKEN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          client_id: process.env.VK_CLIENT_ID ?? '',
+          client_id: clientId,
           grant_type: 'authorization_code',
           device_id: deviceId,
-          redirect_uri: process.env.VK_REDIRECT_URI ?? '',
+          redirect_uri: redirectUri,
           code,
           code_verifier: statePayload.codeVerifier,
         }),
@@ -97,7 +97,7 @@ export class VkAuthService {
       const profileResponse = await fetch(VK_USER_INFO_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ access_token: accessToken, client_id: process.env.VK_CLIENT_ID ?? '' }),
+        body: new URLSearchParams({ access_token: accessToken, client_id: clientId }),
       });
       const profilePayload = (await profileResponse.json()) as {
         user?: { user_id?: string; first_name?: string; last_name?: string; avatar?: string; city?: string };

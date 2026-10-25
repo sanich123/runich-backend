@@ -29,12 +29,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - .env
     command: ['yarn', 'db:migrate:prod']
     environment:
-      TZ: UTC
-      APP_ENV: stage
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to db}
     logging:
       driver: json-file
@@ -99,7 +95,7 @@ services:
   grafana_alloy:
     image: grafana/alloy:v1.20.1
     restart: always
-    user: "0:0"
+    user: '0:0'
     command:
       - run
       - --server.http.listen-addr=127.0.0.1:12345

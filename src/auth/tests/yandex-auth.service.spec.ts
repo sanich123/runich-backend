@@ -1,4 +1,4 @@
-import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { jest } from '@jest/globals';
 import { YandexAuthService } from '../services/yandex-auth.service';
 
@@ -49,12 +49,6 @@ describe('YandexAuthService', () => {
     expect(url.searchParams.get('client_id')).toBe('client-id');
     expect(url.searchParams.get('redirect_uri')).toBe('https://api.example/auth/yandex/callback');
     expect(url.searchParams.get('force_confirm')).toBe('yes');
-  });
-
-  it('rejects a missing Yandex configuration', () => {
-    delete process.env.YANDEX_CLIENT_ID;
-
-    expect(() => service.start(responseMock() as never)).toThrow(ServiceUnavailableException);
   });
 
   it('redirects callback errors and missing codes to the frontend', async () => {

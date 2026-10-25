@@ -123,12 +123,6 @@ jobs:
             test "$(git rev-parse 'HEAD^{tree}')" = "$DEPLOY_TREE_SHA"
             test -s .env
             chmod 600 .env
-            auth_frontend_env="$(mktemp .env.XXXXXX)"
-            awk -F= '$1 != "AUTH_FRONTEND_REDIRECT_URI" { print }' .env > "$auth_frontend_env"
-            printf 'AUTH_FRONTEND_REDIRECT_URI=https://runich-app.ru/login-from-url\n' >> "$auth_frontend_env"
-            chmod --reference=.env "$auth_frontend_env"
-            chown --reference=.env "$auth_frontend_env"
-            mv "$auth_frontend_env" .env
             docker run --rm --user "$(id -u):$(id -g)" --volume "$PWD:/deployment" "$DEPLOY_IMAGE" \
               node scripts/validate-deployment-env.mjs --environment production --file /deployment/.env
             touch logs.log
@@ -317,7 +311,6 @@ jobs:
             nestjs_app xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' \
             node scripts/send-deployment-success-email.mjs
           REMOTE
-
 
       - name: Clean up Production Docker resources after notification
         if: ${{ always() && steps.send_success_email.outcome != 'skipped' }}
