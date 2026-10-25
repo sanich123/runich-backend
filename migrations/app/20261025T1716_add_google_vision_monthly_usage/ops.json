@@ -1,0 +1,51 @@
+[
+  {
+    "id": "table.GoogleVisionMonthlyUsage",
+    "label": "Create table \"GoogleVisionMonthlyUsage\"",
+    "summary": "Creates table \"GoogleVisionMonthlyUsage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "GoogleVisionMonthlyUsage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"GoogleVisionMonthlyUsage\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GoogleVisionMonthlyUsage\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"GoogleVisionMonthlyUsage\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"GoogleVisionMonthlyUsage\"",
+        "sql": "CREATE TABLE \"public\".\"GoogleVisionMonthlyUsage\" (\n  \"month_key\" character varying(7) NOT NULL,\n  \"used_units\" int4 DEFAULT 0 NOT NULL,\n  PRIMARY KEY (\"month_key\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"GoogleVisionMonthlyUsage\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"GoogleVisionMonthlyUsage\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"GoogleVisionMonthlyUsage\""
+        }
+      }
+    ]
+  }
+]

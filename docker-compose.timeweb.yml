@@ -30,6 +30,7 @@ services:
       RUNICH_PROCESS: api
       OBSERVE_SERVICE_VERSION: ${BACKEND_IMAGE:-local}
       LOG_FILE_PATH: /app/logs.log
+      GOOGLE_CLOUD_VISION_API_KEY: ''
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must point to the external PostgreSQL service}
     ports:
       - '127.0.0.1:3000:3000'

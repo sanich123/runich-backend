@@ -62,6 +62,7 @@ services:
       TZ: UTC
       RUNICH_PROCESS: api
       LOG_FILE_PATH: /app/logs.log
+      GOOGLE_CLOUD_VISION_API_KEY: ''
       DATABASE_URL: ${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must be set in .env or the shell}
     ports:
       - '127.0.0.1:3000:3000'

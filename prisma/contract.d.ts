@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'ee87d74127e76bc9e86c47ee60feabc170f0e913cc0ac7892337f26bb162c69d'>;
+  StorageHashBase<'b9fea1a401b872f4d1c8369913db9de66706270ea50df045a55ef0d6a1e75eac'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -703,6 +703,11 @@ export namespace Models {
     user: public_User;
     readonly [RelationKeys]?: 'profile' | 'user';
   };
+  export type public_GoogleVisionMonthlyUsage = {
+    monthKey: FieldOutputTypes['public']['GoogleVisionMonthlyUsage']['monthKey'];
+    usedUnits: FieldOutputTypes['public']['GoogleVisionMonthlyUsage']['usedUnits'];
+    readonly [RelationKeys]?: never;
+  };
   export type public_Like = {
     activityId: FieldOutputTypes['public']['Like']['activityId'];
     authorId: FieldOutputTypes['public']['Like']['authorId'];
@@ -1046,6 +1051,7 @@ export declare const models: {
     ContentReport: Models.public_ContentReport;
     EmailNotificationJob: Models.public_EmailNotificationJob;
     Friend: Models.public_Friend;
+    GoogleVisionMonthlyUsage: Models.public_GoogleVisionMonthlyUsage;
     Like: Models.public_Like;
     LoadTestSeedJob: Models.public_LoadTestSeedJob;
     MediaCleanupJob: Models.public_MediaCleanupJob;
@@ -2749,6 +2755,31 @@ type ContractBase = Omit<
                   readonly name: 'Friend_user_id_fkey';
                 },
               ];
+            };
+            readonly GoogleVisionMonthlyUsage: {
+              columns: {
+                readonly month_key: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 7 };
+                  readonly many: false;
+                };
+                readonly used_units: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['month_key'] };
+              uniques: readonly [];
+              indexes: readonly [];
+              foreignKeys: readonly [];
             };
             readonly Like: {
               columns: {
@@ -5000,6 +5031,10 @@ type ContractBase = Omit<
       readonly model: 'EmailNotificationJob';
     };
     readonly Friend: { readonly namespace: 'public' & NamespaceId; readonly model: 'Friend' };
+    readonly GoogleVisionMonthlyUsage: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'GoogleVisionMonthlyUsage';
+    };
     readonly Like: { readonly namespace: 'public' & NamespaceId; readonly model: 'Like' };
     readonly LoadTestSeedJob: {
       readonly namespace: 'public' & NamespaceId;
@@ -6423,6 +6458,31 @@ type ContractBase = Omit<
                 readonly profileId: { readonly column: 'profileId' };
                 readonly updatedAt: { readonly column: 'updatedAt' };
                 readonly userId: { readonly column: 'user_id' };
+              };
+            };
+          };
+          readonly GoogleVisionMonthlyUsage: {
+            readonly fields: {
+              readonly monthKey: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 7 };
+                };
+              };
+              readonly usedUnits: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+            };
+            readonly relations: Record<string, never>;
+            readonly storage: {
+              readonly table: 'GoogleVisionMonthlyUsage';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly monthKey: { readonly column: 'month_key' };
+                readonly usedUnits: { readonly column: 'used_units' };
               };
             };
           };
