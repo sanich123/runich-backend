@@ -90,6 +90,8 @@ model Profile {
   pushNotifications     Boolean                 @default(false) @map("push_notifications")
   inAppNotifications    Boolean                 @default(true) @map("in_app_notifications")
   profilePhotoBlurhash  String?
+  profilePhotoPendingAssetId String? @map("profile_photo_pending_asset_id")
+  profilePhotoPendingBlurhash String? @map("profile_photo_pending_blurhash")
   profileSearchVisible Boolean                @default(true) @map("profile_search_visible")
   allowActivityInteractions Boolean           @default(true) @map("allow_activity_interactions")
   allowActivityReplayViewing Boolean          @default(true) @map("allow_activity_replay_viewing")

@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsDateString, IsEmail, IsOptional, IsString, Matches, ValidateIf } from 'class-validator';
+import { IsBoolean, IsDateString, IsEmail, IsOptional, IsString, IsUUID, Matches, ValidateIf } from 'class-validator';
 
 const WEIGHT_PATTERN = /^(?:\d|[1-9]\d|1\d\d|200)$/;
 const HEIGHT_PATTERN = /^(?:\d|[1-9]\d|1\d\d|2[0-2]\d|230)$/;
@@ -75,6 +75,11 @@ export class UserDto {
   @IsString()
   @IsOptional()
   profilePhotoBlurhash?: string | null;
+
+  @ApiPropertyOptional({ type: String, description: "Uploaded profile photo's moderation asset id" })
+  @IsUUID()
+  @IsOptional()
+  profilePhotoAssetId?: string | null;
 
   @ApiPropertyOptional({ type: String, description: "User's choosed sport" })
   @IsString()

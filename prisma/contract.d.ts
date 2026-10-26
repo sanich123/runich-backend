@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'b9fea1a401b872f4d1c8369913db9de66706270ea50df045a55ef0d6a1e75eac'>;
+  StorageHashBase<'259f8d1ae7b33173f81399515933481f656ffee90e4976acc7b303e0c47e62c5'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -852,6 +852,8 @@ export namespace Models {
     name: FieldOutputTypes['public']['Profile']['name'];
     profilePhoto: FieldOutputTypes['public']['Profile']['profilePhoto'];
     profilePhotoBlurhash: FieldOutputTypes['public']['Profile']['profilePhotoBlurhash'];
+    profilePhotoPendingAssetId: FieldOutputTypes['public']['Profile']['profilePhotoPendingAssetId'];
+    profilePhotoPendingBlurhash: FieldOutputTypes['public']['Profile']['profilePhotoPendingBlurhash'];
     profileSearchVisible: FieldOutputTypes['public']['Profile']['profileSearchVisible'];
     pushNotifications: FieldOutputTypes['public']['Profile']['pushNotifications'];
     restingHeartRate: FieldOutputTypes['public']['Profile']['restingHeartRate'];
@@ -3933,6 +3935,18 @@ type ContractBase = Omit<
                   readonly many: false;
                 };
                 readonly profilePhotoBlurhash: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly profile_photo_pending_asset_id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly profile_photo_pending_blurhash: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: true;
@@ -7372,6 +7386,14 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly profilePhotoPendingAssetId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly profilePhotoPendingBlurhash: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly profileSearchVisible: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
@@ -7523,6 +7545,12 @@ type ContractBase = Omit<
                 readonly name: { readonly column: 'name' };
                 readonly profilePhoto: { readonly column: 'profilePhoto' };
                 readonly profilePhotoBlurhash: { readonly column: 'profilePhotoBlurhash' };
+                readonly profilePhotoPendingAssetId: {
+                  readonly column: 'profile_photo_pending_asset_id';
+                };
+                readonly profilePhotoPendingBlurhash: {
+                  readonly column: 'profile_photo_pending_blurhash';
+                };
                 readonly profileSearchVisible: { readonly column: 'profile_search_visible' };
                 readonly pushNotifications: { readonly column: 'push_notifications' };
                 readonly restingHeartRate: { readonly column: 'resting_heart_rate' };

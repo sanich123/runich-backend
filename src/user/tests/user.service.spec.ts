@@ -1,9 +1,17 @@
+import { BadRequestException } from '@nestjs/common';
 import { UserService } from '../user.service';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 
 function createPrismaMock() {
   return {
-    profile: { findUnique: asyncMock(), create: asyncMock(), update: asyncMock(), upsert: asyncMock() },
+    profile: {
+      findUnique: asyncMock(),
+      create: asyncMock(),
+      update: asyncMock(),
+      upsert: asyncMock(),
+      updateMany: asyncMock(),
+    },
+    mediaModerationAsset: { findFirst: asyncMock() },
   };
 }
 
@@ -74,6 +82,99 @@ describe('UserService', () => {
       update: { name: 'Ann', updatedAt: expect.any(Date) },
       create: { name: 'Ann', updatedAt: expect.any(Date), userId: 'user-1' },
     });
+  });
+
+  it('shows a pending avatar as blurhash to subscribers and a signed preview to its owner', async () => {
+    const prisma = createPrismaMock();
+    const storage = {
+      getModerationUploadStatuses: asyncMock().mockResolvedValue({
+        items: [{ assetId: 'asset-1', status: 'review_required', contentType: 'image/webp' }],
+      }),
+      getOwnerModerationPreviewUrl: asyncMock().mockResolvedValue('https://private.example.test/preview'),
+    };
+    const moderationAccess = { areBlocked: asyncMock().mockResolvedValue(false) };
+    const service = new UserService(prisma as never, undefined, storage as never, moderationAccess as never);
+    const pendingProfile = {
+      id: 'profile-1',
+      userId: 'owner-1',
+      profilePhoto: 'https://public.example.test/old-avatar.webp',
+      profilePhotoBlurhash: 'old-hash',
+      profilePhotoPendingAssetId: 'asset-1',
+      profilePhotoPendingBlurhash: 'pending-hash',
+    };
+    prisma.profile.findUnique.mockResolvedValue(pendingProfile);
+
+    const subscriberView = await service.getProfileByUserId('owner-1', 'subscriber-1');
+    expect(subscriberView).toMatchObject({
+      profilePhoto: null,
+      profilePhotoBlurhash: 'pending-hash',
+      profilePhotoReviewStatus: 'review_required',
+    });
+    expect(subscriberView).not.toHaveProperty('profilePhotoPendingAssetId');
+    expect(storage.getOwnerModerationPreviewUrl).not.toHaveBeenCalled();
+
+    const ownerView = await service.getProfileByUserId('owner-1');
+    expect(ownerView).toMatchObject({
+      profilePhoto: 'https://private.example.test/preview',
+      profilePhotoBlurhash: 'pending-hash',
+      profilePhotoReviewStatus: 'review_required',
+    });
+  });
+
+  it('links a pending profile upload without changing the published avatar', async () => {
+    const prisma = createPrismaMock();
+    const storage = {
+      getModerationUploadStatuses: asyncMock().mockResolvedValue({
+        items: [{ assetId: 'asset-1', status: 'queued', contentType: 'image/webp' }],
+      }),
+      getOwnerModerationPreviewUrl: asyncMock().mockResolvedValue('https://private.example.test/preview'),
+    };
+    const service = new UserService(prisma as never, undefined, storage as never);
+    prisma.mediaModerationAsset.findFirst.mockResolvedValue({ status: 'queued', publishedKey: null });
+    prisma.profile.upsert.mockResolvedValue({
+      id: 'profile-1',
+      userId: 'owner-1',
+      profilePhoto: 'https://public.example.test/old-avatar.webp',
+      profilePhotoBlurhash: 'old-hash',
+      profilePhotoPendingAssetId: 'asset-1',
+      profilePhotoPendingBlurhash: 'pending-hash',
+    });
+
+    await expect(
+      service.updateProfileByUserId('owner-1', 'owner-1', {
+        profilePhotoAssetId: 'asset-1',
+        profilePhotoBlurhash: 'pending-hash',
+      }),
+    ).resolves.toMatchObject({
+      profilePhoto: 'https://private.example.test/preview',
+      profilePhotoBlurhash: 'pending-hash',
+      profilePhotoReviewStatus: 'queued',
+    });
+    expect(prisma.profile.upsert).toHaveBeenCalledWith({
+      where: { userId: 'owner-1' },
+      update: {
+        profilePhotoPendingAssetId: 'asset-1',
+        profilePhotoPendingBlurhash: 'pending-hash',
+        updatedAt: expect.any(Date),
+      },
+      create: {
+        profilePhotoPendingAssetId: 'asset-1',
+        profilePhotoPendingBlurhash: 'pending-hash',
+        updatedAt: expect.any(Date),
+        userId: 'owner-1',
+      },
+    });
+  });
+
+  it('rejects a profile photo asset that is not owned by the profile user', async () => {
+    const prisma = createPrismaMock();
+    const service = new UserService(prisma as never, undefined, {} as never);
+    prisma.mediaModerationAsset.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.updateProfileByUserId('owner-1', 'owner-1', { profilePhotoAssetId: 'asset-1' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.profile.upsert).not.toHaveBeenCalled();
   });
 
   it('converts database failures from every operation to an internal server error', async () => {
