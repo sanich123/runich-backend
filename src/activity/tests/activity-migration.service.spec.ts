@@ -49,8 +49,8 @@ jest.unstable_mockModule('src/common/parsers/map-activities-with-coordinates', (
   mapActivitiesWithCoordinates,
 }));
 
-const { ActivityMigrationService } = await import('../activity-migration.service');
-const { ActivityService } = await import('../activity.service');
+const { ActivityMigrationService } = await import('../services/activity-migration.service');
+const { ActivityService } = await import('../services/activity.service');
 
 const prisma = {
   activityMigrationJob: {

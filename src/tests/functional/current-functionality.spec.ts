@@ -4,7 +4,7 @@ import { jest } from '@jest/globals';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from '../../auth/services/auth.service';
 import { AccountService } from '../../account/account.service';
-import { ActivityService } from '../../activity/activity.service';
+import { ActivityService } from '../../activity/services/activity.service';
 import { CommentService } from '../../comment/comment.service';
 import { FriendService } from '../../friend/friend.service';
 import { LikeService } from '../../like/like.service';
@@ -144,7 +144,7 @@ describe('account, user and social services', () => {
   it('paginates and filters accounts', async () => {
     const prisma = db();
     const service = new AccountService(prisma as never);
-    prisma.profile.findMany.mockResolvedValue([{ id: 'profile-1' }]);
+    prisma.profile.findMany.mockResolvedValue([{ id: 'profile-1', userId: 'user-1' }]);
     await expect(service.getFilteredAccounts('10', undefined, { name: 'Ann' })).resolves.toMatchObject({
       items: [{ id: 'profile-1' }],
     });

@@ -3,7 +3,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { LikeDto } from './like.dto';
 import { handleServiceError, isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
-import { ActivityService } from 'src/activity/activity.service';
+import { ActivityService } from 'src/activity/services/activity.service';
 import { encodeLikeCursor } from './like.pagination';
 import type { LikeCursor } from './like.pagination';
 import { EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';

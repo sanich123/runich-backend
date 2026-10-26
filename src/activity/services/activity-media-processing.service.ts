@@ -8,7 +8,7 @@ import {
   ACTIVITY_MEDIA_PROCESSING_STATUS,
 } from './activity-media-processing.constants';
 import { getMediaProcessingErrorMessage } from './activity-media-processing.utils';
-import type { ActivityMediaProcessingRecord } from './type';
+import type { ActivityMediaProcessingRecord } from '../type';
 
 @Injectable()
 export class ActivityMediaProcessingService {

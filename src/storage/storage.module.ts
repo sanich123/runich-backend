@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
-import { MediaCleanupService } from './media-cleanup.service';
+import { MediaCleanupService } from './services/media-cleanup.service';
 import { StorageController } from './storage.controller';
-import { StorageService } from './storage.service';
+import { StorageService } from './services/storage.service';
 
 @Module({
   imports: [PrismaModule, PassportModule.register({ defaultStrategy: 'jwt' })],

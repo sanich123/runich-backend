@@ -4,7 +4,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { CommentDTO, CommentLikeDto } from './comment.dto';
 import { AccountService } from 'src/account/account.service';
-import { ActivityService } from 'src/activity/activity.service';
+import { ActivityService } from 'src/activity/services/activity.service';
 import { CommentLikeService } from './comment-like.service';
 import { encodeCommentCursor } from './comment.pagination';
 import type { CommentCursor } from './comment.pagination';

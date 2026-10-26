@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from 'src/storage/services/storage.service';
 import { BackgroundWorkerModule } from '../background-worker.module';
 
 describe('BackgroundWorkerModule', () => {

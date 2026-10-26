@@ -20,6 +20,7 @@ function createPrismaMock() {
       findUnique: asyncMock(),
       upsert: asyncMock(),
     },
+    mediaModerationAsset: { findMany: asyncMock() },
   };
 }
 
@@ -27,7 +28,7 @@ describe('AccountService', () => {
   it('searches by name, surname and partial email using the same query', async () => {
     const prisma = createPrismaMock();
     const service = new AccountService(prisma as never);
-    const profile = { id: 'profile-1' };
+    const profile = { id: 'profile-1', userId: 'user-1' };
     const searchFields = [
       { filter: { name: 'Alexander' }, term: 'Alexander' },
       { filter: { surname: 'Voronin' }, term: 'Voronin' },
@@ -72,10 +73,78 @@ describe('AccountService', () => {
           city: true,
           profilePhoto: true,
           profilePhotoBlurhash: true,
+          profilePhotoPendingAssetId: true,
+          profilePhotoPendingBlurhash: true,
           allowNewFollowers: true,
         },
       });
     }
+  });
+
+  it('hides a pending profile photo in search results and returns its blurhash and review status', async () => {
+    const prisma = createPrismaMock();
+    const service = new AccountService(prisma as never);
+    prisma.profile.findMany.mockResolvedValue([
+      {
+        id: 'profile-1',
+        userId: 'user-1',
+        profilePhoto: 'https://cdn.example/approved.jpg',
+        profilePhotoBlurhash: 'approved-blurhash',
+        profilePhotoPendingAssetId: 'asset-1',
+        profilePhotoPendingBlurhash: 'pending-blurhash',
+      },
+    ]);
+    prisma.mediaModerationAsset.findMany.mockResolvedValue([
+      { id: 'asset-1', ownerId: 'user-1', status: 'review_required' },
+    ]);
+
+    await expect(service.getFilteredAccounts('10', undefined, {})).resolves.toMatchObject({
+      items: [
+        {
+          id: 'profile-1',
+          userId: 'user-1',
+          profilePhoto: null,
+          profilePhotoBlurhash: 'pending-blurhash',
+          profilePhotoReviewStatus: 'review_required',
+        },
+      ],
+    });
+    expect(prisma.mediaModerationAsset.findMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ['asset-1'] },
+        ownerId: { in: ['user-1'] },
+        role: 'media',
+        scope: 'profile',
+      },
+      select: { id: true, ownerId: true, status: true },
+    });
+  });
+
+  it('does not hide a profile photo when its moderation asset belongs to another user', async () => {
+    const prisma = createPrismaMock();
+    const service = new AccountService(prisma as never);
+    prisma.profile.findMany.mockResolvedValue([
+      {
+        id: 'profile-1',
+        userId: 'user-1',
+        profilePhoto: 'https://cdn.example/approved.jpg',
+        profilePhotoBlurhash: 'approved-blurhash',
+        profilePhotoPendingAssetId: 'asset-1',
+        profilePhotoPendingBlurhash: 'pending-blurhash',
+      },
+    ]);
+    prisma.mediaModerationAsset.findMany.mockResolvedValue([
+      { id: 'asset-1', ownerId: 'other-user', status: 'queued' },
+    ]);
+
+    await expect(service.getFilteredAccounts('10', undefined, {})).resolves.toMatchObject({
+      items: [
+        {
+          profilePhoto: 'https://cdn.example/approved.jpg',
+          profilePhotoBlurhash: 'approved-blurhash',
+        },
+      ],
+    });
   });
 
   it('requires every word of a full-name search and ignores blank values', async () => {

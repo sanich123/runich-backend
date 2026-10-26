@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import {
   MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION,
   MEDIA_MODERATION_MODEL_VERSION,
-} from '../media-moderation-thresholds';
+} from '../services/media-moderation-thresholds';
 
 type ExecFileCallback = (error: Error | null, result?: { stdout: string; stderr: string }) => void;
 
@@ -35,7 +35,7 @@ const execFileMock = jest.fn((command: string, args: string[], _options: unknown
 
 await jest.unstable_mockModule('node:child_process', () => ({ ...childProcess, execFile: execFileMock }));
 
-const { MediaModerationScannerService } = await import('../media-moderation-scanner.service');
+const { MediaModerationScannerService } = await import('../services/media-moderation-scanner.service');
 
 const queuedAsset = {
   id: 'asset-1',

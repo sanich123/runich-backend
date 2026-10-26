@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { ActivityPersistenceService } from './activity-persistence.service';
+import { ActivityPersistenceService } from '../services/activity-persistence.service';
 
 function resolvedMock<T>(value: T) {
   return jest.fn<() => Promise<T>>().mockResolvedValue(value);

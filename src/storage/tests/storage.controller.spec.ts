@@ -4,7 +4,7 @@ import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { asyncMock } from 'src/tests/helpers';
 import { isSupportedVideoUpload } from '../const';
 import { StorageController } from '../storage.controller';
-import { StorageService } from '../storage.service';
+import { StorageService } from '../services/storage.service';
 
 describe('StorageController', () => {
   const storageService = {

@@ -1,0 +1,35 @@
+import type { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+
+export type ActivityUpdateField =
+  | 'date'
+  | 'timeZone'
+  | 'description'
+  | 'distance'
+  | 'elevationGain'
+  | 'duration'
+  | 'speed'
+  | 'sport'
+  | 'title'
+  | 'kilometresSplit'
+  | 'heartRateStorageKey'
+  | 'averageHeartRate'
+  | 'minHeartRate'
+  | 'maxHeartRate'
+  | 'mapPhotoUrl'
+  | 'routeOnlyMapPhotoUrl'
+  | 'routeStorageKey'
+  | 'routeFormatVersion'
+  | 'routePointCount'
+  | 'routeSizeBytes'
+  | 'routeChecksum'
+  | 'mapPhotoUrlBlurhash'
+  | 'hideMap'
+  | 'mediaProcessingStatus'
+  | 'locationName'
+  | 'weatherTemperature'
+  | 'weatherWindSpeed'
+  | 'weatherCode'
+  | 'locationEnrichmentStatus'
+  | 'caloriesActive';
+
+export type ActivityDatabase = Pick<PrismaService, 'activity' | 'activityMedia' | 'mediaCleanupJob'>;

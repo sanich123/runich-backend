@@ -2,8 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EXPO_PUSH_CONFIG, PUSH_NOTIFICATION_COPY } from './notification.constants';
 import type { ExpoPushMessage, ExpoPushTicket } from './notification.types';
 
-export type { ExpoPushMessage } from './notification.types';
-
 @Injectable()
 export class PushNotificationService {
   private readonly logger = new Logger(PushNotificationService.name);

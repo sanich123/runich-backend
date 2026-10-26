@@ -49,8 +49,8 @@ jest.unstable_mockModule('fs/promises', () => ({
 }));
 
 const { ActivityController } = await import('../activity.controller');
-import { ActivityService } from '../activity.service';
-import { ActivityMigrationService } from '../activity-migration.service';
+import { ActivityService } from '../services/activity.service';
+import { ActivityMigrationService } from '../services/activity-migration.service';
 import { AccountService } from 'src/account/account.service';
 
 describe('ActivityController Strava migration', () => {

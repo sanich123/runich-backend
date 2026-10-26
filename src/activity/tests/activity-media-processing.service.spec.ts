@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { ActivityMediaProcessingService } from '../activity-media-processing.service';
+import { ActivityMediaProcessingService } from '../services/activity-media-processing.service';
 import { asyncMock } from 'src/tests/helpers';
 
 function createPrismaMock() {

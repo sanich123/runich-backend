@@ -1,72 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-
-type ActivityUpdateField =
-  | 'date'
-  | 'timeZone'
-  | 'description'
-  | 'distance'
-  | 'elevationGain'
-  | 'duration'
-  | 'speed'
-  | 'sport'
-  | 'title'
-  | 'kilometresSplit'
-  | 'heartRateStorageKey'
-  | 'averageHeartRate'
-  | 'minHeartRate'
-  | 'maxHeartRate'
-  | 'mapPhotoUrl'
-  | 'routeOnlyMapPhotoUrl'
-  | 'routeStorageKey'
-  | 'routeFormatVersion'
-  | 'routePointCount'
-  | 'routeSizeBytes'
-  | 'routeChecksum'
-  | 'mapPhotoUrlBlurhash'
-  | 'hideMap'
-  | 'mediaProcessingStatus'
-  | 'locationName'
-  | 'weatherTemperature'
-  | 'weatherWindSpeed'
-  | 'weatherCode'
-  | 'locationEnrichmentStatus'
-  | 'caloriesActive';
-
-const ACTIVITY_UPDATE_FIELDS: ActivityUpdateField[] = [
-  'date',
-  'timeZone',
-  'description',
-  'distance',
-  'elevationGain',
-  'duration',
-  'speed',
-  'sport',
-  'title',
-  'kilometresSplit',
-  'heartRateStorageKey',
-  'averageHeartRate',
-  'minHeartRate',
-  'maxHeartRate',
-  'mapPhotoUrl',
-  'routeOnlyMapPhotoUrl',
-  'routeStorageKey',
-  'routeFormatVersion',
-  'routePointCount',
-  'routeSizeBytes',
-  'routeChecksum',
-  'mapPhotoUrlBlurhash',
-  'hideMap',
-  'mediaProcessingStatus',
-  'locationName',
-  'weatherTemperature',
-  'weatherWindSpeed',
-  'weatherCode',
-  'locationEnrichmentStatus',
-  'caloriesActive',
-];
-
-export type ActivityDatabase = Pick<PrismaService, 'activity' | 'activityMedia' | 'mediaCleanupJob'>;
+import { ACTIVITY_UPDATE_FIELDS } from './activity-persistence.constants';
+import type { ActivityDatabase } from './activity-persistence.types';
 
 @Injectable()
 export class ActivityPersistenceService {

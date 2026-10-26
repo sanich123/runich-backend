@@ -8,6 +8,8 @@ export const PROFILE_SEARCH_SELECT = {
   city: true,
   profilePhoto: true,
   profilePhotoBlurhash: true,
+  profilePhotoPendingAssetId: true,
+  profilePhotoPendingBlurhash: true,
   allowNewFollowers: true,
 } as const;
 

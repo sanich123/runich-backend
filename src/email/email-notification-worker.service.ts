@@ -2,12 +2,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/activity-migration-config';
-import { EmailNotificationService, type EmailNotificationPayload } from './email-notification.service';
+import { EmailNotificationService } from './email-notification.service';
+import type { EmailNotificationPayload } from './email-notification.types';
+import { MAX_ATTEMPTS, MAX_RETRY_DELAY_MS, STALE_JOB_AGE_MS } from './email-notification-worker.constants';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from './email-notification.constants';
-
-const MAX_ATTEMPTS = 5;
-const STALE_JOB_AGE_MS = 15 * 60 * 1000;
-const MAX_RETRY_DELAY_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class EmailNotificationWorkerService {

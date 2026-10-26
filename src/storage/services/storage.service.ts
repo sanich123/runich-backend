@@ -36,9 +36,9 @@ import {
   isSupportedVideoUpload,
   MAX_DELETE_BATCH_SIZE,
   MEDIA_BATCH_CONCURRENCY,
-} from './const';
-import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from './activity-route';
-import { decodeActivityHeartRateSamples, encodeActivityHeartRateSamples } from './activity-heart-rate';
+} from '../const';
+import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from '../activity-route';
+import { decodeActivityHeartRateSamples, encodeActivityHeartRateSamples } from '../activity-heart-rate';
 import {
   getActivityPhotoKey,
   getExtensionFromStorageKey,
@@ -46,8 +46,8 @@ import {
   getMigrationArchiveKey,
   getProfilePhotoKey,
   getUserUploadKey,
-} from './storage-key';
-import { MEDIA_UPLOAD_ROLES } from './type';
+} from '../storage-key';
+import { MEDIA_UPLOAD_ROLES } from '../type';
 import type {
   ActivityRouteStorageMetadata,
   MediaUploadManifestEntry,
@@ -56,7 +56,7 @@ import type {
   StorageSettings,
   UploadedPhotoBatch,
   ActivityRouteCacheEntry,
-} from './type';
+} from '../type';
 
 @Injectable()
 export class StorageService {

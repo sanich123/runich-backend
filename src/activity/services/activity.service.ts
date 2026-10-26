@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ActivityDto, type ActivityMediaObject, type WatchWorkoutImportDto } from './activity.dto';
+import { ActivityDto, type ActivityMediaObject, type WatchWorkoutImportDto } from '../activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
@@ -21,38 +21,25 @@ import { ActivityAccessService } from './activity-access.service';
 import { ActivityReadService } from './activity-read.service';
 import { ACTIVITY_ENRICHMENT_STATUS } from './activity-enrichment.constants';
 import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.constants';
-import { ACTIVITY_FAVORITE_ERROR_MESSAGES, DEFAULT_ACTIVITY_PAGE_SIZE } from './const';
-import type { ActivityCursor, ActivityMediaCursor } from './activity.pagination';
+import { ACTIVITY_FAVORITE_ERROR_MESSAGES, DEFAULT_ACTIVITY_PAGE_SIZE } from '../const';
+import type { ActivityCursor, ActivityMediaCursor } from '../activity.pagination';
+import type { ActivityMediaWithModerationReferences, HomeFeedCursor, HomeFeedCursors } from './activity.types';
 import {
   getElevationGainFromKilometreSplits,
   getElevationGainFromLocations,
   normalizeActivityDetails,
   omitActivityHeartRateSamples,
   omitMediaProcessingStatus,
-} from './utils';
-import type { MigratedActivity } from './type';
-import { MediaCleanupService } from 'src/storage/media-cleanup.service';
-import { StorageService } from 'src/storage/storage.service';
-import type { ActivityDatabase } from './activity-persistence.service';
-import { ACTIVITY_VISIBILITY } from './activity-visibility';
+} from '../utils';
+import type { MigratedActivity } from '../type';
+import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
+import { StorageService } from 'src/storage/services/storage.service';
+import type { ActivityDatabase } from './activity-persistence.types';
+import { ACTIVITY_VISIBILITY } from '../activity-visibility';
 import { calculateActiveCalories } from './activity-calories';
 import { StaticMapService } from 'src/common/maps/static-map.service';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
-import { getHeartRateStatistics } from './heart-rate.utils';
-
-type HomeFeedCursor = ActivityCursor | 'done' | undefined;
-type HomeFeedCursors = {
-  my?: HomeFeedCursor;
-  followers?: HomeFeedCursor;
-  favorites?: HomeFeedCursor;
-};
-type ActivityMediaWithModerationReferences = {
-  url: string | null;
-  thumbnail: string | null;
-  mediaModerationAssetId: string | null;
-  thumbnailModerationAssetId: string | null;
-  [key: string]: unknown;
-};
+import { getHeartRateStatistics } from '../heart-rate.utils';
 
 @Injectable()
 export class ActivityService {

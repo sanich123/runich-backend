@@ -6,10 +6,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import AdmZip from 'adm-zip';
 import request from 'supertest';
 import { AppModule } from 'src/app/app.module';
-import { ActivityMigrationService } from 'src/activity/activity-migration.service';
+import { ActivityMigrationService } from 'src/activity/services/activity-migration.service';
 import { AuthTokenService } from 'src/auth/services/auth-token.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from 'src/storage/services/storage.service';
 
 const describeIntegration = process.env.RUNICH_INTEGRATION === 'true' ? describe : describe.skip;
 
