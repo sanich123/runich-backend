@@ -1,21 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { CurrentSubscriptionResponseDto, SubscriptionStatus } from './subscription.dto';
-
-interface SubscriptionRecord {
-  provider: string;
-  productId: string | null;
-  status: string;
-  startsAt: Date | string;
-  expiresAt: Date | string | null;
-  cancelAtPeriodEnd: boolean;
-}
-
-function asDate(value: Date | string | null) {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
+import type { SubscriptionRecord } from './subscription.types';
+import { asDate } from './subscription.utils';
 
 @Injectable()
 export class SubscriptionService {

@@ -19,7 +19,9 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
-import { AdminAccessService, ADMIN_ROLES, type AdminRole } from './admin-access.service';
+import { ADMIN_ROLES } from './admin-access.constants';
+import { AdminAccessService } from './admin-access.service';
+import type { AdminRole } from './admin-access.types';
 import { AdminRolesGuard } from './admin-roles.guard';
 
 @ApiTags('admin')

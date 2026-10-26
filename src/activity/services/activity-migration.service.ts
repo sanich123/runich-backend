@@ -3,24 +3,24 @@ import { rm } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setImmediate as yieldToEventLoop, setTimeout as delay } from 'node:timers/promises';
-import { ACTIVITY_MIGRATION_STATUS, ActivityMigrationJobResponseDto, ActivityMigrationStatus } from './activity.dto';
-import { getMigrationIncomingArchivePath, getMigrationWorkDirectory } from './activity-migration-storage';
+import { ACTIVITY_MIGRATION_STATUS, ActivityMigrationJobResponseDto, ActivityMigrationStatus } from '../activity.dto';
+import { getMigrationIncomingArchivePath, getMigrationWorkDirectory } from '../activity-migration-storage';
 import { generateActivityTitle } from './activity-title';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-with-coordinates';
 import { parseCsvFileIntoArray } from 'src/common/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
-import { ACTIVITY_MIGRATION_CONFIG } from './activity-migration-config';
+import { ACTIVITY_MIGRATION_CONFIG } from '../activity-migration-config';
 import type {
   EnqueueMigrationInput,
   MigratedActivity,
   MigrationJob,
   MigrationProgress,
   StartMigrationUploadInput,
-} from './type';
-import { fileExists, getMigrationErrorMessage } from './activity-migration.utils';
+} from '../type';
+import { fileExists, getMigrationErrorMessage, getTimestamp } from './activity-migration.utils';
 import { ActivityService } from './activity.service';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from 'src/storage/services/storage.service';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 
 @Injectable()
@@ -529,16 +529,4 @@ export class ActivityMigrationService {
       queueSize: processingCount + queuedCount,
     };
   }
-}
-
-function getTimestamp(value: unknown): number | null {
-  if (value instanceof Date) {
-    const timestamp = value.getTime();
-    return Number.isFinite(timestamp) ? timestamp : null;
-  }
-
-  if (typeof value !== 'string' && typeof value !== 'number') return null;
-
-  const timestamp = new Date(value).getTime();
-  return Number.isFinite(timestamp) ? timestamp : null;
 }

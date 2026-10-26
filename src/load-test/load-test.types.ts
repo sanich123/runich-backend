@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- bulk load-test fixtures cross the generated repository boundary. */
 export const LOAD_TEST_SEED_STATUS = {
   queued: 'queued',
   processing: 'processing',
@@ -80,3 +81,6 @@ export type LoadTestSeedRequest = Partial<LoadTestSeedConfig> & {
   runId?: string;
   manifestKey?: string;
 };
+
+export type AnyRecord = Record<string, any>;
+export type SeedUser = { id: string; profileId: string; index: number };

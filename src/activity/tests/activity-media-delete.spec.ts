@@ -1,5 +1,5 @@
 import { ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { ActivityService } from '../activity.service';
+import { ActivityService } from '../services/activity.service';
 import { asyncMock } from 'src/tests/helpers';
 import { jest } from '@jest/globals';
 

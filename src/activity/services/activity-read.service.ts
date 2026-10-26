@@ -3,22 +3,22 @@ import { AccountService } from 'src/account/account.service';
 import { reduceLocations } from 'src/common/parsers/reduce-locations';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from 'src/storage/services/storage.service';
 import { ActivityAccessService } from './activity-access.service';
-import type { ActivityHeartRateSampleObject, LocationObject } from './activity.dto';
+import type { ActivityHeartRateSampleObject, LocationObject } from '../activity.dto';
 import {
   ACTIVITY_CARD_SELECT,
   ACTIVITY_DETAILS_SELECT,
   DEFAULT_ACTIVITY_PAGE_SIZE,
   MAX_MAP_ROUTE_LOCATIONS,
-} from './const';
+} from '../const';
 import {
   encodeActivityCursor,
   encodeActivityMediaCursor,
   type ActivityCursor,
   type ActivityMediaCursor,
-} from './activity.pagination';
-import { ACTIVITY_VISIBILITY } from './activity-visibility';
+} from '../activity.pagination';
+import { ACTIVITY_VISIBILITY } from '../activity-visibility';
 import {
   createActivityChartLocations,
   hidePendingActivityMediaForViewer,
@@ -26,8 +26,8 @@ import {
   normalizeActivityCardForViewer,
   normalizeActivityDetails,
   reduceActivityChartHeartRateSamples,
-} from './utils';
-import type { ActivityFeedSqlRow } from './type';
+} from '../utils';
+import type { ActivityFeedSqlRow } from '../type';
 
 @Injectable()
 export class ActivityReadService {
@@ -514,8 +514,19 @@ export class ActivityReadService {
             'userId', p."user_id",
             'surname', p."surname",
             'name', p."name",
-            'profilePhoto', p."profilePhoto",
-            'profilePhotoBlurhash', p."profilePhotoBlurhash",
+            'profilePhoto', CASE
+              WHEN p."user_id" <> ${currentUserId}::uuid AND profile_photo_asset."id" IS NOT NULL THEN NULL
+              ELSE p."profilePhoto"
+            END,
+            'profilePhotoBlurhash', CASE
+              WHEN p."user_id" <> ${currentUserId}::uuid AND profile_photo_asset."id" IS NOT NULL
+                THEN p."profile_photo_pending_blurhash"
+              ELSE p."profilePhotoBlurhash"
+            END,
+            'profilePhotoReviewStatus', CASE
+              WHEN p."user_id" <> ${currentUserId}::uuid THEN profile_photo_asset."status"
+              ELSE NULL
+            END,
             'allowActivityInteractions', p."allow_activity_interactions",
             'allowActivityReplayViewing', p."allow_activity_replay_viewing",
             'allowActivityHeartRateViewing', p."allow_activity_heart_rate_viewing",
@@ -543,6 +554,12 @@ export class ActivityReadService {
           ) AS "_count"
         FROM "Activity" AS a
         INNER JOIN "Profile" AS p ON p."id" = a."profileId"
+        LEFT JOIN "MediaModerationAsset" AS profile_photo_asset
+          ON profile_photo_asset."id"::text = p."profile_photo_pending_asset_id"
+          AND profile_photo_asset."owner_id" = p."user_id"
+          AND profile_photo_asset."role" = 'media'
+          AND profile_photo_asset."scope" = 'profile'
+          AND profile_photo_asset."status" IN ('queued', 'processing', 'review_required')
         WHERE a."visibility" IN ('public', 'followers')
           AND a."moderation_status" = 'visible'
           AND NOT EXISTS (

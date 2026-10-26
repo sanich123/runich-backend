@@ -11,19 +11,10 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { UserDto } from './user.dto';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from 'src/storage/services/storage.service';
 import { PUBLIC_USER_PROFILE_SELECT } from 'src/account/const';
 import { ModerationAccessService } from 'src/moderation/moderation-access.service';
-
-type ProfilePhotoReviewStage = 'queued' | 'processing' | 'review_required';
-
-interface ProfileWithPendingPhoto {
-  userId: string;
-  profilePhoto: string | null;
-  profilePhotoBlurhash: string | null;
-  profilePhotoPendingAssetId: string | null;
-  profilePhotoPendingBlurhash: string | null;
-}
+import type { ProfilePhotoReviewStage, ProfileWithPendingPhoto } from './user.types';
 
 @Injectable()
 export class UserService {

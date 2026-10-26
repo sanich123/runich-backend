@@ -7,7 +7,7 @@ const originalFetch = globalThis.fetch;
 process.env.APP_ENV = 'production';
 process.env.GOOGLE_CLOUD_VISION_API_KEY = 'vision-test-key';
 
-const { GoogleCloudVisionSafeSearch } = await import('../google-cloud-vision-safe-search');
+const { GoogleCloudVisionSafeSearch } = await import('../services/google-cloud-vision-safe-search');
 
 const queryRaw = asyncMock();
 const vision = new GoogleCloudVisionSafeSearch({ $queryRaw: queryRaw } as never);

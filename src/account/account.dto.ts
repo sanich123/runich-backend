@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import type { ProfilePhotoReviewStatus } from './account.types';
 
 export class ProfileDto {
   @ApiPropertyOptional({ type: String, description: 'Id value (optional)' })
@@ -39,6 +40,8 @@ export class ProfileDto {
   weight?: string | null;
   @ApiPropertyOptional({ type: String, description: 'Profile photo blurhash (optional)' })
   profilePhotoBlurhash?: string | null;
+  @ApiPropertyOptional({ type: String, enum: ['queued', 'processing', 'review_required'], nullable: true })
+  profilePhotoReviewStatus?: ProfilePhotoReviewStatus | null;
   @ApiPropertyOptional({ type: Boolean, description: 'Email notifications enabled' })
   emailNotifications?: boolean | null;
   @ApiPropertyOptional({ type: Boolean, description: 'Push notifications enabled' })

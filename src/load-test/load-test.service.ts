@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- bulk load-test fixtures cross the generated repository boundary. */
 import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from 'src/storage/services/storage.service';
 import {
   LOAD_TEST_DEFAULT_CONFIG,
   LOAD_TEST_SEED_STATUS,
@@ -11,24 +10,18 @@ import {
   LoadTestSeedConfig,
   LoadTestSeedJob,
   LoadTestSeedRequest,
+  AnyRecord,
+  SeedUser,
 } from './load-test.types';
-
-const TARGET_EMAIL = 'aovoronin.piano@gmail.com';
-const MOCK_EMAIL_PREFIX = 'runich.loadtest.';
-const DEFAULT_MANIFEST_KEY = 'load-test/stage-feed-v1/manifest.json';
-const MOCK_PASSWORD_HASH = '$2b$10$5YM2tf1oixEi8OyMTJh2Bua.1ZELZhXaBAKAllQ1mwQs8t96GnwPK';
-const CREATE_BATCH_SIZE = 250;
-const MINUTE_IN_MS = 60_000;
-const COMMENT_TEXTS = [
-  'Сильная тренировка!',
-  'Отличный темп и красивый маршрут.',
-  'Так держать!',
-  'Вдохновляет на свою пробежку.',
-  'Классный результат.',
-];
-
-type AnyRecord = Record<string, any>;
-type SeedUser = { id: string; profileId: string; index: number };
+import {
+  COMMENT_TEXTS,
+  CREATE_BATCH_SIZE,
+  DEFAULT_MANIFEST_KEY,
+  MINUTE_IN_MS,
+  MOCK_EMAIL_PREFIX,
+  MOCK_PASSWORD_HASH,
+  TARGET_EMAIL,
+} from './load-test.constants';
 
 @Injectable()
 export class LoadTestSeedService {

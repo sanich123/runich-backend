@@ -15,7 +15,7 @@ import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.servic
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { escapeHtml } from './utils';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from 'src/storage/services/storage.service';
 
 @Injectable()
 export class EmailService {

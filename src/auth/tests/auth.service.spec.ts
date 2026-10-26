@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { EmailService } from 'src/email/email.service';
 import { asyncMock, expectInternalServerError, syncMock } from 'src/tests/helpers';
-import { MediaCleanupService } from 'src/storage/media-cleanup.service';
+import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
 import { AuthService } from '../services/auth.service';
 import { CONFIRMATION_CODE_TTL_MS } from '../constants/auth.constants';
 

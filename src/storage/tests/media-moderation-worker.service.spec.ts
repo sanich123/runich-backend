@@ -6,9 +6,12 @@ import {
   MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION,
   MEDIA_MODERATION_MODEL_VERSION,
   MEDIA_MODERATION_RETRY_LIMIT,
-} from '../media-moderation-thresholds';
-import { getMediaModerationProviderName, getMediaModerationReviewReason } from '../media-moderation-worker.helpers';
-import { MediaModerationWorkerService } from '../media-moderation-worker.service';
+} from '../services/media-moderation-thresholds';
+import {
+  getMediaModerationProviderName,
+  getMediaModerationReviewReason,
+} from '../services/media-moderation-worker.helpers';
+import { MediaModerationWorkerService } from '../services/media-moderation-worker.service';
 
 function createPrismaMock() {
   const prisma = {

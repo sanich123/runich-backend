@@ -2,10 +2,10 @@ import { jest } from '@jest/globals';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { encodeActivityCursor } from '../activity.pagination';
 import { ActivityController } from '../activity.controller';
-import { ActivityService } from '../activity.service';
+import { ActivityService } from '../services/activity.service';
 import { AccountService } from 'src/account/account.service';
 import { asyncMock } from 'src/tests/helpers';
-import { ActivityMigrationService } from '../activity-migration.service';
+import { ActivityMigrationService } from '../services/activity-migration.service';
 
 describe('ActivityController', () => {
   const activityIds = ['51f499f2-3332-4fdb-ac78-cb6ab1e6106a', '4755835b-8591-4cf2-ac17-3a2785706f16'];

@@ -3,9 +3,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/activity-migration-config';
 import { StorageService } from './storage.service';
-import { MEDIA_CLEANUP_STATUS } from './const';
-import type { CleanupDatabase } from './type';
-import { getStorageErrorMessage } from './utils';
+import { MEDIA_CLEANUP_STATUS } from '../const';
+import type { CleanupDatabase } from '../type';
+import { getStorageErrorMessage } from '../utils';
 
 @Injectable()
 export class MediaCleanupService {

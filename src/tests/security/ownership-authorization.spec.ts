@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { ActivityPersistenceService } from '../../activity/activity-persistence.service';
+import { ActivityPersistenceService } from '../../activity/services/activity-persistence.service';
 import { CommentService } from '../../comment/comment.service';
 import { FriendService } from '../../friend/friend.service';
 import { LikeService } from '../../like/like.service';

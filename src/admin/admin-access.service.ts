@@ -1,24 +1,14 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-
-export const ADMIN_ROLES = ['moderator', 'email_sender', 'access_manager', 'superuser'] as const;
-export type AdminRole = (typeof ADMIN_ROLES)[number];
-
-export const ADMIN_PERMISSIONS = ['moderation.manage', 'email.send', 'admin.roles.manage'] as const;
-export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
-
-const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
-  moderator: ['moderation.manage'],
-  email_sender: ['email.send'],
-  access_manager: ['admin.roles.manage'],
-  superuser: ADMIN_PERMISSIONS,
-};
-const ACCESS_MANAGER_ROLES: readonly AdminRole[] = ['moderator', 'email_sender'];
-const EMPTY_ACCESS = { roles: [] as AdminRole[], permissions: [] as AdminPermission[], isSuperuser: false };
-
-function isAdminRole(role: string): role is AdminRole {
-  return ADMIN_ROLES.includes(role as AdminRole);
-}
+import {
+  ACCESS_MANAGER_ROLES,
+  ADMIN_PERMISSIONS,
+  ADMIN_ROLES,
+  EMPTY_ACCESS,
+  ROLE_PERMISSIONS,
+} from './admin-access.constants';
+import type { AdminPermission, AdminRole } from './admin-access.types';
+import { isAdminRole } from './admin-access.utils';
 
 @Injectable()
 export class AdminAccessService {

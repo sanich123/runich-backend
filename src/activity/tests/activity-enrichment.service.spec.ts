@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { asyncMock } from 'src/tests/helpers';
-import { ActivityEnrichmentService } from '../activity-enrichment.service';
+import { ActivityEnrichmentService } from '../services/activity-enrichment.service';
 
 function createPrismaMock() {
   return {

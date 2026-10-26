@@ -1,4 +1,4 @@
-import { calculateActiveCalories } from '../activity-calories';
+import { calculateActiveCalories } from '../services/activity-calories';
 
 describe('calculateActiveCalories', () => {
   it('calculates active calories from weight and activity intensity', () => {

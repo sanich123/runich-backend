@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { MAX_ACTIVITY_HEART_RATE_SAMPLES, MAX_ACTIVITY_LOCATIONS } from 'src/common/constants';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
+import type { ProfilePhotoReviewStatus } from 'src/account/account.types';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -628,6 +629,9 @@ class ActivityProfileResponseDto {
 
   @ApiPropertyOptional({ type: String, nullable: true })
   profilePhotoBlurhash: string | null;
+
+  @ApiPropertyOptional({ type: String, enum: ['queued', 'processing', 'review_required'], nullable: true })
+  profilePhotoReviewStatus?: ProfilePhotoReviewStatus | null;
 
   @ApiPropertyOptional({ type: Boolean })
   allowActivityInteractions?: boolean;

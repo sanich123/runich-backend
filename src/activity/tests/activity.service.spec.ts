@@ -1,5 +1,5 @@
 import { ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
-import { ActivityService } from '../activity.service';
+import { ActivityService } from '../services/activity.service';
 import { MAX_MAP_ROUTE_LOCATIONS } from '../const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 import { encodeActivityCursor, parseActivityCursor, parseActivityMediaCursor } from '../activity.pagination';
@@ -1340,6 +1340,9 @@ describe('ActivityService', () => {
 
     await service.getAllActivitiesWithFriends('user-1');
     expect(prisma.$queryRaw.mock.calls.at(-1)?.slice(1)).toEqual([
+      'user-1',
+      'user-1',
+      'user-1',
       'user-1',
       'user-1',
       'user-1',

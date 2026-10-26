@@ -8,18 +8,7 @@ import { ModerationReportEmail, type ModerationReportEmailProps } from './templa
 import { ReporterModerationEmail, type ReporterModerationEmailProps } from './templates/ReporterModerationEmail';
 import { EmailType } from './templates/types';
 import { MODERATION_EMAIL_RECIPIENT, getModerationReportTitle } from './email-notification.constants';
-
-export interface EmailNotificationPayload {
-  activityId: string;
-  actorName?: string | null;
-  actorSurname?: string | null;
-  actorProfilePhoto?: string | null;
-  recipientEmail: string;
-  recipientName?: string | null;
-  recipientSurname?: string | null;
-  mapPhotoUrl?: string | null;
-  comment?: string;
-}
+import type { EmailNotificationPayload } from './email-notification.types';
 
 @Injectable()
 export class EmailNotificationService {

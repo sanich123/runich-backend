@@ -19,7 +19,7 @@ import type { SessionMetadata } from '../types/auth.types';
 import { YandexAuthService } from './yandex-auth.service';
 import { AuthEmailService } from './auth-email.service';
 import { VkAuthService } from './vk-auth.service';
-import { MediaCleanupService } from 'src/storage/media-cleanup.service';
+import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
 import { normalizeEmail } from '../utils/russian-email';
 import { CONFIRMATION_CODE_TTL_MS } from '../constants/auth.constants';
 

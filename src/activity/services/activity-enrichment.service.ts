@@ -1,29 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from 'src/storage/services/storage.service';
 import { getLocalDateTimeParts, isValidIanaTimeZone } from 'src/common/utils/time-zone';
-import type { LocationObject } from './activity.dto';
+import type { LocationObject } from '../activity.dto';
 import { ACTIVITY_ENRICHMENT_CONFIG, ACTIVITY_ENRICHMENT_STATUS } from './activity-enrichment.constants';
-
-type ActivityEnrichmentRecord = {
-  id: string;
-  routeStorageKey: string | null;
-  kilometresSplit: unknown;
-  date: Date;
-  timeZone: string | null;
-};
-
-type WeatherResponse = {
-  hourly?: {
-    time?: unknown[];
-    temperature_2m?: unknown[];
-    wind_speed_10m?: unknown[];
-    weather_code?: unknown[];
-  };
-};
-
-type Coordinate = { latitude: number; longitude: number };
+import type { ActivityEnrichmentRecord, Coordinate, WeatherResponse } from './activity-enrichment.types';
 
 @Injectable()
 export class ActivityEnrichmentService {

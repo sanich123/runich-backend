@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { jest } from '@jest/globals';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from 'src/storage/services/storage.service';
 import { asyncMock } from 'src/tests/helpers';
 import { LOAD_TEST_DEFAULT_CONFIG } from '../load-test.types';
 import { LoadTestSeedService } from '../load-test.service';

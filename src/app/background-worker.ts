@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { ActivityMediaProcessingService } from 'src/activity/activity-media-processing.service';
-import { ActivityEnrichmentService } from 'src/activity/activity-enrichment.service';
-import { ActivityMigrationService } from 'src/activity/activity-migration.service';
-import { MediaCleanupService } from 'src/storage/media-cleanup.service';
+import { ActivityMediaProcessingService } from 'src/activity/services/activity-media-processing.service';
+import { ActivityEnrichmentService } from 'src/activity/services/activity-enrichment.service';
+import { ActivityMigrationService } from 'src/activity/services/activity-migration.service';
+import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
 import { getAppEnvironment } from 'src/common/config/environment';
 import { getLogLevels } from 'src/common/utils/log-levels';
 import { BackgroundWorkerModule } from './background-worker.module';
@@ -12,7 +12,7 @@ import { LoadTestSeedService } from 'src/load-test/load-test.service';
 import { observeInstrument } from 'src/common/observe/observe.config';
 import { EmailNotificationWorkerService } from 'src/email/email-notification-worker.service';
 import { PushNotificationWorkerService } from 'src/notification/push-notification-worker.service';
-import { MediaModerationWorkerService } from 'src/storage/media-moderation-worker.service';
+import { MediaModerationWorkerService } from 'src/storage/services/media-moderation-worker.service';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(BackgroundWorkerModule, {

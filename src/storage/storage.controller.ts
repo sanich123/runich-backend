@@ -44,7 +44,7 @@ import {
   PhotoUploadOptionsDto,
   PhotoUploadResponseDto,
 } from './storage.dto';
-import { StorageService } from './storage.service';
+import { StorageService } from './services/storage.service';
 
 @ApiTags('photo')
 @ApiBearerAuth('bearerAuth')

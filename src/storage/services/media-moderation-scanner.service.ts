@@ -3,11 +3,9 @@ import * as nsfwjs from 'nsfwjs';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-cpu';
 import sharp from 'sharp';
-import { execFile } from 'node:child_process';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import type { StorageService } from './storage.service';
 import type { GoogleCloudVisionSafeSearch } from './google-cloud-vision-safe-search';
 import {
@@ -20,10 +18,9 @@ import {
 import { mergeMediaModerationScores } from './media-moderation-worker.helpers';
 import type { MediaAsset, MediaModerationScanResult } from './media-moderation-worker.types';
 
-const execFileAsync = promisify(execFile);
-const MODEL_URL = process.env.NSFWJS_MODEL_URL?.trim();
-
-type Prediction = { className: string; probability: number };
+import { MODEL_URL } from './media-moderation-scanner.constants';
+import type { Prediction } from './media-moderation-scanner.types';
+import { execFileAsync } from './media-moderation-scanner.utils';
 
 export class MediaModerationScannerService {
   private readonly logger = new Logger(MediaModerationScannerService.name);

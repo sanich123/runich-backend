@@ -16,7 +16,7 @@ import {
 import { BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { asyncMock } from 'src/tests/helpers';
-import { StorageService } from '../storage.service';
+import { StorageService } from '../services/storage.service';
 import { decodeActivityRoute, encodeActivityRoute } from '../activity-route';
 import { getActivityPhotoKey, getExtensionFromStorageKey } from '../storage-key';
 import { getStorageErrorMessage } from '../utils';

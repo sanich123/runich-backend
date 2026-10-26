@@ -6,6 +6,7 @@ import { Filtering } from './filter.decorator';
 import { encodeProfileCursor, type ProfileCursor } from './account.pagination';
 import { DEFAULT_PROFILE_PAGE_SIZE, PROFILE_SEARCH_SELECT } from './const';
 import { buildProfileWhere } from './utils';
+import type { ProfilePhotoModerationAsset, ProfileSearchProfile } from './account.types';
 
 @Injectable()
 export class AccountService {
@@ -39,17 +40,50 @@ export class AccountService {
     };
 
     try {
-      const profilesWithExtraItem = await this.prisma.profile.findMany({
+      const profilesWithExtraItem = (await this.prisma.profile.findMany({
         where,
         orderBy: { id: 'asc' },
         take: Number(take) + 1,
         select: PROFILE_SEARCH_SELECT,
-      });
+      })) as ProfileSearchProfile[];
       const hasMore = profilesWithExtraItem.length > Number(take);
       const profiles = profilesWithExtraItem.slice(0, Number(take));
+      const pendingAssetIds = profiles.flatMap((profile) =>
+        typeof profile.profilePhotoPendingAssetId === 'string' ? [profile.profilePhotoPendingAssetId] : [],
+      );
+      const moderationAssets = (
+        pendingAssetIds.length
+          ? await this.prisma.mediaModerationAsset.findMany({
+              where: {
+                id: { in: pendingAssetIds },
+                ownerId: { in: profiles.map(({ userId }) => userId) },
+                role: 'media',
+                scope: 'profile',
+              },
+              select: { id: true, ownerId: true, status: true },
+            })
+          : []
+      ) as ProfilePhotoModerationAsset[];
+      const assetsById = new Map(moderationAssets.map((asset) => [asset.id, asset]));
+      const items = profiles.map(({ profilePhotoPendingAssetId, profilePhotoPendingBlurhash, ...profile }) => {
+        const asset = profilePhotoPendingAssetId ? assetsById.get(profilePhotoPendingAssetId) : undefined;
+        if (
+          asset &&
+          asset.ownerId === profile.userId &&
+          (asset.status === 'queued' || asset.status === 'processing' || asset.status === 'review_required')
+        ) {
+          return {
+            ...profile,
+            profilePhoto: null,
+            profilePhotoBlurhash: profilePhotoPendingBlurhash,
+            profilePhotoReviewStatus: asset.status,
+          };
+        }
+        return profile;
+      });
 
       return {
-        items: profiles,
+        items,
         hasMore,
         nextCursor: hasMore && profiles.length ? encodeProfileCursor(profiles.at(-1)!) : null,
       };

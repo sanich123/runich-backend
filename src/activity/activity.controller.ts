@@ -28,7 +28,7 @@ import { Transform } from 'node:stream';
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { isUUID } from 'class-validator';
-import { ActivityService } from './activity.service';
+import { ActivityService } from './services/activity.service';
 import {
   ActivityDto,
   ActivityMediaAppendDto,
@@ -52,7 +52,7 @@ import {
   ActivityMigrationJobResponseDto,
   ActivityMigrationUploadStartDto,
 } from './activity.dto';
-import { ActivityMigrationService } from './activity-migration.service';
+import { ActivityMigrationService } from './services/activity-migration.service';
 import { getMigrationArchiveDirectory, getMigrationIncomingArchivePath } from './activity-migration-storage';
 import { ParamsId } from 'src/common/dto/params-validation';
 import {
