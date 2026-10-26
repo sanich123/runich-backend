@@ -11,7 +11,11 @@ import {
   MEDIA_MODERATION_RETRY_LIMIT,
   MEDIA_MODERATION_STALE_PROCESSING_MS,
 } from './media-moderation-thresholds';
-import { getMediaModerationProviderName, getMediaModerationReviewReason } from './media-moderation-worker.helpers';
+import {
+  getMediaModerationProviderName,
+  getMediaModerationReportReason,
+  getMediaModerationReviewReason,
+} from './media-moderation-worker.helpers';
 import type { MediaAsset } from './media-moderation-worker.types';
 import { StorageService } from './storage.service';
 
@@ -57,7 +61,7 @@ export class MediaModerationWorkerService {
           result.frameCount,
           scannedAt,
           reason,
-          'sexual_content',
+          getMediaModerationReportReason(result.scores),
           result.modelVersion,
         );
       } else {
@@ -129,7 +133,7 @@ export class MediaModerationWorkerService {
     frameCount: number | null,
     scannedAt: Date,
     reason: string,
-    reportReason: 'sexual_content' | 'other',
+    reportReason: 'sexual_content' | 'violence' | 'other',
     modelVersion = MEDIA_MODERATION_MODEL_VERSION,
   ) {
     await this.prisma.$transaction(async (transaction) => {

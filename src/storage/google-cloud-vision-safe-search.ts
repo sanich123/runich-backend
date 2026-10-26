@@ -13,7 +13,13 @@ const LIKELIHOOD_SCORE: Record<string, number> = {
 
 type VisionResponse = {
   error?: { message?: string };
-  safeSearchAnnotation?: { adult?: string; racy?: string };
+  safeSearchAnnotation?: {
+    adult?: string;
+    spoof?: string;
+    medical?: string;
+    violence?: string;
+    racy?: string;
+  };
 };
 
 export class GoogleCloudVisionSafeSearch {
@@ -60,6 +66,9 @@ export class GoogleCloudVisionSafeSearch {
       if (error || !safeSearchAnnotation) throw new Error('Google Cloud Vision SafeSearch detection failed');
       return {
         Porn: LIKELIHOOD_SCORE[safeSearchAnnotation.adult ?? 'UNKNOWN'] ?? 0,
+        Spoof: LIKELIHOOD_SCORE[safeSearchAnnotation.spoof ?? 'UNKNOWN'] ?? 0,
+        Medical: LIKELIHOOD_SCORE[safeSearchAnnotation.medical ?? 'UNKNOWN'] ?? 0,
+        Violence: LIKELIHOOD_SCORE[safeSearchAnnotation.violence ?? 'UNKNOWN'] ?? 0,
         Sexy: LIKELIHOOD_SCORE[safeSearchAnnotation.racy ?? 'UNKNOWN'] ?? 0,
       };
     });

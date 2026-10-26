@@ -64,7 +64,15 @@ describe('GoogleCloudVisionSafeSearch', () => {
     fetchMock.mockResolvedValue(
       response({
         responses: [
-          { safeSearchAnnotation: { adult: 'LIKELY', racy: 'POSSIBLE' } },
+          {
+            safeSearchAnnotation: {
+              adult: 'LIKELY',
+              spoof: 'UNLIKELY',
+              medical: 'POSSIBLE',
+              violence: 'VERY_LIKELY',
+              racy: 'POSSIBLE',
+            },
+          },
           { safeSearchAnnotation: { adult: 'UNRECOGNIZED', racy: 'UNRECOGNIZED' } },
           { safeSearchAnnotation: {} },
         ],
@@ -74,9 +82,9 @@ describe('GoogleCloudVisionSafeSearch', () => {
     await expect(
       vision.classifyImages([Buffer.from('first'), Buffer.from('second'), Buffer.from('third')]),
     ).resolves.toEqual([
-      { Porn: 0.75, Sexy: 0.4 },
-      { Porn: 0, Sexy: 0 },
-      { Porn: 0, Sexy: 0 },
+      { Porn: 0.75, Spoof: 0.1, Medical: 0.4, Violence: 0.95, Sexy: 0.4 },
+      { Porn: 0, Spoof: 0, Medical: 0, Violence: 0, Sexy: 0 },
+      { Porn: 0, Spoof: 0, Medical: 0, Violence: 0, Sexy: 0 },
     ]);
     const [url, init] = fetchMock.mock.calls[0]!;
     expect((url as URL).searchParams.get('key')).toBe('vision-test-key');
