@@ -402,6 +402,7 @@ export class StorageService {
     if (!asset) throw new BadRequestException('Загруженный файл не найден');
     if (asset.status === 'approved' && asset.publishedKey) {
       await this.syncLinkedActivityMedia(assetId, this.getPublicUrl(asset.publishedKey), 'approved');
+      await this.syncLinkedProfilePhoto(assetId, this.getPublicUrl(asset.publishedKey), 'approved');
       return { url: this.getPublicUrl(asset.publishedKey), key: asset.publishedKey };
     }
     if (asset.status === 'rejected') throw new BadRequestException('Отклонённый файл нельзя опубликовать');
@@ -428,6 +429,7 @@ export class StorageService {
       },
     });
     await this.syncLinkedActivityMedia(assetId, this.getPublicUrl(destinationKey), 'approved');
+    await this.syncLinkedProfilePhoto(assetId, this.getPublicUrl(destinationKey), 'approved');
     await this.deleteQuarantineObject(asset.quarantineKey);
     return { url: this.getPublicUrl(destinationKey), key: destinationKey };
   }
@@ -451,13 +453,16 @@ export class StorageService {
       if (!asset) continue;
       if (asset.status === 'approved' && asset.publishedKey) {
         await this.syncLinkedActivityMedia(assetId, this.getPublicUrl(asset.publishedKey), 'approved');
+        await this.syncLinkedProfilePhoto(assetId, this.getPublicUrl(asset.publishedKey), 'approved');
       } else if (asset.status === 'rejected') {
         await this.syncLinkedActivityMedia(assetId, null, 'rejected');
+        await this.syncLinkedProfilePhoto(assetId, null, 'rejected');
       } else if (asset.role === 'media') {
         await this.prisma.activityMedia.updateMany({
           where: { mediaModerationAssetId: assetId },
           data: { mediaReviewStatus: asset.status },
         });
+        if (asset.status === 'failed') await this.syncLinkedProfilePhoto(assetId, null, 'rejected');
       }
     }
   }
@@ -489,6 +494,7 @@ export class StorageService {
       },
     });
     await this.syncLinkedActivityMedia(asset.id, null, 'rejected');
+    await this.syncLinkedProfilePhoto(asset.id, null, 'rejected');
     await this.deleteActivityModerationAssets(
       asset.ownerId,
       linkedMedia.map((media: { thumbnailModerationAssetId: string | null }) => media.thumbnailModerationAssetId),
@@ -511,6 +517,26 @@ export class StorageService {
     await this.prisma.activityMedia.updateMany({
       where: { mediaModerationAssetId: assetId },
       data: { url, mediaReviewStatus: status, ...(status === 'rejected' ? { thumbnail: null } : {}) },
+    });
+  }
+
+  private async syncLinkedProfilePhoto(assetId: string, url: string | null, status: 'approved' | 'rejected') {
+    if (!this.prisma) return;
+    const profile = await this.prisma.profile.findFirst({
+      where: { profilePhotoPendingAssetId: assetId },
+      select: { userId: true, profilePhotoPendingBlurhash: true },
+    });
+    if (!profile) return;
+    await this.prisma.profile.updateMany({
+      where: { userId: profile.userId, profilePhotoPendingAssetId: assetId },
+      data: {
+        ...(status === 'approved' && url
+          ? { profilePhoto: url, profilePhotoBlurhash: profile.profilePhotoPendingBlurhash }
+          : {}),
+        profilePhotoPendingAssetId: null,
+        profilePhotoPendingBlurhash: null,
+        updatedAt: new Date(),
+      },
     });
   }
 

@@ -1,4 +1,11 @@
-import { ForbiddenException, Inject, Injectable, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
@@ -7,6 +14,16 @@ import { blurhashFromUrl } from 'src/common/images/blurhash';
 import { StorageService } from 'src/storage/storage.service';
 import { PUBLIC_USER_PROFILE_SELECT } from 'src/account/const';
 import { ModerationAccessService } from 'src/moderation/moderation-access.service';
+
+type ProfilePhotoReviewStage = 'queued' | 'processing' | 'review_required';
+
+interface ProfileWithPendingPhoto {
+  userId: string;
+  profilePhoto: string | null;
+  profilePhotoBlurhash: string | null;
+  profilePhotoPendingAssetId: string | null;
+  profilePhotoPendingBlurhash: string | null;
+}
 
 @Injectable()
 export class UserService {
@@ -25,9 +42,18 @@ export class UserService {
     try {
       if (userId !== currentUserId) {
         if (await this.moderationAccess.areBlocked(userId, currentUserId)) return null;
-        return await this.prisma.profile.findUnique({ where: { userId }, select: PUBLIC_USER_PROFILE_SELECT });
+        const profile = await this.prisma.profile.findUnique({
+          where: { userId },
+          select: {
+            ...PUBLIC_USER_PROFILE_SELECT,
+            profilePhotoPendingAssetId: true,
+            profilePhotoPendingBlurhash: true,
+          },
+        });
+        return profile ? await this.presentProfilePhoto(profile, false) : profile;
       }
-      return await this.prisma.profile.findUnique({ where: { userId } });
+      const profile = await this.prisma.profile.findUnique({ where: { userId } });
+      return profile ? await this.presentProfilePhoto(profile, true) : profile;
     } catch (error) {
       handleServiceError(error);
     }
@@ -43,7 +69,7 @@ export class UserService {
       const profilePhoto = await this.promoteProfilePhoto(id, accountDto.profilePhoto);
       const profilePhotoBlurhash = profilePhoto ? await blurhashFromUrl(profilePhoto, this.latencyMetrics) : null;
       return await this.prisma.profile.create({
-        data: { ...accountDto, profilePhoto, profilePhotoBlurhash, userId: id },
+        data: { ...this.withoutProfilePhotoAssetId(accountDto), profilePhoto, profilePhotoBlurhash, userId: id },
       });
     } catch (error) {
       handleServiceError(error);
@@ -66,12 +92,16 @@ export class UserService {
         : accountDto.profilePhoto === null
           ? null
           : undefined;
+      const profileData = this.withoutProfilePhotoAssetId(accountDto);
       return await this.prisma.profile.update({
         where: hasImplicitOwner ? { id: profileId } : { id: profileId, userId: currentUserId as string },
         data: {
-          ...accountDto,
+          ...profileData,
           ...(profilePhoto !== undefined ? { profilePhoto } : {}),
           ...(hasImplicitOwner ? {} : { profilePhotoBlurhash }),
+          ...(accountDto.profilePhoto === null
+            ? { profilePhotoPendingAssetId: null, profilePhotoPendingBlurhash: null }
+            : {}),
           updatedAt: new Date(),
         },
       });
@@ -92,24 +122,16 @@ export class UserService {
         targetUserId = currentUserId;
       }
 
-      const profilePhoto = await this.promoteProfilePhoto(targetUserId, accountDto.profilePhoto);
-      const profilePhotoBlurhash = profilePhoto
-        ? await blurhashFromUrl(profilePhoto, this.latencyMetrics)
-        : accountDto.profilePhoto === null
-          ? null
-          : undefined;
-      const data = {
-        ...accountDto,
-        ...(profilePhoto !== undefined ? { profilePhoto } : {}),
-        ...(profilePhotoBlurhash !== undefined ? { profilePhotoBlurhash } : {}),
-        updatedAt: new Date(),
-      };
-
-      return await this.prisma.profile.upsert({
+      const data = this.withoutProfilePhotoAssetId(accountDto);
+      delete data.profilePhoto;
+      delete data.profilePhotoBlurhash;
+      const photoData = await this.getProfilePhotoUpdateData(targetUserId, accountDto);
+      const updatedProfile = await this.prisma.profile.upsert({
         where: { userId: targetUserId },
-        update: data,
-        create: { ...data, userId: targetUserId },
+        update: { ...data, ...photoData, updatedAt: new Date() },
+        create: { ...data, ...photoData, updatedAt: new Date(), userId: targetUserId },
       });
+      return await this.presentProfilePhoto(updatedProfile, true);
     } catch (error) {
       handleServiceError(error);
     }
@@ -118,5 +140,118 @@ export class UserService {
   private async promoteProfilePhoto(userId: string | undefined, profilePhoto: UserDto['profilePhoto']) {
     if (!userId || !profilePhoto || !this.storageService) return profilePhoto;
     return await this.storageService.promoteProfilePhoto(userId, profilePhoto);
+  }
+
+  private async getProfilePhotoUpdateData(userId: string, accountDto: UserDto) {
+    if (accountDto.profilePhotoAssetId) {
+      if (!this.storageService) throw new ServiceUnavailableException('Проверка загружаемых медиафайлов не настроена');
+      const asset = await this.prisma.mediaModerationAsset.findFirst({
+        where: {
+          id: accountDto.profilePhotoAssetId,
+          ownerId: userId,
+          role: 'media',
+          scope: 'profile',
+        },
+        select: { status: true, publishedKey: true },
+      });
+      if (!asset) throw new BadRequestException('Загруженное фото профиля не найдено');
+      if (asset.status === 'rejected' || asset.status === 'failed') {
+        throw new BadRequestException('Фото профиля не прошло проверку');
+      }
+
+      const pendingBlurhash = accountDto.profilePhotoBlurhash ?? null;
+      if (asset.status === 'approved') {
+        const published = await this.storageService.publishApprovedModerationAsset(
+          userId,
+          accountDto.profilePhotoAssetId,
+        );
+        return {
+          profilePhoto: published.url,
+          profilePhotoBlurhash: pendingBlurhash ?? (await blurhashFromUrl(published.url, this.latencyMetrics)),
+          profilePhotoPendingAssetId: null,
+          profilePhotoPendingBlurhash: null,
+        };
+      }
+
+      return {
+        profilePhotoPendingAssetId: accountDto.profilePhotoAssetId,
+        profilePhotoPendingBlurhash: pendingBlurhash,
+      };
+    }
+
+    if (accountDto.profilePhoto !== undefined) {
+      const profilePhoto = await this.promoteProfilePhoto(userId, accountDto.profilePhoto);
+      const profilePhotoBlurhash = profilePhoto
+        ? await blurhashFromUrl(profilePhoto, this.latencyMetrics)
+        : accountDto.profilePhoto === null
+          ? null
+          : undefined;
+      return {
+        ...(profilePhoto !== undefined ? { profilePhoto } : {}),
+        ...(profilePhotoBlurhash !== undefined ? { profilePhotoBlurhash } : {}),
+        ...(accountDto.profilePhoto === null
+          ? { profilePhotoPendingAssetId: null, profilePhotoPendingBlurhash: null }
+          : {}),
+      };
+    }
+
+    return accountDto.profilePhotoBlurhash !== undefined
+      ? { profilePhotoBlurhash: accountDto.profilePhotoBlurhash }
+      : {};
+  }
+
+  private async presentProfilePhoto<T extends ProfileWithPendingPhoto>(profile: T, isOwner: boolean) {
+    const { profilePhotoPendingAssetId, profilePhotoPendingBlurhash, ...responseProfile } = profile;
+    if (!profilePhotoPendingAssetId) return responseProfile;
+    if (!this.storageService) {
+      return {
+        ...responseProfile,
+        profilePhoto: null,
+        profilePhotoBlurhash: profilePhotoPendingBlurhash,
+        profilePhotoReviewStatus: 'queued' as const,
+      };
+    }
+
+    const { items } = await this.storageService.getModerationUploadStatuses(profile.userId, [
+      profilePhotoPendingAssetId,
+    ]);
+    const asset = items.find(({ assetId }) => assetId === profilePhotoPendingAssetId);
+    if (!asset || asset.status === 'rejected' || asset.status === 'failed') {
+      await this.prisma.profile.updateMany({
+        where: { userId: profile.userId, profilePhotoPendingAssetId },
+        data: { profilePhotoPendingAssetId: null, profilePhotoPendingBlurhash: null, updatedAt: new Date() },
+      });
+      return responseProfile;
+    }
+
+    if (asset.status === 'approved' && asset.url) {
+      await this.prisma.profile.updateMany({
+        where: { userId: profile.userId, profilePhotoPendingAssetId },
+        data: {
+          profilePhoto: asset.url,
+          profilePhotoBlurhash: profilePhotoPendingBlurhash,
+          profilePhotoPendingAssetId: null,
+          profilePhotoPendingBlurhash: null,
+          updatedAt: new Date(),
+        },
+      });
+      return { ...responseProfile, profilePhoto: asset.url, profilePhotoBlurhash: profilePhotoPendingBlurhash };
+    }
+
+    const profilePhoto = isOwner
+      ? await this.storageService.getOwnerModerationPreviewUrl(profile.userId, profilePhotoPendingAssetId)
+      : null;
+    return {
+      ...responseProfile,
+      profilePhoto,
+      profilePhotoBlurhash: profilePhotoPendingBlurhash,
+      profilePhotoReviewStatus: asset.status as ProfilePhotoReviewStage,
+    };
+  }
+
+  private withoutProfilePhotoAssetId(accountDto: UserDto) {
+    const data = { ...accountDto };
+    delete data.profilePhotoAssetId;
+    return data;
   }
 }

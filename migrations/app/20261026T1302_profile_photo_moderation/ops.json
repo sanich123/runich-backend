@@ -1,0 +1,122 @@
+[
+  {
+    "id": "column.public.Profile.profile_photo_pending_asset_id",
+    "label": "Add column \"profile_photo_pending_asset_id\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "profile_photo_pending_asset_id",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"profile_photo_pending_asset_id\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "profile_photo_pending_asset_id"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"profile_photo_pending_asset_id\" on \"Profile\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"profile_photo_pending_asset_id\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"profile_photo_pending_asset_id\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"profile_photo_pending_asset_id\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "profile_photo_pending_asset_id"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"profile_photo_pending_asset_id\" on \"Profile\""
+        }
+      },
+      {
+        "description": "verify column \"profile_photo_pending_asset_id\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "profile_photo_pending_asset_id",
+          "text"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Profile.profile_photo_pending_blurhash",
+    "label": "Add column \"profile_photo_pending_blurhash\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "profile_photo_pending_blurhash",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"profile_photo_pending_blurhash\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "profile_photo_pending_blurhash"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"profile_photo_pending_blurhash\" on \"Profile\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"profile_photo_pending_blurhash\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"profile_photo_pending_blurhash\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"profile_photo_pending_blurhash\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "profile_photo_pending_blurhash"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"profile_photo_pending_blurhash\" on \"Profile\""
+        }
+      },
+      {
+        "description": "verify column \"profile_photo_pending_blurhash\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "profile_photo_pending_blurhash",
+          "text"
+        ]
+      }
+    ]
+  }
+]

@@ -8,9 +8,13 @@ export const MEDIA_MODERATION_POLL_INTERVAL_MS = 2_000;
 export const MEDIA_MODERATION_RETRY_LIMIT = 5;
 export const MEDIA_MODERATION_STALE_PROCESSING_MS = 15 * 60_000;
 export const MEDIA_MODERATION_GOOGLE_VISION_MONTHLY_LIMIT = 950;
-export const MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION = 'google-cloud-vision-safe-search-v1';
+export const MEDIA_MODERATION_GOOGLE_VISION_MODEL_PREFIX = 'google-cloud-vision-safe-search-';
+export const MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION = `${MEDIA_MODERATION_GOOGLE_VISION_MODEL_PREFIX}v2`;
 export const MEDIA_MODERATION_REVIEW_THRESHOLDS = {
   Porn: 0.25,
-  Hentai: 0.25,
+  Hentai: 0.6,
   Sexy: 0.6,
+  Spoof: 0.75,
+  Medical: 0.75,
+  Violence: 0.75,
 } as const;

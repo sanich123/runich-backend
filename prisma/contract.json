@@ -4065,6 +4065,20 @@
                   "kind": "scalar"
                 }
               },
+              "profilePhotoPendingAssetId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "profilePhotoPendingBlurhash": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "profileSearchVisible": {
                 "nullable": false,
                 "type": {
@@ -4312,6 +4326,12 @@
                 },
                 "profilePhotoBlurhash": {
                   "column": "profilePhotoBlurhash"
+                },
+                "profilePhotoPendingAssetId": {
+                  "column": "profile_photo_pending_asset_id"
+                },
+                "profilePhotoPendingBlurhash": {
+                  "column": "profile_photo_pending_blurhash"
                 },
                 "profileSearchVisible": {
                   "column": "profile_search_visible"
@@ -9431,6 +9451,16 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "profile_photo_pending_asset_id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "profile_photo_pending_blurhash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
                 "profile_search_visible": {
                   "codecId": "pg/bool@1",
                   "dataType": "pg/bool",
@@ -10713,7 +10743,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "b9fea1a401b872f4d1c8369913db9de66706270ea50df045a55ef0d6a1e75eac"
+    "storageHash": "259f8d1ae7b33173f81399515933481f656ffee90e4976acc7b303e0c47e62c5"
   },
   "capabilities": {
     "postgres": {

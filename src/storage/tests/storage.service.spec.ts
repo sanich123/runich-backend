@@ -35,6 +35,7 @@ function createModerationPrismaMock() {
       delete: asyncMock(),
     },
     activityMedia: { findFirst: asyncMock(), findMany: asyncMock(), updateMany: asyncMock() },
+    profile: { findFirst: asyncMock(), updateMany: asyncMock() },
   };
 }
 
@@ -1028,6 +1029,7 @@ describe('StorageService', () => {
         reviewNote: null,
       })
       .mockResolvedValue({ role: 'media' });
+    prisma.profile.findFirst.mockResolvedValue({ userId: 'user-1', profilePhotoPendingBlurhash: 'pending-hash' });
     const service = new StorageService(undefined, prisma as never);
 
     await expect(service.approveModerationAsset('asset-1', 'moderator-1', '  approved  ')).resolves.toEqual({
@@ -1054,6 +1056,16 @@ describe('StorageService', () => {
       data: {
         url: 'https://s3.twcstorage.ru/runich-test/user-1/uploads/moderated/asset-1.webp',
         mediaReviewStatus: 'approved',
+      },
+    });
+    expect(prisma.profile.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', profilePhotoPendingAssetId: 'asset-1' },
+      data: {
+        profilePhoto: 'https://s3.twcstorage.ru/runich-test/user-1/uploads/moderated/asset-1.webp',
+        profilePhotoBlurhash: 'pending-hash',
+        profilePhotoPendingAssetId: null,
+        profilePhotoPendingBlurhash: null,
+        updatedAt: expect.any(Date),
       },
     });
     expect(s3Send.mock.calls[1]?.[0]).toBeInstanceOf(DeleteObjectCommand);
@@ -1130,6 +1142,7 @@ describe('StorageService', () => {
       })
       .mockResolvedValue({ role: 'media' });
     prisma.activityMedia.findMany.mockResolvedValue([{ thumbnailModerationAssetId: 'thumbnail-1' }]);
+    prisma.profile.findFirst.mockResolvedValue({ userId: 'user-1', profilePhotoPendingBlurhash: 'pending-hash' });
     prisma.mediaModerationAsset.findFirst.mockResolvedValue({
       id: 'thumbnail-1',
       ownerId: 'user-1',
@@ -1147,6 +1160,14 @@ describe('StorageService', () => {
     expect(prisma.activityMedia.updateMany).toHaveBeenCalledWith({
       where: { mediaModerationAssetId: 'asset-1' },
       data: { url: null, mediaReviewStatus: 'rejected', thumbnail: null },
+    });
+    expect(prisma.profile.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', profilePhotoPendingAssetId: 'asset-1' },
+      data: {
+        profilePhotoPendingAssetId: null,
+        profilePhotoPendingBlurhash: null,
+        updatedAt: expect.any(Date),
+      },
     });
     expect(prisma.mediaModerationAsset.delete).toHaveBeenCalledWith({ where: { id: 'thumbnail-1' } });
     expect(s3Send).toHaveBeenCalledTimes(2);
