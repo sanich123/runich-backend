@@ -1349,6 +1349,8 @@ describe('ActivityService', () => {
       'user-1',
       'user-1',
       'user-1',
+      'user-1',
+      'user-1',
       true,
       null,
       null,
@@ -1528,14 +1530,52 @@ describe('ActivityService', () => {
     }
 
     const [feedTemplate] = prisma.$queryRaw.mock.calls.at(-1) as unknown as [TemplateStringsArray];
-    expect(Array.from(feedTemplate).join('')).toContain('a."emotion"');
-    expect(Array.from(feedTemplate).join('')).toContain('a."is_favorite" AS "isFavorite"');
+    const feedQuery = Array.from(feedTemplate).join('');
+    expect(feedQuery).toContain('a."emotion"');
+    expect(feedQuery).toContain('a."is_favorite" AS "isFavorite"');
+    expect(feedQuery).toContain("'profilePhoto', p." + '"profilePhoto"');
+    expect(feedQuery).toContain("'profilePhotoPublishedKey'");
+    expect(feedQuery).toContain(
+      "profile_photo_asset.\"status\" IN ('queued', 'processing', 'review_required', 'approved')",
+    );
 
     await service.getActivityByActivityId('activity-1');
     const detailQuery = ((prisma.activity.findUnique.mock.calls as unknown[][])[0]?.[0] ?? {}) as {
       select?: Record<string, unknown>;
     };
     expect(detailQuery.select).toEqual(expect.objectContaining({ description: true, kilometresSplit: true }));
+  });
+
+  it('uses the published moderation asset URL in activity cards and removes internal asset fields', async () => {
+    const prisma = createPrismaMock();
+    const storage = { getPublicUrl: (key: string) => 'https://cdn.example/' + key };
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue(null) };
+    const service = new ActivityService(prisma as never, account as never, undefined, storage as never);
+    prisma.$queryRaw.mockResolvedValue([
+      {
+        id: 'activity-1',
+        userId: 'friend-1',
+        media: [],
+        profile: {
+          userId: 'friend-1',
+          profilePhoto: null,
+          profilePhotoBlurhash: 'pending-blurhash',
+          profilePhotoReviewStatus: null,
+          profilePhotoAssetStatus: 'approved',
+          profilePhotoPublishedKey: 'friend-1/uploads/moderated/asset-1.webp',
+        },
+      },
+    ]);
+
+    const response = await service.getAllActivitiesWithFriends('viewer-1');
+
+    expect(response.activities[0].profile).toMatchObject({
+      userId: 'friend-1',
+      profilePhoto: 'https://cdn.example/friend-1/uploads/moderated/asset-1.webp',
+      profilePhotoBlurhash: 'pending-blurhash',
+    });
+    expect(response.activities[0].profile).not.toHaveProperty('profilePhotoAssetStatus');
+    expect(response.activities[0].profile).not.toHaveProperty('profilePhotoPublishedKey');
   });
 
   it('converts database failures from every caught method to an internal server error', async () => {

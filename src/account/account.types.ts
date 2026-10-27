@@ -17,4 +17,5 @@ export type ProfilePhotoModerationAsset = {
   id: string;
   ownerId: string;
   status: ProfilePhotoReviewStatus | 'approved' | 'rejected' | 'failed';
+  publishedKey: string | null;
 };

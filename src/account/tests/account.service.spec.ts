@@ -81,7 +81,7 @@ describe('AccountService', () => {
     }
   });
 
-  it('hides a pending profile photo in search results and returns its blurhash and review status', async () => {
+  it('keeps the published profile photo in search while a replacement is pending', async () => {
     const prisma = createPrismaMock();
     const service = new AccountService(prisma as never);
     prisma.profile.findMany.mockResolvedValue([
@@ -95,20 +95,21 @@ describe('AccountService', () => {
       },
     ]);
     prisma.mediaModerationAsset.findMany.mockResolvedValue([
-      { id: 'asset-1', ownerId: 'user-1', status: 'review_required' },
+      { id: 'asset-1', ownerId: 'user-1', status: 'review_required', publishedKey: null },
     ]);
 
-    await expect(service.getFilteredAccounts('10', undefined, {})).resolves.toMatchObject({
+    const response = await service.getFilteredAccounts('10', undefined, {});
+    expect(response).toMatchObject({
       items: [
         {
           id: 'profile-1',
           userId: 'user-1',
-          profilePhoto: null,
-          profilePhotoBlurhash: 'pending-blurhash',
-          profilePhotoReviewStatus: 'review_required',
+          profilePhoto: 'https://cdn.example/approved.jpg',
+          profilePhotoBlurhash: 'approved-blurhash',
         },
       ],
     });
+    expect(response.items[0]).not.toHaveProperty('profilePhotoReviewStatus');
     expect(prisma.mediaModerationAsset.findMany).toHaveBeenCalledWith({
       where: {
         id: { in: ['asset-1'] },
@@ -116,7 +117,68 @@ describe('AccountService', () => {
         role: 'media',
         scope: 'profile',
       },
-      select: { id: true, ownerId: true, status: true },
+      select: { id: true, ownerId: true, status: true, publishedKey: true },
+    });
+  });
+
+  it('returns a pending placeholder when search finds no previously published photo', async () => {
+    const prisma = createPrismaMock();
+    const service = new AccountService(prisma as never);
+    prisma.profile.findMany.mockResolvedValue([
+      {
+        id: 'profile-1',
+        userId: 'user-1',
+        profilePhoto: null,
+        profilePhotoBlurhash: null,
+        profilePhotoPendingAssetId: 'asset-1',
+        profilePhotoPendingBlurhash: 'pending-blurhash',
+      },
+    ]);
+    prisma.mediaModerationAsset.findMany.mockResolvedValue([
+      { id: 'asset-1', ownerId: 'user-1', status: 'review_required', publishedKey: null },
+    ]);
+
+    await expect(service.getFilteredAccounts('10', undefined, {})).resolves.toMatchObject({
+      items: [
+        {
+          profilePhoto: null,
+          profilePhotoBlurhash: 'pending-blurhash',
+          profilePhotoReviewStatus: 'review_required',
+        },
+      ],
+    });
+  });
+
+  it('returns the published URL when search sees an approved profile-photo asset', async () => {
+    const prisma = createPrismaMock();
+    const storage = { getPublicUrl: (key: string) => 'https://cdn.example/' + key };
+    const service = new AccountService(prisma as never, undefined, storage as never);
+    prisma.profile.findMany.mockResolvedValue([
+      {
+        id: 'profile-1',
+        userId: 'user-1',
+        profilePhoto: null,
+        profilePhotoBlurhash: null,
+        profilePhotoPendingAssetId: 'asset-1',
+        profilePhotoPendingBlurhash: 'pending-blurhash',
+      },
+    ]);
+    prisma.mediaModerationAsset.findMany.mockResolvedValue([
+      {
+        id: 'asset-1',
+        ownerId: 'user-1',
+        status: 'approved',
+        publishedKey: 'user-1/uploads/moderated/asset-1.webp',
+      },
+    ]);
+
+    await expect(service.getFilteredAccounts('10', undefined, {})).resolves.toMatchObject({
+      items: [
+        {
+          profilePhoto: 'https://cdn.example/user-1/uploads/moderated/asset-1.webp',
+          profilePhotoBlurhash: 'pending-blurhash',
+        },
+      ],
     });
   });
 
