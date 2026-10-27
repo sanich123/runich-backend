@@ -99,9 +99,9 @@ timers are disabled; keep them disabled so Docker can bind TCP 80/443. The
 Certbot renewal container uses the shared `/etc/letsencrypt` mount and signals
 Nginx to reload. Keep inbound TCP 80/443 and UDP 443 open.
 
-После readiness workflow пишет `.deployed-sha`, очищает Docker-образы и
-BuildKit-кэш, затем отправляет deployment-письмо. Ошибка SMTP на финальном шаге
-не откатывает уже здоровый релиз, но делает Actions job красным.
+После readiness workflow пишет `.deployed-sha`, удаляет неиспользуемые Docker-образы
+и BuildKit-кэш старше 48 часов, затем отправляет deployment-письмо. Ошибка SMTP
+на финальном шаге не откатывает уже здоровый релиз, но делает Actions job красным.
 
 Ежедневный production-отчёт запускает
 `.github/workflows/daily-production-metrics.yml` в 09:00 по Москве. Он выполняет
@@ -142,16 +142,16 @@ yarn prisma migration show migrations/app/<migration_directory>
 
 ## Диск, логи и секреты
 
-Оба deploy workflow после внутренней проверки API/worker/Alloy выполняют:
+Deploy workflows сохраняют неиспользуемые образы и BuildKit-кэш за последние
+48 часов; более старые контейнеры, образы и сети удаляются после проверки
+API/worker/Alloy. Раздельные команды сохраняют недавний BuildKit-кэш для
+повторного использования и короткое окно для отката. Docker volumes не затрагиваются:
 
 ```bash
-docker system prune --all --force
-```
-
-Production дополнительно очищает BuildKit-кэш:
-
-```bash
-docker builder prune --all --force
+docker container prune --force --filter 'until=48h'
+docker image prune --all --force --filter 'until=48h'
+docker network prune --force --filter 'until=48h'
+docker builder prune --all --force --filter 'until=48h'
 ```
 
 Ошибка очистки не откатывает уже здоровый deploy.

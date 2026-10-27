@@ -30,17 +30,25 @@ jobs:
       - name: Check out the exact commit
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and publish immutable image
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-        run: |
-          set -euo pipefail
-          printf '%s' "$GITHUB_TOKEN" |
-            docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin >/dev/null
-          docker build --pull --tag "$DEPLOY_IMAGE" .
-          docker push "$DEPLOY_IMAGE"
-          docker logout ghcr.io >/dev/null
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          pull: true
+          push: true
+          tags: ${{ env.DEPLOY_IMAGE }}
+          cache-from: type=gha,scope=runich-backend-stage
+          cache-to: type=gha,mode=max,scope=runich-backend-stage
 
       - name: Deploy the exact image over SSH
         env:
@@ -79,10 +87,9 @@ jobs:
             "${SSH[@]}" "$TARGET" 'set -eu; cd /opt/runich-stage; umask 077; IFS= read -r token; tmp="$(mktemp .env.XXXXXX)"; sed "/^GRAFANA_LOKI_TOKEN=/d" .env > "$tmp"; printf "GRAFANA_LOKI_TOKEN=%s\\n" "$token" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token'
           unset GRAFANA_LOKI_TOKEN
 
-          # На сервере Stage мало места на диске. Удаляем неиспользуемые объекты Docker
-          # перед передачей нового образа. Именованные тома базы данных и сертификатов
-          # сохраняются, поскольку при очистке не используется параметр --volumes.
-          "${SSH[@]}" "$TARGET" 'set -euo pipefail; echo "Disk before Docker cleanup:"; df -h /; docker system df; docker system prune --all --force; echo "Disk after Docker cleanup:"; df -h /; docker system df'
+          # Stage имеет ограниченный диск. Сохраняем неиспользуемые образы и кеш за 48 часов,
+          # удаляя неиспользуемые Docker-объекты старше 48 часов. Тома не затрагиваются.
+          "${SSH[@]}" "$TARGET" 'set -euo pipefail; echo "Disk before Docker cleanup:"; df -h /; docker system df; docker container prune --force --filter "until=48h"; docker image prune --all --force --filter "until=48h"; docker network prune --force --filter "until=48h"; docker builder prune --all --force --filter "until=48h"; echo "Disk after Docker cleanup:"; docker system df'
 
           # Загружаем на сервер Stage точный неизменяемый образ из GHCR. Токен задачи
           # передается через stdin SSH, а временные учетные данные Docker удаляются
@@ -242,14 +249,19 @@ jobs:
             echo 'Stage deployment success email failed; continuing with cleanup.' >&2
           fi
 
-          # На сервере Stage мало места на диске. Оставляем работающие контейнеры
-          # и все именованные тома (PostgreSQL и Let's Encrypt), а старые образы,
-          # остановленные контейнеры, неиспользуемые сети и кэш сборки удаляем
-          # только после проверок готовности развертывания и попытки отправить письмо.
+          # На сервере Stage мало места. Сохраняем неиспользуемые образы и кэш за 48 часов,
+          # удаляя неиспользуемые объекты старше 48 часов после проверок и письма.
+          # Именованные тома PostgreSQL и Let's Encrypt очистка не затрагивает.
           echo 'Docker disk usage before cleanup:'
           docker system df || echo 'Could not inspect Docker disk usage before cleanup.' >&2
-          docker system prune --all --force || \
-            echo 'Docker cleanup failed; keeping the healthy deployment.' >&2
+          docker container prune --force --filter 'until=48h' || \
+            echo 'Stopped-container cleanup failed; keeping the healthy deployment.' >&2
+          docker image prune --all --force --filter 'until=48h' || \
+            echo 'Image cleanup failed; keeping the healthy deployment.' >&2
+          docker network prune --force --filter 'until=48h' || \
+            echo 'Network cleanup failed; keeping the healthy deployment.' >&2
+          docker builder prune --all --force --filter 'until=48h' || \
+            echo 'Build cache cleanup failed; keeping the healthy deployment.' >&2
           echo 'Docker disk usage after cleanup:'
           docker system df || echo 'Could not inspect Docker disk usage after cleanup.' >&2
 
