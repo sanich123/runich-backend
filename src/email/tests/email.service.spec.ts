@@ -9,7 +9,7 @@ jest.unstable_mockModule('nodemailer', () => ({
 }));
 
 const { EmailService } = await import('../email.service');
-const { makeFeedbackInput } = await import('./fixtures');
+const { makeFeedbackAttachment, makeFeedbackInput } = await import('./fixtures');
 const { makeProfileName } = await import('src/tests/fixtures/profile.fixtures');
 
 const originalEnvironment = { ...process.env };
@@ -138,10 +138,7 @@ describe('EmailService', () => {
     sendMail.mockRejectedValueOnce(new Error('SMTP failed'));
 
     await expect(
-      service.sendFeedback(
-        makeFeedbackInput({ attachments: [{ url: 'https://cdn.example/screen.jpg', thumbnail: null }] }),
-        'user-1',
-      ),
+      service.sendFeedback(makeFeedbackInput({ attachments: [makeFeedbackAttachment({ thumbnail: null })] }), 'user-1'),
     ).rejects.toThrow('SMTP failed');
     expect(storage.deleteObjectByKey).not.toHaveBeenCalled();
   });
@@ -150,7 +147,7 @@ describe('EmailService', () => {
     const service = new EmailService(prisma as never);
 
     await expect(
-      service.sendFeedback(makeFeedbackInput({ attachments: [{ url: 'https://cdn.example/screen.jpg' }] }), 'user-1'),
+      service.sendFeedback(makeFeedbackInput({ attachments: [makeFeedbackAttachment()] }), 'user-1'),
     ).rejects.toThrow('S3-хранилище не настроено для вложений feedback');
     expect(sendMail).not.toHaveBeenCalled();
   });
@@ -176,7 +173,7 @@ describe('EmailService', () => {
     const service = new EmailService(prisma as never, undefined, storage as never);
 
     await expect(
-      service.sendFeedback(makeFeedbackInput({ attachments: [{ url: 'https://cdn.example/screen.jpg' }] }), 'user-1'),
+      service.sendFeedback(makeFeedbackInput({ attachments: [makeFeedbackAttachment()] }), 'user-1'),
     ).rejects.toThrow('Вложение feedback имеет некорректный S3-путь');
     expect(sendMail).not.toHaveBeenCalled();
   });
