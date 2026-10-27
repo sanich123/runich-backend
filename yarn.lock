@@ -3771,25 +3771,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/throttler@npm:6.5.0":
-  version: 6.5.0
-  resolution: "@nestjs/throttler@npm:6.5.0"
+"@nestjs/throttler@npm:6.7.1":
+  version: 6.7.1
+  resolution: "@nestjs/throttler@npm:6.7.1"
   peerDependencies:
-    "@nestjs/common": ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0
-    "@nestjs/core": ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0
+    "@nestjs/common": ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0
+    "@nestjs/core": ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0
     reflect-metadata: ^0.1.13 || ^0.2.0
-  checksum: 10c0/bd755e765d020189b24fd8cb8a5989b47d7856abdc8efc881d73dd76e71b8e6e4466e532464434fd1199a106bf4752bda3d0036ef4aa13aa61e9317f60658da8
-  languageName: node
-  linkType: hard
-
-"@nestjs/throttler@patch:@nestjs/throttler@npm%3A6.5.0#~/.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch":
-  version: 6.5.0
-  resolution: "@nestjs/throttler@patch:@nestjs/throttler@npm%3A6.5.0#~/.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch::version=6.5.0&hash=b16cab"
-  peerDependencies:
-    "@nestjs/common": ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0
-    "@nestjs/core": ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0
-    reflect-metadata: ^0.1.13 || ^0.2.0
-  checksum: 10c0/610a998269698f227ddc3abf45d58b03370e26df18b3dc045592b2ad76f735d418233c46c6a98f9a994f52dd9c337b3d1f4f786f1289a28ca340bc8004efe6be
+  checksum: 10c0/c91ab43a7c5301862db24401ce84144c15c28c0f525de459da8c495cad4adf5e7aa14710b8dbe4a8b47fa564fbbc44784da90181c975978ed3ab56d794841ebb
   languageName: node
   linkType: hard
 
@@ -13770,7 +13759,7 @@ __metadata:
     "@nestjs/schematics": "npm:12.0.11"
     "@nestjs/swagger": "npm:12.0.5"
     "@nestjs/testing": "npm:12.3.1"
-    "@nestjs/throttler": "patch:@nestjs/throttler@npm%3A6.5.0#~/.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch"
+    "@nestjs/throttler": "npm:6.7.1"
     "@prisma/cli-engine": "npm:0.9.0"
     "@prisma/management-api-sdk": "npm:^1.85.0"
     "@prisma/orm-postgres": "npm:8.0.0-rc.20"
