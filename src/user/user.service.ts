@@ -195,11 +195,11 @@ export class UserService {
     const { profilePhotoPendingAssetId, profilePhotoPendingBlurhash, ...responseProfile } = profile;
     if (!profilePhotoPendingAssetId) return responseProfile;
     if (!this.storageService) {
+      const hasPublishedPhoto = Boolean(responseProfile.profilePhoto);
       return {
         ...responseProfile,
-        profilePhoto: null,
-        profilePhotoBlurhash: profilePhotoPendingBlurhash,
-        profilePhotoReviewStatus: 'queued' as const,
+        profilePhotoBlurhash: hasPublishedPhoto ? responseProfile.profilePhotoBlurhash : profilePhotoPendingBlurhash,
+        ...(!hasPublishedPhoto ? { profilePhotoReviewStatus: 'queued' as const } : {}),
       };
     }
 
@@ -229,14 +229,17 @@ export class UserService {
       return { ...responseProfile, profilePhoto: asset.url, profilePhotoBlurhash: profilePhotoPendingBlurhash };
     }
 
-    const profilePhoto = isOwner
+    const ownerPreview = isOwner
       ? await this.storageService.getOwnerModerationPreviewUrl(profile.userId, profilePhotoPendingAssetId)
       : null;
+    const hasPublishedPhoto = Boolean(responseProfile.profilePhoto);
+    const profilePhoto = isOwner ? (ownerPreview ?? responseProfile.profilePhoto) : responseProfile.profilePhoto;
     return {
       ...responseProfile,
       profilePhoto,
-      profilePhotoBlurhash: profilePhotoPendingBlurhash,
-      profilePhotoReviewStatus: asset.status as ProfilePhotoReviewStage,
+      profilePhotoBlurhash:
+        ownerPreview || !hasPublishedPhoto ? profilePhotoPendingBlurhash : responseProfile.profilePhotoBlurhash,
+      ...(isOwner || !hasPublishedPhoto ? { profilePhotoReviewStatus: asset.status as ProfilePhotoReviewStage } : {}),
     };
   }
 

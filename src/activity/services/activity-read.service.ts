@@ -459,6 +459,18 @@ export class ActivityReadService {
     }
   }
 
+  private resolveFeedProfilePhoto<T extends ActivityFeedSqlRow>(activity: T): T {
+    const rawProfile = activity.profile;
+    if (!rawProfile || typeof rawProfile !== 'object' || Array.isArray(rawProfile)) return activity;
+
+    const { profilePhotoAssetStatus, profilePhotoPublishedKey, ...profile } = rawProfile as Record<string, unknown>;
+    if (profilePhotoAssetStatus === 'approved' && typeof profilePhotoPublishedKey === 'string' && this.storageService) {
+      profile.profilePhoto = this.storageService.getPublicUrl(profilePhotoPublishedKey);
+    }
+
+    return { ...activity, profile } as T;
+  }
+
   async getAllActivitiesWithFriends(
     id: string,
     take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
@@ -514,17 +526,31 @@ export class ActivityReadService {
             'userId', p."user_id",
             'surname', p."surname",
             'name', p."name",
-            'profilePhoto', CASE
-              WHEN p."user_id" <> ${currentUserId}::uuid AND profile_photo_asset."id" IS NOT NULL THEN NULL
-              ELSE p."profilePhoto"
-            END,
+            'profilePhoto', p."profilePhoto",
             'profilePhotoBlurhash', CASE
-              WHEN p."user_id" <> ${currentUserId}::uuid AND profile_photo_asset."id" IS NOT NULL
+              WHEN p."user_id" <> ${currentUserId}::uuid
+                AND profile_photo_asset."status" = 'approved'
+                AND profile_photo_asset."published_key" IS NOT NULL
+                THEN p."profile_photo_pending_blurhash"
+              WHEN p."user_id" <> ${currentUserId}::uuid
+                AND profile_photo_asset."status" IN ('queued', 'processing', 'review_required')
+                AND p."profilePhoto" IS NULL
                 THEN p."profile_photo_pending_blurhash"
               ELSE p."profilePhotoBlurhash"
             END,
             'profilePhotoReviewStatus', CASE
+              WHEN p."user_id" <> ${currentUserId}::uuid
+                AND profile_photo_asset."status" IN ('queued', 'processing', 'review_required')
+                AND p."profilePhoto" IS NULL
+                THEN profile_photo_asset."status"
+              ELSE NULL
+            END,
+            'profilePhotoAssetStatus', CASE
               WHEN p."user_id" <> ${currentUserId}::uuid THEN profile_photo_asset."status"
+              ELSE NULL
+            END,
+            'profilePhotoPublishedKey', CASE
+              WHEN p."user_id" <> ${currentUserId}::uuid THEN profile_photo_asset."published_key"
               ELSE NULL
             END,
             'allowActivityInteractions', p."allow_activity_interactions",
@@ -559,7 +585,7 @@ export class ActivityReadService {
           AND profile_photo_asset."owner_id" = p."user_id"
           AND profile_photo_asset."role" = 'media'
           AND profile_photo_asset."scope" = 'profile'
-          AND profile_photo_asset."status" IN ('queued', 'processing', 'review_required')
+          AND profile_photo_asset."status" IN ('queued', 'processing', 'review_required', 'approved')
         WHERE a."visibility" IN ('public', 'followers')
           AND a."moderation_status" = 'visible'
           AND NOT EXISTS (
@@ -593,7 +619,7 @@ export class ActivityReadService {
           .slice(0, Number(take))
           .map(async (activity: ActivityFeedSqlRow) =>
             normalizeActivityCardForViewer(
-              await this.resolveActivityMediaForViewer(activity, currentUserId),
+              await this.resolveActivityMediaForViewer(this.resolveFeedProfilePhoto(activity), currentUserId),
               currentUserId,
             ),
           ),

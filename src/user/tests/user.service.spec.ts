@@ -84,7 +84,7 @@ describe('UserService', () => {
     });
   });
 
-  it('shows a pending avatar as blurhash to subscribers and a signed preview to its owner', async () => {
+  it('keeps the published avatar visible to subscribers while keeping a pending preview private', async () => {
     const prisma = createPrismaMock();
     const storage = {
       getModerationUploadStatuses: asyncMock().mockResolvedValue({
@@ -106,10 +106,10 @@ describe('UserService', () => {
 
     const subscriberView = await service.getProfileByUserId('owner-1', 'subscriber-1');
     expect(subscriberView).toMatchObject({
-      profilePhoto: null,
-      profilePhotoBlurhash: 'pending-hash',
-      profilePhotoReviewStatus: 'review_required',
+      profilePhoto: 'https://public.example.test/old-avatar.webp',
+      profilePhotoBlurhash: 'old-hash',
     });
+    expect(subscriberView).not.toHaveProperty('profilePhotoReviewStatus');
     expect(subscriberView).not.toHaveProperty('profilePhotoPendingAssetId');
     expect(storage.getOwnerModerationPreviewUrl).not.toHaveBeenCalled();
 
@@ -119,6 +119,32 @@ describe('UserService', () => {
       profilePhotoBlurhash: 'pending-hash',
       profilePhotoReviewStatus: 'review_required',
     });
+  });
+
+  it('keeps a first-time pending photo private when there is no published avatar', async () => {
+    const prisma = createPrismaMock();
+    const storage = {
+      getModerationUploadStatuses: asyncMock().mockResolvedValue({
+        items: [{ assetId: 'asset-1', status: 'review_required', contentType: 'image/webp' }],
+      }),
+      getOwnerModerationPreviewUrl: asyncMock().mockResolvedValue('https://private.example.test/preview'),
+    };
+    const service = new UserService(prisma as never, undefined, storage as never);
+    prisma.profile.findUnique.mockResolvedValue({
+      id: 'profile-1',
+      userId: 'owner-1',
+      profilePhoto: null,
+      profilePhotoBlurhash: null,
+      profilePhotoPendingAssetId: 'asset-1',
+      profilePhotoPendingBlurhash: 'pending-hash',
+    });
+
+    await expect(service.getProfileByUserId('owner-1', 'subscriber-1')).resolves.toMatchObject({
+      profilePhoto: null,
+      profilePhotoBlurhash: 'pending-hash',
+      profilePhotoReviewStatus: 'review_required',
+    });
+    expect(storage.getOwnerModerationPreviewUrl).not.toHaveBeenCalled();
   });
 
   it('links a pending profile upload without changing the published avatar', async () => {
@@ -319,7 +345,7 @@ describe('UserService', () => {
     });
   });
 
-  it('uses a safe blurhash response if moderation storage is temporarily unavailable', async () => {
+  it('preserves the published avatar if moderation storage is temporarily unavailable', async () => {
     const prisma = createPrismaMock();
     const service = new UserService(prisma as never);
     prisma.profile.findUnique.mockResolvedValue({
@@ -332,9 +358,8 @@ describe('UserService', () => {
     });
 
     await expect(service.getProfileByUserId('owner-1')).resolves.toMatchObject({
-      profilePhoto: null,
-      profilePhotoBlurhash: 'pending-hash',
-      profilePhotoReviewStatus: 'queued',
+      profilePhoto: 'https://public.example.test/old-avatar.webp',
+      profilePhotoBlurhash: 'old-hash',
     });
   });
 

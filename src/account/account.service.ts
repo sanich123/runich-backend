@@ -1,6 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ModerationAccessService } from 'src/moderation/moderation-access.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { StorageService } from 'src/storage/services/storage.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { Filtering } from './filter.decorator';
 import { encodeProfileCursor, type ProfileCursor } from './account.pagination';
@@ -13,6 +14,7 @@ export class AccountService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Optional() @Inject(ModerationAccessService) moderationAccess?: ModerationAccessService,
+    @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
   ) {
     this.moderationAccess = moderationAccess ?? new ModerationAccessService(this.prisma);
   }
@@ -60,7 +62,7 @@ export class AccountService {
                 role: 'media',
                 scope: 'profile',
               },
-              select: { id: true, ownerId: true, status: true },
+              select: { id: true, ownerId: true, status: true, publishedKey: true },
             })
           : []
       ) as ProfilePhotoModerationAsset[];
@@ -70,13 +72,26 @@ export class AccountService {
         if (
           asset &&
           asset.ownerId === profile.userId &&
-          (asset.status === 'queued' || asset.status === 'processing' || asset.status === 'review_required')
+          asset.status === 'approved' &&
+          asset.publishedKey &&
+          this.storageService
         ) {
           return {
             ...profile,
-            profilePhoto: null,
-            profilePhotoBlurhash: profilePhotoPendingBlurhash,
-            profilePhotoReviewStatus: asset.status,
+            profilePhoto: this.storageService.getPublicUrl(asset.publishedKey),
+            profilePhotoBlurhash: profilePhotoPendingBlurhash ?? profile.profilePhotoBlurhash,
+          };
+        }
+        if (
+          asset &&
+          asset.ownerId === profile.userId &&
+          (asset.status === 'queued' || asset.status === 'processing' || asset.status === 'review_required')
+        ) {
+          const hasPublishedPhoto = Boolean(profile.profilePhoto);
+          return {
+            ...profile,
+            profilePhotoBlurhash: hasPublishedPhoto ? profile.profilePhotoBlurhash : profilePhotoPendingBlurhash,
+            ...(!hasPublishedPhoto ? { profilePhotoReviewStatus: asset.status } : {}),
           };
         }
         return profile;
