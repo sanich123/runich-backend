@@ -5,9 +5,6 @@
 .env
 /app.env
 .yarn/*
-!.yarn/patches/
-.yarn/patches/*
-!.yarn/patches/@nestjs-throttler-npm-6.5.0-b1c890481d.patch
 # Журналы
 logs
 *.log

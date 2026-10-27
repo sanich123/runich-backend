@@ -14,7 +14,6 @@ WORKDIR /usr/src/app
 COPY --from=node-runtime /usr/local /usr/local
 
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn/patches .yarn/patches
 
 RUN apt-get update \
   && apt-get install --yes --no-install-recommends \
