@@ -1,6 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { jest } from '@jest/globals';
 import { VkAuthService } from '../services/vk-auth.service';
+import { makeConfirmedAuthUser } from './fixtures';
 
 type RedirectResponse = { redirect: jest.Mock };
 
@@ -227,10 +228,9 @@ describe('VkAuthService', () => {
         ),
       );
     (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
-    (prismaMock.user.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
-      id: 'user-1',
-      emailConfirmedAt: new Date(),
-    });
+    (prismaMock.user.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+      makeConfirmedAuthUser(),
+    );
     const response = { redirect: jest.fn() } as RedirectResponse;
 
     await service.callback(
@@ -266,14 +266,12 @@ describe('VkAuthService', () => {
         new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42, email: ' IVAN@EXAMPLE.COM ' })),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ user: { first_name: 'Ivan' } })));
-    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
-      id: 'user-1',
-      emailConfirmedAt: new Date(),
-    });
-    (prismaMock.user.update as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
-      id: 'user-1',
-      emailConfirmedAt: new Date(),
-    });
+    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+      makeConfirmedAuthUser(),
+    );
+    (prismaMock.user.update as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+      makeConfirmedAuthUser(),
+    );
     const response = { redirect: jest.fn() } as RedirectResponse;
 
     await service.callback(
@@ -301,10 +299,9 @@ describe('VkAuthService', () => {
       id: 'user-1',
       emailConfirmedAt: null,
     });
-    (prismaMock.user.update as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
-      id: 'user-1',
-      emailConfirmedAt: new Date(),
-    });
+    (prismaMock.user.update as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+      makeConfirmedAuthUser(),
+    );
     const response = { redirect: jest.fn() } as RedirectResponse;
 
     await service.callback(

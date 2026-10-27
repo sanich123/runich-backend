@@ -2,6 +2,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { jest } from '@jest/globals';
 import { createHash } from 'node:crypto';
 import { AuthTokenService } from '../services/auth-token.service';
+import { makePersistedSession, makeRefreshTokenClaims } from './fixtures';
 
 const asyncMock = () => jest.fn<(...args: unknown[]) => Promise<unknown>>();
 const syncMock = () => jest.fn<(...args: unknown[]) => unknown>();
@@ -14,11 +15,8 @@ function jwtMock() {
 }
 
 function session() {
-  return {
-    id: 'session-1',
-    userId: 'user-1',
+  return makePersistedSession({
     refreshHash: createHash('sha256').update('refresh-token').digest('hex'),
-    revokedAt: null,
     ipAddress: 'old-ip',
     userAgent: 'old-agent',
     deviceModel: 'old-model',
@@ -29,7 +27,7 @@ function session() {
     appVersion: 'old-app',
     appBuild: 'old-build',
     lastSeenAt: new Date(),
-  };
+  });
 }
 
 describe('AuthTokenService persistence branches', () => {
@@ -169,7 +167,7 @@ describe('AuthTokenService persistence branches', () => {
 
   it('refreshes valid persistent sessions and updates supplied metadata', async () => {
     const jwt = jwtMock();
-    jwt.verify.mockReturnValue({ userId: 'user-1', type: 'refresh', sessionId: 'session-1' });
+    jwt.verify.mockReturnValue(makeRefreshTokenClaims());
     const prisma = {
       userSession: {
         findUnique: asyncMock().mockResolvedValue(session()),
@@ -211,7 +209,7 @@ describe('AuthTokenService persistence branches', () => {
     ['different refresh hash', { ...session(), refreshHash: 'different' }],
   ])('rejects a %s', async (_description, value) => {
     const jwt = jwtMock();
-    jwt.verify.mockReturnValue({ userId: 'user-1', type: 'refresh', sessionId: 'session-1' });
+    jwt.verify.mockReturnValue(makeRefreshTokenClaims());
     const prisma = {
       userSession: {
         findUnique: asyncMock().mockResolvedValue(value),
@@ -225,7 +223,7 @@ describe('AuthTokenService persistence branches', () => {
 
   it('rejects a session lost during the conditional rotation update', async () => {
     const jwt = jwtMock();
-    jwt.verify.mockReturnValue({ userId: 'user-1', type: 'refresh', sessionId: 'session-1' });
+    jwt.verify.mockReturnValue(makeRefreshTokenClaims());
     const prisma = {
       userSession: {
         findUnique: asyncMock().mockResolvedValue(session()),

@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { jest } from '@jest/globals';
 import { EmailNotificationWorkerService } from '../email-notification-worker.service';
 import { asyncMock } from 'src/tests/helpers';
+import { makeProfileSummary } from 'src/tests/fixtures/profile.fixtures';
 
 describe('EmailNotificationWorkerService', () => {
   const prisma = {
@@ -45,7 +46,7 @@ describe('EmailNotificationWorkerService', () => {
   it('sends an activity-like email using the persisted actor and activity owner data', async () => {
     prisma.like.findUnique.mockResolvedValue({
       authorId: 'liker-1',
-      profile: { name: 'Alice', surname: 'Runner', profilePhoto: 'alice.jpg' },
+      profile: makeProfileSummary({ profilePhoto: 'alice.jpg' }),
       activity: {
         id: 'activity-1',
         userId: 'owner-1',
@@ -136,7 +137,7 @@ describe('EmailNotificationWorkerService', () => {
     prisma.comment.findUnique.mockResolvedValue({
       authorId: 'commenter-1',
       comment: 'Nice route',
-      profile: { name: 'Alice', surname: 'Runner', profilePhoto: 'alice.jpg' },
+      profile: makeProfileSummary({ profilePhoto: 'alice.jpg' }),
       activity: {
         id: 'activity-1',
         userId: 'owner-1',
@@ -172,7 +173,7 @@ describe('EmailNotificationWorkerService', () => {
     });
     prisma.commentLike.findUnique.mockResolvedValue({
       authorId: 'liker-1',
-      profile: { name: 'Alice', surname: 'Runner', profilePhoto: 'alice.jpg' },
+      profile: makeProfileSummary({ profilePhoto: 'alice.jpg' }),
       comment: {
         authorId: 'comment-author-1',
         comment: 'Great route',
@@ -218,18 +219,20 @@ describe('EmailNotificationWorkerService', () => {
       subjectUser: {
         id: 'reported-user',
         email: 'alex@example.com',
-        profile: { name: 'Alex', surname: 'Runner', bio: 'Runner profile', profilePhoto: 'profile.jpg' },
+        profile: makeProfileSummary({
+          name: 'Alex',
+          surname: 'Runner',
+          bio: 'Runner profile',
+          profilePhoto: 'profile.jpg',
+        }),
       },
       activity: null,
       comment: null,
       media: null,
     });
-    prisma.profile.findUnique.mockResolvedValue({
-      name: 'Alex',
-      surname: 'Runner',
-      bio: 'Runner profile',
-      profilePhoto: 'profile.jpg',
-    });
+    prisma.profile.findUnique.mockResolvedValue(
+      makeProfileSummary({ name: 'Alex', surname: 'Runner', bio: 'Runner profile', profilePhoto: 'profile.jpg' }),
+    );
 
     await worker.processNextJob();
 
@@ -244,12 +247,12 @@ describe('EmailNotificationWorkerService', () => {
       reportedUser: { id: 'reported-user', email: 'alex@example.com', name: 'Alex', surname: 'Runner' },
       reportedContent: 'Runner profile',
       reportedMediaUrl: null,
-      reportedProfile: {
+      reportedProfile: makeProfileSummary({
         name: 'Alex',
         surname: 'Runner',
         bio: 'Runner profile',
         profilePhoto: 'profile.jpg',
-      },
+      }),
     });
   });
 

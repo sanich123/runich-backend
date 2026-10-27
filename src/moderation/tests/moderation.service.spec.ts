@@ -3,6 +3,7 @@ import { asyncMock, transactionMock } from 'src/tests/helpers';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
 import { ModerationService } from '../moderation.service';
+import { makeModerationReport, makeSpamActivityReport } from './fixtures';
 
 function createPrismaMock() {
   const prisma = {
@@ -108,19 +109,17 @@ describe('ModerationService', () => {
     const duplicate = { id: 'report-existing', status: 'open', createdAt: new Date() };
     prisma.activity.findUnique.mockResolvedValue({ userId: 'author-1', moderationStatus: 'visible' });
     prisma.contentReport.findFirst.mockResolvedValue(duplicate);
-    await expect(
-      service.submitReport('reporter-1', { targetType: 'activity', targetId: 'activity-1', reason: 'spam' }),
-    ).resolves.toBe(duplicate);
+    await expect(service.submitReport('reporter-1', makeSpamActivityReport())).resolves.toBe(duplicate);
     expect(prisma.contentReport.create).not.toHaveBeenCalled();
 
     prisma.contentReport.findFirst.mockResolvedValue(null);
-    await expect(
-      service.submitReport('author-1', { targetType: 'activity', targetId: 'activity-1', reason: 'spam' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.submitReport('author-1', makeSpamActivityReport())).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     prisma.activity.findUnique.mockResolvedValue({ userId: 'author-1', moderationStatus: 'hidden' });
-    await expect(
-      service.submitReport('reporter-1', { targetType: 'activity', targetId: 'activity-1', reason: 'spam' }),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.submitReport('reporter-1', makeSpamActivityReport())).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     await expect(
       service.submitReport('reporter-1', { targetType: 'media_upload', targetId: 'asset-1', reason: 'spam' } as never),
     ).rejects.toBeInstanceOf(NotFoundException);
@@ -231,13 +230,7 @@ describe('ModerationService', () => {
   it('hides reported comments and records the moderator action in the same transaction', async () => {
     const prisma = createPrismaMock();
     const service = new ModerationService(prisma as never, {} as never);
-    const report = {
-      id: 'report-1',
-      status: 'open',
-      targetType: 'comment',
-      targetId: 'comment-1',
-      subjectUserId: 'author-1',
-    };
+    const report = makeModerationReport({ targetType: 'comment', targetId: 'comment-1' });
     prisma.contentReport.findUnique
       .mockResolvedValueOnce(report)
       .mockResolvedValueOnce({ ...report, status: 'resolved' });
@@ -265,13 +258,7 @@ describe('ModerationService', () => {
   it('validates moderation actions and applies temporary account suspensions', async () => {
     const prisma = createPrismaMock();
     const service = new ModerationService(prisma as never, {} as never);
-    const userReport = {
-      id: 'report-1',
-      status: 'open',
-      targetType: 'user',
-      targetId: 'user-2',
-      subjectUserId: 'user-2',
-    };
+    const userReport = makeModerationReport({ targetType: 'user', targetId: 'user-2', subjectUserId: 'user-2' });
     prisma.contentReport.findUnique.mockResolvedValue(userReport);
     prisma.contentReport.updateMany.mockResolvedValue({ count: 1 });
 
@@ -292,13 +279,7 @@ describe('ModerationService', () => {
   it('submits and decides appeals, restoring content when an appeal is upheld', async () => {
     const prisma = createPrismaMock();
     const service = new ModerationService(prisma as never, {} as never);
-    const report = {
-      id: 'report-1',
-      status: 'resolved',
-      targetType: 'activity',
-      targetId: 'activity-1',
-      subjectUserId: 'author-1',
-    };
+    const report = makeModerationReport({ status: 'resolved' });
     const appeal = {
       id: 'appeal-1',
       reportId: 'report-1',
@@ -502,13 +483,12 @@ describe('ModerationService', () => {
   it('rejects invalid appeals and handles upheld, rejected, and concurrent decisions', async () => {
     const prisma = createPrismaMock();
     const service = new ModerationService(prisma as never, {} as never);
-    const report = {
-      id: 'report-1',
+    const report = makeModerationReport({
       status: 'resolved',
       targetType: 'user',
       targetId: 'user-2',
       subjectUserId: 'user-2',
-    };
+    });
     const appeal = { id: 'appeal-1', reportId: 'report-1', appellantId: 'user-2', status: 'pending' };
     prisma.contentReport.findUnique.mockResolvedValue(report);
     prisma.moderationAppeal.findFirst.mockResolvedValue(null);

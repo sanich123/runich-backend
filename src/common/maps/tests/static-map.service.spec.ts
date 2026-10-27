@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import sharp from 'sharp';
+import { makeMoscowCoordinate, makeNearbyMoscowCoordinate } from 'src/tests/fixtures/geography.fixtures';
 
 const renderRunichVectorMap = jest.fn<() => Promise<Buffer>>();
 jest.unstable_mockModule('../static-map.vector', () => ({ renderRunichVectorMap }));
@@ -8,10 +9,7 @@ const { StaticMapService } = await import('../static-map.service');
 const { calculateStaticMapBbox, calculateStaticMapViewport, normalizeStaticMapLocations } =
   await import('../static-map.utils');
 
-const locations = [
-  { coords: { latitude: 55.75, longitude: 37.61 } },
-  { coords: { latitude: 55.76, longitude: 37.62 } },
-];
+const locations = [{ coords: makeMoscowCoordinate() }, { coords: makeNearbyMoscowCoordinate() }];
 
 describe('StaticMapService', () => {
   const originalEnvironment = { ...process.env };

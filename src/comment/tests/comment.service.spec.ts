@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { CommentService } from '../comment.service';
 import { asyncMock, expectInternalServerError, transactionMock } from 'src/tests/helpers';
+import { makeProfileName } from 'src/tests/fixtures/profile.fixtures';
 
 function createPrismaMock() {
   const prisma = {
@@ -42,7 +43,7 @@ describe('CommentService', () => {
     prisma.comment.findUnique.mockResolvedValue({
       moderationStatus: 'visible',
       comment: 'Hello',
-      profile: { name: 'Ann', surname: 'Runner' },
+      profile: makeProfileName(),
       activity: { id: 'activity-1' },
       commentLikes: [like],
     });
@@ -69,7 +70,7 @@ describe('CommentService', () => {
     await expect(service.deleteCommentByCommentId('comment-1')).resolves.toEqual(comment);
     await expect(service.updateCommentByCommentId('Updated', 'comment-1')).resolves.toEqual(comment);
     await expect(service.getCommentByCommentId('comment-1')).resolves.toEqual({
-      profile: { name: 'Ann', surname: 'Runner' },
+      profile: makeProfileName(),
       comment: 'Hello',
     });
     await expect(service.createCommentLikeByCommentId({ commentId: 'comment-1' })).resolves.toEqual(like);
@@ -200,12 +201,12 @@ describe('CommentService', () => {
     prisma.comment.findUnique.mockResolvedValue({
       moderationStatus: 'visible',
       comment: 'Hello',
-      profile: { name: 'Ann', surname: 'Runner' },
+      profile: makeProfileName(),
       activity: { id: 'activity-1' },
     });
 
     await expect(service.getCommentByCommentId('comment-1', 'owner-1')).resolves.toEqual({
-      profile: { name: 'Ann', surname: 'Runner' },
+      profile: makeProfileName(),
       comment: 'Hello',
     });
     expect(prisma.comment.findUnique).toHaveBeenCalledTimes(1);

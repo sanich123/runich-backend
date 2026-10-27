@@ -9,13 +9,14 @@ import {
   omitMediaProcessingStatus,
   reduceActivityChartHeartRateSamples,
 } from '../utils';
+import { makeActivityRouteCoordinate, makeApprovedActivityMedia, makeQueuedActivity } from './fixtures';
 
 describe('activity utilities', () => {
   it('removes media processing status only from object values', () => {
     expect(omitMediaProcessingStatus(null)).toBeNull();
     expect(omitMediaProcessingStatus('queued')).toBe('queued');
     expect(omitMediaProcessingStatus(['queued'])).toEqual(['queued']);
-    expect(omitMediaProcessingStatus({ id: 'activity-1', mediaProcessingStatus: 'queued' })).toEqual({
+    expect(omitMediaProcessingStatus(makeQueuedActivity())).toEqual({
       id: 'activity-1',
     });
   });
@@ -107,11 +108,7 @@ describe('activity utilities', () => {
           mediaModerationAssetId: 'asset-queued',
           thumbnailModerationAssetId: 'asset-thumbnail',
         },
-        {
-          id: 'approved',
-          url: 'https://cdn.example/approved.jpg',
-          mediaReviewStatus: 'approved',
-        },
+        makeApprovedActivityMedia(),
         { id: 'legacy', url: 'https://cdn.example/legacy.jpg' },
         { id: 'rejected', url: null, mediaReviewStatus: 'rejected' },
         { id: 'failed', url: null, mediaReviewStatus: 'failed' },
@@ -129,7 +126,7 @@ describe('activity utilities', () => {
           blurhash: 'blurhash-queued',
           mediaReviewStatus: 'queued',
         },
-        { id: 'approved', url: 'https://cdn.example/approved.jpg', mediaReviewStatus: 'approved' },
+        makeApprovedActivityMedia(),
         { id: 'legacy', url: 'https://cdn.example/legacy.jpg' },
       ],
     });
@@ -141,7 +138,7 @@ describe('activity utilities', () => {
         blurhash: 'blurhash-queued',
         mediaReviewStatus: 'queued',
       },
-      { id: 'approved', url: 'https://cdn.example/approved.jpg', mediaReviewStatus: 'approved' },
+      makeApprovedActivityMedia(),
       { id: 'legacy', url: 'https://cdn.example/legacy.jpg' },
       { id: 'rejected', url: null, mediaReviewStatus: 'rejected' },
       { id: 'failed', url: null, mediaReviewStatus: 'failed' },
@@ -153,7 +150,7 @@ describe('activity utilities', () => {
 
   it('creates privacy-filtered chart samples without exposing route coordinates', () => {
     const locations = [
-      { timestamp: 1_000, coords: { latitude: 0, longitude: 0, altitude: 100, timestamp: 1_000 } },
+      { timestamp: 1_000, coords: makeActivityRouteCoordinate() },
       { timestamp: 61_000, coords: { latitude: 0, longitude: 0.001, altitude: 110, timestamp: 61_000 } },
     ];
 
@@ -174,7 +171,7 @@ describe('activity utilities', () => {
     expect(createActivityChartLocations(locations, 111, true, false)[0]?.coords).toEqual({ timestamp: 1_000 });
 
     const fallbackTimestampLocations = [
-      { coords: { latitude: 0, longitude: 0, altitude: 100, timestamp: 1_000 } },
+      { coords: makeActivityRouteCoordinate() },
       { timestamp: 61_000, coords: { latitude: 0, longitude: 0.001, altitude: 110 } },
       { timestamp: 0, coords: { latitude: 0, longitude: 0.002, altitude: 120 } },
       { coords: { latitude: 0, longitude: 0.003, altitude: 130 } },

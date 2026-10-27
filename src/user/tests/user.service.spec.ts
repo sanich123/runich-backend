@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { UserService } from '../user.service';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
+import { makeBasicProfile, makePendingAvatarProfile } from 'src/tests/fixtures/profile.fixtures';
 
 function createPrismaMock() {
   return {
@@ -35,7 +36,7 @@ describe('UserService', () => {
   it('updates or creates a profile by the authenticated user id', async () => {
     const prisma = createPrismaMock();
     const service = new UserService(prisma as never);
-    prisma.profile.upsert.mockResolvedValue({ id: 'profile-1', userId: 'user-1', name: 'Ann' });
+    prisma.profile.upsert.mockResolvedValue(makeBasicProfile());
 
     await expect(service.updateProfileByUserId('user-1', 'user-1', { name: 'Ann' })).resolves.toEqual({
       id: 'profile-1',
@@ -70,7 +71,7 @@ describe('UserService', () => {
     const prisma = createPrismaMock();
     const service = new UserService(prisma as never);
     prisma.profile.findUnique.mockResolvedValue({ userId: 'user-1' });
-    prisma.profile.upsert.mockResolvedValue({ id: 'profile-1', userId: 'user-1', name: 'Ann' });
+    prisma.profile.upsert.mockResolvedValue(makeBasicProfile());
 
     await expect(service.updateProfileByUserId('profile-1', 'user-1', { name: 'Ann' })).resolves.toEqual({
       id: 'profile-1',
@@ -94,14 +95,7 @@ describe('UserService', () => {
     };
     const moderationAccess = { areBlocked: asyncMock().mockResolvedValue(false) };
     const service = new UserService(prisma as never, undefined, storage as never, moderationAccess as never);
-    const pendingProfile = {
-      id: 'profile-1',
-      userId: 'owner-1',
-      profilePhoto: 'https://public.example.test/old-avatar.webp',
-      profilePhotoBlurhash: 'old-hash',
-      profilePhotoPendingAssetId: 'asset-1',
-      profilePhotoPendingBlurhash: 'pending-hash',
-    };
+    const pendingProfile = makePendingAvatarProfile();
     prisma.profile.findUnique.mockResolvedValue(pendingProfile);
 
     const subscriberView = await service.getProfileByUserId('owner-1', 'subscriber-1');
@@ -130,14 +124,9 @@ describe('UserService', () => {
       getOwnerModerationPreviewUrl: asyncMock().mockResolvedValue('https://private.example.test/preview'),
     };
     const service = new UserService(prisma as never, undefined, storage as never);
-    prisma.profile.findUnique.mockResolvedValue({
-      id: 'profile-1',
-      userId: 'owner-1',
-      profilePhoto: null,
-      profilePhotoBlurhash: null,
-      profilePhotoPendingAssetId: 'asset-1',
-      profilePhotoPendingBlurhash: 'pending-hash',
-    });
+    prisma.profile.findUnique.mockResolvedValue(
+      makePendingAvatarProfile({ profilePhoto: null, profilePhotoBlurhash: null }),
+    );
 
     await expect(service.getProfileByUserId('owner-1', 'subscriber-1')).resolves.toMatchObject({
       profilePhoto: null,
@@ -157,14 +146,7 @@ describe('UserService', () => {
     };
     const service = new UserService(prisma as never, undefined, storage as never);
     prisma.mediaModerationAsset.findFirst.mockResolvedValue({ status: 'queued', publishedKey: null });
-    prisma.profile.upsert.mockResolvedValue({
-      id: 'profile-1',
-      userId: 'owner-1',
-      profilePhoto: 'https://public.example.test/old-avatar.webp',
-      profilePhotoBlurhash: 'old-hash',
-      profilePhotoPendingAssetId: 'asset-1',
-      profilePhotoPendingBlurhash: 'pending-hash',
-    });
+    prisma.profile.upsert.mockResolvedValue(makePendingAvatarProfile());
 
     await expect(
       service.updateProfileByUserId('owner-1', 'owner-1', {
@@ -282,14 +264,7 @@ describe('UserService', () => {
       }),
     };
     const service = new UserService(prisma as never, undefined, storage as never);
-    prisma.profile.findUnique.mockResolvedValue({
-      id: 'profile-1',
-      userId: 'owner-1',
-      profilePhoto: 'https://public.example.test/old-avatar.webp',
-      profilePhotoBlurhash: 'old-hash',
-      profilePhotoPendingAssetId: 'asset-1',
-      profilePhotoPendingBlurhash: 'pending-hash',
-    });
+    prisma.profile.findUnique.mockResolvedValue(makePendingAvatarProfile());
 
     await expect(service.getProfileByUserId('owner-1')).resolves.toMatchObject({
       profilePhoto: 'https://public.example.test/old-avatar.webp',
@@ -320,14 +295,7 @@ describe('UserService', () => {
       }),
     };
     const service = new UserService(prisma as never, undefined, storage as never);
-    prisma.profile.findUnique.mockResolvedValue({
-      id: 'profile-1',
-      userId: 'owner-1',
-      profilePhoto: 'https://public.example.test/old-avatar.webp',
-      profilePhotoBlurhash: 'old-hash',
-      profilePhotoPendingAssetId: 'asset-1',
-      profilePhotoPendingBlurhash: 'pending-hash',
-    });
+    prisma.profile.findUnique.mockResolvedValue(makePendingAvatarProfile());
 
     await expect(service.getProfileByUserId('owner-1')).resolves.toMatchObject({
       profilePhoto: 'https://public.example.test/approved-avatar.webp',
@@ -348,14 +316,7 @@ describe('UserService', () => {
   it('preserves the published avatar if moderation storage is temporarily unavailable', async () => {
     const prisma = createPrismaMock();
     const service = new UserService(prisma as never);
-    prisma.profile.findUnique.mockResolvedValue({
-      id: 'profile-1',
-      userId: 'owner-1',
-      profilePhoto: 'https://public.example.test/old-avatar.webp',
-      profilePhotoBlurhash: 'old-hash',
-      profilePhotoPendingAssetId: 'asset-1',
-      profilePhotoPendingBlurhash: 'pending-hash',
-    });
+    prisma.profile.findUnique.mockResolvedValue(makePendingAvatarProfile());
 
     await expect(service.getProfileByUserId('owner-1')).resolves.toMatchObject({
       profilePhoto: 'https://public.example.test/old-avatar.webp',

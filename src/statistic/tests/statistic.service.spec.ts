@@ -2,15 +2,16 @@ import { ForbiddenException } from '@nestjs/common';
 import { StatisticService } from '../statistic.service';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 import { DEFAULT_TIME_ZONE } from 'src/common/utils/time-zone';
+import {
+  makeActivityTotals,
+  makeEmptyActivityTotals,
+  makeSportActivityTotals,
+  makeStatisticActivities,
+} from './fixtures';
 
 function createPrismaMock() {
   return { activity: { findMany: asyncMock() }, profile: { findUnique: asyncMock() }, $queryRaw: asyncMock() };
 }
-
-const activities = [
-  { duration: 100, distance: 1000, speed: 5, date: new Date('2025-01-02'), id: 'a1', sport: 'run' },
-  { duration: 200, distance: 2000, speed: 6, date: new Date('2025-01-03'), id: 'a2', sport: 'bike' },
-];
 
 function getQueryText(call: unknown[]) {
   return (call[0] as TemplateStringsArray).join('$parameter');
@@ -43,11 +44,12 @@ describe('StatisticService', () => {
   it('calculates monthly statistics grouped by sport', async () => {
     const prisma = createPrismaMock();
     const service = new StatisticService(prisma as never);
+    const activities = makeStatisticActivities();
     prisma.activity.findMany.mockResolvedValue(activities);
     prisma.$queryRaw.mockResolvedValue([
-      { sport: null, totalDuration: 300, totalDistance: 3000, totalItems: 2 },
-      { sport: 'bike', totalDuration: 200, totalDistance: 2000, totalItems: 1 },
-      { sport: 'run', totalDuration: 100, totalDistance: 1000, totalItems: 1 },
+      { sport: null, ...makeActivityTotals() },
+      makeSportActivityTotals('bike'),
+      makeSportActivityTotals('run'),
     ]);
 
     await expect(service.getMonthStatisticsByYearMonth('u1', '2025', '0')).resolves.toEqual({
@@ -192,7 +194,7 @@ describe('StatisticService', () => {
   it('calculates weekly and all-time metrics, including empty input', async () => {
     const prisma = createPrismaMock();
     const service = new StatisticService(prisma as never);
-    prisma.$queryRaw.mockResolvedValue([{ totalDuration: 300, totalDistance: 3000, totalItems: 2 }]);
+    prisma.$queryRaw.mockResolvedValue([makeActivityTotals()]);
 
     await expect(service.getCurrentWeekStatistics('u1', 'Mon Aug 10 2026', 'Sun Aug 16 2026')).resolves.toEqual({
       totalDuration: 300,
@@ -216,7 +218,7 @@ describe('StatisticService', () => {
     const prisma = createPrismaMock();
     const service = new StatisticService(prisma as never);
     prisma.profile.findUnique.mockResolvedValue({ hideActivityStatistics: true });
-    prisma.$queryRaw.mockResolvedValue([{ totalDuration: 0, totalDistance: 0, totalItems: 0 }]);
+    prisma.$queryRaw.mockResolvedValue([makeEmptyActivityTotals()]);
 
     await expect(service.getAllActivitiesStatisticsByUserId('owner-1', 'viewer-1')).rejects.toBeInstanceOf(
       ForbiddenException,

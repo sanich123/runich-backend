@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { jest } from '@jest/globals';
 import { asyncMock } from 'src/tests/helpers';
 import { NotificationService } from '../notification.service';
+import { makePushTokenInput } from './fixtures';
 import { MANDATORY_NOTIFICATION_TYPES } from '../notification.constants';
 
 describe('NotificationService', () => {
@@ -155,12 +156,9 @@ describe('NotificationService', () => {
     transaction.pushDeviceToken.findFirst.mockResolvedValue(null);
     transaction.pushDeviceToken.create.mockResolvedValue({ id: 'device-token-1' });
 
-    await expect(
-      service.registerPushToken('user-1', 'device-1', {
-        token: 'ExpoPushToken[device-token]',
-        platform: 'android',
-      }),
-    ).resolves.toEqual({ enabled: true });
+    await expect(service.registerPushToken('user-1', 'device-1', makePushTokenInput())).resolves.toEqual({
+      enabled: true,
+    });
 
     expect(transaction.pushDeviceToken.updateMany).toHaveBeenCalledWith({
       where: { userId: 'user-1', deviceId: 'device-1', active: true },
@@ -181,12 +179,9 @@ describe('NotificationService', () => {
   it('updates an existing Expo token and rejects invalid device identifiers', async () => {
     transaction.pushDeviceToken.findFirst.mockResolvedValue({ id: 'existing-token' });
 
-    await expect(
-      service.registerPushToken('user-1', 'device-1', {
-        token: 'ExpoPushToken[device-token]',
-        platform: 'android',
-      }),
-    ).resolves.toEqual({ enabled: true });
+    await expect(service.registerPushToken('user-1', 'device-1', makePushTokenInput())).resolves.toEqual({
+      enabled: true,
+    });
     expect(transaction.pushDeviceToken.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'existing-token' },

@@ -1,5 +1,7 @@
 import { ActivityService } from '../services/activity.service';
 import { asyncMock } from 'src/tests/helpers';
+import { makeActivityRouteCoordinate } from './fixtures';
+import { makeRoundedMoscowCoordinate } from 'src/tests/fixtures/geography.fixtures';
 
 function createPrismaMock() {
   return {
@@ -47,9 +49,9 @@ describe('ActivityService privacy', () => {
 
   it('allows an owner to read private activity locations', async () => {
     const prisma = createPrismaMock();
-    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
+    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: makeRoundedMoscowCoordinate() }]) };
     const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
-    const locations = [{ coords: { latitude: 55, longitude: 37 } }];
+    const locations = [{ coords: makeRoundedMoscowCoordinate() }];
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       visibility: 'private',
@@ -259,7 +261,7 @@ describe('ActivityService privacy', () => {
     const prisma = createPrismaMock();
     const storage = {
       readActivityRoute: asyncMock().mockResolvedValue([
-        { timestamp: 1_000, coords: { latitude: 0, longitude: 0, altitude: 100, timestamp: 1_000 } },
+        { timestamp: 1_000, coords: makeActivityRouteCoordinate() },
         { timestamp: 61_000, coords: { latitude: 0, longitude: 0.001, altitude: 110, timestamp: 61_000 } },
       ]),
     };

@@ -10,15 +10,13 @@ import {
   startOfLocalWeek,
 } from '../time-zone';
 
+const januaryFirst = { year: 2026, month: 1, day: 1 };
+
 describe('time zone calendar calculations', () => {
   it('converts local midnight to the correct UTC instant', () => {
-    expect(localDateToUtc({ year: 2026, month: 1, day: 1 }, 'UTC').toISOString()).toBe('2026-01-01T00:00:00.000Z');
-    expect(localDateToUtc({ year: 2026, month: 1, day: 1 }, 'Europe/Moscow').toISOString()).toBe(
-      '2025-12-31T21:00:00.000Z',
-    );
-    expect(localDateToUtc({ year: 2026, month: 1, day: 1 }, 'America/New_York').toISOString()).toBe(
-      '2026-01-01T05:00:00.000Z',
-    );
+    expect(localDateToUtc(januaryFirst, 'UTC').toISOString()).toBe('2026-01-01T00:00:00.000Z');
+    expect(localDateToUtc(januaryFirst, 'Europe/Moscow').toISOString()).toBe('2025-12-31T21:00:00.000Z');
+    expect(localDateToUtc(januaryFirst, 'America/New_York').toISOString()).toBe('2026-01-01T05:00:00.000Z');
   });
 
   it('keeps month and year ranges aligned to the users local calendar', () => {
@@ -92,7 +90,7 @@ describe('time zone calendar calculations', () => {
     expect(december.lt.toISOString()).toBe('2027-01-01T00:00:00.000Z');
     expect(getLocalYearRange(2026).gte).toBeInstanceOf(Date);
     expect(getLocalWeekRange(undefined).gte).toBeInstanceOf(Date);
-    expect(localDateToUtc({ year: 2026, month: 1, day: 1 })).toBeInstanceOf(Date);
+    expect(localDateToUtc(januaryFirst)).toBeInstanceOf(Date);
     expect(getLocalMonthRange(2026, 0).gte).toBeInstanceOf(Date);
   });
 });

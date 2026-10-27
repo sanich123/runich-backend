@@ -5,6 +5,7 @@ import { asyncMock } from 'src/tests/helpers';
 import { isSupportedVideoUpload } from '../const';
 import { StorageController } from '../storage.controller';
 import { StorageService } from '../services/storage.service';
+import { makeActivityMediaFixture, makePhotoUpload } from './fixtures';
 
 describe('StorageController', () => {
   const storageService = {
@@ -31,11 +32,7 @@ describe('StorageController', () => {
   });
 
   it('passes the multipart file and authenticated user to the upload service', async () => {
-    const file = {
-      originalname: 'photo.jpg',
-      mimetype: 'image/jpeg',
-      buffer: Buffer.from('photo'),
-    } as Express.Multer.File;
+    const file = makePhotoUpload() as Express.Multer.File;
     storageService.uploadPhoto.mockResolvedValue({ url: 'https://cdn.example/photo.jpg' });
 
     await expect(controller.uploadPhoto(file, request)).resolves.toEqual({ url: 'https://cdn.example/photo.jpg' });
@@ -54,13 +51,10 @@ describe('StorageController', () => {
     ] as Express.Multer.File[];
     const body = {
       scope: 'activity' as const,
-      manifest: JSON.stringify([
-        { mediaId: 'media-1', role: 'media' },
-        { mediaId: 'media-2', role: 'media' },
-      ]),
+      manifest: JSON.stringify([makeActivityMediaFixture(), { mediaId: 'media-2', role: 'media' }]),
     };
     storageService.uploadPhotos.mockResolvedValue([
-      { mediaId: 'media-1', role: 'media', url: 'https://cdn.example/one.jpg' },
+      makeActivityMediaFixture({ url: 'https://cdn.example/one.jpg' }),
       { mediaId: 'media-2', role: 'media', url: 'https://cdn.example/two.jpg' },
     ]);
 
@@ -77,12 +71,12 @@ describe('StorageController', () => {
     const files = [{ originalname: 'one.jpg', mimetype: 'image/jpeg' }] as Express.Multer.File[];
     const body = {
       scope: 'activity' as const,
-      manifest: JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+      manifest: JSON.stringify([makeActivityMediaFixture()]),
     };
-    storageService.uploadPhotos.mockResolvedValue([{ mediaId: 'media-1', role: 'media', url: 'photo-url' }]);
+    storageService.uploadPhotos.mockResolvedValue([makeActivityMediaFixture({ url: 'photo-url' })]);
 
     await expect(controller.uploadPhotos(files, request, body)).resolves.toEqual([
-      { mediaId: 'media-1', role: 'media', url: 'photo-url' },
+      makeActivityMediaFixture({ url: 'photo-url' }),
     ]);
     expect(storageService.uploadPhotos).toHaveBeenCalledWith('user-1', files, { scope: 'activity' }, body.manifest);
   });
@@ -91,12 +85,12 @@ describe('StorageController', () => {
     const files = [{ originalname: 'avatar.jpg', mimetype: 'image/jpeg' }] as Express.Multer.File[];
     const body = {
       scope: 'profile' as const,
-      manifest: JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+      manifest: JSON.stringify([makeActivityMediaFixture()]),
     };
-    storageService.uploadPhotos.mockResolvedValue([{ mediaId: 'media-1', role: 'media', url: 'avatar-url' }]);
+    storageService.uploadPhotos.mockResolvedValue([makeActivityMediaFixture({ url: 'avatar-url' })]);
 
     await expect(controller.uploadPhotos(files, request, body)).resolves.toEqual([
-      { mediaId: 'media-1', role: 'media', url: 'avatar-url' },
+      makeActivityMediaFixture({ url: 'avatar-url' }),
     ]);
     expect(storageService.uploadPhotos).toHaveBeenCalledWith('user-1', files, { scope: 'profile' }, body.manifest);
   });

@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { ActivityMediaProcessingService } from '../services/activity-media-processing.service';
 import { asyncMock } from 'src/tests/helpers';
+import { makeMediaProcessingActivity } from './fixtures';
 
 function createPrismaMock() {
   return {
@@ -28,14 +29,7 @@ describe('ActivityMediaProcessingService', () => {
   it('calculates missing media blurhashes in the background and completes the activity', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityMediaProcessingService(prisma as never);
-    prisma.activity.findMany.mockResolvedValue([
-      {
-        id: 'activity-1',
-        media: [{ position: 0, url: 'photo', thumbnail: null, blurhash: null }],
-        mapPhotoUrl: 'map',
-        mapPhotoUrlBlurhash: null,
-      },
-    ]);
+    prisma.activity.findMany.mockResolvedValue([makeMediaProcessingActivity({ mapPhotoUrl: 'map' })]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
     prisma.activity.update.mockResolvedValue({ id: 'activity-1' });
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
@@ -121,9 +115,7 @@ describe('ActivityMediaProcessingService', () => {
     const prisma = createPrismaMock();
     const service = new ActivityMediaProcessingService(prisma as never);
     jest.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('image unavailable'));
-    prisma.activity.findMany.mockResolvedValue([
-      { id: 'activity-1', media: [], mapPhotoUrl: null, mapPhotoUrlBlurhash: null },
-    ]);
+    prisma.activity.findMany.mockResolvedValue([makeMediaProcessingActivity({ media: [] })]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
     prisma.activity.update.mockRejectedValueOnce(new Error('database unavailable'));
 
@@ -143,9 +135,7 @@ describe('ActivityMediaProcessingService', () => {
     const prisma = createPrismaMock();
     const service = new ActivityMediaProcessingService(prisma as never);
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
-    prisma.activity.findMany.mockResolvedValue([
-      { id: 'activity-1', media: [], mapPhotoUrl: null, mapPhotoUrlBlurhash: null },
-    ]);
+    prisma.activity.findMany.mockResolvedValue([makeMediaProcessingActivity({ media: [] })]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
     prisma.activity.update.mockRejectedValueOnce('database unavailable');
 
@@ -160,14 +150,7 @@ describe('ActivityMediaProcessingService', () => {
   it('skips an activity claimed by another worker', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityMediaProcessingService(prisma as never);
-    prisma.activity.findMany.mockResolvedValue([
-      {
-        id: 'activity-1',
-        media: [{ position: 0, url: 'photo', thumbnail: null, blurhash: null }],
-        mapPhotoUrl: null,
-        mapPhotoUrlBlurhash: null,
-      },
-    ]);
+    prisma.activity.findMany.mockResolvedValue([makeMediaProcessingActivity()]);
     prisma.activity.updateMany.mockResolvedValue({ count: 0 });
 
     await expect(service.processNextBatch()).resolves.toBe(true);

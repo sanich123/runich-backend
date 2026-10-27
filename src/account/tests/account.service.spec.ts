@@ -1,6 +1,12 @@
 import { AccountService } from '../account.service';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 import { parseProfileCursor } from '../account.pagination';
+import {
+  makeAccountPage,
+  makeReviewRequiredProfilePhotoAsset,
+  makeSearchProfileWithFirstPendingPhoto,
+  makeSearchProfileWithPendingReplacement,
+} from './fixtures';
 
 const filter = {
   name: 'Ann',
@@ -38,11 +44,7 @@ describe('AccountService', () => {
     for (const { filter, term } of searchFields) {
       prisma.profile.findMany.mockResolvedValue([profile]);
 
-      await expect(service.getFilteredAccounts('2', undefined, filter)).resolves.toEqual({
-        items: [profile],
-        hasMore: false,
-        nextCursor: null,
-      });
+      await expect(service.getFilteredAccounts('2', undefined, filter)).resolves.toEqual(makeAccountPage([profile]));
 
       const expectedWhere = {
         AND: [
@@ -84,19 +86,8 @@ describe('AccountService', () => {
   it('keeps the published profile photo in search while a replacement is pending', async () => {
     const prisma = createPrismaMock();
     const service = new AccountService(prisma as never);
-    prisma.profile.findMany.mockResolvedValue([
-      {
-        id: 'profile-1',
-        userId: 'user-1',
-        profilePhoto: 'https://cdn.example/approved.jpg',
-        profilePhotoBlurhash: 'approved-blurhash',
-        profilePhotoPendingAssetId: 'asset-1',
-        profilePhotoPendingBlurhash: 'pending-blurhash',
-      },
-    ]);
-    prisma.mediaModerationAsset.findMany.mockResolvedValue([
-      { id: 'asset-1', ownerId: 'user-1', status: 'review_required', publishedKey: null },
-    ]);
+    prisma.profile.findMany.mockResolvedValue([makeSearchProfileWithPendingReplacement()]);
+    prisma.mediaModerationAsset.findMany.mockResolvedValue([makeReviewRequiredProfilePhotoAsset()]);
 
     const response = await service.getFilteredAccounts('10', undefined, {});
     expect(response).toMatchObject({
@@ -124,19 +115,8 @@ describe('AccountService', () => {
   it('returns a pending placeholder when search finds no previously published photo', async () => {
     const prisma = createPrismaMock();
     const service = new AccountService(prisma as never);
-    prisma.profile.findMany.mockResolvedValue([
-      {
-        id: 'profile-1',
-        userId: 'user-1',
-        profilePhoto: null,
-        profilePhotoBlurhash: null,
-        profilePhotoPendingAssetId: 'asset-1',
-        profilePhotoPendingBlurhash: 'pending-blurhash',
-      },
-    ]);
-    prisma.mediaModerationAsset.findMany.mockResolvedValue([
-      { id: 'asset-1', ownerId: 'user-1', status: 'review_required', publishedKey: null },
-    ]);
+    prisma.profile.findMany.mockResolvedValue([makeSearchProfileWithFirstPendingPhoto()]);
+    prisma.mediaModerationAsset.findMany.mockResolvedValue([makeReviewRequiredProfilePhotoAsset()]);
 
     await expect(service.getFilteredAccounts('10', undefined, {})).resolves.toMatchObject({
       items: [
@@ -153,16 +133,7 @@ describe('AccountService', () => {
     const prisma = createPrismaMock();
     const storage = { getPublicUrl: (key: string) => 'https://cdn.example/' + key };
     const service = new AccountService(prisma as never, undefined, storage as never);
-    prisma.profile.findMany.mockResolvedValue([
-      {
-        id: 'profile-1',
-        userId: 'user-1',
-        profilePhoto: null,
-        profilePhotoBlurhash: null,
-        profilePhotoPendingAssetId: 'asset-1',
-        profilePhotoPendingBlurhash: 'pending-blurhash',
-      },
-    ]);
+    prisma.profile.findMany.mockResolvedValue([makeSearchProfileWithFirstPendingPhoto()]);
     prisma.mediaModerationAsset.findMany.mockResolvedValue([
       {
         id: 'asset-1',
@@ -185,16 +156,7 @@ describe('AccountService', () => {
   it('does not hide a profile photo when its moderation asset belongs to another user', async () => {
     const prisma = createPrismaMock();
     const service = new AccountService(prisma as never);
-    prisma.profile.findMany.mockResolvedValue([
-      {
-        id: 'profile-1',
-        userId: 'user-1',
-        profilePhoto: 'https://cdn.example/approved.jpg',
-        profilePhotoBlurhash: 'approved-blurhash',
-        profilePhotoPendingAssetId: 'asset-1',
-        profilePhotoPendingBlurhash: 'pending-blurhash',
-      },
-    ]);
+    prisma.profile.findMany.mockResolvedValue([makeSearchProfileWithPendingReplacement()]);
     prisma.mediaModerationAsset.findMany.mockResolvedValue([
       { id: 'asset-1', ownerId: 'other-user', status: 'queued' },
     ]);

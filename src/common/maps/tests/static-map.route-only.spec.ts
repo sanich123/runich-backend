@@ -1,15 +1,16 @@
 import sharp from 'sharp';
 import { renderRouteOnlyMap } from '../static-map.route-only';
+import { makeMoscowCoordinate, makeNearbyMoscowCoordinate } from 'src/tests/fixtures/geography.fixtures';
 
 const route = [
-  { coords: { longitude: 37.61, latitude: 55.75 } },
-  { coords: { longitude: Number.NaN, latitude: 55.75 } },
-  { coords: { longitude: 37.61, latitude: Number.NaN } },
-  { coords: { longitude: -181, latitude: 55.75 } },
-  { coords: { longitude: 181, latitude: 55.75 } },
-  { coords: { longitude: 37.61, latitude: -91 } },
-  { coords: { longitude: 37.61, latitude: 91 } },
-  { coords: { longitude: 37.62, latitude: 55.76 } },
+  { coords: makeMoscowCoordinate() },
+  { coords: makeMoscowCoordinate({ longitude: Number.NaN }) },
+  { coords: makeMoscowCoordinate({ latitude: Number.NaN }) },
+  { coords: makeMoscowCoordinate({ longitude: -181 }) },
+  { coords: makeMoscowCoordinate({ longitude: 181 }) },
+  { coords: makeMoscowCoordinate({ latitude: -91 }) },
+  { coords: makeMoscowCoordinate({ latitude: 91 }) },
+  { coords: makeNearbyMoscowCoordinate() },
 ];
 
 describe('route-only static map renderer', () => {

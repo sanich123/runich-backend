@@ -18,6 +18,7 @@ import { LikeDto } from '../../like/like.dto';
 import { ParamsId } from '../../common/dto/params-validation';
 import { UserDto } from '../../user/user.dto';
 import { MAX_ACTIVITY_LOCATIONS } from '../../common/constants';
+import { makeActivityDto } from '../../activity/tests/fixtures';
 
 const uuid = '11111111-1111-4111-8111-111111111111';
 const email = 'runner@example.com';
@@ -101,7 +102,7 @@ describe('request DTO validation', () => {
   });
 
   it('validates activity scalar fields and every nested activity collection', async () => {
-    await expectValid(ActivityDto, { duration: 100, distance: 1000, speed: 10, sport: 'run' });
+    await expectValid(ActivityDto, makeActivityDto());
     await expectValid(ActivityDto, {
       duration: 33374,
       distance: 5.029430600013118,
@@ -138,7 +139,7 @@ describe('request DTO validation', () => {
       thumbnail: null,
       blurhash: 'hash',
     }));
-    const activityFields = { duration: 100, distance: 1000, speed: 10, sport: 'run' };
+    const activityFields = makeActivityDto();
     await expectValid(ActivityDto, { ...activityFields, media: activityMedia });
     await expectInvalid(ActivityDto, { ...activityFields, media: [...activityMedia, ...activityMedia.slice(0, 1)] });
     await expectValid(ActivityMediaAppendDto, { media: activityMedia });
