@@ -2,31 +2,22 @@ import { UnauthorizedException } from '@nestjs/common';
 import { jest } from '@jest/globals';
 import { createHash } from 'node:crypto';
 import { AuthTokenService } from '../services/auth-token.service';
+import { makePersistedSession, makeRefreshTokenClaims } from './fixtures';
 
 describe('AuthTokenService refresh rotation', () => {
   function createService(updateCounts: number[]) {
     const prisma = {
       userSession: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'session-1',
-          userId: 'user-1',
-          refreshHash: createHash('sha256').update('refresh-token').digest('hex'),
-          revokedAt: null,
-          ipAddress: null,
-          userAgent: null,
-          deviceModel: null,
-          manufacturer: null,
-          osName: null,
-          osVersion: null,
-          deviceType: null,
-          appVersion: null,
-          appBuild: null,
-        } as never),
+        findUnique: jest.fn().mockResolvedValue(
+          makePersistedSession({
+            refreshHash: createHash('sha256').update('refresh-token').digest('hex'),
+          }) as never,
+        ),
         updateMany: jest.fn().mockImplementation(async () => ({ count: updateCounts.shift() ?? 0 })),
       },
     };
     const jwt = {
-      verify: jest.fn().mockReturnValue({ userId: 'user-1', type: 'refresh', sessionId: 'session-1' }),
+      verify: jest.fn().mockReturnValue(makeRefreshTokenClaims()),
       sign: jest.fn().mockReturnValue('rotated-token'),
     };
     return { service: new AuthTokenService(jwt as never, prisma as never), prisma, jwt };

@@ -4,13 +4,19 @@ import { MAX_MAP_ROUTE_LOCATIONS } from '../const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
 import { encodeActivityCursor, parseActivityCursor, parseActivityMediaCursor } from '../activity.pagination';
 import { jest } from '@jest/globals';
-
-const activityDto = {
-  duration: 100,
-  distance: 1000,
-  speed: 10,
-  sport: 'run',
-};
+import {
+  makeActivityDto,
+  makeActivityPhoto,
+  makeActivityProfile,
+  makeMigrationSuccessResult,
+  makeQueuedActivity,
+  makeStoredActivity,
+} from './fixtures';
+import {
+  makeMoscowCoordinate,
+  makeNearbyMoscowCoordinate,
+  makeRoundedMoscowCoordinate,
+} from 'src/tests/fixtures/geography.fixtures';
 
 function createPrismaMock() {
   const prisma = {
@@ -47,11 +53,11 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
-    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity());
 
     await expect(
       service.createActivity(
-        { ...activityDto, media: [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }] },
+        { ...makeActivityDto(), media: [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }] },
         'user-1',
       ),
     ).resolves.toEqual({ id: 'activity-1' });
@@ -81,9 +87,9 @@ describe('ActivityService', () => {
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue(null);
 
-    await expect(
-      service.appendActivityMedia('missing-activity', 'user-1', [{ url: 'photo', thumbnail: null }]),
-    ).rejects.toThrow('Активность не найдена');
+    await expect(service.appendActivityMedia('missing-activity', 'user-1', [makeActivityPhoto()])).rejects.toThrow(
+      'Активность не найдена',
+    );
     expect(prisma.activityMedia.count).not.toHaveBeenCalled();
   });
 
@@ -92,9 +98,9 @@ describe('ActivityService', () => {
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1', date: new Date() });
 
-    await expect(
-      service.appendActivityMedia('activity-1', 'user-1', [{ url: 'photo', thumbnail: null }]),
-    ).rejects.toThrow('Недостаточно прав');
+    await expect(service.appendActivityMedia('activity-1', 'user-1', [makeActivityPhoto()])).rejects.toThrow(
+      'Недостаточно прав',
+    );
     expect(prisma.activityMedia.count).not.toHaveBeenCalled();
   });
 
@@ -103,9 +109,9 @@ describe('ActivityService', () => {
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: new Date() });
 
-    await expect(
-      service.appendActivityMedia('activity-1', 'user-1', [{ url: 'photo', thumbnail: null }]),
-    ).rejects.toThrow('Сервис хранения медиа не настроен');
+    await expect(service.appendActivityMedia('activity-1', 'user-1', [makeActivityPhoto()])).rejects.toThrow(
+      'Сервис хранения медиа не настроен',
+    );
     expect(prisma.activityMedia.count).not.toHaveBeenCalled();
   });
 
@@ -184,11 +190,11 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never, undefined, undefined, undefined, undefined);
-    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity());
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
     await expect(
-      service.createActivity({ ...activityDto, description: '  Activity description  ' }, 'user-1'),
+      service.createActivity({ ...makeActivityDto(), description: '  Activity description  ' }, 'user-1'),
     ).resolves.toEqual({ id: 'activity-1' });
     expect(global.fetch).not.toHaveBeenCalled();
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
@@ -202,18 +208,15 @@ describe('ActivityService', () => {
     });
 
     process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
-    const locations = [
-      { coords: { latitude: 55.75, longitude: 37.61 } },
-      { coords: { latitude: 55.76, longitude: 37.62 } },
-    ];
-    await service.createActivity({ ...activityDto, locations, media: [{ url: 'photo', thumbnail: null }] }, 'user-1');
+    const locations = [{ coords: makeMoscowCoordinate() }, { coords: makeNearbyMoscowCoordinate() }];
+    await service.createActivity({ ...makeActivityDto(), locations, media: [makeActivityPhoto()] }, 'user-1');
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({
         mapPhotoUrl: expect.stringContaining('?access_token=mapbox-token'),
       }),
     });
 
-    await service.createActivity({ ...activityDto, locations }, 'user-1');
+    await service.createActivity({ ...makeActivityDto(), locations }, 'user-1');
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({
         mapPhotoUrl: expect.stringContaining('?access_token=mapbox-token'),
@@ -230,10 +233,7 @@ describe('ActivityService', () => {
         key: 'user-1/activities/activity-1/map.webp',
       }),
     };
-    const locations = [
-      { coords: { latitude: 55.75, longitude: 37.61 } },
-      { coords: { latitude: 55.76, longitude: 37.62 } },
-    ];
+    const locations = [{ coords: makeMoscowCoordinate() }, { coords: makeNearbyMoscowCoordinate() }];
     const service = new ActivityService(
       prisma as never,
       account as never,
@@ -242,9 +242,9 @@ describe('ActivityService', () => {
       undefined,
       staticMap as never,
     );
-    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity());
 
-    await service.createActivity({ ...activityDto, locations }, 'user-1');
+    await service.createActivity({ ...makeActivityDto(), locations }, 'user-1');
 
     expect(staticMap.generateActivityMap).toHaveBeenCalledWith({
       userId: 'user-1',
@@ -271,13 +271,10 @@ describe('ActivityService', () => {
       undefined,
       staticMap as never,
     );
-    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
-    const locations = [
-      { coords: { latitude: 55.75, longitude: 37.61 } },
-      { coords: { latitude: 55.76, longitude: 37.62 } },
-    ];
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity());
+    const locations = [{ coords: makeMoscowCoordinate() }, { coords: makeNearbyMoscowCoordinate() }];
 
-    await service.createActivity({ ...activityDto, locations }, 'user-1');
+    await service.createActivity({ ...makeActivityDto(), locations }, 'user-1');
 
     expect(prisma.activity.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ mapPhotoUrl: null }),
@@ -287,18 +284,12 @@ describe('ActivityService', () => {
   it('stores estimated active calories when the profile has all required metrics', async () => {
     const prisma = createPrismaMock();
     const account = {
-      getAccountByUserId: asyncMock().mockResolvedValue({
-        id: 'profile-1',
-        weight: '80',
-        height: '180',
-        age: '30',
-        gender: 'male',
-      }),
+      getAccountByUserId: asyncMock().mockResolvedValue(makeActivityProfile()),
     };
     const service = new ActivityService(prisma as never, account as never);
-    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity());
 
-    await service.createActivity({ ...activityDto, distance: 10_000, duration: 3_600_000 }, 'user-1');
+    await service.createActivity({ ...makeActivityDto(), distance: 10_000, duration: 3_600_000 }, 'user-1');
 
     expect(prisma.activity.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ caloriesActive: 742 }),
@@ -308,22 +299,16 @@ describe('ActivityService', () => {
   it('prefers Health Connect calories and estimates them only when the source omitted them', async () => {
     const prisma = createPrismaMock();
     const account = {
-      getAccountByUserId: asyncMock().mockResolvedValue({
-        id: 'profile-1',
-        weight: '80',
-        height: '180',
-        age: '30',
-        gender: 'male',
-      }),
+      getAccountByUserId: asyncMock().mockResolvedValue(makeActivityProfile()),
     };
     const service = new ActivityService(prisma as never, account as never);
     prisma.activity.findMany.mockResolvedValue([]);
-    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity());
 
     await service.importWatchWorkouts(
       [
         {
-          ...activityDto,
+          ...makeActivityDto(),
           duration: 3_600_000,
           distance: 10_000,
           source: 'health-connect',
@@ -332,7 +317,7 @@ describe('ActivityService', () => {
           locations: [],
         },
         {
-          ...activityDto,
+          ...makeActivityDto(),
           duration: 3_600_000,
           distance: 10_000,
           source: 'health-connect',
@@ -354,12 +339,12 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
-    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity());
     const locations = [100, 100, 100, 120, 120, 120].map((altitude) => ({
-      coords: { latitude: 55.75, longitude: 37.61, altitude },
+      coords: { ...makeMoscowCoordinate(), altitude },
     }));
 
-    await service.createActivity({ ...activityDto, locations }, 'user-1');
+    await service.createActivity({ ...makeActivityDto(), locations }, 'user-1');
 
     expect(prisma.activity.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ elevationGain: 20 }),
@@ -382,10 +367,10 @@ describe('ActivityService', () => {
       refreshLinkedActivityMedia: asyncMock(),
     };
     const service = new ActivityService(prisma as never, account as never, undefined, storage as never);
-    prisma.activity.create.mockResolvedValue({ id: 'activity-1', mediaProcessingStatus: 'queued' });
-    const locations = [{ timestamp: 1, coords: { latitude: 55.75, longitude: 37.61 } }];
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity());
+    const locations = [{ timestamp: 1, coords: makeMoscowCoordinate() }];
 
-    await expect(service.createActivity({ ...activityDto, locations }, 'user-1')).resolves.toEqual({
+    await expect(service.createActivity({ ...makeActivityDto(), locations }, 'user-1')).resolves.toEqual({
       id: 'activity-1',
     });
 
@@ -419,10 +404,7 @@ describe('ActivityService', () => {
     prisma.activity.create.mockRejectedValue(new Error('database unavailable'));
 
     await expectInternalServerError(
-      service.createActivity(
-        { ...activityDto, locations: [{ coords: { latitude: 55.75, longitude: 37.61 } }] },
-        'user-1',
-      ),
+      service.createActivity({ ...makeActivityDto(), locations: [{ coords: makeMoscowCoordinate() }] }, 'user-1'),
     );
 
     expect(storage.deleteObjectByKey).toHaveBeenCalledWith(
@@ -487,17 +469,12 @@ describe('ActivityService', () => {
 
   it('reads a stored route while keeping the locations endpoint response unchanged', async () => {
     const prisma = createPrismaMock();
-    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
+    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: makeRoundedMoscowCoordinate() }]) };
     const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
-    prisma.activity.findUnique.mockResolvedValue({
-      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
-      kilometresSplit: [],
-      userId: 'user-1',
-      visibility: 'private',
-    });
+    prisma.activity.findUnique.mockResolvedValue(makeStoredActivity());
 
     await expect(service.getLocationsByActivityId('activity-1', 'user-1')).resolves.toEqual({
-      locations: [{ coords: { latitude: 55, longitude: 37 } }],
+      locations: [{ coords: makeRoundedMoscowCoordinate() }],
       kilometresSplit: [],
     });
     expect(storage.readActivityRoute).toHaveBeenCalledWith(
@@ -507,17 +484,12 @@ describe('ActivityService', () => {
 
   it('reads public route locations for another user', async () => {
     const prisma = createPrismaMock();
-    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: { latitude: 55, longitude: 37 } }]) };
+    const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: makeRoundedMoscowCoordinate() }]) };
     const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
-    prisma.activity.findUnique.mockResolvedValue({
-      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
-      kilometresSplit: [],
-      userId: 'owner-1',
-      visibility: 'public',
-    });
+    prisma.activity.findUnique.mockResolvedValue(makeStoredActivity({ userId: 'owner-1', visibility: 'public' }));
 
     await expect(service.getLocationsByActivityId('activity-1', 'viewer-1')).resolves.toEqual({
-      locations: [{ coords: { latitude: 55, longitude: 37 } }],
+      locations: [{ coords: makeRoundedMoscowCoordinate() }],
       kilometresSplit: [],
     });
     expect(storage.readActivityRoute).toHaveBeenCalledWith(
@@ -538,12 +510,7 @@ describe('ActivityService', () => {
     }));
     const storage = { readActivityRoute: asyncMock().mockResolvedValue(locations) };
     const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
-    prisma.activity.findUnique.mockResolvedValue({
-      routeStorageKey: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
-      kilometresSplit: [],
-      userId: 'user-1',
-      visibility: 'private',
-    });
+    prisma.activity.findUnique.mockResolvedValue(makeStoredActivity());
 
     const response = await service.getLocationsByActivityId('activity-1', 'user-1');
 
@@ -563,14 +530,14 @@ describe('ActivityService', () => {
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
 
-    await service.createActivity({ ...activityDto, date: '2026-08-12T07:15:00', title: '   ' }, 'user-1');
+    await service.createActivity({ ...makeActivityDto(), date: '2026-08-12T07:15:00', title: '   ' }, 'user-1');
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({ title: 'Утренний бег' }),
     });
 
     await service.createActivity(
       {
-        ...activityDto,
+        ...makeActivityDto(),
         sport: 'ride',
         date: '2026-08-12T20:15:00.000Z',
         timeZone: 'Europe/Moscow',
@@ -582,7 +549,7 @@ describe('ActivityService', () => {
       data: expect.objectContaining({ title: 'Вечерний велозаезд', timeZone: 'Europe/Moscow' }),
     });
 
-    await service.createActivity({ ...activityDto, title: 'Моя пробежка' }, 'user-1');
+    await service.createActivity({ ...makeActivityDto(), title: 'Моя пробежка' }, 'user-1');
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
       data: expect.objectContaining({ title: 'Моя пробежка' }),
     });
@@ -593,7 +560,7 @@ describe('ActivityService', () => {
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
     const pedometerActivity = {
-      ...activityDto,
+      ...makeActivityDto(),
       sport: 'walk',
       steps: 1240,
       kilometresSplit: [
@@ -601,7 +568,7 @@ describe('ActivityService', () => {
           lastKilometerDuration: 600_000,
           lastKilometerAltitude: 0,
           lastKilometerSteps: 1240,
-          kilometerPoint: { coords: { latitude: 55.75, longitude: 37.61 } },
+          kilometerPoint: { coords: makeMoscowCoordinate() },
         },
       ],
     };
@@ -637,7 +604,7 @@ describe('ActivityService', () => {
     const service = new ActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);
     const activities = Array.from({ length: 101 }, (_, index) => ({
-      ...activityDto,
+      ...makeActivityDto(),
       title: 'Импортированная активность',
       userId: 'user-1',
       profileId: 'profile-1',
@@ -674,16 +641,16 @@ describe('ActivityService', () => {
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
     prisma.activity.findMany.mockResolvedValue([{ source: 'health-connect', sourceActivityId: 'existing' }]);
-    prisma.activity.create.mockResolvedValue({ id: 'activity-new', mediaProcessingStatus: 'queued' });
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity({ id: 'activity-new' }));
 
     const existingWorkout = {
-      ...activityDto,
+      ...makeActivityDto(),
       source: 'health-connect' as const,
       sourceActivityId: 'existing',
       locations: [],
     };
     const newWorkout = {
-      ...activityDto,
+      ...makeActivityDto(),
       source: 'health-connect' as const,
       sourceActivityId: 'new',
       locations: [],
@@ -737,17 +704,17 @@ describe('ActivityService', () => {
       mapPhotoUrl: 'https://cdn.example.com/user-1/activities/old-route-id/map.webp',
     };
     prisma.activity.findMany.mockResolvedValue([previousActivity]);
-    prisma.activity.update.mockResolvedValue({ id: 'activity-existing', mediaProcessingStatus: 'queued' });
+    prisma.activity.update.mockResolvedValue(makeQueuedActivity({ id: 'activity-existing' }));
     const locations = [
-      { timestamp: 1, coords: { latitude: 55.75, longitude: 37.61 } },
-      { timestamp: 2, coords: { latitude: 55.76, longitude: 37.62 } },
+      { timestamp: 1, coords: makeMoscowCoordinate() },
+      { timestamp: 2, coords: makeNearbyMoscowCoordinate() },
     ];
 
     await expect(
       service.importWatchWorkouts(
         [
           {
-            ...activityDto,
+            ...makeActivityDto(),
             date: '2026-10-15T12:00:00.000Z',
             timeZone: 'Europe/Moscow',
             duration: 120,
@@ -816,7 +783,7 @@ describe('ActivityService', () => {
       service.importWatchWorkouts(
         [
           {
-            ...activityDto,
+            ...makeActivityDto(),
             date: '2026-10-15T12:00:00.000Z',
             duration: 130,
             distance: 1_300,
@@ -877,11 +844,11 @@ describe('ActivityService', () => {
       service.importWatchWorkouts(
         [
           {
-            ...activityDto,
+            ...makeActivityDto(),
             date: '2026-10-15T12:00:00.000Z',
             source: 'health-connect',
             sourceActivityId: 'record-1',
-            locations: [{ coords: { latitude: 55.75, longitude: 37.61 } }],
+            locations: [{ coords: makeMoscowCoordinate() }],
           },
         ],
         'user-1',
@@ -930,11 +897,11 @@ describe('ActivityService', () => {
       service.importWatchWorkouts(
         [
           {
-            ...activityDto,
+            ...makeActivityDto(),
             date: '2026-10-15T12:00:00.000Z',
             source: 'health-connect',
             sourceActivityId: 'record-1',
-            locations: [{ coords: { latitude: 55.75, longitude: 37.61 } }],
+            locations: [{ coords: makeMoscowCoordinate() }],
           },
         ],
         'user-1',
@@ -956,7 +923,7 @@ describe('ActivityService', () => {
 
     await service.createActivitiesFromMigrationArchive([
       {
-        ...activityDto,
+        ...makeActivityDto(),
         userId: 'user-1',
         profileId: 'profile-1',
         source: 'strava',
@@ -986,7 +953,7 @@ describe('ActivityService', () => {
     const service = new ActivityService(prisma as never, account as never);
     prisma.activity.findMany.mockResolvedValue([]);
     const sharedActivity = {
-      ...activityDto,
+      ...makeActivityDto(),
       duration: 3_600_000,
       distance: 10_000,
       profileId: 'profile-1',
@@ -1042,12 +1009,9 @@ describe('ActivityService', () => {
       undefined,
       staticMap as never,
     );
-    const locations = [
-      { coords: { latitude: 55.75, longitude: 37.61 } },
-      { coords: { latitude: 55.76, longitude: 37.62 } },
-    ];
+    const locations = [{ coords: makeMoscowCoordinate() }, { coords: makeNearbyMoscowCoordinate() }];
     const activity = {
-      ...activityDto,
+      ...makeActivityDto(),
       id: 'activity-1',
       description: 'Imported activity description',
       userId: 'user-1',
@@ -1058,10 +1022,9 @@ describe('ActivityService', () => {
     };
     prisma.activity.findMany.mockResolvedValue([]);
 
-    await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual({
-      success: true,
-      importedActivities: 1,
-    });
+    await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual(
+      makeMigrationSuccessResult(),
+    );
 
     expect(storage.uploadActivityRoute).toHaveBeenCalledWith('user-1', 'activity-1', locations);
     expect(staticMap.generateActivityMap).toHaveBeenCalledWith({
@@ -1099,10 +1062,12 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, { getAccountByUserId: asyncMock() } as never);
     const activity = { id: 'activity-1' };
+    const activityWithMedia = { id: 'activity-1', media: [makeActivityPhoto()] };
+    const activityPage = { activities: [activityWithMedia], hasMore: false, nextCursor: null, isLastPage: true };
     prisma.activity.update.mockResolvedValue(activity);
     prisma.activity.findUnique.mockResolvedValue(activity);
-    prisma.activity.findMany.mockResolvedValue([{ id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] }]);
-    prisma.$queryRaw.mockResolvedValue([{ id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] }]);
+    prisma.activity.findMany.mockResolvedValue([activityWithMedia]);
+    prisma.$queryRaw.mockResolvedValue([activityWithMedia]);
     prisma.activityMedia.findMany.mockResolvedValue([
       {
         activityDate: new Date('2026-08-12T23:15:00.000Z'),
@@ -1116,7 +1081,7 @@ describe('ActivityService', () => {
     ]);
     prisma.activity.delete.mockResolvedValue(activity);
 
-    await expect(service.updateActivity({ ...activityDto, title: 'Morning run' }, 'activity-1')).resolves.toEqual(
+    await expect(service.updateActivity({ ...makeActivityDto(), title: 'Morning run' }, 'activity-1')).resolves.toEqual(
       activity,
     );
     await expect(service.getLocationsByActivityId('activity-1')).resolves.toBeNull();
@@ -1127,15 +1092,8 @@ describe('ActivityService', () => {
       nextCursor: null,
       isLastPage: true,
     });
-    await expect(service.getActivitesByUserId('user-1', '5')).resolves.toEqual({
-      activities: [{ id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] }],
-      hasMore: false,
-      nextCursor: null,
-      isLastPage: true,
-    });
-    await expect(service.getActivitiesByTheirIds(['activity-1', 'activity-2'])).resolves.toEqual([
-      { id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] },
-    ]);
+    await expect(service.getActivitesByUserId('user-1', '5')).resolves.toEqual(activityPage);
+    await expect(service.getActivitiesByTheirIds(['activity-1', 'activity-2'])).resolves.toEqual([activityWithMedia]);
     expect(prisma.activity.findMany).toHaveBeenLastCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: { in: ['activity-1', 'activity-2'] } }) }),
     );
@@ -1144,12 +1102,7 @@ describe('ActivityService', () => {
       expect.objectContaining({ where: expect.objectContaining({ id: { in: ['activity-1', 'activity-2'] } }) }),
     );
     await expect(service.getActivitiesByTheirIds(' , ')).resolves.toEqual([]);
-    await expect(service.getAllActivitiesWithFriends('user-1', '5')).resolves.toEqual({
-      activities: [{ id: 'activity-1', media: [{ url: 'photo', thumbnail: null }] }],
-      hasMore: false,
-      nextCursor: null,
-      isLastPage: true,
-    });
+    await expect(service.getAllActivitiesWithFriends('user-1', '5')).resolves.toEqual(activityPage);
     expect(prisma.friend.findMany).not.toHaveBeenCalled();
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
     const [template] = prisma.$queryRaw.mock.calls[0] as unknown as [TemplateStringsArray];
@@ -1164,7 +1117,7 @@ describe('ActivityService', () => {
     prisma.activity.findFirst.mockResolvedValue({ source: 'strava', caloriesActive: 613 });
     prisma.activity.update.mockResolvedValue({ id: 'activity-1' });
 
-    await service.updateActivity({ ...activityDto, distance: 9_000, duration: 3_600_000 }, 'activity-1');
+    await service.updateActivity({ ...makeActivityDto(), distance: 9_000, duration: 3_600_000 }, 'activity-1');
 
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1', userId: 'activity-1' },
@@ -1192,7 +1145,9 @@ describe('ActivityService', () => {
     });
     prisma.activity.update.mockResolvedValue({ id: 'activity-1', hideMap: false });
 
-    await expect(service.updateActivity({ ...activityDto, hideMap: false }, 'activity-1', 'user-1')).resolves.toEqual({
+    await expect(
+      service.updateActivity({ ...makeActivityDto(), hideMap: false }, 'activity-1', 'user-1'),
+    ).resolves.toEqual({
       id: 'activity-1',
       hideMap: false,
     });
@@ -1207,10 +1162,7 @@ describe('ActivityService', () => {
   it('generates a route-only image when an activity is hidden', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const locations = [
-      { coords: { latitude: 55.75, longitude: 37.61 } },
-      { coords: { latitude: 55.76, longitude: 37.62 } },
-    ];
+    const locations = [{ coords: makeMoscowCoordinate() }, { coords: makeNearbyMoscowCoordinate() }];
     const storage = {
       readActivityRoute: asyncMock().mockResolvedValue(locations),
     };
@@ -1236,7 +1188,7 @@ describe('ActivityService', () => {
     });
     prisma.activity.update.mockResolvedValue({ id: 'activity-1', hideMap: true });
 
-    await service.updateActivity({ ...activityDto, hideMap: true }, 'activity-1', 'user-1');
+    await service.updateActivity({ ...makeActivityDto(), hideMap: true }, 'activity-1', 'user-1');
 
     expect(storage.readActivityRoute).toHaveBeenCalledWith(
       'user-1/activities/activity-1/locations/locations-v1.json.gz',
@@ -1259,10 +1211,7 @@ describe('ActivityService', () => {
   it('repairs legacy hidden activities by generating both map images', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const locations = [
-      { coords: { latitude: 55.75, longitude: 37.61 } },
-      { coords: { latitude: 55.76, longitude: 37.62 } },
-    ];
+    const locations = [{ coords: makeMoscowCoordinate() }, { coords: makeNearbyMoscowCoordinate() }];
     const storage = {
       readActivityRoute: asyncMock().mockResolvedValue(locations),
       getOwnedKey: jest.fn().mockReturnValue('user-1/activities/activity-1/map.webp'),
@@ -1292,7 +1241,7 @@ describe('ActivityService', () => {
     });
     prisma.activity.update.mockResolvedValue({ id: 'activity-1', hideMap: true });
 
-    await service.updateActivity({ ...activityDto, hideMap: true }, 'activity-1', 'user-1');
+    await service.updateActivity({ ...makeActivityDto(), hideMap: true }, 'activity-1', 'user-1');
 
     expect(staticMap.generateActivityMap).toHaveBeenNthCalledWith(1, {
       userId: 'user-1',
@@ -1324,7 +1273,7 @@ describe('ActivityService', () => {
     prisma.activity.findFirst.mockResolvedValue(null);
 
     await expect(
-      service.updateActivity({ ...activityDto, hideMap: true }, 'activity-missing', 'user-1'),
+      service.updateActivity({ ...makeActivityDto(), hideMap: true }, 'activity-missing', 'user-1'),
     ).rejects.toThrow('Активность не найдена');
     expect(prisma.activity.update).not.toHaveBeenCalled();
   });
@@ -1584,16 +1533,16 @@ describe('ActivityService', () => {
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const service = new ActivityService(prisma as never, account as never);
     prisma.activity.create.mockRejectedValue(error);
-    await expectInternalServerError(service.createActivity({ ...activityDto }, 'u1'));
+    await expectInternalServerError(service.createActivity({ ...makeActivityDto() }, 'u1'));
     prisma.activity.findMany.mockResolvedValue([]);
     prisma.activity.upsert.mockRejectedValue(error);
     await expectInternalServerError(
       service.createActivitiesFromMigrationArchive([
-        { ...activityDto, userId: 'u1', profileId: 'p1', source: 'strava', sourceActivityId: 's1' },
+        { ...makeActivityDto(), userId: 'u1', profileId: 'p1', source: 'strava', sourceActivityId: 's1' },
       ]),
     );
     prisma.activity.update.mockRejectedValue(error);
-    await expectInternalServerError(service.updateActivity(activityDto, 'a1'));
+    await expectInternalServerError(service.updateActivity(makeActivityDto(), 'a1'));
     prisma.activity.findUnique.mockRejectedValue(error);
     await expectInternalServerError(service.getActivityByActivityId('a1'));
     prisma.activity.findMany.mockRejectedValue(error);
@@ -1623,7 +1572,7 @@ describe('ActivityService', () => {
     await expect(
       service.createActivity(
         {
-          ...activityDto,
+          ...makeActivityDto(),
           media: [{ assetId: 'asset-1', thumbnailAssetId: 'thumbnail-1', mediaReviewStatus: 'queued' }],
         } as never,
         'user-1',

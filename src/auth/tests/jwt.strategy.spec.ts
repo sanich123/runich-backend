@@ -3,6 +3,10 @@ import { JwtStrategy } from '../strategies/jwt.strategy';
 
 const asyncMock = () => jest.fn<(...args: unknown[]) => Promise<unknown>>();
 
+function sessionClaims() {
+  return { userId: 'user-1', sessionId: 'session-1' };
+}
+
 describe('JwtStrategy', () => {
   const prisma = {
     user: { findUnique: asyncMock() },
@@ -35,21 +39,21 @@ describe('JwtStrategy', () => {
 
   it('rejects missing, revoked and foreign sessions', async () => {
     prisma.userSession.findUnique.mockResolvedValue(null);
-    await expect(strategy.validate({ userId: 'user-1', sessionId: 'session-1' })).rejects.toThrow('Сессия завершена');
+    await expect(strategy.validate(sessionClaims())).rejects.toThrow('Сессия завершена');
 
     prisma.userSession.findUnique.mockResolvedValue({
       userId: 'user-1',
       revokedAt: new Date(),
       lastSeenAt: new Date(),
     });
-    await expect(strategy.validate({ userId: 'user-1', sessionId: 'session-1' })).rejects.toThrow('Сессия завершена');
+    await expect(strategy.validate(sessionClaims())).rejects.toThrow('Сессия завершена');
 
     prisma.userSession.findUnique.mockResolvedValue({
       userId: 'other-user',
       revokedAt: null,
       lastSeenAt: new Date(),
     });
-    await expect(strategy.validate({ userId: 'user-1', sessionId: 'session-1' })).rejects.toThrow('Сессия завершена');
+    await expect(strategy.validate(sessionClaims())).rejects.toThrow('Сессия завершена');
   });
 
   it('refreshes an idle session timestamp and keeps a recent session untouched', async () => {
@@ -60,7 +64,7 @@ describe('JwtStrategy', () => {
     });
     prisma.userSession.updateMany.mockResolvedValue({ count: 1 });
 
-    await expect(strategy.validate({ userId: 'user-1', sessionId: 'session-1' })).resolves.toMatchObject({
+    await expect(strategy.validate(sessionClaims())).resolves.toMatchObject({
       id: 'user-1',
       sessionId: 'session-1',
     });
@@ -84,7 +88,7 @@ describe('JwtStrategy', () => {
       lastSeenAt: new Date(),
     });
     prisma.userSession.updateMany.mockClear();
-    await strategy.validate({ userId: 'user-1', sessionId: 'session-1' });
+    await strategy.validate(sessionClaims());
     expect(prisma.userSession.updateMany).not.toHaveBeenCalled();
   });
 });

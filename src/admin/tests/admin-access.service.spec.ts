@@ -3,6 +3,7 @@ import { ConflictException, ForbiddenException, NotFoundException } from '@nestj
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { asyncMock } from 'src/tests/helpers';
 import { AdminAccessService } from '../admin-access.service';
+import { makeAdminTarget, makeConfirmedUser } from './fixtures';
 
 describe('AdminAccessService', () => {
   const transaction = {
@@ -43,11 +44,7 @@ describe('AdminAccessService', () => {
   });
 
   it('combines valid role assignments, ignores invalid and legacy superuser rows, and expands superuser permissions', async () => {
-    prisma.user.findUnique.mockResolvedValue({
-      emailConfirmedAt: new Date(),
-      deletedAt: null,
-      isSuperAdmin: true,
-    });
+    prisma.user.findUnique.mockResolvedValue(makeConfirmedUser(true));
     prisma.adminRoleAssignment.findMany.mockResolvedValue([
       { role: 'moderator' },
       { role: 'moderator' },
@@ -64,11 +61,7 @@ describe('AdminAccessService', () => {
   });
 
   it('checks permissions against confirmed active roles', async () => {
-    prisma.user.findUnique.mockResolvedValue({
-      emailConfirmedAt: new Date(),
-      deletedAt: null,
-      isSuperAdmin: false,
-    });
+    prisma.user.findUnique.mockResolvedValue(makeConfirmedUser());
     prisma.adminRoleAssignment.findMany.mockResolvedValue([{ role: 'moderator' }]);
 
     await expect(service.hasPermission('user-1', 'moderation.manage')).resolves.toBe(true);
@@ -167,8 +160,8 @@ describe('AdminAccessService', () => {
 
   it('grants and audits an ordinary role for an access manager', async () => {
     prisma.user.findUnique
-      .mockResolvedValueOnce({ emailConfirmedAt: new Date(), deletedAt: null, isSuperAdmin: false })
-      .mockResolvedValueOnce({ id: 'target-1', email: 'target@example.test', deletedAt: null })
+      .mockResolvedValueOnce(makeConfirmedUser())
+      .mockResolvedValueOnce(makeAdminTarget())
       .mockResolvedValueOnce({ email: 'manager@example.test' });
     prisma.adminRoleAssignment.findMany.mockResolvedValue([{ role: 'access_manager' }]);
     transaction.adminRoleAssignment.findUnique.mockResolvedValue(null);
@@ -193,10 +186,10 @@ describe('AdminAccessService', () => {
 
   it('does not duplicate an already active grant and can grant the legacy superuser flag', async () => {
     prisma.user.findUnique
-      .mockResolvedValueOnce({ emailConfirmedAt: new Date(), deletedAt: null, isSuperAdmin: true })
-      .mockResolvedValueOnce({ id: 'target-1', email: 'target@example.test', deletedAt: null })
-      .mockResolvedValueOnce({ emailConfirmedAt: new Date(), deletedAt: null, isSuperAdmin: true })
-      .mockResolvedValueOnce({ id: 'target-1', email: 'target@example.test', deletedAt: null })
+      .mockResolvedValueOnce(makeConfirmedUser(true))
+      .mockResolvedValueOnce(makeAdminTarget())
+      .mockResolvedValueOnce(makeConfirmedUser(true))
+      .mockResolvedValueOnce(makeAdminTarget())
       .mockResolvedValueOnce({ email: 'root@example.test' })
       .mockResolvedValueOnce({ id: 'target-1', isSuperAdmin: false });
     prisma.adminRoleAssignment.findMany.mockResolvedValue([]);
@@ -219,27 +212,19 @@ describe('AdminAccessService', () => {
   it('rejects self edits, unauthorized managers, and deleted targets', async () => {
     await expect(service.grantRole('user-1', 'user-1', 'moderator')).rejects.toBeInstanceOf(ForbiddenException);
 
-    prisma.user.findUnique.mockResolvedValue({
-      emailConfirmedAt: new Date(),
-      deletedAt: null,
-      isSuperAdmin: false,
-    });
+    prisma.user.findUnique.mockResolvedValue(makeConfirmedUser());
     prisma.adminRoleAssignment.findMany.mockResolvedValue([]);
     await expect(service.grantRole('user-1', 'target-1', 'moderator')).rejects.toBeInstanceOf(ForbiddenException);
 
     prisma.user.findUnique
-      .mockResolvedValueOnce({ emailConfirmedAt: new Date(), deletedAt: null, isSuperAdmin: true })
-      .mockResolvedValueOnce({ id: 'target-1', email: 'target@example.test', deletedAt: new Date() });
+      .mockResolvedValueOnce(makeConfirmedUser(true))
+      .mockResolvedValueOnce(makeAdminTarget({ deletedAt: new Date() }));
     prisma.adminRoleAssignment.findMany.mockResolvedValue([]);
     await expect(service.grantRole('root-1', 'target-1', 'moderator')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('restricts access managers from granting superuser status', async () => {
-    prisma.user.findUnique.mockResolvedValue({
-      emailConfirmedAt: new Date(),
-      deletedAt: null,
-      isSuperAdmin: false,
-    });
+    prisma.user.findUnique.mockResolvedValue(makeConfirmedUser());
     prisma.adminRoleAssignment.findMany.mockResolvedValue([{ role: 'access_manager' }]);
 
     await expect(service.grantRole('manager-1', 'target-1', 'superuser')).rejects.toBeInstanceOf(ForbiddenException);
@@ -247,8 +232,8 @@ describe('AdminAccessService', () => {
 
   it('revokes roles and prevents removing the last confirmed superuser', async () => {
     prisma.user.findUnique
-      .mockResolvedValueOnce({ emailConfirmedAt: new Date(), deletedAt: null, isSuperAdmin: true })
-      .mockResolvedValueOnce({ id: 'target-1', email: 'target@example.test', deletedAt: null })
+      .mockResolvedValueOnce(makeConfirmedUser(true))
+      .mockResolvedValueOnce(makeAdminTarget())
       .mockResolvedValueOnce({ email: 'root@example.test' });
     prisma.adminRoleAssignment.findMany.mockResolvedValue([]);
     transaction.adminRoleAssignment.findUnique.mockResolvedValue({ isActive: true });
@@ -262,8 +247,8 @@ describe('AdminAccessService', () => {
     );
 
     prisma.user.findUnique
-      .mockResolvedValueOnce({ emailConfirmedAt: new Date(), deletedAt: null, isSuperAdmin: true })
-      .mockResolvedValueOnce({ id: 'target-1', email: 'target@example.test', deletedAt: null })
+      .mockResolvedValueOnce(makeConfirmedUser(true))
+      .mockResolvedValueOnce(makeAdminTarget())
       .mockResolvedValueOnce({ email: 'root@example.test' });
     transaction.user.findUnique.mockResolvedValue({ isSuperAdmin: true });
     transaction.user.count.mockResolvedValue(1);
@@ -272,10 +257,10 @@ describe('AdminAccessService', () => {
 
   it('is idempotent when revoking inactive assignments or granting an existing superuser', async () => {
     prisma.user.findUnique
-      .mockResolvedValueOnce({ emailConfirmedAt: new Date(), deletedAt: null, isSuperAdmin: true })
-      .mockResolvedValueOnce({ id: 'target-1', email: 'target@example.test', deletedAt: null })
-      .mockResolvedValueOnce({ emailConfirmedAt: new Date(), deletedAt: null, isSuperAdmin: true })
-      .mockResolvedValueOnce({ id: 'target-1', email: 'target@example.test', deletedAt: null })
+      .mockResolvedValueOnce(makeConfirmedUser(true))
+      .mockResolvedValueOnce(makeAdminTarget())
+      .mockResolvedValueOnce(makeConfirmedUser(true))
+      .mockResolvedValueOnce(makeAdminTarget())
       .mockResolvedValueOnce({ email: 'root@example.test' })
       .mockResolvedValueOnce({ id: 'target-1', isSuperAdmin: true });
     prisma.adminRoleAssignment.findMany.mockResolvedValue([]);
@@ -292,8 +277,8 @@ describe('AdminAccessService', () => {
 
   it('allows revoking a superuser while another confirmed, active superuser remains', async () => {
     prisma.user.findUnique
-      .mockResolvedValueOnce({ emailConfirmedAt: new Date(), deletedAt: null, isSuperAdmin: true })
-      .mockResolvedValueOnce({ id: 'target-1', email: 'target@example.test', deletedAt: null })
+      .mockResolvedValueOnce(makeConfirmedUser(true))
+      .mockResolvedValueOnce(makeAdminTarget())
       .mockResolvedValueOnce({ email: 'root@example.test' });
     prisma.adminRoleAssignment.findMany.mockResolvedValue([]);
     transaction.user.findUnique.mockResolvedValue({ isSuperAdmin: true });

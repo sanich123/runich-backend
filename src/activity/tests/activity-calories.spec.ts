@@ -1,30 +1,13 @@
 import { calculateActiveCalories } from '../services/activity-calories';
+import { makeActivityCaloriesInput } from './fixtures';
 
 describe('calculateActiveCalories', () => {
   it('calculates active calories from weight and activity intensity', () => {
-    expect(
-      calculateActiveCalories({
-        weight: '80',
-        height: '180',
-        age: '30',
-        gender: 'male',
-        sport: 'run',
-        distance: 10_000,
-        duration: 3_600_000,
-      }),
-    ).toBe(742);
+    expect(calculateActiveCalories(makeActivityCaloriesInput())).toBe(742);
   });
 
   it('does not calculate calories when a profile metric is absent or invalid', () => {
-    const validInput = {
-      weight: '80',
-      height: '180',
-      age: '30',
-      gender: 'male',
-      sport: 'run',
-      distance: 10_000,
-      duration: 3_600_000,
-    } as const;
+    const validInput = makeActivityCaloriesInput();
 
     expect(calculateActiveCalories({ ...validInput, weight: null })).toBeNull();
     expect(calculateActiveCalories({ ...validInput, height: null })).toBeNull();

@@ -6,6 +6,7 @@ import { ActivityService } from '../services/activity.service';
 import { AccountService } from 'src/account/account.service';
 import { asyncMock } from 'src/tests/helpers';
 import { ActivityMigrationService } from '../services/activity-migration.service';
+import { makeSmallActivityDto } from './fixtures';
 
 describe('ActivityController', () => {
   const activityIds = ['51f499f2-3332-4fdb-ac78-cb6ab1e6106a', '4755835b-8591-4cf2-ac17-3a2785706f16'];
@@ -36,18 +37,15 @@ describe('ActivityController', () => {
 
   it('returns service results for all non-migration activity endpoints', async () => {
     const result = { id: 'activity-1' };
+    const activityPage = { activities: [result], hasMore: false, nextCursor: null };
     activityService.getMediaByUserId.mockResolvedValue({ media: [] });
     activityService.deleteActivityMedia.mockResolvedValue({ success: true });
     activityService.getLocationsByActivityId.mockResolvedValue({ locations: [] });
     activityService.getActivitiesByTheirIds.mockResolvedValue([result]);
     activityService.createActivity.mockResolvedValue(result);
     activityService.updateActivity.mockResolvedValue(result);
-    activityService.getActivitesByUserId.mockResolvedValue({ activities: [result], hasMore: false, nextCursor: null });
-    activityService.getAllActivitiesWithFriends.mockResolvedValue({
-      activities: [result],
-      hasMore: false,
-      nextCursor: null,
-    });
+    activityService.getActivitesByUserId.mockResolvedValue(activityPage);
+    activityService.getAllActivitiesWithFriends.mockResolvedValue(activityPage);
     activityService.getActivityByActivityId.mockResolvedValue(result);
     activityService.deleteActivityById.mockResolvedValue(result);
 
@@ -60,22 +58,10 @@ describe('ActivityController', () => {
     await expect(controller.getActivitiesByActivitiesIds(activityIds.join(','))).resolves.toEqual([result]);
     await expect(controller.getActivitiesByActivitiesIds(activityIds)).resolves.toEqual([result]);
     expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(activityIds, undefined);
-    await expect(
-      controller.createActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'u1' }),
-    ).resolves.toEqual(result);
-    await expect(
-      controller.patchActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'a1' }),
-    ).resolves.toEqual(result);
-    await expect(controller.getActivitiesByUserId({ id: 'u1' }, undefined, '10')).resolves.toEqual({
-      activities: [result],
-      hasMore: false,
-      nextCursor: null,
-    });
-    await expect(controller.getAllActivitiesWithFriends({ id: 'u1' }, undefined, '10')).resolves.toEqual({
-      activities: [result],
-      hasMore: false,
-      nextCursor: null,
-    });
+    await expect(controller.createActivity(makeSmallActivityDto(), { id: 'u1' })).resolves.toEqual(result);
+    await expect(controller.patchActivity(makeSmallActivityDto(), { id: 'a1' })).resolves.toEqual(result);
+    await expect(controller.getActivitiesByUserId({ id: 'u1' }, undefined, '10')).resolves.toEqual(activityPage);
+    await expect(controller.getAllActivitiesWithFriends({ id: 'u1' }, undefined, '10')).resolves.toEqual(activityPage);
     await expect(controller.getActivityByActivityId({ id: 'a1' }, request)).resolves.toEqual(result);
     await expect(controller.deleteActivityById({ id: 'a1' })).resolves.toEqual(result);
   });
@@ -172,12 +158,8 @@ describe('ActivityController', () => {
     ).rejects.toBe(error);
     await expect(controller.getLocationsByActivityId({ id: 'a1' }, request)).rejects.toBe(error);
     await expect(controller.getActivitiesByActivitiesIds(activityIds[0])).rejects.toBe(error);
-    await expect(
-      controller.createActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'u1' }),
-    ).rejects.toBe(error);
-    await expect(
-      controller.patchActivity({ duration: 1, distance: 2, speed: 3, sport: 'run' }, { id: 'a1' }),
-    ).rejects.toBe(error);
+    await expect(controller.createActivity(makeSmallActivityDto(), { id: 'u1' })).rejects.toBe(error);
+    await expect(controller.patchActivity(makeSmallActivityDto(), { id: 'a1' })).rejects.toBe(error);
     await expect(controller.getActivitiesByUserId({ id: 'u1' }, undefined, '10')).rejects.toBe(error);
     await expect(controller.getAllActivitiesWithFriends({ id: 'u1' }, undefined, '10')).rejects.toBe(error);
     await expect(controller.getFavoriteActivities({ user: { id: 'u1' } } as never)).rejects.toBe(error);

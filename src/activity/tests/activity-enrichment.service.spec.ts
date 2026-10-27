@@ -1,6 +1,8 @@
 import { jest } from '@jest/globals';
 import { asyncMock } from 'src/tests/helpers';
 import { ActivityEnrichmentService } from '../services/activity-enrichment.service';
+import { makeCompletedEnrichmentUpdate } from './fixtures';
+import { makeMoscowCoordinate } from 'src/tests/fixtures/geography.fixtures';
 
 function createPrismaMock() {
   return {
@@ -52,7 +54,7 @@ describe('ActivityEnrichmentService', () => {
     const service = new ActivityEnrichmentService(prisma as never, storage as never);
     prisma.activity.findMany.mockResolvedValue([createActivity()]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
-    storage.readActivityRoute.mockResolvedValue([{ coords: { latitude: 55.75, longitude: 37.61 } }]);
+    storage.readActivityRoute.mockResolvedValue([{ coords: makeMoscowCoordinate() }]);
     jest.spyOn(global, 'fetch').mockResolvedValueOnce(
       jsonResponse({
         hourly: {
@@ -71,12 +73,7 @@ describe('ActivityEnrichmentService', () => {
     expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('api.mapbox.com'), expect.any(Object));
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
-      data: {
-        weatherTemperature: 18,
-        weatherWindSpeed: 6,
-        weatherCode: 0,
-        locationEnrichmentStatus: 'completed',
-      },
+      data: makeCompletedEnrichmentUpdate({ weatherTemperature: 18, weatherWindSpeed: 6, weatherCode: 0 }),
     });
   });
 
@@ -98,12 +95,7 @@ describe('ActivityEnrichmentService', () => {
     expect(global.fetch).not.toHaveBeenCalled();
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
-      data: {
-        weatherTemperature: null,
-        weatherWindSpeed: null,
-        weatherCode: null,
-        locationEnrichmentStatus: 'completed',
-      },
+      data: makeCompletedEnrichmentUpdate(),
     });
   });
 
@@ -121,7 +113,7 @@ describe('ActivityEnrichmentService', () => {
           { kilometerPoint: {} },
           { kilometerPoint: { coords: null } },
           { kilometerPoint: { coords: { latitude: 91, longitude: 37 } } },
-          { kilometerPoint: { coords: { latitude: 55.75, longitude: 37.61 } } },
+          { kilometerPoint: { coords: makeMoscowCoordinate() } },
         ],
       }),
     ]);
@@ -134,12 +126,7 @@ describe('ActivityEnrichmentService', () => {
     expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('timezone=UTC'), expect.any(Object));
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
-      data: {
-        weatherTemperature: null,
-        weatherWindSpeed: null,
-        weatherCode: null,
-        locationEnrichmentStatus: 'completed',
-      },
+      data: makeCompletedEnrichmentUpdate(),
     });
   });
 
@@ -157,12 +144,7 @@ describe('ActivityEnrichmentService', () => {
     expect(global.fetch).not.toHaveBeenCalled();
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
-      data: {
-        weatherTemperature: null,
-        weatherWindSpeed: null,
-        weatherCode: null,
-        locationEnrichmentStatus: 'completed',
-      },
+      data: makeCompletedEnrichmentUpdate(),
     });
   });
 
@@ -185,19 +167,14 @@ describe('ActivityEnrichmentService', () => {
     const service = new ActivityEnrichmentService(prisma as never, storage as never);
     prisma.activity.findMany.mockResolvedValue([createActivity()]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
-    storage.readActivityRoute.mockResolvedValue([{ coords: { latitude: 55.75, longitude: 37.61 } }]);
+    storage.readActivityRoute.mockResolvedValue([{ coords: makeMoscowCoordinate() }]);
     jest.spyOn(global, 'fetch').mockRejectedValueOnce('Open-Meteo unavailable');
 
     await expect(service.processNextBatch()).resolves.toBe(true);
 
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
-      data: {
-        weatherTemperature: null,
-        weatherWindSpeed: null,
-        weatherCode: null,
-        locationEnrichmentStatus: 'completed',
-      },
+      data: makeCompletedEnrichmentUpdate(),
     });
   });
 
@@ -207,19 +184,14 @@ describe('ActivityEnrichmentService', () => {
     const service = new ActivityEnrichmentService(prisma as never, storage as never);
     prisma.activity.findMany.mockResolvedValue([createActivity()]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
-    storage.readActivityRoute.mockResolvedValue([{ coords: { latitude: 55.75, longitude: 37.61 } }]);
+    storage.readActivityRoute.mockResolvedValue([{ coords: makeMoscowCoordinate() }]);
     jest.spyOn(global, 'fetch').mockResolvedValueOnce(jsonResponse({}, false));
 
     await expect(service.processNextBatch()).resolves.toBe(true);
 
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-1' },
-      data: {
-        weatherTemperature: null,
-        weatherWindSpeed: null,
-        weatherCode: null,
-        locationEnrichmentStatus: 'completed',
-      },
+      data: makeCompletedEnrichmentUpdate(),
     });
   });
 
@@ -235,12 +207,7 @@ describe('ActivityEnrichmentService', () => {
 
     expect(prisma.activity.updateMany).toHaveBeenNthCalledWith(2, {
       where: { id: 'activity-1', locationEnrichmentStatus: 'processing' },
-      data: {
-        weatherTemperature: null,
-        weatherWindSpeed: null,
-        weatherCode: null,
-        locationEnrichmentStatus: 'completed',
-      },
+      data: makeCompletedEnrichmentUpdate(),
     });
   });
 
@@ -250,7 +217,7 @@ describe('ActivityEnrichmentService', () => {
     const service = new ActivityEnrichmentService(prisma as never, storage as never);
     prisma.activity.findMany.mockResolvedValue([createActivity()]);
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
-    storage.readActivityRoute.mockResolvedValue([{ coords: { latitude: 55.75, longitude: 37.61 } }]);
+    storage.readActivityRoute.mockResolvedValue([{ coords: makeMoscowCoordinate() }]);
     jest.spyOn(global, 'fetch').mockResolvedValueOnce(
       jsonResponse({
         hourly: {

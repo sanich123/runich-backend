@@ -11,6 +11,13 @@ import { asyncMock, expectInternalServerError, syncMock } from 'src/tests/helper
 import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
 import { AuthService } from '../services/auth.service';
 import { CONFIRMATION_CODE_TTL_MS } from '../constants/auth.constants';
+import {
+  makeConfirmedPasswordUser,
+  makeLegacySessionTokens,
+  makePasswordUser,
+  makePendingConfirmationUser,
+  makeSessionTokens,
+} from './fixtures';
 
 function createDependencies() {
   return {
@@ -141,23 +148,16 @@ describe('AuthService', () => {
     dependencies.prisma.user.findUnique.mockResolvedValueOnce({ encryptedPassword: '$2b$10$invalid' });
     await expect(service.login('user@example.com', 'wrong')).rejects.toBeInstanceOf(UnauthorizedException);
 
-    dependencies.prisma.user.findUnique.mockResolvedValueOnce({
-      id: 'user-1',
-      encryptedPassword: await (await import('bcrypt')).hash('secret123', 4),
-    });
+    dependencies.prisma.user.findUnique.mockResolvedValueOnce(
+      makePasswordUser(await (await import('bcrypt')).hash('secret123', 4)),
+    );
     await expect(service.login('user@example.com', 'secret123')).rejects.toBeInstanceOf(UnauthorizedException);
 
-    dependencies.prisma.user.findUnique.mockResolvedValueOnce({
-      id: 'user-1',
-      encryptedPassword: await (await import('bcrypt')).hash('secret123', 4),
-      emailConfirmedAt: new Date(),
-    });
+    dependencies.prisma.user.findUnique.mockResolvedValueOnce(
+      makeConfirmedPasswordUser(await (await import('bcrypt')).hash('secret123', 4)),
+    );
     dependencies.prisma.user.update.mockResolvedValue({ id: 'user-1' });
-    await expect(service.login('user@example.com', 'secret123')).resolves.toEqual({
-      userId: 'user-1',
-      accessToken: 'access-token',
-      refreshToken: 'access-token',
-    });
+    await expect(service.login('user@example.com', 'secret123')).resolves.toEqual(makeLegacySessionTokens());
     expect(dependencies.jwt.sign).toHaveBeenCalledWith({ userId: 'user-1', type: 'access' }, { expiresIn: '1d' });
     expect(dependencies.jwt.sign).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', type: 'refresh', jti: expect.any(String) }),
@@ -171,11 +171,9 @@ describe('AuthService', () => {
 
   it('normalizes email before login lookup', async () => {
     const dependencies = createDependencies();
-    dependencies.prisma.user.findUnique.mockResolvedValue({
-      id: 'user-1',
-      encryptedPassword: await (await import('bcrypt')).hash('secret123', 4),
-      emailConfirmedAt: new Date(),
-    });
+    dependencies.prisma.user.findUnique.mockResolvedValue(
+      makeConfirmedPasswordUser(await (await import('bcrypt')).hash('secret123', 4)),
+    );
     dependencies.prisma.user.update.mockResolvedValue({ id: 'user-1' });
     const service = new AuthService(
       dependencies.prisma as unknown as PrismaService,
@@ -190,12 +188,9 @@ describe('AuthService', () => {
 
   it('allows password login for a provider account after a password is set', async () => {
     const dependencies = createDependencies();
-    dependencies.prisma.user.findUnique.mockResolvedValue({
-      id: 'user-1',
-      authProvider: 'YANDEX',
-      encryptedPassword: await (await import('bcrypt')).hash('secret123', 4),
-      emailConfirmedAt: new Date(),
-    });
+    dependencies.prisma.user.findUnique.mockResolvedValue(
+      makeConfirmedPasswordUser(await (await import('bcrypt')).hash('secret123', 4), { authProvider: 'YANDEX' }),
+    );
     dependencies.prisma.user.update.mockResolvedValue({ id: 'user-1' });
     const service = new AuthService(
       dependencies.prisma as unknown as PrismaService,
@@ -262,11 +257,7 @@ describe('AuthService', () => {
     await expect(service.verifyToken('invalid-code')).rejects.toBeInstanceOf(UnauthorizedException);
 
     tokenService.consumeEmailLoginCode.mockResolvedValue('user-1');
-    tokenService.createSessionTokens.mockResolvedValue({
-      userId: 'user-1',
-      accessToken: 'access-token',
-      refreshToken: 'refresh-token',
-    });
+    tokenService.createSessionTokens.mockResolvedValue(makeSessionTokens());
     dependencies.prisma.user.update.mockResolvedValue({});
     await expect(service.verifyToken('unconfirmed-code')).resolves.toEqual({
       userId: 'user-1',
@@ -347,26 +338,12 @@ describe('AuthService', () => {
     dependencies.prisma.user.findUnique.mockResolvedValueOnce(null);
     await expect(service.confirmEmailByCode('1234', 'missing@example.com')).rejects.toBeInstanceOf(NotFoundException);
 
-    dependencies.prisma.user.findUnique.mockResolvedValueOnce({
-      id: 'user-1',
-      confirmationToken: '1234',
-      confirmationSentAt: new Date(),
-      emailConfirmedAt: null,
-    });
+    dependencies.prisma.user.findUnique.mockResolvedValueOnce(makePendingConfirmationUser());
     await expect(service.confirmEmailByCode('bad', ' USER@EXAMPLE.COM ')).rejects.toBeInstanceOf(BadRequestException);
 
-    dependencies.prisma.user.findUnique.mockResolvedValueOnce({
-      id: 'user-1',
-      confirmationToken: '1234',
-      confirmationSentAt: new Date(),
-      emailConfirmedAt: null,
-    });
+    dependencies.prisma.user.findUnique.mockResolvedValueOnce(makePendingConfirmationUser());
     dependencies.prisma.user.updateMany.mockResolvedValue({ count: 1 });
-    await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
-      accessToken: 'access-token',
-      userId: 'user-1',
-      refreshToken: 'access-token',
-    });
+    await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual(makeLegacySessionTokens());
     expect(dependencies.prisma.user.findUnique).toHaveBeenLastCalledWith({ where: { email: 'user@example.com' } });
     expect(dependencies.prisma.user.updateMany).toHaveBeenCalledWith({
       where: {
@@ -386,12 +363,9 @@ describe('AuthService', () => {
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
     );
-    dependencies.prisma.user.findUnique.mockResolvedValue({
-      id: 'user-1',
-      confirmationToken: '1234',
-      confirmationSentAt: new Date(Date.now() - CONFIRMATION_CODE_TTL_MS - 1),
-      emailConfirmedAt: null,
-    });
+    dependencies.prisma.user.findUnique.mockResolvedValue(
+      makePendingConfirmationUser({ confirmationSentAt: new Date(Date.now() - CONFIRMATION_CODE_TTL_MS - 1) }),
+    );
 
     await expect(service.confirmEmailByCode('1234', 'user@example.com')).rejects.toThrow(
       'Срок действия кода подтверждения истёк',
@@ -406,12 +380,7 @@ describe('AuthService', () => {
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
     );
-    dependencies.prisma.user.findUnique.mockResolvedValue({
-      id: 'user-1',
-      confirmationToken: '1234',
-      confirmationSentAt: new Date(),
-      emailConfirmedAt: null,
-    });
+    dependencies.prisma.user.findUnique.mockResolvedValue(makePendingConfirmationUser());
     dependencies.prisma.user.updateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
 
     const results = await Promise.allSettled([
@@ -436,11 +405,9 @@ describe('AuthService', () => {
       jwtService,
       dependencies.email as unknown as EmailService,
     );
-    dependencies.prisma.user.findUnique.mockResolvedValue({
-      id: 'user-1',
-      encryptedPassword: await (await import('bcrypt')).hash('secret123', 4),
-      emailConfirmedAt: new Date(),
-    });
+    dependencies.prisma.user.findUnique.mockResolvedValue(
+      makeConfirmedPasswordUser(await (await import('bcrypt')).hash('secret123', 4)),
+    );
     dependencies.prisma.user.update.mockResolvedValue({ id: 'user-1' });
 
     const loginResult = (await service.login('user@example.com', 'secret123'))!;
@@ -544,11 +511,9 @@ describe('AuthService', () => {
     });
     dependencies.prisma.user.update.mockResolvedValue({});
 
-    await expect(service.changePassword('NewPassword1', 'NewPassword1', ' USER@EXAMPLE.COM ')).resolves.toEqual({
-      userId: 'user-1',
-      accessToken: 'access-token',
-      refreshToken: 'access-token',
-    });
+    await expect(service.changePassword('NewPassword1', 'NewPassword1', ' USER@EXAMPLE.COM ')).resolves.toEqual(
+      makeLegacySessionTokens(),
+    );
     expect(dependencies.prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'user@example.com' } });
     expect(dependencies.prisma.user.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },

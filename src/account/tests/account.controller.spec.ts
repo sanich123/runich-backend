@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import { AccountController } from '../account.controller';
 import { AccountService } from '../account.service';
 import { asyncMock } from 'src/tests/helpers';
+import { makeAccountPage } from './fixtures';
 
 describe('AccountController', () => {
   const service = {
@@ -13,13 +14,10 @@ describe('AccountController', () => {
 
   it('returns service results for every endpoint', async () => {
     const profile = { id: 'profile-1' };
-    service.getFilteredAccounts.mockResolvedValue({ items: [profile], hasMore: false, nextCursor: null });
+    const page = makeAccountPage([profile]);
+    service.getFilteredAccounts.mockResolvedValue(page);
 
-    await expect(controller.getFilteredAccounts(undefined, '10', { name: 'Ann' })).resolves.toEqual({
-      items: [profile],
-      hasMore: false,
-      nextCursor: null,
-    });
+    await expect(controller.getFilteredAccounts(undefined, '10', { name: 'Ann' })).resolves.toEqual(page);
     expect(service.getFilteredAccounts).toHaveBeenCalledWith('10', undefined, { name: 'Ann' });
   });
 

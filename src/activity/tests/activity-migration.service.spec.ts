@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import { NotFoundException } from '@nestjs/common';
 import { SELF_DECLARED_DEPS_METADATA } from '@nestjs/common/constants';
 import { asyncMock } from 'src/tests/helpers';
+import { makeMigrationSuccessResult } from './fixtures';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 
 type MapInput = {
@@ -153,7 +154,7 @@ describe('ActivityMigrationService', () => {
     transaction.mockImplementation(async (callback) =>
       callback({ activity: {}, activityMigrationJob: { update: transactionJobUpdate } }),
     );
-    createActivitiesFromMigrationArchive.mockResolvedValue({ success: true, importedActivities: 1 });
+    createActivitiesFromMigrationArchive.mockResolvedValue(makeMigrationSuccessResult());
     mapActivitiesWithCoordinates.mockImplementation(async ({ parsedActivities = [] }) =>
       parsedActivities.map((activity) => mappedActivity(String(activity['Activity ID']))),
     );
@@ -323,7 +324,7 @@ describe('ActivityMigrationService', () => {
     parseCsvFileIntoArray.mockResolvedValue(rows);
     createActivitiesFromMigrationArchive
       .mockResolvedValueOnce({ success: true, importedActivities: 8 })
-      .mockResolvedValueOnce({ success: true, importedActivities: 1 });
+      .mockResolvedValueOnce(makeMigrationSuccessResult());
 
     await expect(service.processNextJob()).resolves.toBe(true);
 
@@ -368,7 +369,7 @@ describe('ActivityMigrationService', () => {
       { 'Activity ID': 'strava-2' },
       { 'Activity ID': 'strava-3' },
     ]);
-    createActivitiesFromMigrationArchive.mockResolvedValue({ success: true, importedActivities: 1 });
+    createActivitiesFromMigrationArchive.mockResolvedValue(makeMigrationSuccessResult());
 
     await service.processNextJob();
 

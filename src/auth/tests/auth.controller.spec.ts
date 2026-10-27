@@ -4,6 +4,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { AuthService } from '../services/auth.service';
 import { AuthController } from '../controllers/auth.controller';
 import { asyncMock, syncMock } from 'src/tests/helpers';
+import { makeSessionTokens } from './fixtures';
 
 describe('AuthController', () => {
   const authService = {
@@ -42,11 +43,7 @@ describe('AuthController', () => {
     authService.confirmEmailByCode.mockResolvedValue(auth);
     authService.getEmailCodeForPassword.mockResolvedValue({ message: 'sent' });
     authService.verifyPasswordChangeCode.mockResolvedValue({ message: 'verified' });
-    authService.changePassword.mockResolvedValue({
-      userId: 'user-1',
-      accessToken: 'access-token',
-      refreshToken: 'refresh-token',
-    });
+    authService.changePassword.mockResolvedValue(makeSessionTokens());
     authService.deleteUser.mockResolvedValue(undefined);
 
     await expect(controller.registerUser({ email: 'user@yandex.ru', password: 'secret123' })).resolves.toEqual({

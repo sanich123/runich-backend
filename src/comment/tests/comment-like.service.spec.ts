@@ -1,6 +1,8 @@
 import { jest } from '@jest/globals';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { asyncMock, transactionMock } from 'src/tests/helpers';
+import { makeCommentLike } from './fixtures';
+import { makeProfileSummary } from 'src/tests/fixtures/profile.fixtures';
 
 import { CommentLikeService } from '../comment-like.service';
 
@@ -30,20 +32,16 @@ describe('CommentLikeService', () => {
     const like = { id: 'like-1' };
     prisma.commentLike.create.mockResolvedValue(like);
     prisma.comment.findUnique.mockResolvedValue({ authorId: 'owner-1', comment: 'Nice run', activityId: 'activity-1' });
-    prisma.profile.findUnique
-      .mockResolvedValueOnce({ name: 'Alice', surname: 'Runner', profilePhoto: 'avatar.jpg' })
-      .mockResolvedValueOnce({
-        emailNotifications: true,
-        inAppNotifications: true,
-        pushNotifications: false,
-        user: { email: 'owner@example.com' },
-      });
+    prisma.profile.findUnique.mockResolvedValueOnce(makeProfileSummary()).mockResolvedValueOnce({
+      emailNotifications: true,
+      inAppNotifications: true,
+      pushNotifications: false,
+      user: { email: 'owner@example.com' },
+    });
 
-    await expect(service.create({ profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' })).resolves.toBe(
-      like,
-    );
+    await expect(service.create(makeCommentLike())).resolves.toBe(like);
     expect(prisma.commentLike.create).toHaveBeenCalledWith({
-      data: { profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' },
+      data: makeCommentLike(),
     });
     expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
       data: { notificationType: 'comment-like', sourceId: 'like-1', status: 'queued' },
@@ -52,18 +50,14 @@ describe('CommentLikeService', () => {
     prisma.commentLike.create.mockRejectedValue({ code: 'P2002' });
     prisma.commentLike.findUnique.mockResolvedValue(like);
 
-    await expect(service.create({ profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' })).resolves.toBe(
-      like,
-    );
+    await expect(service.create(makeCommentLike())).resolves.toBe(like);
   });
 
   it('rethrows non-unique create errors', async () => {
     const error = new Error('database unavailable');
     prisma.commentLike.create.mockRejectedValue(error);
 
-    await expect(service.create({ profileId: 'profile-1', authorId: 'user-1', commentId: 'comment-1' })).rejects.toBe(
-      error,
-    );
+    await expect(service.create(makeCommentLike())).rejects.toBe(error);
   });
 
   it('creates an in-app notification for the author of a liked comment', async () => {
@@ -73,16 +67,14 @@ describe('CommentLikeService', () => {
       comment: 'Good pace!',
       activityId: 'activity-1',
     });
-    prisma.profile.findUnique
-      .mockResolvedValueOnce({ name: 'Alice', surname: 'Runner', profilePhoto: 'avatar.jpg' })
-      .mockResolvedValueOnce({
-        emailNotifications: false,
-        inAppNotifications: true,
-        pushNotifications: false,
-        user: { email: 'owner@example.com' },
-      });
+    prisma.profile.findUnique.mockResolvedValueOnce(makeProfileSummary()).mockResolvedValueOnce({
+      emailNotifications: false,
+      inAppNotifications: true,
+      pushNotifications: false,
+      user: { email: 'owner@example.com' },
+    });
 
-    await service.create({ profileId: 'profile-1', authorId: 'actor-1', commentId: 'comment-1' });
+    await service.create(makeCommentLike({ authorId: 'actor-1' }));
 
     expect(prisma.notification.create).toHaveBeenCalledWith({
       data: expect.objectContaining({

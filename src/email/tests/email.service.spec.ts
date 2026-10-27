@@ -9,6 +9,8 @@ jest.unstable_mockModule('nodemailer', () => ({
 }));
 
 const { EmailService } = await import('../email.service');
+const { makeFeedbackInput } = await import('./fixtures');
+const { makeProfileName } = await import('src/tests/fixtures/profile.fixtures');
 
 const originalEnvironment = { ...process.env };
 
@@ -35,7 +37,7 @@ describe('EmailService', () => {
     createTransport.mockClear();
     findUnique.mockReset().mockResolvedValue({
       email: 'ann@example.com',
-      profile: { name: 'Ann', surname: 'Runner' },
+      profile: makeProfileName(),
     });
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -102,13 +104,11 @@ describe('EmailService', () => {
       deleteObjectByKey: jest.fn(),
     };
     const service = new EmailService(prisma as never, undefined, storage as never);
-    const feedback = {
-      feedbackId: 'feedback-1',
-      kind: 'bug',
+    const feedback = makeFeedbackInput({
       text: 'Something <wrong>',
       deviceInfo: 'Android\nPixel',
       attachments: [{ url: 'https://cdn.example/user-1/feedback/2026-09-17/feedback-1/screen.jpg', thumbnail: null }],
-    };
+    });
 
     await service.sendFeedback(feedback, 'user-1');
 
@@ -139,13 +139,7 @@ describe('EmailService', () => {
 
     await expect(
       service.sendFeedback(
-        {
-          feedbackId: 'feedback-1',
-          kind: 'bug',
-          text: 'Broken',
-          deviceInfo: 'Android',
-          attachments: [{ url: 'https://cdn.example/screen.jpg', thumbnail: null }],
-        },
+        makeFeedbackInput({ attachments: [{ url: 'https://cdn.example/screen.jpg', thumbnail: null }] }),
         'user-1',
       ),
     ).rejects.toThrow('SMTP failed');
@@ -156,16 +150,7 @@ describe('EmailService', () => {
     const service = new EmailService(prisma as never);
 
     await expect(
-      service.sendFeedback(
-        {
-          feedbackId: 'feedback-1',
-          kind: 'bug',
-          text: 'Broken',
-          deviceInfo: 'Android',
-          attachments: [{ url: 'https://cdn.example/screen.jpg' }],
-        },
-        'user-1',
-      ),
+      service.sendFeedback(makeFeedbackInput({ attachments: [{ url: 'https://cdn.example/screen.jpg' }] }), 'user-1'),
     ).rejects.toThrow('S3-хранилище не настроено для вложений feedback');
     expect(sendMail).not.toHaveBeenCalled();
   });
@@ -191,16 +176,7 @@ describe('EmailService', () => {
     const service = new EmailService(prisma as never, undefined, storage as never);
 
     await expect(
-      service.sendFeedback(
-        {
-          feedbackId: 'feedback-1',
-          kind: 'bug',
-          text: 'Broken',
-          deviceInfo: 'Android',
-          attachments: [{ url: 'https://cdn.example/screen.jpg' }],
-        },
-        'user-1',
-      ),
+      service.sendFeedback(makeFeedbackInput({ attachments: [{ url: 'https://cdn.example/screen.jpg' }] }), 'user-1'),
     ).rejects.toThrow('Вложение feedback имеет некорректный S3-путь');
     expect(sendMail).not.toHaveBeenCalled();
   });
@@ -210,10 +186,7 @@ describe('EmailService', () => {
     const service = new EmailService(prisma as never);
 
     await expect(
-      service.sendFeedback(
-        { feedbackId: 'feedback-1', kind: 'thanks', text: 'Thanks', deviceInfo: 'iOS' },
-        'missing-user',
-      ),
+      service.sendFeedback(makeFeedbackInput({ kind: 'thanks', text: 'Thanks', deviceInfo: 'iOS' }), 'missing-user'),
     ).rejects.toThrow('Пользователь для feedback не найден');
     expect(sendMail).not.toHaveBeenCalled();
   });
@@ -221,9 +194,9 @@ describe('EmailService', () => {
   it('rejects feedback when Prisma is not configured', async () => {
     const service = new EmailService();
 
-    await expect(
-      service.sendFeedback({ feedbackId: 'feedback-1', kind: 'bug', text: 'Broken', deviceInfo: 'Android' }, 'user-1'),
-    ).rejects.toThrow('PrismaService не настроен для отправки feedback');
+    await expect(service.sendFeedback(makeFeedbackInput(), 'user-1')).rejects.toThrow(
+      'PrismaService не настроен для отправки feedback',
+    );
     expect(sendMail).not.toHaveBeenCalled();
   });
 
@@ -231,10 +204,7 @@ describe('EmailService', () => {
     findUnique.mockResolvedValue({ email: 'ann@example.com', profile: null });
     const service = new EmailService(prisma as never);
 
-    await service.sendFeedback(
-      { feedbackId: 'feedback-1', kind: 'unknown', text: 'Thanks', deviceInfo: 'iOS' },
-      'user-1',
-    );
+    await service.sendFeedback(makeFeedbackInput({ kind: 'unknown', text: 'Thanks', deviceInfo: 'iOS' }), 'user-1');
 
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({

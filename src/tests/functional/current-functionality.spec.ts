@@ -5,10 +5,18 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from '../../auth/services/auth.service';
 import { AccountService } from '../../account/account.service';
 import { ActivityService } from '../../activity/services/activity.service';
+import { makeActivityDto, makeMigrationSuccessResult } from '../../activity/tests/fixtures';
+import {
+  makeConfirmedPasswordUser,
+  makePasswordUser,
+  makePendingConfirmationUser,
+  makeSessionTokens,
+} from '../../auth/tests/fixtures';
 import { CommentService } from '../../comment/comment.service';
 import { FriendService } from '../../friend/friend.service';
 import { LikeService } from '../../like/like.service';
 import { StatisticService } from '../../statistic/statistic.service';
+import { makeActivityTotals, makeSportActivityTotals, makeStatisticActivities } from '../../statistic/tests/fixtures';
 import { UserService } from '../../user/user.service';
 import { JwtStrategy } from '../../auth/strategies/jwt.strategy';
 import { getLogLevels } from '../../common/utils/log-levels';
@@ -64,7 +72,7 @@ describe('authentication', () => {
     createEmailLoginCredential: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue('jwt'),
     createSessionTokens: jest
       .fn<(...args: unknown[]) => Promise<unknown>>()
-      .mockResolvedValue({ userId: 'user-1', accessToken: 'jwt', refreshToken: 'jwt' }),
+      .mockResolvedValue(makeSessionTokens({ accessToken: 'jwt', refreshToken: 'jwt' })),
     consumeEmailLoginCode: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue('user-1'),
   };
   const service = new AuthService(prisma as never, jwt, email as never, tokenService as never);
@@ -91,37 +99,24 @@ describe('authentication', () => {
   });
 
   it('logs in confirmed users and rejects unconfirmed users', async () => {
-    prisma.user.findUnique.mockResolvedValue({
-      id: 'user-1',
-      encryptedPassword: await bcrypt.hash('secret', 4),
-      emailConfirmedAt: new Date(),
-    });
+    prisma.user.findUnique.mockResolvedValue(makeConfirmedPasswordUser(await bcrypt.hash('secret', 4)));
     prisma.user.update.mockResolvedValue({});
-    await expect(service.login('user@example.com', 'secret')).resolves.toEqual({
-      userId: 'user-1',
-      accessToken: 'jwt',
-      refreshToken: 'jwt',
-    });
+    await expect(service.login('user@example.com', 'secret')).resolves.toEqual(
+      makeSessionTokens({ accessToken: 'jwt', refreshToken: 'jwt' }),
+    );
     expect(prisma.user.update).toHaveBeenCalled();
 
-    prisma.user.findUnique.mockResolvedValue({ id: 'user-1', encryptedPassword: await bcrypt.hash('secret', 4) });
+    prisma.user.findUnique.mockResolvedValue(makePasswordUser(await bcrypt.hash('secret', 4)));
     await expect(service.login('user@example.com', 'secret')).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('confirms email by code and verifies tokens', async () => {
-    prisma.user.findUnique.mockResolvedValue({
-      id: 'user-1',
-      confirmationToken: '1234',
-      confirmationSentAt: new Date(),
-      emailConfirmedAt: null,
-    });
+    prisma.user.findUnique.mockResolvedValue(makePendingConfirmationUser());
     prisma.user.updateMany.mockResolvedValue({ count: 1 });
     prisma.user.update.mockResolvedValue({});
-    await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual({
-      accessToken: 'jwt',
-      userId: 'user-1',
-      refreshToken: 'jwt',
-    });
+    await expect(service.confirmEmailByCode('1234', ' USER@EXAMPLE.COM ')).resolves.toEqual(
+      makeSessionTokens({ accessToken: 'jwt', refreshToken: 'jwt' }),
+    );
     await expect(service.confirmEmailByCode('bad', 'user@example.com')).rejects.toBeInstanceOf(BadRequestException);
 
     prisma.user.findUnique.mockResolvedValue({ id: 'user-1', emailConfirmedAt: null });
@@ -245,7 +240,7 @@ describe('activity, comments and statistics', () => {
     prisma.activity.findMany.mockResolvedValue([]);
     queryRaw.mockResolvedValue([]);
     prisma.activity.delete.mockResolvedValue({ id: 'a1' });
-    const dto = { duration: 100, distance: 1000, speed: 10, sport: 'run' };
+    const dto = makeActivityDto();
     await expect(service.createActivity(dto, 'u1')).resolves.toEqual({ id: 'a1' });
     await expect(service.updateActivity(dto, 'a1')).resolves.toEqual({ id: 'a1' });
     await expect(service.getLocationsByActivityId('a1', 'u1')).resolves.toEqual({
@@ -304,10 +299,9 @@ describe('activity, comments and statistics', () => {
       },
     ]);
 
-    await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual({
-      success: true,
-      importedActivities: 1,
-    });
+    await expect(service.createActivitiesFromMigrationArchive([activity])).resolves.toEqual(
+      makeMigrationSuccessResult(),
+    );
     expect(prisma.activity.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
@@ -365,20 +359,17 @@ describe('activity, comments and statistics', () => {
     const queryRaw = createMock();
     Object.assign(prisma, { $queryRaw: queryRaw });
     const service = new StatisticService(prisma as never);
-    const activities = [
-      { duration: 100, distance: 1000, speed: 5, date: new Date('2025-01-02'), id: 'a1', sport: 'run' },
-      { duration: 200, distance: 2000, speed: 6, date: new Date('2025-01-03'), id: 'a2', sport: 'bike' },
-    ];
+    const activities = makeStatisticActivities();
     prisma.activity.findMany.mockResolvedValue(activities);
     queryRaw.mockResolvedValueOnce([
-      { sport: null, totalDuration: 300, totalDistance: 3000, totalItems: 2 },
-      { sport: 'bike', totalDuration: 200, totalDistance: 2000, totalItems: 1 },
-      { sport: 'run', totalDuration: 100, totalDistance: 1000, totalItems: 1 },
+      { sport: null, ...makeActivityTotals() },
+      makeSportActivityTotals('bike'),
+      makeSportActivityTotals('run'),
     ]);
     await expect(service.getMonthStatisticsByYearMonth('u1', '2025', '0')).resolves.toMatchObject({
       activitiesReducedBySport: { all: { totalDuration: 300, totalDistance: 3000, totalItems: 2 } },
     });
-    queryRaw.mockResolvedValueOnce([{ totalDuration: 300, totalDistance: 3000, totalItems: 2 }]);
+    queryRaw.mockResolvedValueOnce([makeActivityTotals()]);
     await expect(service.getAllActivitiesStatisticsByUserId('u1')).resolves.toEqual({
       totalDistance: 3000,
       totalDuration: 300,

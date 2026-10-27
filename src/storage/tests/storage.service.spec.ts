@@ -16,6 +16,8 @@ import {
 import { BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { asyncMock } from 'src/tests/helpers';
+import { makeActivityMediaFixture, makePhotoUpload } from './fixtures';
+import { makeMoscowCoordinate } from 'src/tests/fixtures/geography.fixtures';
 import { StorageService } from '../services/storage.service';
 import { decodeActivityRoute, encodeActivityRoute } from '../activity-route';
 import { getActivityPhotoKey, getExtensionFromStorageKey } from '../storage-key';
@@ -127,10 +129,7 @@ describe('StorageService', () => {
     });
     const service = new StorageService(undefined, prisma as never);
     const image = await createTestImage();
-    const manifest = JSON.stringify([
-      { mediaId: 'media-1', role: 'media' },
-      { mediaId: 'media-2', role: 'media' },
-    ]);
+    const manifest = JSON.stringify([makeActivityMediaFixture(), { mediaId: 'media-2', role: 'media' }]);
 
     await expect(
       service.uploadPhotos(
@@ -168,14 +167,9 @@ describe('StorageService', () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
 
-    await expect(
-      service.uploadPhotos(
-        'user-1',
-        [{ buffer: Buffer.from('photo'), originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
-        {},
-        '[]',
-      ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.uploadPhotos('user-1', [makePhotoUpload()], {}, '[]')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     expect(s3Send).not.toHaveBeenCalled();
   });
 
@@ -188,7 +182,7 @@ describe('StorageService', () => {
         'user-1',
         [{ size: UPLOAD_LIMITS.mediaBatchBytes + 1, originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
         {},
-        JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+        JSON.stringify([makeActivityMediaFixture()]),
       ),
     ).rejects.toThrow('Суммарный размер файлов не должен превышать 250 МБ');
     expect(s3Send).not.toHaveBeenCalled();
@@ -216,7 +210,7 @@ describe('StorageService', () => {
         'user-1',
         [{ originalname: 'photo.mp4', mimetype: 'video/mp4' }],
         {},
-        JSON.stringify([{ mediaId: 'media-1', role: 'media' }]),
+        JSON.stringify([makeActivityMediaFixture()]),
       ),
     ).rejects.toThrow('Не удалось прочитать загруженный файл');
     expect(s3Send).not.toHaveBeenCalled();
@@ -231,10 +225,7 @@ describe('StorageService', () => {
       publishedKey: null,
     });
     const service = new StorageService(undefined, prisma as never);
-    const manifest = JSON.stringify([
-      { mediaId: 'media-1', role: 'media' },
-      { mediaId: 'media-2', role: 'media' },
-    ]);
+    const manifest = JSON.stringify([makeActivityMediaFixture(), { mediaId: 'media-2', role: 'media' }]);
 
     await expect(
       service.uploadPhotos(
@@ -259,14 +250,9 @@ describe('StorageService', () => {
   ])('rejects a manifest with an invalid %s', async (_caseName, manifest) => {
     const service = new StorageService();
 
-    await expect(
-      service.uploadPhotos(
-        'user-1',
-        [{ buffer: Buffer.from('photo'), originalname: 'photo.jpg', mimetype: 'image/jpeg' }],
-        {},
-        manifest,
-      ),
-    ).rejects.toThrow('Некорректная запись manifest медиафайлов');
+    await expect(service.uploadPhotos('user-1', [makePhotoUpload()], {}, manifest)).rejects.toThrow(
+      'Некорректная запись manifest медиафайлов',
+    );
     expect(s3Send).not.toHaveBeenCalled();
   });
 
@@ -281,10 +267,7 @@ describe('StorageService', () => {
           { buffer: Buffer.from('two'), originalname: 'two.jpg', mimetype: 'image/jpeg' },
         ],
         {},
-        JSON.stringify([
-          { mediaId: 'media-1', role: 'media' },
-          { mediaId: 'media-1', role: 'media' },
-        ]),
+        JSON.stringify([makeActivityMediaFixture(), makeActivityMediaFixture()]),
       ),
     ).rejects.toThrow('Manifest содержит пустой, слишком длинный или дублирующий mediaId и role');
     expect(s3Send).not.toHaveBeenCalled();
@@ -693,7 +676,7 @@ describe('StorageService', () => {
   it('uploads a compressed activity route under the user and activity prefix', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = new StorageService();
-    const locations = [{ timestamp: 1, coords: { latitude: 55.75, longitude: 37.61 } }];
+    const locations = [{ timestamp: 1, coords: makeMoscowCoordinate() }];
 
     await expect(service.uploadActivityRoute('user-1', 'activity-1', locations)).resolves.toMatchObject({
       key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
@@ -716,7 +699,7 @@ describe('StorageService', () => {
   });
 
   it('reads and decompresses an activity route from S3', async () => {
-    const locations = [{ timestamp: 1, coords: { latitude: 55.75, longitude: 37.61 } }];
+    const locations = [{ timestamp: 1, coords: makeMoscowCoordinate() }];
     const encoded = await encodeActivityRoute(locations);
     s3Send.mockResolvedValue({ Body: { transformToByteArray: async () => encoded.body } } as never);
     const service = new StorageService();
@@ -883,9 +866,11 @@ describe('StorageService', () => {
     const service = new StorageService(undefined, prisma as never);
     const image = await createTestImage();
 
-    await expect(
-      service.uploadPhoto('user-1', { buffer: image, originalname: 'photo.jpg', mimetype: 'image/jpeg' }),
-    ).resolves.toMatchObject({ assetId: 'stage-asset', status: 'queued', contentType: 'image/webp' });
+    await expect(service.uploadPhoto('user-1', makePhotoUpload({ buffer: image }))).resolves.toMatchObject({
+      assetId: 'stage-asset',
+      status: 'queued',
+      contentType: 'image/webp',
+    });
     expect(s3Send).toHaveBeenCalledTimes(1);
     expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input).toMatchObject({
       Bucket: 'runich-test',

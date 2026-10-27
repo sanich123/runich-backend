@@ -1,6 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { jest } from '@jest/globals';
 import { YandexAuthService } from '../services/yandex-auth.service';
+import { makeConfirmedAuthUser } from './fixtures';
 
 const asyncMock = () => jest.fn<(...args: unknown[]) => Promise<unknown>>();
 
@@ -108,7 +109,7 @@ describe('YandexAuthService', () => {
         ),
       );
     prisma.user.findUnique.mockResolvedValue(null);
-    prisma.user.create.mockResolvedValue({ id: 'user-1', emailConfirmedAt: new Date() });
+    prisma.user.create.mockResolvedValue(makeConfirmedAuthUser());
 
     const response = responseMock();
     await service.callback('code', '', response as never);
