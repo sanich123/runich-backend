@@ -7,6 +7,7 @@ module.exports = {
     '^.+\\.tsx?$': ['ts-jest', { useESM: true }],
   },
   moduleNameMapper: {
+    '^@nestjs/throttler$': '<rootDir>/tests/mocks/nestjs-throttler.ts',
     '^src/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [

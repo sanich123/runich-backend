@@ -2,6 +2,7 @@ node_modules
 dist
 .git
 .env
+logs.log
 .DS_Store
 coverage
 .yarn/cache
