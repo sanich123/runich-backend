@@ -14,6 +14,8 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { accessTokenExpiresIn } from './constants/jwt.constants';
 import { StorageModule } from 'src/storage/storage.module';
 import { getJwtSecret } from 'src/common/config/environment';
+import { SuperuserEmailBootstrapService } from './services/superuser-email-bootstrap.service';
+import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { getJwtSecret } from 'src/common/config/environment';
     VkAuthService,
     JwtStrategy,
     ThrottlerGuard,
+    ThrottlerReflector,
+    SuperuserEmailBootstrapService,
   ],
 })
 export class AuthModule {}

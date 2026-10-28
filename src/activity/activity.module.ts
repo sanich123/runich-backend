@@ -13,6 +13,7 @@ import { ActivityMigrationService } from './services/activity-migration.service'
 import { StorageModule } from 'src/storage/storage.module';
 import { StaticMapService } from 'src/common/maps/static-map.service';
 import { ModerationModule } from 'src/moderation/moderation.module';
+import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ModerationModule } from 'src/moderation/moderation.module';
     ActivityMigrationService,
     StaticMapService,
     ThrottlerGuard,
+    ThrottlerReflector,
   ],
   exports: [ActivityService, ActivityPersistenceService, ActivityMigrationService],
 })
