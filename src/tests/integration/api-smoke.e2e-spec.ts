@@ -128,7 +128,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         status: 'ok',
         checks: { database: 'ok' },
       });
-    await request(app.getHttpServer()).get('/auth/config').expect(200).expect({ appVersion: '1.0.0' });
+    await request(app.getHttpServer()).get('/auth/config').expect(200).expect({ appVersion: '1.3.1' });
   });
 
   it('reads and updates profiles through the HTTP API', async () => {

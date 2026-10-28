@@ -116,7 +116,7 @@ export class LoginResponseDto extends UserAuthResponseDto {
 }
 
 export class AppConfigResponseDto {
-  @ApiProperty({ type: String, description: 'Application version' })
+  @ApiProperty({ type: String, description: 'Minimum supported client app version' })
   appVersion: string;
 }
 

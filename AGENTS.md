@@ -5985,3 +5985,11 @@ Reference: [NestJS Logger](https://docs.nestjs.com/techniques/logger)
 ## Service file structure
 
 NestJS service files must contain imports and the decorated service class only. Do not define top-level helper functions, constants, variables, types, interfaces, or enums in a `*.service.ts` file, before or after the class. Place them in sibling `*.utils.ts`, `*.constants.ts`, or `*.types.ts` modules and import them into the service.
+
+## Runich client/API compatibility
+
+- Keep the client/backend compatibility ledger in `API_COMPATIBILITY.md` in both the Runich client and Runich Backend repositories current. Update both copies in the same task whenever client releases, backend releases, API requests/responses, or compatibility evidence change; retain previous entries as history.
+- For each entry, record the client version, compatible backend version(s), Swagger `info.version`, status, evidence, and verification date. Matching version numbers alone do not count as compatibility-test evidence; distinguish repository metadata from deployed Stage/Production versions.
+- Keep the Swagger `DocumentBuilder.setVersion()` value equal to the Runich Backend `package.json` version and update the ledger with it. The client may remain on an older supported version; record that compatibility pair explicitly.
+- Keep the minimum client version returned by backend `GET /auth/config` and its entry in `API_COMPATIBILITY.md` aligned. Raising it makes older app versions redirect to the update screen when they load the home page.
+- These Runich client/backend instructions are project-specific. Do not copy them into Clean Car.
