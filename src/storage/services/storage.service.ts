@@ -741,6 +741,9 @@ export class StorageService {
   }
 
   async promoteProfilePhoto(userId: string, publicUrl: string) {
+    if (this.isQuarantinePreviewUrl(publicUrl)) {
+      throw new BadRequestException('Ссылку на фото из карантина нельзя сохранить в профиле');
+    }
     const sourceKey = this.getPromotablePhotoKey(userId, publicUrl);
     if (!sourceKey) return publicUrl;
 
@@ -1021,6 +1024,32 @@ export class StorageService {
         }),
       ),
     );
+  }
+
+  private isQuarantinePreviewUrl(previewUrl: string) {
+    if (!this.settings.endpoint || !this.settings.quarantineBucket) return false;
+
+    try {
+      const parsedUrl = new URL(previewUrl);
+      const endpointUrl = new URL(this.settings.endpoint);
+      if (parsedUrl.origin !== endpointUrl.origin) return false;
+
+      const endpointPath = endpointUrl.pathname.replace(/\/+$/, '');
+      const bucketPath = `${endpointPath}/${encodeURIComponent(this.settings.quarantineBucket)}`;
+      const keyPathPrefix = `${bucketPath}/`;
+      if (!parsedUrl.pathname.startsWith(keyPathPrefix)) return false;
+      if (this.settings.quarantineBucket !== this.settings.bucket) return true;
+
+      let key: string;
+      try {
+        key = decodeURIComponent(parsedUrl.pathname.slice(keyPathPrefix.length));
+      } catch {
+        return false;
+      }
+      return Boolean(this.settings.quarantinePrefix && key.startsWith(this.settings.quarantinePrefix));
+    } catch {
+      return false;
+    }
   }
 
   private getPromotablePhotoKey(userId: string, publicUrl: string) {

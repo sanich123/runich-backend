@@ -422,6 +422,12 @@ describe('StorageService', () => {
 
     await expect(service.promoteProfilePhoto('user-1', profileUrl)).resolves.toBe(profileUrl);
     await expect(service.promoteProfilePhoto('user-1', externalUrl)).resolves.toBe(externalUrl);
+    await expect(
+      service.promoteProfilePhoto(
+        'user-1',
+        'https://s3.twcstorage.ru/runich-test/moderation-quarantine/user-1/avatar.webp?X-Amz-Signature=redacted',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(s3Send).not.toHaveBeenCalled();
   });
 

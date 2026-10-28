@@ -134,6 +134,13 @@ export class UserService {
   }
 
   private async getProfilePhotoUpdateData(userId: string, accountDto: UserDto) {
+    if (accountDto.profilePhotoAssetId && accountDto.profilePhoto !== undefined) {
+      throw new BadRequestException('Передайте только один способ обновления фото профиля');
+    }
+    if (typeof accountDto.profilePhoto === 'string') {
+      throw new BadRequestException('Для обновления фото профиля передайте идентификатор загруженного файла');
+    }
+
     if (accountDto.profilePhotoAssetId) {
       if (!this.storageService) throw new ServiceUnavailableException('Проверка загружаемых медиафайлов не настроена');
       const asset = await this.prisma.mediaModerationAsset.findFirst({
