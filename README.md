@@ -122,6 +122,7 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | POSTGRES_PASSWORD            | Local Compose database password                                                          |
 | PORT                         | HTTP port, default 3000                                                                  |
 | APP_ENV                      | Application environment: local, stage or production                                      |
+| SUPERUSER_EMAILS             | Optional comma-separated email allowlist for automatic superuser access after confirmation |
 | YANDEX_SMTP_USER             | Full Yandex mailbox address used as the sender                                           |
 | YANDEX_SMTP_PASSWORD         | Yandex application password for Mail                                                     |
 | MAILRU_SMTP_USER             | Required full Mail.ru mailbox address used for SMTP fallback                            |

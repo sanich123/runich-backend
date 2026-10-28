@@ -22,6 +22,7 @@ import { VkAuthService } from './vk-auth.service';
 import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
 import { normalizeEmail } from '../utils/russian-email';
 import { CONFIRMATION_CODE_TTL_MS } from '../constants/auth.constants';
+import { SuperuserEmailBootstrapService } from './superuser-email-bootstrap.service';
 
 @Injectable()
 export class AuthService {
@@ -31,6 +32,7 @@ export class AuthService {
   private readonly authEmailService: AuthEmailService;
   private readonly vkAuthService: VkAuthService;
   private readonly mediaCleanupService?: MediaCleanupService;
+  private readonly superuserEmailBootstrapService: SuperuserEmailBootstrapService;
 
   constructor(
     @Inject(PrismaService)
@@ -49,11 +51,18 @@ export class AuthService {
     vkAuthService?: VkAuthService,
     @Inject(MediaCleanupService)
     mediaCleanupService?: MediaCleanupService,
+    @Inject(SuperuserEmailBootstrapService)
+    superuserEmailBootstrapService?: SuperuserEmailBootstrapService,
   ) {
     this.tokenService = tokenService ?? new AuthTokenService(this.jwtService);
-    this.yandexAuthService = yandexAuthService ?? new YandexAuthService(this.prisma, this.tokenService);
+    this.superuserEmailBootstrapService =
+      superuserEmailBootstrapService ?? new SuperuserEmailBootstrapService(this.prisma);
+    this.yandexAuthService =
+      yandexAuthService ?? new YandexAuthService(this.prisma, this.tokenService, this.superuserEmailBootstrapService);
     this.authEmailService = authEmailService ?? new AuthEmailService(this.emailService);
-    this.vkAuthService = vkAuthService ?? new VkAuthService(this.prisma, this.jwtService, this.tokenService);
+    this.vkAuthService =
+      vkAuthService ??
+      new VkAuthService(this.prisma, this.jwtService, this.tokenService, this.superuserEmailBootstrapService);
     this.mediaCleanupService = mediaCleanupService;
   }
 
@@ -147,6 +156,7 @@ export class AuthService {
           this.logger.warn(`Вход отклонён: учётная запись не подтверждена (${normalizedEmail})`);
           throw new UnauthorizedException('Данная учетная запись не подтверждена');
         }
+        await this.superuserEmailBootstrapService.grantIfAllowlisted(user.id, user.email);
         await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
         return this.tokenService.createSessionTokens(user.id, metadata);
       }
@@ -175,10 +185,11 @@ export class AuthService {
   async verifyToken(code: string, metadata: SessionMetadata = {}) {
     try {
       const userId = await this.tokenService.consumeEmailLoginCode(code);
-      await this.prisma.user.update({
+      const user = await this.prisma.user.update({
         where: { id: userId },
         data: { emailConfirmedAt: new Date(), lastSignInAt: new Date() },
       });
+      await this.superuserEmailBootstrapService.grantIfAllowlisted(userId, user?.email);
       return this.tokenService.createSessionTokens(userId, metadata);
     } catch (error) {
       handleServiceError(error);
@@ -255,6 +266,7 @@ export class AuthService {
         throw new BadRequestException('Код подтверждения недействителен или уже использован');
       }
 
+      await this.superuserEmailBootstrapService.grantIfAllowlisted(user.id, normalizedEmail);
       return this.tokenService.createSessionTokens(user.id);
     } catch (error) {
       handleServiceError(error);

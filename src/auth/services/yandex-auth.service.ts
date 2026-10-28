@@ -4,12 +4,15 @@ import type { Response } from 'express';
 import { AuthTokenService } from './auth-token.service';
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { normalizeEmail } from '../utils/russian-email';
+import { SuperuserEmailBootstrapService } from './superuser-email-bootstrap.service';
 
 @Injectable()
 export class YandexAuthService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuthTokenService) private readonly tokenService: AuthTokenService,
+    @Inject(SuperuserEmailBootstrapService)
+    private readonly superuserEmailBootstrapService = new SuperuserEmailBootstrapService(prisma),
   ) {}
 
   start(response: Response) {
@@ -84,6 +87,7 @@ export class YandexAuthService {
     } else if (!user.emailConfirmedAt) {
       user = await this.prisma.user.update({ where: { id: user.id }, data: { emailConfirmedAt: new Date() } });
     }
+    await this.superuserEmailBootstrapService.grantIfAllowlisted(user.id, email);
     await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
 
     const redirect = new URL(frontendUrl);
