@@ -332,6 +332,11 @@ describe('UserService', () => {
     await expect(
       service.updateProfileByUserId('owner-1', 'owner-1', { profilePhotoAssetId: 'asset-1' }),
     ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.updateProfileByUserId('owner-1', 'owner-1', {
+        profilePhoto: 'https://s3.example.test/quarantine/avatar.webp',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.profile.upsert).not.toHaveBeenCalled();
   });
 
