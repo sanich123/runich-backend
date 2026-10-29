@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'259f8d1ae7b33173f81399515933481f656ffee90e4976acc7b303e0c47e62c5'>;
+  StorageHashBase<'1fd9deb34bc84d13ebebad646073c5ec9977f74be403a029223007a787e01c04'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -332,6 +332,19 @@ type FieldTypeOverrides = {
           readonly input: 'activity' | 'comment' | 'media' | 'media_upload' | 'user';
         };
       };
+      readonly Group: {
+        readonly privacy: { readonly output: 'open' | 'closed'; readonly input: 'open' | 'closed' };
+      };
+      readonly GroupMember: {
+        readonly role: {
+          readonly output: 'owner' | 'admin' | 'member';
+          readonly input: 'owner' | 'admin' | 'member';
+        };
+        readonly status: {
+          readonly output: 'active' | 'pending' | 'rejected';
+          readonly input: 'active' | 'pending' | 'rejected';
+        };
+      };
       readonly MediaModerationAsset: {
         readonly status: {
           readonly output:
@@ -453,6 +466,19 @@ type ColumnTypeOverrides = {
       readonly target_type: {
         readonly output: 'activity' | 'comment' | 'media' | 'media_upload' | 'user';
         readonly input: 'activity' | 'comment' | 'media' | 'media_upload' | 'user';
+      };
+    };
+    readonly Group: {
+      readonly privacy: { readonly output: 'open' | 'closed'; readonly input: 'open' | 'closed' };
+    };
+    readonly GroupMember: {
+      readonly role: {
+        readonly output: 'owner' | 'admin' | 'member';
+        readonly input: 'owner' | 'admin' | 'member';
+      };
+      readonly status: {
+        readonly output: 'active' | 'pending' | 'rejected';
+        readonly input: 'active' | 'pending' | 'rejected';
       };
     };
     readonly MediaModerationAsset: {
@@ -740,6 +766,32 @@ export namespace Models {
     usedUnits: FieldOutputTypes['public']['GoogleVisionMonthlyUsage']['usedUnits'];
     readonly [RelationKeys]?: never;
   };
+  export type public_Group = {
+    createdAt: FieldOutputTypes['public']['Group']['createdAt'];
+    createdByUserId: FieldOutputTypes['public']['Group']['createdByUserId'];
+    description: FieldOutputTypes['public']['Group']['description'];
+    id: FieldOutputTypes['public']['Group']['id'];
+    locationName: FieldOutputTypes['public']['Group']['locationName'];
+    name: FieldOutputTypes['public']['Group']['name'];
+    privacy: FieldOutputTypes['public']['Group']['privacy'];
+    sports: FieldOutputTypes['public']['Group']['sports'];
+    updatedAt: FieldOutputTypes['public']['Group']['updatedAt'];
+    creator: public_User;
+    members: public_GroupMember[];
+    readonly [RelationKeys]?: 'creator' | 'members';
+  };
+  export type public_GroupMember = {
+    groupId: FieldOutputTypes['public']['GroupMember']['groupId'];
+    id: FieldOutputTypes['public']['GroupMember']['id'];
+    joinedAt: FieldOutputTypes['public']['GroupMember']['joinedAt'];
+    requestedAt: FieldOutputTypes['public']['GroupMember']['requestedAt'];
+    role: FieldOutputTypes['public']['GroupMember']['role'];
+    status: FieldOutputTypes['public']['GroupMember']['status'];
+    userId: FieldOutputTypes['public']['GroupMember']['userId'];
+    group: public_Group;
+    user: public_User;
+    readonly [RelationKeys]?: 'group' | 'user';
+  };
   export type public_Like = {
     activityId: FieldOutputTypes['public']['Like']['activityId'];
     authorId: FieldOutputTypes['public']['Like']['authorId'];
@@ -996,6 +1048,8 @@ export namespace Models {
     contentReportsForUser: public_ContentReport[];
     friends: public_Friend[];
     grantedAdminRoleAssignments: public_AdminRoleAssignment[];
+    groupMemberships: public_GroupMember[];
+    groupsCreated: public_Group[];
     mediaModerationAssets: public_MediaModerationAsset[];
     moderationActions: public_ModerationAction[];
     moderationAppeals: public_ModerationAppeal[];
@@ -1022,6 +1076,8 @@ export namespace Models {
       | 'contentReportsForUser'
       | 'friends'
       | 'grantedAdminRoleAssignments'
+      | 'groupMemberships'
+      | 'groupsCreated'
       | 'mediaModerationAssets'
       | 'moderationActions'
       | 'moderationAppeals'
@@ -1086,6 +1142,8 @@ export declare const models: {
     EmailNotificationJob: Models.public_EmailNotificationJob;
     Friend: Models.public_Friend;
     GoogleVisionMonthlyUsage: Models.public_GoogleVisionMonthlyUsage;
+    Group: Models.public_Group;
+    GroupMember: Models.public_GroupMember;
     Like: Models.public_Like;
     LoadTestSeedJob: Models.public_LoadTestSeedJob;
     MediaCleanupJob: Models.public_MediaCleanupJob;
@@ -2814,6 +2872,220 @@ type ContractBase = Omit<
               uniques: readonly [];
               indexes: readonly [];
               foreignKeys: readonly [];
+            };
+            readonly Group: {
+              columns: {
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly created_by_user_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly description: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 2000 };
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'gen_random_uuid()';
+                  };
+                  readonly many: false;
+                };
+                readonly location_name: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 160 };
+                  readonly many: false;
+                };
+                readonly name: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 80 };
+                  readonly many: false;
+                };
+                readonly privacy: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'open'>;
+                  };
+                  readonly many: false;
+                };
+                readonly sports: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', readonly []>;
+                  };
+                  readonly many: { readonly elementNullable: false };
+                };
+                readonly updated_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id']; readonly name: 'Group_pkey' };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'Group_created_by_user_id_idx';
+                  readonly columns: readonly ['created_by_user_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Group_privacy_created_at_idx';
+                  readonly columns: readonly ['privacy', 'created_at'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Group';
+                    readonly columns: readonly ['created_by_user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Users';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'Group_created_by_user_id_fkey';
+                },
+              ];
+            };
+            readonly GroupMember: {
+              columns: {
+                readonly group_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'gen_random_uuid()';
+                  };
+                  readonly many: false;
+                };
+                readonly joined_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly requested_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly role: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'member'>;
+                  };
+                  readonly many: false;
+                };
+                readonly status: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'active'>;
+                  };
+                  readonly many: false;
+                };
+                readonly user_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id']; readonly name: 'GroupMember_pkey' };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['group_id', 'user_id'];
+                  readonly name: 'GroupMember_group_id_user_id_key';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'GroupMember_group_id_status_requested_at_idx';
+                  readonly columns: readonly ['group_id', 'status', 'requested_at'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'GroupMember_user_id_status_group_id_idx';
+                  readonly columns: readonly ['user_id', 'status', 'group_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'GroupMember';
+                    readonly columns: readonly ['group_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Group';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'GroupMember_group_id_fkey';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'GroupMember';
+                    readonly columns: readonly ['user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Users';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'GroupMember_user_id_fkey';
+                },
+              ];
             };
             readonly Like: {
               columns: {
@@ -4991,6 +5263,18 @@ type ContractBase = Omit<
               readonly kind: 'valueSet';
               readonly values: readonly ['activity', 'comment', 'media', 'media_upload', 'user'];
             };
+            readonly GroupMemberRole: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['owner', 'admin', 'member'];
+            };
+            readonly GroupMemberStatus: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['active', 'pending', 'rejected'];
+            };
+            readonly GroupPrivacy: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['open', 'closed'];
+            };
             readonly MediaModerationStatus: {
               readonly kind: 'valueSet';
               readonly values: readonly [
@@ -5080,6 +5364,11 @@ type ContractBase = Omit<
     readonly GoogleVisionMonthlyUsage: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'GoogleVisionMonthlyUsage';
+    };
+    readonly Group: { readonly namespace: 'public' & NamespaceId; readonly model: 'Group' };
+    readonly GroupMember: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'GroupMember';
     };
     readonly Like: { readonly namespace: 'public' & NamespaceId; readonly model: 'Like' };
     readonly LoadTestSeedJob: {
@@ -6529,6 +6818,180 @@ type ContractBase = Omit<
               readonly fields: {
                 readonly monthKey: { readonly column: 'month_key' };
                 readonly usedUnits: { readonly column: 'used_units' };
+              };
+            };
+          };
+          readonly Group: {
+            readonly fields: {
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly createdByUserId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly description: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 2000 };
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly locationName: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 160 };
+                };
+              };
+              readonly name: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 80 };
+                };
+              };
+              readonly privacy: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly sports: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+                readonly many: { readonly elementNullable: false };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+            };
+            readonly relations: {
+              readonly creator: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['createdByUserId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly members: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'GroupMember';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['groupId'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'Group';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly createdByUserId: { readonly column: 'created_by_user_id' };
+                readonly description: { readonly column: 'description' };
+                readonly id: { readonly column: 'id' };
+                readonly locationName: { readonly column: 'location_name' };
+                readonly name: { readonly column: 'name' };
+                readonly privacy: { readonly column: 'privacy' };
+                readonly sports: { readonly column: 'sports' };
+                readonly updatedAt: { readonly column: 'updated_at' };
+              };
+            };
+          };
+          readonly GroupMember: {
+            readonly fields: {
+              readonly groupId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly joinedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly requestedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly role: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+            };
+            readonly relations: {
+              readonly group: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Group';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['groupId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'GroupMember';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly groupId: { readonly column: 'group_id' };
+                readonly id: { readonly column: 'id' };
+                readonly joinedAt: { readonly column: 'joined_at' };
+                readonly requestedAt: { readonly column: 'requested_at' };
+                readonly role: { readonly column: 'role' };
+                readonly status: { readonly column: 'status' };
+                readonly userId: { readonly column: 'user_id' };
               };
             };
           };
@@ -8240,6 +8703,28 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['grantedByUserId'];
                 };
               };
+              readonly groupMemberships: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'GroupMember';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
+              readonly groupsCreated: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Group';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['createdByUserId'];
+                };
+              };
               readonly mediaModerationAssets: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -8717,6 +9202,29 @@ type ContractBase = Omit<
               { readonly name: 'user'; readonly value: 'user' },
             ];
           };
+          readonly GroupMemberRole: {
+            readonly codecId: 'pg/text@1';
+            readonly members: readonly [
+              { readonly name: 'owner'; readonly value: 'owner' },
+              { readonly name: 'admin'; readonly value: 'admin' },
+              { readonly name: 'member'; readonly value: 'member' },
+            ];
+          };
+          readonly GroupMemberStatus: {
+            readonly codecId: 'pg/text@1';
+            readonly members: readonly [
+              { readonly name: 'active'; readonly value: 'active' },
+              { readonly name: 'pending'; readonly value: 'pending' },
+              { readonly name: 'rejected'; readonly value: 'rejected' },
+            ];
+          };
+          readonly GroupPrivacy: {
+            readonly codecId: 'pg/text@1';
+            readonly members: readonly [
+              { readonly name: 'open'; readonly value: 'open' },
+              { readonly name: 'closed'; readonly value: 'closed' },
+            ];
+          };
           readonly MediaModerationStatus: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
@@ -8799,6 +9307,20 @@ type ContractBase = Omit<
             { readonly name: 'media'; readonly value: 'media' },
             { readonly name: 'media_upload'; readonly value: 'media_upload' },
             { readonly name: 'user'; readonly value: 'user' },
+          ];
+          readonly GroupMemberRole: readonly [
+            { readonly name: 'owner'; readonly value: 'owner' },
+            { readonly name: 'admin'; readonly value: 'admin' },
+            { readonly name: 'member'; readonly value: 'member' },
+          ];
+          readonly GroupMemberStatus: readonly [
+            { readonly name: 'active'; readonly value: 'active' },
+            { readonly name: 'pending'; readonly value: 'pending' },
+            { readonly name: 'rejected'; readonly value: 'rejected' },
+          ];
+          readonly GroupPrivacy: readonly [
+            { readonly name: 'open'; readonly value: 'open' },
+            { readonly name: 'closed'; readonly value: 'closed' },
           ];
           readonly MediaModerationStatus: readonly [
             { readonly name: 'queued'; readonly value: 'queued' },

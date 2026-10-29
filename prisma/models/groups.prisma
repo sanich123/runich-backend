@@ -1,0 +1,53 @@
+// use prisma-8
+
+enum GroupPrivacy {
+  open
+  closed
+}
+
+enum GroupMemberRole {
+  owner
+  admin
+  member
+}
+
+enum GroupMemberStatus {
+  active
+  pending
+  rejected
+}
+
+model Group {
+  id              Uuid                 @id(map: "Group_pkey") @default(sql`gen_random_uuid()`)
+  name            VarChar(80)
+  description     VarChar(2000)?
+  sports          String[]             @default([])
+  privacy         GroupPrivacy         @default(open)
+  locationName    VarChar(160)?         @map("location_name")
+  createdAt       TimestamptzString(6) @default(now()) @map("created_at")
+  updatedAt       TimestamptzString(6) @default(now()) @map("updated_at")
+  createdByUserId Uuid                 @map("created_by_user_id")
+  creator         User                 @relation("GroupCreator", fields: [createdByUserId], references: [id], onDelete: Cascade, map: "Group_created_by_user_id_fkey", index: false)
+  members         GroupMember[]
+
+  @@index([privacy, createdAt], map: "Group_privacy_created_at_idx")
+  @@index([createdByUserId], map: "Group_created_by_user_id_idx")
+  @@map("Group")
+}
+
+model GroupMember {
+  id          Uuid                  @id(map: "GroupMember_pkey") @default(sql`gen_random_uuid()`)
+  groupId     Uuid                  @map("group_id")
+  userId      Uuid                  @map("user_id")
+  role        GroupMemberRole       @default(member)
+  status      GroupMemberStatus     @default(active)
+  requestedAt TimestamptzString(6)  @default(now()) @map("requested_at")
+  joinedAt    TimestamptzString(6)? @map("joined_at")
+  group       Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "GroupMember_group_id_fkey", index: false)
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade, map: "GroupMember_user_id_fkey", index: false)
+
+  @@unique([groupId, userId], map: "GroupMember_group_id_user_id_key")
+  @@index([userId, status, groupId], map: "GroupMember_user_id_status_group_id_idx")
+  @@index([groupId, status, requestedAt], map: "GroupMember_group_id_status_requested_at_idx")
+  @@map("GroupMember")
+}

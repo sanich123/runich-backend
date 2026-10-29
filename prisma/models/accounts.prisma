@@ -38,6 +38,8 @@ model User {
   activityMigrationJobs    ActivityMigrationJob[]
   authExchanges            AuthExchange[]
   friends                  Friend[]
+  groupsCreated            Group[]                  @relation("GroupCreator")
+  groupMemberships         GroupMember[]
   profile                  Profile?
   userSessions             UserSession[]
   subscriptions            Subscription[]
