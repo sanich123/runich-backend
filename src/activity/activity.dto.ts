@@ -1,6 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { MAX_ACTIVITY_HEART_RATE_SAMPLES, MAX_ACTIVITY_LOCATIONS } from 'src/common/constants';
+import {
+  MAX_ACTIVITY_HEART_RATE_SAMPLES,
+  MAX_ACTIVITY_LOCATIONS,
+  MAX_RAW_ACTIVITY_LOCATIONS,
+} from 'src/common/constants';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import type { ProfilePhotoReviewStatus } from 'src/account/account.types';
 import {
@@ -354,6 +358,16 @@ export class ActivityDto {
   @ValidateNested({ each: true })
   @Type(() => ActivityKilometreSplitDto)
   kilometresSplit?: ActivityKilometreSplitObject[];
+}
+
+export class ActivityRouteLocationsDto {
+  @ApiProperty({ type: [ActivityLocationDto], minItems: 2, maxItems: MAX_RAW_ACTIVITY_LOCATIONS })
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(MAX_RAW_ACTIVITY_LOCATIONS)
+  @ValidateNested({ each: true })
+  @Type(() => ActivityLocationDto)
+  locations: LocationObject[];
 }
 
 export type ActivityHeartRateSampleObject = {

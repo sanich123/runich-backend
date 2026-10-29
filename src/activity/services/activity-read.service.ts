@@ -38,7 +38,7 @@ export class ActivityReadService {
     @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
   ) {}
 
-  async getLocationsByActivityId(id: string, currentUserId?: string) {
+  async getLocationsByActivityId(id: string, currentUserId?: string, raw = false) {
     const activity = await this.prisma.activity.findUnique({
       where: { id },
       select: {
@@ -63,10 +63,8 @@ export class ActivityReadService {
     let locations: LocationObject[] | undefined;
     if (activity.routeStorageKey) {
       if (!this.storageService) throw new Error('Сервис хранения маршрутов не настроен');
-      locations = reduceLocations(
-        await this.storageService.readActivityRoute(activity.routeStorageKey),
-        MAX_MAP_ROUTE_LOCATIONS,
-      );
+      const storedLocations = await this.storageService.readActivityRoute(activity.routeStorageKey);
+      locations = raw && isOwner ? storedLocations : reduceLocations(storedLocations, MAX_MAP_ROUTE_LOCATIONS);
     }
     return { locations, kilometresSplit: activity.kilometresSplit };
   }

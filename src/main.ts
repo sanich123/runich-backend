@@ -4,7 +4,11 @@ import { AppModule } from './app/app.module';
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { DatabaseExceptionFilter } from './common/filters/database-exception.filter';
-import { MAX_JSON_BODY_BYTES, DATABASE_ERROR_TO_HTTP_STATUS } from './common/constants';
+import {
+  MAX_JSON_BODY_BYTES,
+  MAX_RAW_ACTIVITY_ROUTE_BODY_BYTES,
+  DATABASE_ERROR_TO_HTTP_STATUS,
+} from './common/constants';
 import { getLogLevels } from './common/utils/log-levels';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { urlencoded, json } from 'express';
@@ -36,6 +40,7 @@ async function bootstrap() {
   // Railway завершает публичное соединение на прокси. Доверяем первому узлу прокси,
   // чтобы IP запроса, ограничение частоты и данные сессии использовали IP клиента.
   app.set('trust proxy', 1);
+  app.use('/activity/:id/locations/raw', json({ limit: MAX_RAW_ACTIVITY_ROUTE_BODY_BYTES }));
   app.use(json({ limit: MAX_JSON_BODY_BYTES }));
   app.use(urlencoded({ extended: true, limit: MAX_JSON_BODY_BYTES }));
 

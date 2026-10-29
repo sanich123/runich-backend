@@ -14,6 +14,7 @@ describe('ActivityController', () => {
     getMediaByUserId: asyncMock(),
     deleteActivityMedia: asyncMock(),
     getLocationsByActivityId: asyncMock(),
+    uploadRawActivityLocations: asyncMock(),
     getActivitiesByTheirIds: asyncMock(),
     createActivitiesFromMigrationArchive: asyncMock(),
     createActivity: asyncMock(),
@@ -55,6 +56,14 @@ describe('ActivityController', () => {
     await expect(controller.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, request)).resolves.toBeUndefined();
     expect(activityService.deleteActivityMedia).toHaveBeenCalledWith('a1', 'm1', 'u1');
     await expect(controller.getLocationsByActivityId({ id: 'a1' }, request)).resolves.toEqual({ locations: [] });
+    expect(activityService.getLocationsByActivityId).toHaveBeenLastCalledWith('a1', 'u1', false);
+    await expect(controller.getLocationsByActivityId({ id: 'a1' }, request, 'true')).resolves.toEqual({
+      locations: [],
+    });
+    expect(activityService.getLocationsByActivityId).toHaveBeenLastCalledWith('a1', 'u1', true);
+    const locations = [{ coords: { latitude: 55.75, longitude: 37.61 } }];
+    await expect(controller.uploadRawActivityLocations({ id: 'a1' }, { locations }, request)).resolves.toBeUndefined();
+    expect(activityService.uploadRawActivityLocations).toHaveBeenCalledWith('a1', 'u1', locations);
     await expect(controller.getActivitiesByActivitiesIds(activityIds.join(','))).resolves.toEqual([result]);
     await expect(controller.getActivitiesByActivitiesIds(activityIds)).resolves.toEqual([result]);
     expect(activityService.getActivitiesByTheirIds).toHaveBeenLastCalledWith(activityIds, undefined);

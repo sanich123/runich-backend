@@ -10,7 +10,12 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ActivityDto, type ActivityMediaObject, type WatchWorkoutImportDto } from '../activity.dto';
+import {
+  ActivityDto,
+  type ActivityMediaObject,
+  type WatchWorkoutImportDto,
+  type LocationObject,
+} from '../activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
@@ -896,8 +901,27 @@ export class ActivityService {
     }
   }
 
-  async getLocationsByActivityId(id: string, currentUserId?: string) {
-    return await this.readService.getLocationsByActivityId(id, currentUserId);
+  async getLocationsByActivityId(id: string, currentUserId?: string, raw = false) {
+    return await this.readService.getLocationsByActivityId(id, currentUserId, raw);
+  }
+
+  async uploadRawActivityLocations(id: string, currentUserId: string, locations: LocationObject[]) {
+    const activity = await this.prisma.activity.findUnique({ where: { id }, select: { id: true, userId: true } });
+    if (!activity) throw new NotFoundException('Активность не найдена');
+    if (activity.userId !== currentUserId) throw new ForbiddenException('Нельзя загрузить маршрут чужой активности');
+    if (!this.storageService) throw new ServiceUnavailableException('Сервис хранения маршрутов не настроен');
+
+    const routeMetadata = await this.storageService.uploadActivityRoute(activity.userId, id, locations);
+    await this.prisma.activity.update({
+      where: { id },
+      data: {
+        routeStorageKey: routeMetadata.key,
+        routeFormatVersion: routeMetadata.formatVersion,
+        routePointCount: routeMetadata.pointCount,
+        routeSizeBytes: routeMetadata.sizeBytes,
+        routeChecksum: routeMetadata.checksum,
+      },
+    });
   }
 
   async getChartDataByActivityId(id: string, currentUserId?: string) {

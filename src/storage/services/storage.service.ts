@@ -621,6 +621,7 @@ export class StorageService {
       ),
     );
 
+    this.activityRouteCache.delete(key);
     return { key, ...metadata } satisfies ActivityRouteStorageMetadata;
   }
 

@@ -1,4 +1,4 @@
-import { ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ActivityService } from '../services/activity.service';
 import { MAX_MAP_ROUTE_LOCATIONS } from '../const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
@@ -479,6 +479,76 @@ describe('ActivityService', () => {
     });
     expect(storage.readActivityRoute).toHaveBeenCalledWith(
       'user-1/activities/activity-1/locations/locations-v1.json.gz',
+    );
+  });
+
+  it('returns the full stored route only when the owner requests raw locations', async () => {
+    const prisma = createPrismaMock();
+    const locations = Array.from({ length: MAX_MAP_ROUTE_LOCATIONS + 3 }, (_, index) => ({
+      timestamp: index,
+      coords: makeRoundedMoscowCoordinate(),
+    }));
+    const storage = { readActivityRoute: asyncMock().mockResolvedValue(locations) };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    prisma.activity.findUnique.mockResolvedValue(makeStoredActivity());
+
+    await expect(service.getLocationsByActivityId('activity-1', 'user-1', true)).resolves.toEqual({
+      locations,
+      kilometresSplit: [],
+    });
+  });
+
+  it('stores a raw route for its owner and refreshes route metadata', async () => {
+    const prisma = createPrismaMock();
+    const routeMetadata = {
+      key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      formatVersion: 1,
+      pointCount: 2,
+      sizeBytes: 120,
+      checksum: 'checksum',
+    };
+    const storage = { uploadActivityRoute: asyncMock().mockResolvedValue(routeMetadata) };
+    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    const locations = [
+      { coords: { latitude: 55.75, longitude: 37.61 } },
+      { coords: { latitude: 55.76, longitude: 37.62 } },
+    ];
+    prisma.activity.findUnique.mockResolvedValue({ id: 'activity-1', userId: 'user-1' });
+
+    await expect(service.uploadRawActivityLocations('activity-1', 'user-1', locations)).resolves.toBeUndefined();
+    expect(storage.uploadActivityRoute).toHaveBeenCalledWith('user-1', 'activity-1', locations);
+    expect(prisma.activity.update).toHaveBeenCalledWith({
+      where: { id: 'activity-1' },
+      data: {
+        routeStorageKey: routeMetadata.key,
+        routeFormatVersion: routeMetadata.formatVersion,
+        routePointCount: routeMetadata.pointCount,
+        routeSizeBytes: routeMetadata.sizeBytes,
+        routeChecksum: routeMetadata.checksum,
+      },
+    });
+  });
+
+  it('rejects raw route uploads for a missing or foreign activity, or without storage', async () => {
+    const notFoundPrisma = createPrismaMock();
+    const notFoundService = new ActivityService(notFoundPrisma as never, {} as never);
+    notFoundPrisma.activity.findUnique.mockResolvedValue(null);
+    await expect(notFoundService.uploadRawActivityLocations('missing', 'user-1', [])).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    const foreignPrisma = createPrismaMock();
+    const foreignService = new ActivityService(foreignPrisma as never, {} as never);
+    foreignPrisma.activity.findUnique.mockResolvedValue({ id: 'activity-1', userId: 'owner-1' });
+    await expect(foreignService.uploadRawActivityLocations('activity-1', 'viewer-1', [])).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    const noStoragePrisma = createPrismaMock();
+    const noStorageService = new ActivityService(noStoragePrisma as never, {} as never);
+    noStoragePrisma.activity.findUnique.mockResolvedValue({ id: 'activity-1', userId: 'user-1' });
+    await expect(noStorageService.uploadRawActivityLocations('activity-1', 'user-1', [])).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
     );
   });
 

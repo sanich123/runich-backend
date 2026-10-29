@@ -31,6 +31,7 @@ import { isUUID } from 'class-validator';
 import { ActivityService } from './services/activity.service';
 import {
   ActivityDto,
+  ActivityRouteLocationsDto,
   ActivityMediaAppendDto,
   ActivityMediaParamsDto,
   SetActivityFavoriteDto,
@@ -153,14 +154,34 @@ export class ActivityController {
     await this.activityService.deleteActivityMedia(id, mediaId, getAuthenticatedUserId(request));
   }
 
+  @Post(`${id}/locations/raw`)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Upload the full activity route after the activity has been saved' })
+  @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiBody({ type: ActivityRouteLocationsDto })
+  @ApiNoContentResponse({ description: 'Full route uploaded' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async uploadRawActivityLocations(
+    @Param() { id }: ParamsId,
+    @Body() { locations }: ActivityRouteLocationsDto,
+    @Req() request: RequestWithUser,
+  ) {
+    await this.activityService.uploadRawActivityLocations(id, getAuthenticatedUserId(request), locations);
+  }
+
   @Get(`${id}/locations`)
   @ApiOkResponse({ type: ActivityLocationsResponseDto })
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get activity locations for route replay' })
+  @ApiOperation({ summary: 'Get activity route locations; only owners can request raw points' })
   @ApiParam({ name: 'id', description: 'Activity identifier' })
+  @ApiQuery({ name: 'raw', required: false, type: Boolean, description: 'Return full route for the activity owner' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Success' })
-  async getLocationsByActivityId(@Param() { id }: ParamsId, @Req() request: RequestWithUser) {
-    return this.activityService.getLocationsByActivityId(id, getAuthenticatedUserId(request));
+  async getLocationsByActivityId(
+    @Param() { id }: ParamsId,
+    @Req() request: RequestWithUser,
+    @Query('raw') raw?: string,
+  ) {
+    return this.activityService.getLocationsByActivityId(id, getAuthenticatedUserId(request), raw === 'true');
   }
 
   @Get(`${id}/chart-data`)
