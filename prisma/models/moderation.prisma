@@ -63,6 +63,8 @@ model MediaModerationAsset {
   reviewer            User?                 @relation("MediaModerationAssetReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
   activityMedia       ActivityMedia?         @relation("ActivityMediaMediaAsset")
   thumbnailForActivityMedia ActivityMedia?    @relation("ActivityMediaThumbnailAsset")
+  groupPhoto          Group?                  @relation("GroupPhotoAsset")
+  groupPostPhoto      GroupPost?              @relation("GroupPostPhotoAsset")
   reports             ContentReport[]
 
   @@unique([ownerId, mediaId, role], map: "MediaModerationAsset_owner_media_role_key")

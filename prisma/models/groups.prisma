@@ -17,11 +17,25 @@ enum GroupMemberStatus {
   rejected
 }
 
+enum GroupNotificationPreference {
+  all
+  announcements
+  off
+}
+
+enum GroupFeedPreference {
+  all
+  admins
+}
+
 model Group {
   id              Uuid                 @id(map: "Group_pkey") @default(sql`gen_random_uuid()`)
   name            VarChar(80)
   description     VarChar(2000)?
   sports          String[]             @default([])
+  categoryTags    String[]             @default([]) @map("category_tags")
+  photoAssetId    Uuid?                @unique @map("photo_asset_id")
+  photoAsset      MediaModerationAsset? @relation("GroupPhotoAsset", fields: [photoAssetId], references: [id], onDelete: SetNull)
   privacy         GroupPrivacy         @default(open)
   locationName    VarChar(160)?         @map("location_name")
   createdAt       TimestamptzString(6) @default(now()) @map("created_at")
@@ -29,6 +43,8 @@ model Group {
   createdByUserId Uuid                 @map("created_by_user_id")
   creator         User                 @relation("GroupCreator", fields: [createdByUserId], references: [id], onDelete: Cascade, map: "Group_created_by_user_id_fkey", index: false)
   members         GroupMember[]
+  posts           GroupPost[]
+  events          GroupEvent[]
 
   @@index([privacy, createdAt], map: "Group_privacy_created_at_idx")
   @@index([createdByUserId], map: "Group_created_by_user_id_idx")
@@ -43,6 +59,8 @@ model GroupMember {
   status      GroupMemberStatus     @default(active)
   requestedAt TimestamptzString(6)  @default(now()) @map("requested_at")
   joinedAt    TimestamptzString(6)? @map("joined_at")
+  notificationPreference GroupNotificationPreference @default(all) @map("notification_preference")
+  feedPreference GroupFeedPreference @default(all) @map("feed_preference")
   group       Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "GroupMember_group_id_fkey", index: false)
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade, map: "GroupMember_user_id_fkey", index: false)
 
@@ -50,4 +68,35 @@ model GroupMember {
   @@index([userId, status, groupId], map: "GroupMember_user_id_status_group_id_idx")
   @@index([groupId, status, requestedAt], map: "GroupMember_group_id_status_requested_at_idx")
   @@map("GroupMember")
+}
+
+model GroupPost {
+  id              Uuid                  @id @default(sql`gen_random_uuid()`)
+  groupId         Uuid                  @map("group_id")
+  createdByUserId Uuid                  @map("created_by_user_id")
+  text            VarChar(2000)
+  photoAssetId    Uuid?                 @unique @map("photo_asset_id")
+  createdAt       TimestamptzString(6)  @default(now()) @map("created_at")
+  group           Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  author          User                  @relation("GroupPostAuthor", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  photoAsset      MediaModerationAsset? @relation("GroupPostPhotoAsset", fields: [photoAssetId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, createdAt], map: "GroupPost_group_id_created_at_idx")
+  @@map("GroupPost")
+}
+
+model GroupEvent {
+  id              Uuid                 @id @default(sql`gen_random_uuid()`)
+  groupId         Uuid                 @map("group_id")
+  createdByUserId Uuid                 @map("created_by_user_id")
+  title           VarChar(120)
+  description     VarChar(2000)?
+  locationName    VarChar(160)?        @map("location_name")
+  startsAt        TimestamptzString(6) @map("starts_at")
+  createdAt       TimestamptzString(6) @default(now()) @map("created_at")
+  group           Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator         User                 @relation("GroupEventCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, startsAt], map: "GroupEvent_group_id_starts_at_idx")
+  @@map("GroupEvent")
 }

@@ -12,6 +12,11 @@ export class PhotoUploadOptionsDto {
   @IsOptional()
   @IsUUID()
   feedbackId?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Group being updated by an active group admin' })
+  @IsOptional()
+  @IsUUID()
+  groupId?: string;
 }
 
 export class PhotoUploadResponseDto {

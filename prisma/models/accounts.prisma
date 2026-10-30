@@ -40,6 +40,8 @@ model User {
   friends                  Friend[]
   groupsCreated            Group[]                  @relation("GroupCreator")
   groupMemberships         GroupMember[]
+  groupPostsAuthored       GroupPost[]               @relation("GroupPostAuthor")
+  groupEventsCreated       GroupEvent[]              @relation("GroupEventCreator")
   profile                  Profile?
   userSessions             UserSession[]
   subscriptions            Subscription[]

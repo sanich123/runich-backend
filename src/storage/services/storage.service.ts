@@ -131,6 +131,16 @@ export class StorageService {
       const mediaId = manifestEntry?.mediaId ?? randomUUID();
       const role = manifestEntry?.role ?? 'media';
       const scope = options.scope ?? 'activity';
+      if (scope === 'group' && isVideo) throw new BadRequestException('Фото группы должно быть изображением');
+      if (scope === 'group' && options.groupId) {
+        const membership = await this.prisma?.groupMember.findUnique({
+          where: { groupId_userId: { groupId: options.groupId, userId } },
+          select: { role: true, status: true },
+        });
+        if (!membership || membership.status !== 'active' || !['owner', 'admin'].includes(membership.role)) {
+          throw new ForbiddenException('Только администратор группы может загрузить её фото');
+        }
+      }
       if (scope !== 'feedback') {
         return await this.uploadForModeration({
           userId,

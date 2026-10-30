@@ -8,7 +8,7 @@ export type StorageFile = {
   mimetype: string;
 };
 
-export const MEDIA_UPLOAD_SCOPES = ['activity', 'profile', 'feedback'] as const;
+export const MEDIA_UPLOAD_SCOPES = ['activity', 'profile', 'group', 'feedback'] as const;
 export type MediaUploadScope = (typeof MEDIA_UPLOAD_SCOPES)[number];
 
 export const MEDIA_UPLOAD_ROLES = ['media', 'thumbnail'] as const;
@@ -34,6 +34,7 @@ export type UploadedPhotoBatch = {
 export type PhotoUploadOptions = {
   scope?: MediaUploadScope;
   feedbackId?: string;
+  groupId?: string;
 };
 
 export type StorageSettings = {

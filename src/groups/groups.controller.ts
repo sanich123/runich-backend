@@ -15,8 +15,18 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { getAuthenticatedUserId, type AuthenticatedRequest } from 'src/auth/request/auth-request';
-import { CreateGroupDto, GroupMembersQueryDto, ListGroupsQueryDto, UpdateGroupMemberDto } from './groups.dto';
+import {
+  CreateGroupDto,
+  CreateGroupEventDto,
+  CreateGroupPostDto,
+  ListGroupEventsQueryDto,
+  GroupMembersQueryDto,
+  ListGroupsQueryDto,
+  UpdateGroupMemberDto,
+  UpdateGroupPreferencesDto,
+} from './groups.dto';
 import { GroupsService } from './groups.service';
+import { validateOptionalIntegerQuery, validateOptionalIanaTimeZoneQuery } from 'src/common/utils/query-validation';
 
 @ApiTags('groups')
 @ApiBearerAuth('bearerAuth')
@@ -71,5 +81,60 @@ export class GroupsController {
     @Body() body: UpdateGroupMemberDto,
   ) {
     return this.groupsService.updateMember(getAuthenticatedUserId(request), id, userId, body.status);
+  }
+
+  @Get(':id/statistics/month')
+  @ApiOperation({ summary: 'Get the monthly public distance leaderboard for active group members' })
+  getMonthlyLeaderboard(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+    @Query('timeZone') timeZone?: string,
+  ) {
+    const validatedYear = validateOptionalIntegerQuery(year, 'year', { min: 2000, max: 9999 });
+    const validatedMonth = validateOptionalIntegerQuery(month, 'month', { max: 11 });
+    const validatedTimeZone = validateOptionalIanaTimeZoneQuery(timeZone, 'timeZone');
+    return this.groupsService.getMonthlyLeaderboard(
+      getAuthenticatedUserId(request),
+      id,
+      validatedYear === undefined ? undefined : Number(validatedYear),
+      validatedMonth === undefined ? undefined : Number(validatedMonth),
+      validatedTimeZone,
+    );
+  }
+
+  @Patch(':id/preferences')
+  @ApiOperation({ summary: 'Update the current member group notification and feed preferences' })
+  updatePreferences(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: UpdateGroupPreferencesDto,
+  ) {
+    return this.groupsService.updatePreferences(getAuthenticatedUserId(request), id, body);
+  }
+
+  @Get(':id/posts')
+  @ApiOperation({ summary: 'List recent group posts visible to the current user' })
+  getPosts(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return this.groupsService.getPosts(getAuthenticatedUserId(request), id);
+  }
+
+  @Post(':id/posts')
+  @ApiOperation({ summary: 'Publish a post to a group' })
+  createPost(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() body: CreateGroupPostDto) {
+    return this.groupsService.createPost(getAuthenticatedUserId(request), id, body);
+  }
+
+  @Get(':id/events')
+  @ApiOperation({ summary: 'List upcoming or past group events' })
+  getEvents(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Query() query: ListGroupEventsQueryDto) {
+    return this.groupsService.getEvents(getAuthenticatedUserId(request), id, query.period ?? 'upcoming');
+  }
+
+  @Post(':id/events')
+  @ApiOperation({ summary: 'Create an event for a group' })
+  createEvent(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() body: CreateGroupEventDto) {
+    return this.groupsService.createEvent(getAuthenticatedUserId(request), id, body);
   }
 }
