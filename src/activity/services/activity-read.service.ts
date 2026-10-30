@@ -468,7 +468,7 @@ export class ActivityReadService {
         },
         orderBy: [{ date: 'desc' }, { id: 'desc' }],
         take: pageSize + 1,
-        select: ACTIVITY_CARD_SELECT,
+        select: { ...ACTIVITY_CARD_SELECT, routePointCount: true },
       });
       const hasMore = activitiesWithExtraItem.length > pageSize;
       const activities = await Promise.all(

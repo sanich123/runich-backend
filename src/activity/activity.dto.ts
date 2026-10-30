@@ -833,7 +833,15 @@ export class ActivityRouteFilterOptionsResponseDto {
   days: number[];
 }
 
+export class ActivityRouteWorkoutCardResponseDto extends ActivityCardResponseDto {
+  @ApiProperty({ type: Number, minimum: 2, description: 'Number of recorded GPS route points' })
+  routePointCount: number;
+}
+
 export class ActivitiesWithRoutesResponseDto extends ActivityListResponseDto {
+  @ApiProperty({ type: [ActivityRouteWorkoutCardResponseDto] })
+  declare activities: ActivityRouteWorkoutCardResponseDto[];
+
   @ApiProperty({ type: ActivityRouteFilterOptionsResponseDto })
   availableFilters: ActivityRouteFilterOptionsResponseDto;
 }
