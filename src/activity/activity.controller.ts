@@ -43,6 +43,7 @@ import {
   ActivityCardResponseDto,
   ActivityDetailsResponseDto,
   ActivityListResponseDto,
+  ActivitiesWithRoutesResponseDto,
   HomeActivityFeedsResponseDto,
   ActivityLocationsResponseDto,
   ActivityMediaResponseDto,
@@ -74,7 +75,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { AccountService } from 'src/account/account.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { validateOptionalIanaTimeZoneQuery, validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
 import { isZipUpload, UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import {
@@ -82,6 +83,7 @@ import {
   ACTIVITY_FAVORITE_ROUTE,
   ACTIVITY_FAVORITES_ROUTE,
   ACTIVITY_HOME_ROUTE,
+  ACTIVITY_WITH_ROUTES_ROUTE,
   activity,
   id,
 } from './const';
@@ -447,6 +449,47 @@ export class ActivityController {
   @HttpCode(HttpStatus.CREATED)
   async patchActivity(@Body() activity: ActivityDto, @Param() { id }: ParamsId, @Req() request?: RequestWithUser) {
     return await this.activityService.updateActivity(activity, id, request?.user.userId ?? request?.user.id ?? id);
+  }
+
+  @Get(ACTIVITY_WITH_ROUTES_ROUTE)
+  @ApiOkResponse({ type: ActivitiesWithRoutesResponseDto })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get the authenticated user activities that have recorded routes' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor from the previous response' })
+  @ApiQuery({ name: 'take', required: false, description: 'Count of results per page' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search activity titles and sports' })
+  @ApiQuery({ name: 'month', required: false, minimum: 1, maximum: 12, description: 'Local calendar month' })
+  @ApiQuery({ name: 'day', required: false, minimum: 1, maximum: 31, description: 'Local calendar day' })
+  @ApiQuery({ name: 'year', required: false, minimum: 1, description: 'Local calendar year' })
+  @ApiQuery({ name: 'timeZone', required: false, description: 'IANA time zone used for date filters' })
+  async getActivitiesWithRoutes(
+    @Req() request: RequestWithUser,
+    @Query(QueryParams.cursor) cursor?: string,
+    @Query(QueryParams.take) take?: string,
+    @Query('search') search?: string,
+    @Query('month') month?: string,
+    @Query('day') day?: string,
+    @Query('year') year?: string,
+    @Query('timeZone') timeZone?: string,
+  ) {
+    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    const validatedMonth = validateOptionalIntegerQuery(month, 'month', { min: 1, max: 12 });
+    const validatedDay = validateOptionalIntegerQuery(day, 'day', { min: 1, max: 31 });
+    const validatedYear = validateOptionalIntegerQuery(year, 'year', { min: 1, max: 9999 });
+    if (search !== undefined && search.length > 100) throw new BadRequestException('Search is too long');
+
+    return await this.activityService.getActivitiesWithRoutes(
+      getAuthenticatedUserId(request),
+      validatedTake,
+      parseActivityCursor(cursor),
+      {
+        search: search?.trim() || undefined,
+        month: validatedMonth === undefined ? undefined : Number(validatedMonth),
+        day: validatedDay === undefined ? undefined : Number(validatedDay),
+        year: validatedYear === undefined ? undefined : Number(validatedYear),
+        timeZone: validateOptionalIanaTimeZoneQuery(timeZone, 'timeZone') ?? 'UTC',
+      },
+    );
   }
 
   // Deprecated compatibility route; remove after app version 1.2.3 is released.

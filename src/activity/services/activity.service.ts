@@ -28,7 +28,12 @@ import { ACTIVITY_ENRICHMENT_STATUS } from './activity-enrichment.constants';
 import { ACTIVITY_MEDIA_PROCESSING_STATUS } from './activity-media-processing.constants';
 import { ACTIVITY_FAVORITE_ERROR_MESSAGES, DEFAULT_ACTIVITY_PAGE_SIZE } from '../const';
 import type { ActivityCursor, ActivityMediaCursor } from '../activity.pagination';
-import type { ActivityMediaWithModerationReferences, HomeFeedCursor, HomeFeedCursors } from './activity.types';
+import type {
+  ActivityMediaWithModerationReferences,
+  ActivityRouteWorkoutFilters,
+  HomeFeedCursor,
+  HomeFeedCursors,
+} from './activity.types';
 import {
   getElevationGainFromKilometreSplits,
   getElevationGainFromLocations,
@@ -942,6 +947,15 @@ export class ActivityService {
     cursor?: ActivityCursor,
   ) {
     return await this.readService.getFavoriteActivities(currentUserId, take, cursor);
+  }
+
+  async getActivitiesWithRoutes(
+    currentUserId: string,
+    take = String(DEFAULT_ACTIVITY_PAGE_SIZE),
+    cursor?: ActivityCursor,
+    filters: ActivityRouteWorkoutFilters = { timeZone: 'UTC' },
+  ) {
+    return await this.readService.getActivitiesWithRoutes(currentUserId, take, cursor, filters);
   }
 
   async getHomeActivityFeeds(

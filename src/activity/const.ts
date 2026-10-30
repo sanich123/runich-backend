@@ -3,6 +3,7 @@ import { PATHS } from 'src/common/constants';
 export const { activity, id } = PATHS;
 
 export const ACTIVITY_FAVORITES_ROUTE = 'favorites';
+export const ACTIVITY_WITH_ROUTES_ROUTE = 'with-routes';
 export const ACTIVITY_HOME_ROUTE = 'home';
 export const ACTIVITY_FAVORITE_ROUTE = `${id}/favorite`;
 export const ACTIVITY_FAVORITE_API_COPY = {

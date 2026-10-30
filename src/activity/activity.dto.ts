@@ -822,6 +822,22 @@ export class ActivityListResponseDto {
   isLastPage?: boolean;
 }
 
+export class ActivityRouteFilterOptionsResponseDto {
+  @ApiProperty({ type: [Number] })
+  years: number[];
+
+  @ApiProperty({ type: [Number] })
+  months: number[];
+
+  @ApiProperty({ type: [Number] })
+  days: number[];
+}
+
+export class ActivitiesWithRoutesResponseDto extends ActivityListResponseDto {
+  @ApiProperty({ type: ActivityRouteFilterOptionsResponseDto })
+  availableFilters: ActivityRouteFilterOptionsResponseDto;
+}
+
 export class HomeActivityFeedsResponseDto {
   @ApiProperty({ type: ActivityListResponseDto })
   my: ActivityListResponseDto;
