@@ -53,6 +53,13 @@ export class GroupsController {
     return this.groupsService.getGroup(getAuthenticatedUserId(request), id);
   }
 
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a group as its owner' })
+  async deleteGroup(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    await this.groupsService.deleteGroup(getAuthenticatedUserId(request), id);
+  }
+
   @Post(':id/join')
   @ApiOperation({ summary: 'Join an open group or request access to a closed group' })
   joinGroup(@Req() request: AuthenticatedRequest, @Param('id') id: string) {

@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'7cbcc982fb9d3f3d4b35bb9777e12c69718f9a4ce209f2e292d44d36a5a73ee0'>;
+  StorageHashBase<'dc04cb7e1d6a3db4146fdba07c6b6c32b1af4c991eac31f39ec9217288046fd6'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -333,11 +333,15 @@ type FieldTypeOverrides = {
           readonly input: 'open' | 'in_review' | 'resolved' | 'rejected' | 'appealed';
         };
         readonly targetType: {
-          readonly output: 'activity' | 'comment' | 'media' | 'media_upload' | 'user';
-          readonly input: 'activity' | 'comment' | 'media' | 'media_upload' | 'user';
+          readonly output: 'activity' | 'comment' | 'media' | 'media_upload' | 'user' | 'group';
+          readonly input: 'activity' | 'comment' | 'media' | 'media_upload' | 'user' | 'group';
         };
       };
       readonly Group: {
+        readonly moderationStatus: {
+          readonly output: 'visible' | 'hidden' | 'removed';
+          readonly input: 'visible' | 'hidden' | 'removed';
+        };
         readonly privacy: { readonly output: 'open' | 'closed'; readonly input: 'open' | 'closed' };
       };
       readonly GroupMember: {
@@ -479,11 +483,15 @@ type ColumnTypeOverrides = {
         readonly input: 'open' | 'in_review' | 'resolved' | 'rejected' | 'appealed';
       };
       readonly target_type: {
-        readonly output: 'activity' | 'comment' | 'media' | 'media_upload' | 'user';
-        readonly input: 'activity' | 'comment' | 'media' | 'media_upload' | 'user';
+        readonly output: 'activity' | 'comment' | 'media' | 'media_upload' | 'user' | 'group';
+        readonly input: 'activity' | 'comment' | 'media' | 'media_upload' | 'user' | 'group';
       };
     };
     readonly Group: {
+      readonly moderation_status: {
+        readonly output: 'visible' | 'hidden' | 'removed';
+        readonly input: 'visible' | 'hidden' | 'removed';
+      };
       readonly privacy: { readonly output: 'open' | 'closed'; readonly input: 'open' | 'closed' };
     };
     readonly GroupMember: {
@@ -796,6 +804,7 @@ export namespace Models {
     description: FieldOutputTypes['public']['Group']['description'];
     id: FieldOutputTypes['public']['Group']['id'];
     locationName: FieldOutputTypes['public']['Group']['locationName'];
+    moderationStatus: FieldOutputTypes['public']['Group']['moderationStatus'];
     name: FieldOutputTypes['public']['Group']['name'];
     photoAssetId: FieldOutputTypes['public']['Group']['photoAssetId'];
     privacy: FieldOutputTypes['public']['Group']['privacy'];
@@ -2990,6 +2999,16 @@ type ContractBase = Omit<
                   readonly codecId: 'sql/varchar@1';
                   readonly nullable: true;
                   readonly typeParams: { readonly length: 160 };
+                  readonly many: false;
+                };
+                readonly moderation_status: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'visible'>;
+                  };
                   readonly many: false;
                 };
                 readonly name: {
@@ -5593,7 +5612,14 @@ type ContractBase = Omit<
             };
             readonly ContentReportTargetType: {
               readonly kind: 'valueSet';
-              readonly values: readonly ['activity', 'comment', 'media', 'media_upload', 'user'];
+              readonly values: readonly [
+                'activity',
+                'comment',
+                'media',
+                'media_upload',
+                'user',
+                'group',
+              ];
             };
             readonly GroupFeedPreference: {
               readonly kind: 'valueSet';
@@ -7205,6 +7231,10 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly length: 160 };
                 };
               };
+              readonly moderationStatus: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly name: {
                 readonly nullable: false;
                 readonly type: {
@@ -7301,6 +7331,7 @@ type ContractBase = Omit<
                 readonly description: { readonly column: 'description' };
                 readonly id: { readonly column: 'id' };
                 readonly locationName: { readonly column: 'location_name' };
+                readonly moderationStatus: { readonly column: 'moderation_status' };
                 readonly name: { readonly column: 'name' };
                 readonly photoAssetId: { readonly column: 'photo_asset_id' };
                 readonly privacy: { readonly column: 'privacy' };
@@ -9822,6 +9853,7 @@ type ContractBase = Omit<
               { readonly name: 'media'; readonly value: 'media' },
               { readonly name: 'media_upload'; readonly value: 'media_upload' },
               { readonly name: 'user'; readonly value: 'user' },
+              { readonly name: 'group'; readonly value: 'group' },
             ];
           };
           readonly GroupFeedPreference: {
@@ -9944,6 +9976,7 @@ type ContractBase = Omit<
             { readonly name: 'media'; readonly value: 'media' },
             { readonly name: 'media_upload'; readonly value: 'media_upload' },
             { readonly name: 'user'; readonly value: 'user' },
+            { readonly name: 'group'; readonly value: 'group' },
           ];
           readonly GroupFeedPreference: readonly [
             { readonly name: 'all'; readonly value: 'all' },

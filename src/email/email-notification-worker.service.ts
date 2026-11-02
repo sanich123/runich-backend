@@ -179,6 +179,42 @@ export class EmailNotificationWorkerService {
         );
         return payload ? { send: () => this.notifications.sendCommentLike(payload) } : null;
       }
+      case EMAIL_NOTIFICATION_TYPE.groupJoinRequest: {
+        const request = await this.prisma.groupMember.findUnique({
+          where: { id: job.sourceId },
+          select: {
+            status: true,
+            user: { select: { profile: { select: { name: true, surname: true } } } },
+            group: {
+              select: {
+                id: true,
+                name: true,
+                creator: {
+                  select: {
+                    email: true,
+                    profile: { select: { name: true, language: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (!request || request.status !== 'pending' || !request.group.creator.email) return null;
+        const requesterName =
+          [request.user.profile?.name, request.user.profile?.surname].filter(Boolean).join(' ') || 'Runich user';
+        const owner = request.group.creator;
+        return {
+          send: () =>
+            this.notifications.sendGroupJoinRequest({
+              groupId: request.group.id,
+              groupName: request.group.name,
+              requesterName,
+              recipientEmail: owner.email,
+              recipientName: owner.profile?.name,
+              locale: owner.profile?.language === 'russian' ? 'russian' : 'english',
+            }),
+        };
+      }
       case EMAIL_NOTIFICATION_TYPE.moderationReport: {
         const report = await this.prisma.contentReport.findUnique({
           where: { id: job.sourceId },

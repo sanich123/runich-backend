@@ -1,5 +1,5 @@
 export type ReportLanguage = 'russian' | 'english';
-export type ContentReportTargetType = 'activity' | 'comment' | 'media' | 'user' | 'media_upload';
+export type ContentReportTargetType = 'activity' | 'comment' | 'media' | 'user' | 'group' | 'media_upload';
 export type ContentReportReason =
   'threats' | 'harassment' | 'hate_speech' | 'sexual_content' | 'violence' | 'spam' | 'other';
 export type ContentReportStatus = 'open' | 'in_review' | 'resolved' | 'rejected' | 'appealed';

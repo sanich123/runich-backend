@@ -226,6 +226,10 @@
               {
                 "name": "user",
                 "value": "user"
+              },
+              {
+                "name": "group",
+                "value": "group"
               }
             ]
           },
@@ -2786,6 +2790,19 @@
                   }
                 }
               },
+              "moderationStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationContentStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "name": {
                 "nullable": false,
                 "type": {
@@ -2935,6 +2952,9 @@
                 },
                 "locationName": {
                   "column": "location_name"
+                },
+                "moderationStatus": {
+                  "column": "moderation_status"
                 },
                 "name": {
                   "column": "name"
@@ -8256,8 +8276,8 @@
                   "prefix": "ContentReport_status_check"
                 },
                 {
-                  "expression": "\"target_type\" IN ('activity', 'comment', 'media', 'media_upload', 'user')",
-                  "name": "ContentReport_target_type_check_15fa25b2",
+                  "expression": "\"target_type\" IN ('activity', 'comment', 'media', 'media_upload', 'user', 'group')",
+                  "name": "ContentReport_target_type_check_e609e753",
                   "prefix": "ContentReport_target_type_check"
                 }
               ],
@@ -8938,6 +8958,11 @@
                   "prefix": "Group_category_tags_elem_not_null"
                 },
                 {
+                  "expression": "\"moderation_status\" IN ('visible', 'hidden', 'removed')",
+                  "name": "Group_moderation_status_check_9e17caab",
+                  "prefix": "Group_moderation_status_check"
+                },
+                {
                   "expression": "\"privacy\" IN ('open', 'closed')",
                   "name": "Group_privacy_check_76d46d47",
                   "prefix": "Group_privacy_check"
@@ -9001,6 +9026,21 @@
                   "nullable": true,
                   "typeParams": {
                     "length": 160
+                  }
+                },
+                "moderation_status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "visible"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationContentStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
                   }
                 },
                 "name": {
@@ -12209,7 +12249,8 @@
                 "comment",
                 "media",
                 "media_upload",
-                "user"
+                "user",
+                "group"
               ]
             },
             "GroupFeedPreference": {
@@ -12309,7 +12350,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "7cbcc982fb9d3f3d4b35bb9777e12c69718f9a4ce209f2e292d44d36a5a73ee0"
+    "storageHash": "dc04cb7e1d6a3db4146fdba07c6b6c32b1af4c991eac31f39ec9217288046fd6"
   },
   "capabilities": {
     "postgres": {

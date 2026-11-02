@@ -325,6 +325,17 @@ export class StorageService {
     await this.prisma.mediaModerationAsset.delete({ where: { id: assetId } });
   }
 
+  async deleteGroupPhotoAsset(ownerId: string, assetId: string | null) {
+    if (!this.prisma || !assetId) return;
+    const asset = await this.prisma.mediaModerationAsset.findFirst({
+      where: { id: assetId, ownerId, scope: 'group' },
+    });
+    if (!asset) return;
+    await this.deleteQuarantineObject(asset.quarantineKey);
+    if (asset.publishedKey) await this.deleteObjectByKey(asset.publishedKey);
+    await this.prisma.mediaModerationAsset.delete({ where: { id: assetId } });
+  }
+
   async deleteActivityModerationAssets(ownerId: string, assetIds: Array<string | null | undefined>) {
     const uniqueAssetIds = [...new Set(assetIds.filter((assetId): assetId is string => Boolean(assetId)))];
     for (const assetId of uniqueAssetIds) {

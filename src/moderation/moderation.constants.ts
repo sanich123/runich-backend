@@ -11,6 +11,7 @@ export const CONTENT_REPORT_TARGET_TYPES = [
   'comment',
   'media',
   'user',
+  'group',
 ] as const satisfies readonly ContentReportTargetType[];
 export const MODERATION_TARGET_TYPES = [
   ...CONTENT_REPORT_TARGET_TYPES,
@@ -52,8 +53,14 @@ export const ACTIVE_QUEUE_STATUSES: ContentReportStatus[] = ['open', 'in_review'
 export const MAX_BLOCKED_USERS = 500;
 
 export const REPORT_TARGET_LABELS: Record<ReportLanguage, Record<string, string>> = {
-  russian: { activity: 'тренировка', comment: 'комментарий', media: 'фото или видео', user: 'профиль' },
-  english: { activity: 'activity', comment: 'comment', media: 'photo or video', user: 'profile' },
+  russian: {
+    activity: 'тренировка',
+    comment: 'комментарий',
+    media: 'фото или видео',
+    user: 'профиль',
+    group: 'группу',
+  },
+  english: { activity: 'activity', comment: 'comment', media: 'photo or video', user: 'profile', group: 'group' },
 };
 
 export const REPORT_REASON_LABELS: Record<ReportLanguage, Record<string, string>> = {

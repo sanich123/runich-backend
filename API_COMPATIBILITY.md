@@ -9,6 +9,8 @@ This ledger records which Runich client release is paired with which backend rel
 | `1.3.1` | `1.3.1` | `1.3.1` | Starting repository baseline; a separate client/backend compatibility test is not recorded. | Client and backend version metadata plus Swagger configuration checked on `2026-10-28`; deployed Stage/Production versions are not verified. |
 | `1.3.2` | `1.3.1` | `1.3.1` | Source contract expanded; integration check pending. | Groups support the four configured sports, category tags, moderated group photos, member preferences, sharing links, group posts/events, timezone-aware monthly public-activity distance statistics, and the authenticated route-workout list with server-side search, date filters, available filter values, and GPS point counts. Source reviewed on `2026-10-30`; API integration and deployed Stage/Production versions are not verified. |
 
+| 1.4.0 | 1.3.2 | 1.3.2 | Source contract expanded; integration check pending. | Group owner deletion, group reports, join-request email links, photo publication previews, and a single activity per new group are implemented in source. Checked 2026-11-02; API integration and deployed Stage/Production versions are not verified. |
+
 ## Minimum supported client version
 
 The backend returns `appVersion: 1.3.1` from `GET /auth/config`. The Runich client compares this value with its Expo app version on the home page and redirects versions below the minimum to the app-update screen. This is a client-side gate; the backend does not reject every request based on `x-app-version`.

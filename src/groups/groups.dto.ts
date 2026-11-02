@@ -45,10 +45,10 @@ export class CreateGroupDto {
   @MaxLength(2000)
   description?: string;
 
-  @ApiProperty({ enum: GROUP_SPORTS, isArray: true, minItems: 1, maxItems: 4 })
+  @ApiProperty({ enum: GROUP_SPORTS, isArray: true, minItems: 1, maxItems: 1 })
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(4)
+  @ArrayMaxSize(1)
   @IsIn(GROUP_SPORTS, { each: true })
   sports!: (typeof GROUP_SPORTS)[number][];
 

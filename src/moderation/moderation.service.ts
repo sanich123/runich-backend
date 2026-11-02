@@ -189,6 +189,30 @@ export class ModerationService {
         where: { id: report.targetId },
         select: { url: true, thumbnail: true, userId: true, activityId: true, moderationStatus: true },
       });
+    } else if (report.targetType === 'group') {
+      const group = await this.prisma.group.findUnique({
+        where: { id: report.targetId },
+        select: {
+          name: true,
+          description: true,
+          createdByUserId: true,
+          moderationStatus: true,
+          photoAsset: { select: { status: true, publishedKey: true } },
+        },
+      });
+      context = group
+        ? {
+            title: group.name,
+            name: group.name,
+            description: group.description,
+            authorId: group.createdByUserId,
+            moderationStatus: group.moderationStatus,
+            url:
+              group.photoAsset?.status === 'approved' && group.photoAsset.publishedKey
+                ? this.storage.getPublicUrl(group.photoAsset.publishedKey)
+                : null,
+          }
+        : null;
     } else if (report.targetType === 'media_upload') {
       const asset = await this.prisma.mediaModerationAsset.findUnique({ where: { id: report.targetId } });
       context = asset
@@ -400,6 +424,14 @@ export class ModerationService {
       if (!media || media.moderationStatus !== 'visible') return null;
       return { targetType, targetId, subjectUserId: media.userId, mediaId: targetId };
     }
+    if (targetType === 'group') {
+      const group = await this.prisma.group.findUnique({
+        where: { id: targetId },
+        select: { id: true, createdByUserId: true, moderationStatus: true },
+      });
+      if (!group || group.moderationStatus !== 'visible') return null;
+      return { targetType, targetId, subjectUserId: group.createdByUserId };
+    }
     const user = await this.prisma.user.findUnique({ where: { id: targetId }, select: { id: true } });
     if (!user) return null;
     return { targetType, targetId, subjectUserId: targetId, targetUserId: targetId };
@@ -424,6 +456,8 @@ export class ModerationService {
       await transaction.comment.update({ where: { id: targetId }, data: { moderationStatus: status } });
     } else if (targetType === 'media') {
       await transaction.activityMedia.update({ where: { id: targetId }, data: { moderationStatus: status } });
+    } else if (targetType === 'group') {
+      await transaction.group.update({ where: { id: targetId }, data: { moderationStatus: status } });
     } else {
       throw new BadRequestException('Действие к профилю применить нельзя');
     }

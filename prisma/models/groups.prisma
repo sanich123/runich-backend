@@ -36,6 +36,7 @@ model Group {
   categoryTags    String[]             @default([]) @map("category_tags")
   photoAssetId    Uuid?                @unique @map("photo_asset_id")
   photoAsset      MediaModerationAsset? @relation("GroupPhotoAsset", fields: [photoAssetId], references: [id], onDelete: SetNull)
+  moderationStatus ModerationContentStatus @default(visible) @map("moderation_status")
   privacy         GroupPrivacy         @default(open)
   locationName    VarChar(160)?         @map("location_name")
   createdAt       TimestamptzString(6) @default(now()) @map("created_at")

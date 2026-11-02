@@ -5,6 +5,7 @@ import { ModerationAccessService } from 'src/moderation/moderation-access.servic
 import { ActivityMetricsService } from 'src/statistic/activity-metrics.service';
 import { DEFAULT_TIME_ZONE, getLocalDateParts } from 'src/common/utils/time-zone';
 import { StorageService } from 'src/storage/services/storage.service';
+import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import type {
   CreateGroupDto,
   CreateGroupEventDto,
@@ -28,6 +29,7 @@ type GroupRow = {
   categoryTags?: string[];
   photoAssetId?: string | null;
   photoAsset?: { status: string; publishedKey: string | null } | null;
+  moderationStatus?: 'visible' | 'hidden' | 'removed';
   privacy: 'open' | 'closed';
   locationName: string | null;
   createdAt: Date | string;
@@ -49,7 +51,7 @@ export class GroupsService {
 
   async getGroups(userId: string, query: ListGroupsQueryDto) {
     try {
-      const where: Record<string, unknown> = {};
+      const where: Record<string, unknown> = { moderationStatus: 'visible' };
       const blockedIds = await this.moderationAccess.blockedUserIds(userId);
       if (blockedIds.length) where.createdByUserId = { notIn: blockedIds };
       if (query.scope === 'mine') where.members = { some: { userId, status: { in: ['active', 'pending'] } } };
@@ -83,7 +85,7 @@ export class GroupsService {
         orderBy: { createdAt: 'desc' },
         take: 200,
       })) as GroupRow[];
-      return await Promise.all(groups.map((group) => this.toSummary(group)));
+      return await Promise.all(groups.map((group) => this.toSummary(group, userId)));
     } catch (error) {
       handleServiceError(error);
     }
@@ -94,6 +96,7 @@ export class GroupsService {
       const name = body.name.trim();
       if (name.length < 2) throw new BadRequestException('Group name must contain at least two characters');
       const sports = [...new Set(body.sports)];
+      if (sports.length !== 1) throw new BadRequestException('Choose exactly one group activity');
       if (sports.some((sport) => !GROUP_SPORTS.includes(sport as (typeof GROUP_SPORTS)[number]))) {
         throw new ForbiddenException('Unsupported group activity');
       }
@@ -147,11 +150,26 @@ export class GroupsService {
           _count: { select: { members: { where: { status: 'active' } } } },
         },
       })) as GroupRow | null;
-      if (!group) throw new NotFoundException('Group not found');
+      if (!group || group.moderationStatus !== 'visible') throw new NotFoundException('Group not found');
       if (await this.moderationAccess.areBlocked(userId, group.createdByUserId)) {
         throw new ForbiddenException('This group is unavailable');
       }
-      return await this.toSummary(group, true);
+      return await this.toSummary(group, userId, true);
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }
+
+  async deleteGroup(userId: string, groupId: string) {
+    try {
+      const group = (await this.prisma.group.findUnique({
+        where: { id: groupId },
+        select: { createdByUserId: true, photoAssetId: true },
+      })) as { createdByUserId: string; photoAssetId: string | null } | null;
+      if (!group) throw new NotFoundException('Group not found');
+      if (group.createdByUserId !== userId) throw new ForbiddenException('Only the group owner can delete it');
+      await this.prisma.group.delete({ where: { id: groupId } });
+      if (this.storage) await this.storage.deleteGroupPhotoAsset(userId, group.photoAssetId).catch(() => undefined);
     } catch (error) {
       handleServiceError(error);
     }
@@ -174,7 +192,7 @@ export class GroupsService {
       if (existing?.status === 'active') return this.getGroup(userId, groupId);
       const status = group.privacy === 'open' ? 'active' : 'pending';
       const now = new Date().toISOString();
-      await this.prisma.groupMember.upsert({
+      const membership = await this.prisma.groupMember.upsert({
         where: { groupId, userId },
         create: {
           groupId,
@@ -185,7 +203,31 @@ export class GroupsService {
           joinedAt: status === 'active' ? now : null,
         },
         update: { status, requestedAt: now, joinedAt: status === 'active' ? now : null },
+        select: { id: true },
       });
+      if (status === 'pending' && existing?.status !== 'pending') {
+        await this.prisma.emailNotificationJob.upsert({
+          where: {
+            notificationType_sourceId: {
+              notificationType: EMAIL_NOTIFICATION_TYPE.groupJoinRequest,
+              sourceId: membership.id,
+            },
+          },
+          create: {
+            notificationType: EMAIL_NOTIFICATION_TYPE.groupJoinRequest,
+            sourceId: membership.id,
+            status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
+          },
+          update: {
+            status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
+            attempts: 0,
+            availableAt: new Date(now),
+            errorMessage: null,
+            startedAt: null,
+            finishedAt: null,
+          },
+        });
+      }
       return this.getGroup(userId, groupId);
     } catch (error) {
       handleServiceError(error);
@@ -567,8 +609,13 @@ export class GroupsService {
     }
   }
 
-  private async toSummary(group: GroupRow, includeUpdatedAt = false) {
+  private async toSummary(group: GroupRow, userId: string, includeUpdatedAt = false) {
     const membership = group.members?.[0] ?? null;
+    const isOwner = group.createdByUserId === userId;
+    const photoPreviewUrl =
+      isOwner && group.photoAsset?.status !== 'approved' && this.storage
+        ? await this.storage.getOwnerModerationPreviewUrl(userId, group.photoAssetId)
+        : null;
     const canManage = membership?.status === 'active' && (membership.role === 'owner' || membership.role === 'admin');
     const pendingRequestCount =
       includeUpdatedAt && canManage
@@ -590,6 +637,8 @@ export class GroupsService {
         group.photoAsset?.status === 'approved' && group.photoAsset.publishedKey && this.storage
           ? this.storage.getPublicUrl(group.photoAsset.publishedKey)
           : null,
+      photoPreviewUrl,
+      photoPending: ['queued', 'processing'].includes(group.photoAsset?.status ?? ''),
       currentMembership: membership
         ? {
             role: membership.role,
