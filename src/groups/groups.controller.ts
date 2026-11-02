@@ -28,6 +28,12 @@ import {
 } from './groups.dto';
 import { GroupsService } from './groups.service';
 import { validateOptionalIntegerQuery, validateOptionalIanaTimeZoneQuery } from 'src/common/utils/query-validation';
+import { GROUP_PAGE_SIZE, parseGroupDateCursor, parseGroupDistanceCursor } from './groups.pagination';
+
+function parseGroupPageSize(limit?: string) {
+  const validatedLimit = validateOptionalIntegerQuery(limit, 'limit', { min: 1, max: GROUP_PAGE_SIZE });
+  return validatedLimit === undefined ? GROUP_PAGE_SIZE : Number(validatedLimit);
+}
 
 @ApiTags('groups')
 @ApiBearerAuth('bearerAuth')
@@ -83,7 +89,15 @@ export class GroupsController {
   @Get(':id/members')
   @ApiOperation({ summary: 'List group members or pending join requests' })
   getMembers(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Query() query: GroupMembersQueryDto) {
-    return this.groupsService.getMembers(getAuthenticatedUserId(request), id, query.status ?? 'active');
+    const paginationRequested = query.limit !== undefined || query.cursor !== undefined;
+    return this.groupsService.getMembers(
+      getAuthenticatedUserId(request),
+      id,
+      query.status ?? 'active',
+      parseGroupPageSize(query.limit),
+      parseGroupDateCursor(query.cursor),
+      paginationRequested,
+    );
   }
 
   @Patch(':id/members/:userId')
@@ -105,16 +119,22 @@ export class GroupsController {
     @Query('year') year?: string,
     @Query('month') month?: string,
     @Query('timeZone') timeZone?: string,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
   ) {
     const validatedYear = validateOptionalIntegerQuery(year, 'year', { min: 2000, max: 9999 });
     const validatedMonth = validateOptionalIntegerQuery(month, 'month', { max: 11 });
     const validatedTimeZone = validateOptionalIanaTimeZoneQuery(timeZone, 'timeZone');
+    const paginationRequested = limit !== undefined || cursor !== undefined;
     return this.groupsService.getMonthlyLeaderboard(
       getAuthenticatedUserId(request),
       id,
       validatedYear === undefined ? undefined : Number(validatedYear),
       validatedMonth === undefined ? undefined : Number(validatedMonth),
       validatedTimeZone,
+      parseGroupPageSize(limit),
+      parseGroupDistanceCursor(cursor),
+      paginationRequested,
     );
   }
 
@@ -130,8 +150,20 @@ export class GroupsController {
 
   @Get(':id/posts')
   @ApiOperation({ summary: 'List recent group posts visible to the current user' })
-  getPosts(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return this.groupsService.getPosts(getAuthenticatedUserId(request), id);
+  getPosts(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const paginationRequested = limit !== undefined || cursor !== undefined;
+    return this.groupsService.getPosts(
+      getAuthenticatedUserId(request),
+      id,
+      parseGroupPageSize(limit),
+      parseGroupDateCursor(cursor),
+      paginationRequested,
+    );
   }
 
   @Post(':id/posts')
@@ -143,7 +175,15 @@ export class GroupsController {
   @Get(':id/events')
   @ApiOperation({ summary: 'List upcoming or past group events' })
   getEvents(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Query() query: ListGroupEventsQueryDto) {
-    return this.groupsService.getEvents(getAuthenticatedUserId(request), id, query.period ?? 'upcoming');
+    const paginationRequested = query.limit !== undefined || query.cursor !== undefined;
+    return this.groupsService.getEvents(
+      getAuthenticatedUserId(request),
+      id,
+      query.period ?? 'upcoming',
+      parseGroupPageSize(query.limit),
+      parseGroupDateCursor(query.cursor),
+      paginationRequested,
+    );
   }
 
   @Post(':id/events')

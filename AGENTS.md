@@ -5993,6 +5993,12 @@ Reference: [NestJS Logger](https://docs.nestjs.com/techniques/logger)
 
 NestJS service files must contain imports and the decorated service class only. Do not define top-level helper functions, constants, variables, types, interfaces, or enums in a `*.service.ts` file, before or after the class. Place them in sibling `*.utils.ts`, `*.constants.ts`, or `*.types.ts` modules and import them into the service.
 
+## Type assertions
+
+- Prefer inferred types or explicit variable and return annotations over `as` assertions. An assertion only changes what TypeScript believes; it does not validate a runtime value.
+- Keep untyped or external values as `unknown` and narrow them with runtime checks or a schema. Do not assert database query results or internal values to silence weak repository typings; annotate the receiving variable or improve the repository API.
+- Use a narrow `as` assertion only at a documented boundary where no typed alternative is available, and add a short adjacent comment explaining the reason. `as const` is allowed when preserving literal tuple types. Test-only assertions may be used narrowly for invalid runtime inputs or incomplete mocks when a typed fixture is impractical.
+
 ## Runich client/API compatibility
 
 - Keep the client/backend compatibility ledger in `API_COMPATIBILITY.md` in both the Runich client and Runich Backend repositories current. Update both copies in the same task whenever client releases, backend releases, API requests/responses, or compatibility evidence change; retain previous entries as history.

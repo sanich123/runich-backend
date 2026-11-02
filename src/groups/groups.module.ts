@@ -4,12 +4,13 @@ import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { ModerationModule } from 'src/moderation/moderation.module';
 import { StorageModule } from 'src/storage/storage.module';
 import { GroupsController } from './groups.controller';
+import { GroupsContentService } from './groups-content.service';
 import { GroupsService } from './groups.service';
 
 @Module({
   imports: [PrismaModule, ModerationModule, StorageModule, PassportModule.register({ defaultStrategy: 'jwt' })],
   controllers: [GroupsController],
-  providers: [GroupsService],
+  providers: [GroupsService, GroupsContentService],
   exports: [GroupsService],
 })
 export class GroupsModule {}

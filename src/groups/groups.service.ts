@@ -6,8 +6,6 @@ import { ActivityMetricsService } from 'src/statistic/activity-metrics.service';
 import { DEFAULT_TIME_ZONE, getLocalDateParts } from 'src/common/utils/time-zone';
 import { StorageService } from 'src/storage/services/storage.service';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
-import { createNotificationEvent } from 'src/notification/notification-event';
-import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
 import type {
   CreateGroupDto,
   CreateGroupEventDto,
@@ -16,31 +14,11 @@ import type {
   UpdateGroupDto,
   UpdateGroupPreferencesDto,
 } from './groups.dto';
-import { GROUP_CATEGORIES, GROUP_PRIVACY_VALUES, GROUP_SPORTS } from './groups.dto';
-
-type Membership = {
-  role: 'owner' | 'admin' | 'member';
-  status: 'active' | 'pending' | 'rejected';
-  notificationPreference?: 'all' | 'announcements' | 'off';
-  feedPreference?: 'all' | 'admins';
-};
-type GroupRow = {
-  id: string;
-  name: string;
-  description: string | null;
-  sports: string[];
-  categoryTags?: string[];
-  photoAssetId?: string | null;
-  photoAsset?: { status: string; publishedKey: string | null } | null;
-  moderationStatus?: 'visible' | 'hidden' | 'removed';
-  privacy: 'open' | 'closed';
-  locationName: string | null;
-  createdAt: Date | string;
-  updatedAt: Date | string;
-  createdByUserId: string;
-  members?: Membership[];
-  _count?: { members?: number };
-};
+import { GroupsContentService } from './groups-content.service';
+import type { GroupMemberListItem, GroupMemberQueryRow, GroupPostListItem, GroupRow, Membership } from './groups.types';
+import { encodeGroupDateCursor, encodeGroupDistanceCursor } from './groups.pagination';
+import type { GroupDateCursor, GroupDistanceCursor, GroupPage } from './groups.pagination';
+import { isGroupCategory, isGroupPrivacy, isGroupSport } from './groups.utils';
 
 @Injectable()
 export class GroupsService {
@@ -49,7 +27,8 @@ export class GroupsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ModerationAccessService) private readonly moderationAccess: ModerationAccessService,
-    @Inject(StorageService) private readonly storage?: StorageService,
+    @Inject(StorageService) private readonly storage: StorageService | undefined,
+    @Inject(GroupsContentService) private readonly contentService: GroupsContentService,
   ) {}
 
   async getGroups(userId: string, query: ListGroupsQueryDto) {
@@ -75,7 +54,7 @@ export class GroupsService {
         if (sportGroups.length === 0) return [];
         where.id = { in: sportGroups.map(({ id }) => id) };
       }
-      const groups = (await this.prisma.group.findMany({
+      const groups: GroupRow[] = await this.prisma.group.findMany({
         where,
         include: {
           members: {
@@ -87,7 +66,7 @@ export class GroupsService {
         },
         orderBy: { createdAt: 'desc' },
         take: 200,
-      })) as GroupRow[];
+      });
       return await Promise.all(groups.map((group) => this.toSummary(group, userId)));
     } catch (error) {
       handleServiceError(error);
@@ -100,14 +79,11 @@ export class GroupsService {
       if (name.length < 2) throw new BadRequestException('Group name must contain at least two characters');
       const sports = [...new Set(body.sports)];
       if (sports.length !== 1) throw new BadRequestException('Choose exactly one group activity');
-      if (sports.some((sport) => !GROUP_SPORTS.includes(sport as (typeof GROUP_SPORTS)[number]))) {
+      if (sports.some((sport) => !isGroupSport(sport))) {
         throw new ForbiddenException('Unsupported group activity');
       }
       const categoryTags = [...new Set(body.categoryTags ?? [])];
-      if (
-        categoryTags.length > 3 ||
-        categoryTags.some((tag) => !GROUP_CATEGORIES.includes(tag as (typeof GROUP_CATEGORIES)[number]))
-      ) {
+      if (categoryTags.length > 3 || categoryTags.some((tag) => !isGroupCategory(tag))) {
         throw new BadRequestException('Choose up to three supported group categories');
       }
       if (body.photoAssetId) {
@@ -119,7 +95,7 @@ export class GroupsService {
           throw new BadRequestException('Group photo upload is not available');
         }
       }
-      const group = (await this.prisma.group.create({
+      const group: Pick<GroupRow, 'id'> = await this.prisma.group.create({
         data: {
           name,
           description: body.description?.trim() || null,
@@ -133,7 +109,7 @@ export class GroupsService {
             create: { userId, role: 'owner', status: 'active', joinedAt: new Date().toISOString() },
           },
         },
-      })) as GroupRow;
+      });
       return this.getGroup(userId, group.id);
     } catch (error) {
       handleServiceError(error);
@@ -142,10 +118,12 @@ export class GroupsService {
 
   async updateGroup(userId: string, groupId: string, body: UpdateGroupDto) {
     try {
-      const group = (await this.prisma.group.findUnique({
-        where: { id: groupId },
-        select: { createdByUserId: true, photoAssetId: true },
-      })) as { createdByUserId: string; photoAssetId: string | null } | null;
+      const group: { createdByUserId: string; photoAssetId: string | null } | null = await this.prisma.group.findUnique(
+        {
+          where: { id: groupId },
+          select: { createdByUserId: true, photoAssetId: true },
+        },
+      );
       if (!group) throw new NotFoundException('Group not found');
       if (group.createdByUserId !== userId) throw new ForbiddenException('Only the group owner can edit it');
 
@@ -164,23 +142,20 @@ export class GroupsService {
       if (body.sports !== undefined) {
         const sports = Array.isArray(body.sports) ? [...new Set(body.sports)] : [];
         if (sports.length !== 1) throw new BadRequestException('Choose exactly one group activity');
-        if (sports.some((sport) => !GROUP_SPORTS.includes(sport as (typeof GROUP_SPORTS)[number]))) {
+        if (sports.some((sport) => !isGroupSport(sport))) {
           throw new ForbiddenException('Unsupported group activity');
         }
         data.sports = sports;
       }
       if (body.categoryTags !== undefined) {
         const categoryTags = Array.isArray(body.categoryTags) ? [...new Set(body.categoryTags)] : [];
-        if (
-          categoryTags.length > 3 ||
-          categoryTags.some((tag) => !GROUP_CATEGORIES.includes(tag as (typeof GROUP_CATEGORIES)[number]))
-        ) {
+        if (categoryTags.length > 3 || categoryTags.some((tag) => !isGroupCategory(tag))) {
           throw new BadRequestException('Choose up to three supported group categories');
         }
         data.categoryTags = categoryTags;
       }
       if (body.privacy !== undefined) {
-        if (!GROUP_PRIVACY_VALUES.includes(body.privacy as (typeof GROUP_PRIVACY_VALUES)[number])) {
+        if (!isGroupPrivacy(body.privacy)) {
           throw new BadRequestException('Choose a supported group privacy');
         }
         data.privacy = body.privacy;
@@ -224,7 +199,7 @@ export class GroupsService {
 
   async getGroup(userId: string, groupId: string) {
     try {
-      const group = (await this.prisma.group.findUnique({
+      const group: GroupRow | null = await this.prisma.group.findUnique({
         where: { id: groupId },
         include: {
           members: {
@@ -234,7 +209,7 @@ export class GroupsService {
           photoAsset: { select: { status: true, publishedKey: true } },
           _count: { select: { members: { where: { status: 'active' } } } },
         },
-      })) as GroupRow | null;
+      });
       if (!group || group.moderationStatus !== 'visible') throw new NotFoundException('Group not found');
       if (await this.moderationAccess.areBlocked(userId, group.createdByUserId)) {
         throw new ForbiddenException('This group is unavailable');
@@ -247,10 +222,12 @@ export class GroupsService {
 
   async deleteGroup(userId: string, groupId: string) {
     try {
-      const group = (await this.prisma.group.findUnique({
-        where: { id: groupId },
-        select: { createdByUserId: true, photoAssetId: true },
-      })) as { createdByUserId: string; photoAssetId: string | null } | null;
+      const group: { createdByUserId: string; photoAssetId: string | null } | null = await this.prisma.group.findUnique(
+        {
+          where: { id: groupId },
+          select: { createdByUserId: true, photoAssetId: true },
+        },
+      );
       if (!group) throw new NotFoundException('Group not found');
       if (group.createdByUserId !== userId) throw new ForbiddenException('Only the group owner can delete it');
       await this.prisma.group.delete({ where: { id: groupId } });
@@ -262,18 +239,18 @@ export class GroupsService {
 
   async joinGroup(userId: string, groupId: string) {
     try {
-      const group = (await this.prisma.group.findUnique({
+      const group: Pick<GroupRow, 'id' | 'privacy' | 'createdByUserId'> | null = await this.prisma.group.findUnique({
         where: { id: groupId },
         select: { id: true, privacy: true, createdByUserId: true },
-      })) as { id: string; privacy: 'open' | 'closed'; createdByUserId: string } | null;
+      });
       if (!group) throw new NotFoundException('Group not found');
       if (await this.moderationAccess.areBlocked(userId, group.createdByUserId)) {
         throw new ForbiddenException('This group is unavailable');
       }
-      const existing = (await this.prisma.groupMember.findUnique({
+      const existing: Pick<Membership, 'status'> | null = await this.prisma.groupMember.findUnique({
         where: { groupId, userId },
         select: { status: true },
-      })) as { status: 'active' | 'pending' | 'rejected' } | null;
+      });
       if (existing?.status === 'active') return this.getGroup(userId, groupId);
       const status = group.privacy === 'open' ? 'active' : 'pending';
       const now = new Date().toISOString();
@@ -321,10 +298,10 @@ export class GroupsService {
 
   async leaveGroup(userId: string, groupId: string) {
     try {
-      const membership = (await this.prisma.groupMember.findUnique({
+      const membership: Pick<Membership, 'role'> | null = await this.prisma.groupMember.findUnique({
         where: { groupId, userId },
         select: { role: true },
-      })) as { role: 'owner' | 'admin' | 'member' } | null;
+      });
       if (!membership) return;
       if (membership.role === 'owner') throw new ForbiddenException('Transfer group ownership before leaving');
       await this.prisma.groupMember.delete({ where: { groupId, userId } });
@@ -333,23 +310,49 @@ export class GroupsService {
     }
   }
 
-  async getMembers(userId: string, groupId: string, status: 'active' | 'pending') {
+  getMembers(userId: string, groupId: string, status: 'active' | 'pending'): Promise<GroupMemberListItem[]>;
+  getMembers(
+    userId: string,
+    groupId: string,
+    status: 'active' | 'pending',
+    pageSize: number,
+    cursor: GroupDateCursor | undefined,
+    paginationRequested: boolean,
+  ): Promise<GroupMemberListItem[] | GroupPage<GroupMemberListItem>>;
+  async getMembers(
+    userId: string,
+    groupId: string,
+    status: 'active' | 'pending',
+    pageSize = 100,
+    cursor?: GroupDateCursor,
+    paginationRequested = false,
+  ) {
     try {
-      const group = (await this.prisma.group.findUnique({
+      const group: GroupRow | null = await this.prisma.group.findUnique({
         where: { id: groupId },
         include: { members: { where: { userId }, select: { role: true, status: true } } },
-      })) as GroupRow | null;
+      });
       if (!group) throw new NotFoundException('Group not found');
       const current = group.members?.[0];
       const isOwner = group.createdByUserId === userId;
-      const canManage = isOwner || (current?.status === 'active' && (current.role === 'owner' || current.role === 'admin'));
+      const canManage =
+        isOwner || (current?.status === 'active' && (current.role === 'owner' || current.role === 'admin'));
       if (status === 'pending' && !canManage) throw new ForbiddenException('Only group admins can view join requests');
       if (status === 'active' && group.privacy === 'closed' && current?.status !== 'active' && !isOwner) {
         throw new ForbiddenException('Join this group to view its members');
       }
       const blockedIds = await this.moderationAccess.blockedUserIds(userId);
-      const rows = (await this.prisma.groupMember.findMany({
-        where: { groupId, status, ...(blockedIds.length ? { userId: { notIn: blockedIds } } : {}) },
+      const rows: GroupMemberQueryRow[] = await this.prisma.groupMember.findMany({
+        where: {
+          groupId,
+          status,
+          ...(blockedIds.length ? { userId: { notIn: blockedIds } } : {}),
+          ...(paginationRequested && cursor
+            ? {
+                OR: [{ requestedAt: { gt: cursor.date } }, { requestedAt: cursor.date, id: { gt: cursor.id } }],
+              }
+            : {}),
+        },
         include: {
           user: {
             include: {
@@ -366,25 +369,12 @@ export class GroupsService {
             },
           },
         },
-        orderBy: { requestedAt: 'asc' },
-        take: 200,
-      })) as Array<{
-        userId: string;
-        role: 'owner' | 'admin' | 'member';
-        status: 'active' | 'pending' | 'rejected';
-        joinedAt: Date | string | null;
-        user?: {
-          profile?: {
-            name: string | null;
-            surname: string | null;
-            city: string | null;
-            profilePhoto: string | null;
-            hideProfilePhotos: boolean | null;
-            profileSearchVisible: boolean | null;
-          } | null;
-        } | null;
-      }>;
-      return rows.map((member) => ({
+        orderBy: paginationRequested ? [{ requestedAt: 'asc' }, { id: 'asc' }] : { requestedAt: 'asc' },
+        take: paginationRequested ? pageSize + 1 : 200,
+      });
+      const hasMore = paginationRequested && rows.length > pageSize;
+      const pageRows = paginationRequested ? rows.slice(0, pageSize) : rows;
+      const items = pageRows.map((member) => ({
         userId: member.userId,
         role: member.role,
         status: member.status,
@@ -398,6 +388,16 @@ export class GroupsService {
             }
           : null,
       }));
+      if (!paginationRequested) return items;
+      const lastMember = pageRows.at(-1);
+      return {
+        items,
+        hasMore,
+        nextCursor:
+          hasMore && lastMember
+            ? encodeGroupDateCursor({ date: new Date(lastMember.requestedAt), id: lastMember.id })
+            : null,
+      };
     } catch (error) {
       handleServiceError(error);
     }
@@ -410,27 +410,27 @@ export class GroupsService {
     status: 'active' | 'rejected' | 'removed',
   ) {
     try {
-      const actor = (await this.prisma.groupMember.findUnique({
+      const actor: Membership | null = await this.prisma.groupMember.findUnique({
         where: { groupId, userId: actorUserId },
         select: { role: true, status: true },
-      })) as Membership | null;
+      });
       const hasManageRole = actor?.status === 'active' && (actor.role === 'owner' || actor.role === 'admin');
       let isOwner = actor?.status === 'active' && actor.role === 'owner';
       if (!hasManageRole) {
-        const group = (await this.prisma.group.findUnique({
+        const group: Pick<GroupRow, 'createdByUserId'> | null = await this.prisma.group.findUnique({
           where: { id: groupId },
           select: { createdByUserId: true },
-        })) as { createdByUserId: string } | null;
+        });
         if (!group) throw new NotFoundException('Group not found');
         isOwner = group.createdByUserId === actorUserId;
       }
       if (!hasManageRole && !isOwner) {
         throw new ForbiddenException('Only group admins can manage members');
       }
-      const target = (await this.prisma.groupMember.findUnique({
+      const target: Membership | null = await this.prisma.groupMember.findUnique({
         where: { groupId, userId: targetUserId },
         select: { role: true, status: true },
-      })) as Membership | null;
+      });
       if (!target) throw new NotFoundException('Membership not found');
       if (target.role === 'owner' || (!isOwner && target.role === 'admin')) {
         throw new ForbiddenException('You cannot manage this member');
@@ -445,10 +445,11 @@ export class GroupsService {
         return { userId: targetUserId, role: target.role, status };
       }
       const joinedAt = status === 'active' ? new Date().toISOString() : null;
-      const updated = (await this.prisma.groupMember.update({
-        where: { groupId, userId: targetUserId },
-        data: { status, joinedAt },
-      })) as { userId: string; role: string; status: string; joinedAt: Date | string | null };
+      const updated: { userId: string; role: string; status: string; joinedAt: Date | string | null } =
+        await this.prisma.groupMember.update({
+          where: { groupId, userId: targetUserId },
+          data: { status, joinedAt },
+        });
       return {
         userId: updated.userId,
         role: updated.role,
@@ -486,12 +487,16 @@ export class GroupsService {
     year?: number,
     month?: number,
     timeZone = DEFAULT_TIME_ZONE,
+    pageSize = 100,
+    cursor?: GroupDistanceCursor,
+    paginationRequested = false,
   ) {
     try {
-      const group = (await this.prisma.group.findUnique({
-        where: { id: groupId },
-        select: { id: true, privacy: true, members: { where: { userId }, select: { status: true } } },
-      })) as { id: string; privacy: 'open' | 'closed'; members: Array<{ status: string }> } | null;
+      const group: { id: string; privacy: 'open' | 'closed'; members: Array<{ status: string }> } | null =
+        await this.prisma.group.findUnique({
+          where: { id: groupId },
+          select: { id: true, privacy: true, members: { where: { userId }, select: { status: true } } },
+        });
       if (!group) throw new NotFoundException('Group not found');
       if (group.privacy === 'closed' && group.members[0]?.status !== 'active') {
         throw new ForbiddenException('Join this group to view member statistics');
@@ -533,10 +538,20 @@ export class GroupsService {
           AND NOT (gm."user_id" = ANY(${blockedIds}::uuid[]))
         GROUP BY gm."user_id", p."name", p."surname", p."city", p."profilePhoto", p."profile_search_visible", p."hide_profile_photos"
         HAVING COALESCE(SUM(a."distance"), 0) > 0
-        ORDER BY "totalDistance" DESC, gm."user_id"
-        LIMIT 100
+          AND (
+            ${cursor?.totalDistance ?? null}::double precision IS NULL
+            OR COALESCE(SUM(a."distance"), 0) < ${cursor?.totalDistance ?? null}::double precision
+            OR (
+              COALESCE(SUM(a."distance"), 0) = ${cursor?.totalDistance ?? null}::double precision
+              AND gm."user_id" > ${cursor?.userId ?? null}::uuid
+            )
+          )
+        ORDER BY "totalDistance" DESC, gm."user_id" ASC
+        LIMIT ${paginationRequested ? pageSize + 1 : 100}
       `;
-      const items = rows.map((row) => ({
+      const hasMore = paginationRequested && rows.length > pageSize;
+      const pageRows = paginationRequested ? rows.slice(0, pageSize) : rows;
+      const items = pageRows.map((row) => ({
         userId: row.userId,
         profile:
           row.name || row.surname || row.city || row.profilePhoto
@@ -545,229 +560,66 @@ export class GroupsService {
         totalDistance: Number(row.totalDistance),
       }));
 
-      return { year: selectedYear, month: selectedMonth, timeZone, items };
-    } catch (error) {
-      handleServiceError(error);
-    }
-  }
-
-  async getPosts(userId: string, groupId: string) {
-    try {
-      const group = (await this.prisma.group.findUnique({
-        where: { id: groupId },
-        select: {
-          privacy: true,
-          createdByUserId: true,
-          members: { where: { userId }, select: { status: true, feedPreference: true } },
-        },
-      })) as {
-        privacy: 'open' | 'closed';
-        createdByUserId: string;
-        members: Array<{ status: string; feedPreference: 'all' | 'admins' }>;
-      } | null;
-      if (!group) throw new NotFoundException('Group not found');
-      const membership = group.members[0];
-      const isOwner = group.createdByUserId === userId;
-      if (group.privacy === 'closed' && membership?.status !== 'active' && !isOwner) {
-        throw new ForbiddenException('Join this group to view its posts');
-      }
-
-      const blockedIds = await this.moderationAccess.blockedUserIds(userId);
-      const where: Record<string, unknown> = {
-        groupId,
-        ...(blockedIds.length ? { createdByUserId: { notIn: blockedIds } } : {}),
-      };
-      if (membership?.status === 'active' && membership.feedPreference === 'admins') {
-        const admins = (await this.prisma.groupMember.findMany({
-          where: { groupId, status: 'active', role: { in: ['owner', 'admin'] } },
-          select: { userId: true },
-        })) as Array<{ userId: string }>;
-        const adminIds = admins
-          .map(({ userId: adminId }) => adminId)
-          .filter((adminId) => !blockedIds.includes(adminId));
-        if (!adminIds.length) return [];
-        where.createdByUserId = { in: adminIds };
-      }
-
-      const posts = (await this.prisma.groupPost.findMany({
-        where,
-        include: {
-          author: {
-            include: {
-              profile: { select: { name: true, surname: true, profilePhoto: true, hideProfilePhotos: true } },
-            },
-          },
-          photoAsset: { select: { status: true, publishedKey: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      })) as Array<{
-        id: string;
-        text: string;
-        createdAt: Date | string;
-        author?: {
-          id: string;
-          profile?: {
-            name: string | null;
-            surname: string | null;
-            profilePhoto: string | null;
-            hideProfilePhotos: boolean | null;
-          } | null;
-        } | null;
-        photoAsset?: { status: string; publishedKey: string | null } | null;
-      }>;
-      return posts.map((post) => ({
-        id: post.id,
-        text: post.text,
-        createdAt: post.createdAt,
-        author: post.author?.profile
-          ? {
-              userId: post.author.id,
-              name: [post.author.profile.name, post.author.profile.surname].filter(Boolean).join(' ') || null,
-              profilePhoto: post.author.profile.hideProfilePhotos ? null : post.author.profile.profilePhoto,
-            }
-          : null,
-        photoUrl:
-          post.photoAsset?.status === 'approved' && post.photoAsset.publishedKey && this.storage
-            ? this.storage.getPublicUrl(post.photoAsset.publishedKey)
+      if (!paginationRequested) return { year: selectedYear, month: selectedMonth, timeZone, items };
+      const lastMember = pageRows.at(-1);
+      return {
+        year: selectedYear,
+        month: selectedMonth,
+        timeZone,
+        items,
+        hasMore,
+        nextCursor:
+          hasMore && lastMember
+            ? encodeGroupDistanceCursor({ totalDistance: Number(lastMember.totalDistance), userId: lastMember.userId })
             : null,
-      }));
+      };
     } catch (error) {
       handleServiceError(error);
     }
   }
 
-  async createPost(userId: string, groupId: string, body: CreateGroupPostDto) {
-    try {
-      const group = (await this.prisma.group.findUnique({
-        where: { id: groupId },
-        select: { name: true, createdByUserId: true },
-      })) as { name: string; createdByUserId: string } | null;
-      if (!group) throw new NotFoundException('Group not found');
-      const membership = (await this.prisma.groupMember.findUnique({
-        where: { groupId_userId: { groupId, userId } },
-        select: { role: true, status: true },
-      })) as Membership | null;
-      if (group.createdByUserId !== userId && membership?.status !== 'active') {
-        throw new ForbiddenException('Only active group members can publish posts');
-      }
-      const text = body.text.trim();
-      if (!text) throw new BadRequestException('Post text is required');
-      if (body.photoAssetId) {
-        const photo = await this.prisma.mediaModerationAsset.findFirst({
-          where: { id: body.photoAssetId, ownerId: userId, scope: 'group', role: 'media' },
-          select: { status: true, contentType: true },
-        });
-        if (!photo || !photo.contentType.startsWith('image/') || ['failed', 'rejected'].includes(photo.status)) {
-          throw new BadRequestException('Group post photo upload is not available');
-        }
-      }
-      return await this.prisma.$transaction(async (transaction) => {
-        const post = await transaction.groupPost.create({
-          data: { groupId, createdByUserId: userId, text, photoAssetId: body.photoAssetId ?? null },
-        });
-        await this.notifyGroupMembers(transaction, {
-          groupId,
-          groupName: group.name,
-          sourceId: post.id,
-          actorUserId: userId,
-          isAnnouncement: group.createdByUserId === userId || membership?.role === 'admin' || membership?.role === 'owner',
-          kind: 'post',
-          content: text,
-        });
-        return post;
-      });
-    } catch (error) {
-      handleServiceError(error);
-    }
+  getPosts(userId: string, groupId: string): Promise<GroupPostListItem[]>;
+  getPosts(
+    userId: string,
+    groupId: string,
+    pageSize: number,
+    cursor?: GroupDateCursor,
+    paginationRequested?: boolean,
+  ): Promise<GroupPostListItem[] | GroupPage<GroupPostListItem>>;
+  getPosts(
+    userId: string,
+    groupId: string,
+    pageSize?: number,
+    cursor?: GroupDateCursor,
+    paginationRequested?: boolean,
+  ): Promise<GroupPostListItem[] | GroupPage<GroupPostListItem>> {
+    return this.contentService.getPosts(userId, groupId, pageSize, cursor, paginationRequested);
   }
 
-  async getEvents(userId: string, groupId: string, period: 'upcoming' | 'past' = 'upcoming') {
-    try {
-      const group = (await this.prisma.group.findUnique({
-        where: { id: groupId },
-        select: {
-          privacy: true,
-          createdByUserId: true,
-          members: { where: { userId }, select: { status: true } },
-        },
-      })) as { privacy: 'open' | 'closed'; createdByUserId: string; members: Array<{ status: string }> } | null;
-      if (!group) throw new NotFoundException('Group not found');
-      if (group.privacy === 'closed' && group.members[0]?.status !== 'active' && group.createdByUserId !== userId) {
-        throw new ForbiddenException('Join this group to view its events');
-      }
-      const now = new Date();
-      return await this.prisma.groupEvent.findMany({
-        where: { groupId, startsAt: period === 'upcoming' ? { gte: now } : { lt: now } },
-        orderBy: { startsAt: period === 'upcoming' ? 'asc' : 'desc' },
-        take: 100,
-      });
-    } catch (error) {
-      handleServiceError(error);
-    }
+  createPost(userId: string, groupId: string, body: CreateGroupPostDto) {
+    return this.contentService.createPost(userId, groupId, body);
   }
 
-  async createEvent(userId: string, groupId: string, body: CreateGroupEventDto) {
-    try {
-      const group = (await this.prisma.group.findUnique({
-        where: { id: groupId },
-        select: { name: true, createdByUserId: true, sports: true },
-      })) as { name: string; createdByUserId: string; sports: string[] } | null;
-      if (!group) throw new NotFoundException('Group not found');
-      const actor = (await this.prisma.groupMember.findUnique({
-        where: { groupId_userId: { groupId, userId } },
-        select: { role: true, status: true },
-      })) as Membership | null;
-      const hasManageRole = actor?.status === 'active' && (actor.role === 'owner' || actor.role === 'admin');
-      if (group.createdByUserId !== userId && !hasManageRole) {
-        throw new ForbiddenException('Only group admins can create events');
-      }
-      if (body.sport && !group.sports.includes(body.sport)) {
-        throw new BadRequestException('Event activity must match one of the group activities');
-      }
-      const startsAt = new Date(body.startsAt);
-      if (startsAt.getTime() <= Date.now())
-        throw new BadRequestException('Group events must be scheduled in the future');
-      return await this.prisma.$transaction(async (transaction) => {
-        const event = await transaction.groupEvent.create({
-          data: {
-            groupId,
-            createdByUserId: userId,
-            title: body.title.trim(),
-            description: body.description?.trim() || null,
-            locationName: body.locationName?.trim() || null,
-            sport: body.sport ?? group.sports[0] ?? null,
-            distanceKm: body.distanceKm ?? null,
-            startsAt,
-          },
-        });
-        await this.notifyGroupMembers(transaction, {
-          groupId,
-          groupName: group.name,
-          sourceId: event.id,
-          actorUserId: userId,
-          isAnnouncement: true,
-          kind: 'event',
-          content: [
-            event.title,
-            event.distanceKm ? `${event.distanceKm} km` : null,
-            event.locationName,
-          ]
-            .filter(Boolean)
-            .join(' · '),
-        });
-        return event;
-      });
-    } catch (error) {
-      handleServiceError(error);
-    }
+  getEvents(
+    userId: string,
+    groupId: string,
+    period?: 'upcoming' | 'past',
+    pageSize?: number,
+    cursor?: GroupDateCursor,
+    paginationRequested?: boolean,
+  ) {
+    return this.contentService.getEvents(userId, groupId, period, pageSize, cursor, paginationRequested);
+  }
+
+  createEvent(userId: string, groupId: string, body: CreateGroupEventDto) {
+    return this.contentService.createEvent(userId, groupId, body);
   }
 
   private async toSummary(group: GroupRow, userId: string, includeUpdatedAt = false) {
     const membership = group.members?.[0] ?? null;
     const isOwner = group.createdByUserId === userId;
     const photoPreviewUrl =
-      isOwner && group.photoAsset?.status !== 'approved' && this.storage
+      isOwner && group.photoAssetId && group.photoAsset?.status !== 'approved' && this.storage
         ? await this.storage.getOwnerModerationPreviewUrl(userId, group.photoAssetId)
         : null;
     const canManage =
@@ -806,61 +658,5 @@ export class GroupsService {
       canManage,
       pendingRequestCount,
     };
-  }
-
-  private async notifyGroupMembers(
-    transaction: PrismaService,
-    notification: {
-      groupId: string;
-      groupName: string;
-      sourceId: string;
-      actorUserId: string;
-      isAnnouncement: boolean;
-      kind: 'post' | 'event';
-      content: string;
-    },
-  ) {
-    const recipients = (await transaction.groupMember.findMany({
-      where: { groupId: notification.groupId, status: 'active', userId: { not: notification.actorUserId } },
-      select: { userId: true, notificationPreference: true },
-    })) as Array<{ userId: string; notificationPreference: 'all' | 'announcements' | 'off' }>;
-    if (!recipients.length) return;
-
-    const actor = await transaction.profile.findUnique({
-      where: { userId: notification.actorUserId },
-      select: { name: true, surname: true, profilePhoto: true, hideProfilePhotos: true },
-    });
-    const isPost = notification.kind === 'post';
-    const eventType = isPost ? NOTIFICATION_TYPE.groupPost : NOTIFICATION_TYPE.groupEvent;
-    const categoryPreference = isPost ? 'groupPostsNotifications' : 'groupEventsNotifications';
-    const localizedContent = isPost
-      ? {
-          russian: `Новая запись в группе «${notification.groupName}»: ${notification.content}`,
-          english: `New post in “${notification.groupName}”: ${notification.content}`,
-        }
-      : {
-          russian: `Новое событие в группе «${notification.groupName}»: ${notification.content}`,
-          english: `New event in “${notification.groupName}”: ${notification.content}`,
-        };
-
-    for (const { userId, notificationPreference } of recipients) {
-      if (notificationPreference === 'off' || (notificationPreference === 'announcements' && !notification.isAnnouncement)) {
-        continue;
-      }
-      await createNotificationEvent(transaction, {
-        recipientUserId: userId,
-        actorUserId: notification.actorUserId,
-        type: eventType,
-        sourceId: notification.sourceId,
-        targetType: isPost ? 'group-post' : 'group-event',
-        targetId: notification.groupId,
-        relatedId: notification.sourceId,
-        actorName: actor?.name,
-        actorSurname: actor?.surname,
-        actorProfilePhoto: actor?.hideProfilePhotos ? null : actor?.profilePhoto,
-        localizedContent,
-        categoryPreference,
-      });
-    }
   }
 }

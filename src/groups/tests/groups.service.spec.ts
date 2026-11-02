@@ -1,16 +1,31 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { jest } from '@jest/globals';
-import { asyncMock } from 'src/tests/helpers';
+import { asyncMock, transactionMock } from 'src/tests/helpers';
+import { GroupsContentService } from '../groups-content.service';
 import { GroupsService } from '../groups.service';
+import { encodeGroupDateCursor, encodeGroupDistanceCursor, parseGroupDateCursor } from '../groups.pagination';
 
 function createPrismaMock() {
+  const transaction = {
+    groupMember: { findMany: asyncMock() },
+    groupPost: { create: asyncMock() },
+    groupEvent: { create: asyncMock() },
+    profile: { findUnique: asyncMock() },
+    emailNotificationJob: { create: asyncMock() },
+    notification: { create: asyncMock() },
+    pushNotificationJob: { create: asyncMock() },
+  };
+  transaction.groupMember.findMany.mockResolvedValue([]);
+
   return {
-    $queryRaw: asyncMock(),
+    $queryRaw: jest.fn<(strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>>(),
+    $transaction: transactionMock(transaction),
     group: {
       create: asyncMock(),
       delete: asyncMock(),
       findMany: asyncMock(),
       findUnique: asyncMock(),
+      update: asyncMock(),
     },
     groupMember: {
       count: asyncMock(),
@@ -21,11 +36,17 @@ function createPrismaMock() {
       update: asyncMock(),
       upsert: asyncMock(),
     },
-    groupPost: { create: asyncMock(), findMany: asyncMock() },
-    groupEvent: { create: asyncMock(), findMany: asyncMock() },
-    emailNotificationJob: { upsert: asyncMock() },
+    groupPost: { ...transaction.groupPost, findMany: asyncMock() },
+    groupEvent: { ...transaction.groupEvent, findMany: asyncMock() },
+    emailNotificationJob: { ...transaction.emailNotificationJob, upsert: asyncMock() },
     mediaModerationAsset: { findFirst: asyncMock() },
+    transaction,
   };
+}
+
+function createGroupsService(prisma: ReturnType<typeof createPrismaMock>, moderationAccess: object, storage?: object) {
+  const contentService = new GroupsContentService(prisma as never, moderationAccess as never, storage as never);
+  return new GroupsService(prisma as never, moderationAccess as never, storage as never, contentService);
 }
 
 const groupRow = (overrides: Record<string, unknown> = {}) => ({
@@ -36,6 +57,8 @@ const groupRow = (overrides: Record<string, unknown> = {}) => ({
   categoryTags: [],
   privacy: 'open',
   locationName: 'Moscow',
+  photoAssetId: null,
+  photoAsset: null,
   createdAt: '2026-10-29T10:00:00.000Z',
   updatedAt: '2026-10-29T10:00:00.000Z',
   createdByUserId: 'owner-1',
@@ -56,7 +79,7 @@ describe('GroupsService', () => {
       areBlocked: asyncMock().mockResolvedValue(false),
       blockedUserIds: asyncMock().mockResolvedValue([]),
     };
-    service = new GroupsService(prisma as never, moderationAccess as never);
+    service = createGroupsService(prisma, moderationAccess);
   });
 
   it('filters group discovery by scope, search, supported sport, and blocked creators', async () => {
@@ -125,6 +148,119 @@ describe('GroupsService', () => {
         }),
       }),
     );
+  });
+
+  it('updates owner-managed group fields after normalizing values and validating a replacement photo', async () => {
+    const deleteGroupPhotoAsset = asyncMock().mockResolvedValue(undefined);
+    const getOwnerModerationPreviewUrl = asyncMock().mockResolvedValue('https://cdn.test/private-group-preview.webp');
+    service = createGroupsService(prisma, moderationAccess, { deleteGroupPhotoAsset, getOwnerModerationPreviewUrl });
+    prisma.group.findUnique
+      .mockResolvedValueOnce({ createdByUserId: 'owner-1', photoAssetId: 'old-photo' })
+      .mockResolvedValueOnce(groupRow({ name: 'Evening riders', photoAssetId: 'new-photo' }));
+    prisma.mediaModerationAsset.findFirst.mockResolvedValue({ status: 'processing', contentType: 'image/webp' });
+
+    const result = await service.updateGroup('owner-1', 'group-1', {
+      name: ' Evening riders ',
+      description: ' For weekly rides ',
+      sports: ['bike'],
+      categoryTags: ['team', 'team'],
+      privacy: 'closed',
+      locationName: ' Park entrance ',
+      photoAssetId: 'new-photo',
+    });
+
+    expect(prisma.group.update).toHaveBeenCalledWith({
+      where: { id: 'group-1' },
+      data: {
+        name: 'Evening riders',
+        description: 'For weekly rides',
+        sports: ['bike'],
+        categoryTags: ['team'],
+        privacy: 'closed',
+        locationName: 'Park entrance',
+        photoAssetId: 'new-photo',
+      },
+    });
+    expect(deleteGroupPhotoAsset).toHaveBeenCalledWith('owner-1', 'old-photo');
+    expect(result).toMatchObject({ id: 'group-1', name: 'Evening riders' });
+  });
+
+  it('clears nullable group fields and removes the previous photo', async () => {
+    const deleteGroupPhotoAsset = asyncMock().mockRejectedValue(new Error('S3 unavailable'));
+    service = createGroupsService(prisma, moderationAccess, { deleteGroupPhotoAsset });
+    prisma.group.findUnique
+      .mockResolvedValueOnce({ createdByUserId: 'owner-1', photoAssetId: 'previous-photo' })
+      .mockResolvedValueOnce(groupRow({ description: null, locationName: null, photoAssetId: null }));
+
+    await expect(
+      service.updateGroup('owner-1', 'group-1', { description: null, locationName: null, photoAssetId: null }),
+    ).resolves.toMatchObject({ description: null, locationName: null, photoUrl: null });
+
+    expect(prisma.group.update).toHaveBeenCalledWith({
+      where: { id: 'group-1' },
+      data: { description: null, locationName: null, photoAssetId: null },
+    });
+    expect(deleteGroupPhotoAsset).toHaveBeenCalledWith('owner-1', 'previous-photo');
+  });
+
+  it('rejects missing groups, non-owner edits, empty updates, and invalid update values', async () => {
+    prisma.group.findUnique.mockResolvedValueOnce(null);
+    await expect(service.updateGroup('owner-1', 'missing', { name: 'Valid name' })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    prisma.group.findUnique.mockResolvedValueOnce({ createdByUserId: 'other-owner', photoAssetId: null });
+    await expect(service.updateGroup('visitor-1', 'group-1', { name: 'Valid name' })).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    prisma.group.findUnique.mockResolvedValue({ createdByUserId: 'owner-1', photoAssetId: null });
+    await expect(service.updateGroup('owner-1', 'group-1', {})).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.updateGroup('owner-1', 'group-1', { name: ' ' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.updateGroup('owner-1', 'group-1', { description: 5 } as never)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(service.updateGroup('owner-1', 'group-1', { sports: [] })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.updateGroup('owner-1', 'group-1', { sports: ['unknown' as 'run'] })).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    await expect(
+      service.updateGroup('owner-1', 'group-1', {
+        categoryTags: ['team', 'local', 'event', 'casual'],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.updateGroup('owner-1', 'group-1', { categoryTags: ['invalid' as 'team'] }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.updateGroup('owner-1', 'group-1', { privacy: 'private' as 'open' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(service.updateGroup('owner-1', 'group-1', { locationName: 5 } as never)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(service.updateGroup('owner-1', 'group-1', { photoAssetId: 5 } as never)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.group.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects unavailable, non-image, and rejected replacement group photos', async () => {
+    prisma.group.findUnique.mockResolvedValue({ createdByUserId: 'owner-1', photoAssetId: null });
+    prisma.mediaModerationAsset.findFirst.mockResolvedValue(null);
+    await expect(service.updateGroup('owner-1', 'group-1', { photoAssetId: 'missing-photo' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+
+    prisma.mediaModerationAsset.findFirst.mockResolvedValueOnce({ status: 'queued', contentType: 'text/plain' });
+    await expect(service.updateGroup('owner-1', 'group-1', { photoAssetId: 'not-image' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+
+    prisma.mediaModerationAsset.findFirst.mockResolvedValueOnce({ status: 'failed', contentType: 'image/webp' });
+    await expect(service.updateGroup('owner-1', 'group-1', { photoAssetId: 'failed-photo' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.group.update).not.toHaveBeenCalled();
   });
 
   it('attaches a moderated group photo and category tags when creating a group', async () => {
@@ -277,14 +413,7 @@ describe('GroupsService', () => {
   it('shows an owner preview for a pending group photo and a public URL for an approved photo', async () => {
     const getOwnerModerationPreviewUrl = asyncMock().mockResolvedValue('https://cdn.test/pending-preview.webp');
     const getPublicUrl = jest.fn().mockReturnValue('https://cdn.test/approved.webp');
-    service = new GroupsService(
-      prisma as never,
-      moderationAccess as never,
-      {
-        getOwnerModerationPreviewUrl,
-        getPublicUrl,
-      } as never,
-    );
+    service = createGroupsService(prisma, moderationAccess, { getOwnerModerationPreviewUrl, getPublicUrl });
     prisma.groupMember.count.mockResolvedValue(2);
     prisma.group.findUnique
       .mockResolvedValueOnce(
@@ -327,7 +456,7 @@ describe('GroupsService', () => {
 
   it('cleans up a deleted group photo without failing the group deletion', async () => {
     const deleteGroupPhotoAsset = asyncMock().mockRejectedValue(new Error('S3 unavailable'));
-    service = new GroupsService(prisma as never, moderationAccess as never, { deleteGroupPhotoAsset } as never);
+    service = createGroupsService(prisma, moderationAccess, { deleteGroupPhotoAsset });
     prisma.group.findUnique.mockResolvedValue({ createdByUserId: 'owner-1', photoAssetId: 'photo-1' });
 
     await expect(service.deleteGroup('owner-1', 'group-1')).resolves.toBeUndefined();
@@ -420,6 +549,54 @@ describe('GroupsService', () => {
       }),
     );
     expect(members[0].profile).toEqual({ name: 'Alex', surname: 'Runner', city: null, profilePhoto: null });
+  });
+
+  it('returns a keyset-paginated member page and an empty terminal page', async () => {
+    const requestedAt = new Date('2026-10-29T10:00:00.000Z');
+    const inputCursor = { date: new Date('2026-10-28T10:00:00.000Z'), id: 'member-0' };
+    prisma.group.findUnique.mockResolvedValue(groupRow());
+    prisma.groupMember.findMany.mockResolvedValueOnce([
+      {
+        id: 'member-1',
+        requestedAt,
+        userId: 'user-1',
+        role: 'member',
+        status: 'active',
+        joinedAt: requestedAt,
+        user: { profile: null },
+      },
+      { id: 'member-2', requestedAt, userId: 'user-2', role: 'member', status: 'active', joinedAt: null, user: null },
+      { id: 'member-3', requestedAt, userId: 'user-3', role: 'member', status: 'active', joinedAt: null, user: null },
+    ]);
+
+    const page = await service.getMembers('visitor-1', 'group-1', 'active', 2, inputCursor, true);
+
+    expect(prisma.groupMember.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: {
+          groupId: 'group-1',
+          status: 'active',
+          OR: [
+            { requestedAt: { gt: inputCursor.date } },
+            { requestedAt: inputCursor.date, id: { gt: inputCursor.id } },
+          ],
+        },
+        orderBy: [{ requestedAt: 'asc' }, { id: 'asc' }],
+        take: 3,
+      }),
+    );
+    expect(page).toMatchObject({ hasMore: true, items: [{ userId: 'user-1' }, { userId: 'user-2' }] });
+    if (!Array.isArray(page)) {
+      expect(parseGroupDateCursor(page.nextCursor ?? undefined)).toEqual({ date: requestedAt, id: 'member-2' });
+    }
+
+    prisma.groupMember.findMany.mockResolvedValueOnce([]);
+    await expect(service.getMembers('visitor-1', 'group-1', 'active', 2, inputCursor, true)).resolves.toEqual({
+      items: [],
+      hasMore: false,
+      nextCursor: null,
+    });
   });
 
   it('allows active closed-group members to view the roster with visible profile fields', async () => {
@@ -542,6 +719,7 @@ describe('GroupsService', () => {
 
   it('rejects member updates without permission or for incompatible membership states', async () => {
     prisma.groupMember.findUnique.mockResolvedValueOnce(null);
+    prisma.group.findUnique.mockResolvedValueOnce({ createdByUserId: 'owner-1' });
     await expect(service.updateMember('visitor-1', 'group-1', 'member-1', 'active')).rejects.toBeInstanceOf(
       ForbiddenException,
     );
@@ -623,6 +801,38 @@ describe('GroupsService', () => {
     });
   });
 
+  it('paginates the monthly leaderboard with a stable distance and user cursor', async () => {
+    const cursor = { totalDistance: 10000, userId: 'runner-0' };
+    prisma.group.findUnique.mockResolvedValue({ id: 'group-1', privacy: 'open', members: [] });
+    prisma.$queryRaw.mockResolvedValue([
+      { userId: 'runner-1', name: 'Fast', surname: null, city: null, profilePhoto: null, totalDistance: 12000 },
+      { userId: 'runner-2', name: null, surname: null, city: null, profilePhoto: null, totalDistance: 11000 },
+    ]);
+
+    const page = await service.getMonthlyLeaderboard('viewer-1', 'group-1', 2026, 9, 'UTC', 1, cursor, true);
+
+    const rawQuery = prisma.$queryRaw.mock.calls[0]![0];
+    expect(rawQuery.join('')).toContain('ORDER BY "totalDistance" DESC, gm."user_id" ASC');
+    expect(prisma.$queryRaw.mock.calls[0]!.slice(1)).toContain(cursor.totalDistance);
+    expect(prisma.$queryRaw.mock.calls[0]!.slice(1)).toContain(cursor.userId);
+    expect(page).toMatchObject({
+      year: 2026,
+      month: 9,
+      items: [{ userId: 'runner-1', totalDistance: 12000 }],
+      hasMore: true,
+      nextCursor: encodeGroupDistanceCursor({ totalDistance: 12000, userId: 'runner-1' }),
+    });
+
+    prisma.$queryRaw.mockResolvedValueOnce([]);
+    await expect(
+      service.getMonthlyLeaderboard('viewer-1', 'group-1', 2026, 9, 'UTC', 1, cursor, true),
+    ).resolves.toMatchObject({
+      items: [],
+      hasMore: false,
+      nextCursor: null,
+    });
+  });
+
   it('requires membership to view the monthly leaderboard for a closed group', async () => {
     prisma.group.findUnique.mockResolvedValue({ id: 'group-1', privacy: 'closed', members: [] });
 
@@ -666,14 +876,17 @@ describe('GroupsService', () => {
   it('filters group posts to admin posts when requested by an active member', async () => {
     prisma.group.findUnique.mockResolvedValue({
       privacy: 'open',
+      createdByUserId: 'owner-1',
       members: [{ status: 'active', feedPreference: 'admins' }],
     });
     prisma.groupMember.findMany.mockResolvedValue([{ userId: 'admin-1' }]);
     prisma.groupPost.findMany.mockResolvedValue([
       {
         id: 'post-1',
+        createdByUserId: 'admin-1',
         text: 'Sunday run',
         createdAt: '2026-10-29T10:00:00.000Z',
+        photoAssetId: null,
         author: {
           id: 'admin-1',
           profile: { name: 'Alex', surname: 'Runner', profilePhoto: 'photo-url', hideProfilePhotos: false },
@@ -701,6 +914,7 @@ describe('GroupsService', () => {
   it('returns no posts when an admin-only feed has no visible admins', async () => {
     prisma.group.findUnique.mockResolvedValue({
       privacy: 'open',
+      createdByUserId: 'owner-1',
       members: [{ status: 'active', feedPreference: 'admins' }],
     });
     prisma.groupMember.findMany.mockResolvedValue([]);
@@ -711,13 +925,16 @@ describe('GroupsService', () => {
 
   it('returns approved group post photos and hides missing author profiles', async () => {
     const getPublicUrl = jest.fn().mockReturnValue('https://cdn.test/group-post.webp');
-    service = new GroupsService(prisma as never, moderationAccess as never, { getPublicUrl } as never);
-    prisma.group.findUnique.mockResolvedValue({ privacy: 'open', members: [] });
+    const getOwnerModerationPreviewUrls = asyncMock().mockResolvedValue({});
+    service = createGroupsService(prisma, moderationAccess, { getPublicUrl, getOwnerModerationPreviewUrls });
+    prisma.group.findUnique.mockResolvedValue({ privacy: 'open', createdByUserId: 'owner-1', members: [] });
     prisma.groupPost.findMany.mockResolvedValue([
       {
         id: 'post-2',
+        createdByUserId: 'author-1',
         text: 'Club update',
         createdAt: '2026-10-29T10:00:00.000Z',
+        photoAssetId: 'approved-post-photo',
         author: { id: 'author-1', profile: null },
         photoAsset: { status: 'approved', publishedKey: 'groups/group-1/post.webp' },
       },
@@ -727,9 +944,86 @@ describe('GroupsService', () => {
 
     expect(result).toEqual([expect.objectContaining({ author: null, photoUrl: 'https://cdn.test/group-post.webp' })]);
     expect(getPublicUrl).toHaveBeenCalledWith('groups/group-1/post.webp');
+    expect(getOwnerModerationPreviewUrls).not.toHaveBeenCalled();
+  });
+
+  it('returns pending-photo status to readers and private preview URLs only to the post author', async () => {
+    const getOwnerModerationPreviewUrls = asyncMock().mockResolvedValue({
+      'pending-photo': 'https://cdn.test/private-preview.webp',
+    });
+    const getPublicUrl = jest.fn().mockReturnValue('https://cdn.test/approved.webp');
+    service = createGroupsService(prisma, moderationAccess, { getOwnerModerationPreviewUrls, getPublicUrl });
+    prisma.group.findUnique.mockResolvedValue({ privacy: 'open', createdByUserId: 'group-owner', members: [] });
+    prisma.groupPost.findMany.mockResolvedValue([
+      {
+        id: 'pending-post',
+        createdByUserId: 'post-author',
+        text: 'Pending photo',
+        createdAt: '2026-10-29T10:00:00.000Z',
+        photoAssetId: 'pending-photo',
+        author: null,
+        photoAsset: { status: 'review_required', publishedKey: null },
+      },
+      {
+        id: 'rejected-post',
+        createdByUserId: 'post-author',
+        text: 'Rejected photo',
+        createdAt: '2026-10-29T10:00:00.000Z',
+        photoAssetId: 'rejected-photo',
+        author: null,
+        photoAsset: { status: 'rejected', publishedKey: null },
+      },
+      {
+        id: 'text-post',
+        createdByUserId: 'post-author',
+        text: 'Text only',
+        createdAt: '2026-10-29T10:00:00.000Z',
+        photoAssetId: null,
+        author: null,
+        photoAsset: null,
+      },
+    ]);
+
+    const authorView = await service.getPosts('post-author', 'group-1');
+    expect(authorView).toEqual([
+      expect.objectContaining({
+        hasPhoto: true,
+        photoPending: true,
+        photoPreviewUrl: 'https://cdn.test/private-preview.webp',
+      }),
+      expect.objectContaining({ hasPhoto: true, photoPending: false, photoPreviewUrl: null }),
+      expect.not.objectContaining({ hasPhoto: true }),
+    ]);
+    expect(getOwnerModerationPreviewUrls).toHaveBeenCalledWith('post-author', ['pending-photo']);
+
+    const readerView = await service.getPosts('reader-1', 'group-1');
+    expect(readerView[0]).toMatchObject({ hasPhoto: true, photoPending: true, photoPreviewUrl: null, photoUrl: null });
+    expect(getOwnerModerationPreviewUrls).toHaveBeenCalledTimes(1);
+  });
+
+  it('omits an unavailable private post-photo preview', async () => {
+    const getOwnerModerationPreviewUrls = asyncMock().mockRejectedValue(new Error('Preview unavailable'));
+    service = createGroupsService(prisma, moderationAccess, { getOwnerModerationPreviewUrls });
+    prisma.group.findUnique.mockResolvedValue({ privacy: 'open', createdByUserId: 'owner-1', members: [] });
+    prisma.groupPost.findMany.mockResolvedValue([
+      {
+        id: 'post-3',
+        createdByUserId: 'owner-1',
+        text: 'Waiting for moderation',
+        createdAt: '2026-10-29T10:00:00.000Z',
+        photoAssetId: 'pending-photo',
+        author: null,
+        photoAsset: { status: 'processing', publishedKey: null },
+      },
+    ]);
+
+    await expect(service.getPosts('owner-1', 'group-1')).resolves.toEqual([
+      expect.objectContaining({ hasPhoto: true, photoPending: true, photoPreviewUrl: null }),
+    ]);
   });
 
   it('requires active membership to publish group posts', async () => {
+    prisma.group.findUnique.mockResolvedValue({ name: 'Morning runners', createdByUserId: 'owner-1' });
     prisma.groupMember.findUnique.mockResolvedValue({ status: 'pending' });
 
     await expect(service.createPost('member-1', 'group-1', { text: 'Hello group' })).rejects.toBeInstanceOf(
@@ -739,6 +1033,7 @@ describe('GroupsService', () => {
   });
 
   it('publishes trimmed group post text for active members', async () => {
+    prisma.group.findUnique.mockResolvedValue({ name: 'Morning runners', createdByUserId: 'owner-1' });
     prisma.groupMember.findUnique.mockResolvedValue({ status: 'active' });
     prisma.groupPost.create.mockResolvedValue({ id: 'post-1', text: 'Hello group' });
 
@@ -749,7 +1044,59 @@ describe('GroupsService', () => {
     });
   });
 
+  it('returns a keyset-paginated post page and a terminal page without a cursor', async () => {
+    const cursor = { date: new Date('2026-10-28T10:00:00.000Z'), id: 'post-0' };
+    const firstPostDate = new Date('2026-10-29T10:00:00.000Z');
+    prisma.group.findUnique.mockResolvedValue({ privacy: 'open', createdByUserId: 'owner-1', members: [] });
+    prisma.groupPost.findMany.mockResolvedValueOnce([
+      {
+        id: 'post-1',
+        createdByUserId: 'author-1',
+        text: 'First post',
+        createdAt: firstPostDate,
+        photoAssetId: null,
+        author: null,
+        photoAsset: null,
+      },
+      {
+        id: 'post-2',
+        createdByUserId: 'author-2',
+        text: 'Second post',
+        createdAt: new Date('2026-10-29T11:00:00.000Z'),
+        photoAssetId: null,
+        author: null,
+        photoAsset: null,
+      },
+    ]);
+
+    const page = await service.getPosts('reader-1', 'group-1', 1, cursor, true);
+
+    expect(prisma.groupPost.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          groupId: 'group-1',
+          AND: [{ OR: [{ createdAt: { lt: cursor.date } }, { createdAt: cursor.date, id: { lt: cursor.id } }] }],
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 2,
+      }),
+    );
+    expect(page).toMatchObject({
+      items: [{ id: 'post-1', text: 'First post' }],
+      hasMore: true,
+      nextCursor: encodeGroupDateCursor({ date: firstPostDate, id: 'post-1' }),
+    });
+
+    prisma.groupPost.findMany.mockResolvedValueOnce([]);
+    await expect(service.getPosts('reader-1', 'group-1', 1, undefined, true)).resolves.toMatchObject({
+      items: [],
+      hasMore: false,
+      nextCursor: null,
+    });
+  });
+
   it('accepts a pending image and rejects non-image or blank group posts', async () => {
+    prisma.group.findUnique.mockResolvedValue({ name: 'Morning runners', createdByUserId: 'owner-1' });
     prisma.groupMember.findUnique.mockResolvedValue({ status: 'active' });
     prisma.mediaModerationAsset.findFirst
       .mockResolvedValueOnce({ status: 'queued', contentType: 'image/jpeg' })
@@ -767,8 +1114,48 @@ describe('GroupsService', () => {
     );
   });
 
+  it('notifies post readers according to announcement and per-group preferences', async () => {
+    prisma.group.findUnique.mockResolvedValue({ name: 'Morning runners', createdByUserId: 'owner-1' });
+    prisma.groupMember.findUnique.mockResolvedValue({ role: 'member', status: 'active' });
+    prisma.groupPost.create.mockResolvedValue({ id: 'post-notify-1' });
+    prisma.transaction.groupMember.findMany.mockResolvedValue([
+      { userId: 'all-reader', notificationPreference: 'all' },
+      { userId: 'announcement-reader', notificationPreference: 'announcements' },
+      { userId: 'muted-reader', notificationPreference: 'off' },
+    ]);
+    prisma.transaction.profile.findUnique
+      .mockResolvedValueOnce({ name: 'Alex', surname: 'Runner', profilePhoto: 'private.webp', hideProfilePhotos: true })
+      .mockResolvedValue({
+        emailNotifications: false,
+        inAppNotifications: true,
+        pushNotifications: false,
+        groupPostsNotifications: true,
+        groupEventsNotifications: true,
+        language: 'russian',
+      });
+    prisma.transaction.notification.create.mockResolvedValue({ id: 'notification-1' });
+
+    await service.createPost('member-1', 'group-1', { text: '  Sunday run  ' });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.transaction.groupPost.create).toHaveBeenCalledWith({
+      data: { groupId: 'group-1', createdByUserId: 'member-1', text: 'Sunday run', photoAssetId: null },
+    });
+    expect(prisma.transaction.notification.create).toHaveBeenCalledTimes(1);
+    expect(prisma.transaction.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        recipientUserId: 'all-reader',
+        type: 'group-post',
+        targetType: 'group-post',
+        actorProfilePhoto: null,
+        content: 'Новая запись в группе «Morning runners»: Sunday run',
+      }),
+      select: { id: true },
+    });
+  });
+
   it('returns upcoming and past events using their start time', async () => {
-    prisma.group.findUnique.mockResolvedValue({ privacy: 'open', members: [] });
+    prisma.group.findUnique.mockResolvedValue({ privacy: 'open', createdByUserId: 'owner-1', members: [] });
     prisma.groupEvent.findMany.mockResolvedValue([]);
 
     await service.getEvents('visitor-1', 'group-1', 'upcoming');
@@ -778,22 +1165,22 @@ describe('GroupsService', () => {
       1,
       expect.objectContaining({
         where: { groupId: 'group-1', startsAt: { gte: expect.any(Date) } },
-        orderBy: { startsAt: 'asc' },
+        orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
       }),
     );
     expect(prisma.groupEvent.findMany).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         where: { groupId: 'group-1', startsAt: { lt: expect.any(Date) } },
-        orderBy: { startsAt: 'desc' },
+        orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
       }),
     );
   });
 
   it('uses the upcoming event period by default and protects closed events', async () => {
     prisma.group.findUnique
-      .mockResolvedValueOnce({ privacy: 'open', members: [] })
-      .mockResolvedValueOnce({ privacy: 'closed', members: [] });
+      .mockResolvedValueOnce({ privacy: 'open', createdByUserId: 'owner-1', members: [] })
+      .mockResolvedValueOnce({ privacy: 'closed', createdByUserId: 'owner-1', members: [] });
     prisma.groupEvent.findMany.mockResolvedValue([]);
 
     await service.getEvents('visitor-1', 'group-1');
@@ -803,7 +1190,55 @@ describe('GroupsService', () => {
     await expect(service.getEvents('visitor-1', 'group-1', 'past')).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  it('uses date and ID cursors for upcoming and past event pages', async () => {
+    const cursorDate = new Date('2026-10-28T10:00:00.000Z');
+    const eventDate = new Date('2026-10-29T10:00:00.000Z');
+    const cursor = { date: cursorDate, id: 'event-0' };
+    prisma.group.findUnique.mockResolvedValue({ privacy: 'open', createdByUserId: 'owner-1', members: [] });
+    prisma.groupEvent.findMany.mockResolvedValue([
+      { id: 'event-1', startsAt: eventDate },
+      { id: 'event-2', startsAt: new Date('2026-10-30T10:00:00.000Z') },
+    ]);
+
+    const upcoming = await service.getEvents('reader-1', 'group-1', 'upcoming', 1, cursor, true);
+    const past = await service.getEvents('reader-1', 'group-1', 'past', 1, cursor, true);
+
+    expect(prisma.groupEvent.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: {
+          groupId: 'group-1',
+          startsAt: { gte: expect.any(Date) },
+          AND: [{ OR: [{ startsAt: { gt: cursorDate } }, { startsAt: cursorDate, id: { gt: cursor.id } }] }],
+        },
+        orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+        take: 2,
+      }),
+    );
+    expect(prisma.groupEvent.findMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: {
+          groupId: 'group-1',
+          startsAt: { lt: expect.any(Date) },
+          AND: [{ OR: [{ startsAt: { lt: cursorDate } }, { startsAt: cursorDate, id: { lt: cursor.id } }] }],
+        },
+        orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+        take: 2,
+      }),
+    );
+    expect(upcoming).toMatchObject({
+      items: [{ id: 'event-1', startsAt: eventDate }],
+      hasMore: true,
+      nextCursor: encodeGroupDateCursor({ date: eventDate, id: 'event-1' }),
+    });
+    expect(past).toMatchObject({ hasMore: true });
+  });
+
   it('rejects non-admin and past group events', async () => {
+    prisma.group.findUnique
+      .mockResolvedValueOnce({ name: 'Morning runners', createdByUserId: 'owner-1', sports: ['run'] })
+      .mockResolvedValueOnce({ name: 'Morning runners', createdByUserId: 'owner-1', sports: ['run'] });
     prisma.groupMember.findUnique
       .mockResolvedValueOnce({ role: 'member', status: 'active' })
       .mockResolvedValueOnce({ role: 'owner', status: 'active' });
@@ -821,20 +1256,59 @@ describe('GroupsService', () => {
   });
 
   it('allows admins to create a future group event', async () => {
-    prisma.groupMember.findUnique.mockResolvedValue({ role: 'owner', status: 'active' });
-    prisma.groupEvent.create.mockResolvedValue({ id: 'event-1' });
+    prisma.group.findUnique.mockResolvedValue({ name: 'Morning runners', createdByUserId: 'owner-1', sports: ['run'] });
+    prisma.groupMember.findUnique.mockResolvedValue({ role: 'admin', status: 'active' });
+    prisma.groupEvent.create.mockResolvedValue({
+      id: 'event-1',
+      title: 'Sunday run',
+      locationName: 'Park',
+      distanceKm: 5,
+    });
+    prisma.transaction.groupMember.findMany.mockResolvedValue([
+      { userId: 'event-follower', notificationPreference: 'announcements' },
+      { userId: 'muted-follower', notificationPreference: 'off' },
+    ]);
+    prisma.transaction.profile.findUnique
+      .mockResolvedValueOnce({ name: 'Sam', surname: 'Coach', profilePhoto: 'coach.webp', hideProfilePhotos: false })
+      .mockResolvedValue({
+        emailNotifications: false,
+        inAppNotifications: true,
+        pushNotifications: false,
+        groupPostsNotifications: true,
+        groupEventsNotifications: true,
+        language: 'english',
+      });
+    prisma.transaction.notification.create.mockResolvedValue({ id: 'notification-2' });
     const startsAt = new Date(Date.now() + 86400000).toISOString();
 
-    await service.createEvent('owner-1', 'group-1', { title: ' Sunday run ', startsAt, locationName: ' Park ' });
+    await service.createEvent('admin-1', 'group-1', {
+      title: ' Sunday run ',
+      startsAt,
+      locationName: ' Park ',
+      sport: 'run',
+      distanceKm: 5,
+    });
 
     expect(prisma.groupEvent.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         groupId: 'group-1',
-        createdByUserId: 'owner-1',
+        createdByUserId: 'admin-1',
         title: 'Sunday run',
         locationName: 'Park',
+        sport: 'run',
+        distanceKm: 5,
         startsAt: new Date(startsAt),
       }),
+    });
+    expect(prisma.transaction.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        recipientUserId: 'event-follower',
+        type: 'group-event',
+        targetType: 'group-event',
+        actorProfilePhoto: 'coach.webp',
+        content: 'New event in “Morning runners”: Sunday run · 5 km · Park',
+      }),
+      select: { id: true },
     });
   });
 });

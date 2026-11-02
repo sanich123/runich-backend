@@ -1,33 +1,33 @@
-# # 1. Проверка TypeScript
-# yarn typecheck
+# 1. Проверка TypeScript
+yarn typecheck
 
-# # 2. Проверка связности графа Prisma-миграций для актуального контракта
-# yarn prisma migration check
+# 2. Проверка связности графа Prisma-миграций для актуального контракта
+yarn prisma migration check
 
-# # 3. Линтинг и форматирование только подготовленных исходников
-# yarn lint-staged
+# 3. Линтинг и форматирование только подготовленных исходников
+yarn lint-staged
 
-# # 4. Unit-тесты
-# yarn test:ci
+# 4. Unit-тесты
+yarn test:ci
 
-# # 5. Coverage-тесты с порогами покрытия
-# yarn test:cov
+# 5. Coverage-тесты с порогами покрытия
+yarn test:cov
 
-# # 6. PostgreSQL integration/e2e-тесты
-# yarn db:up:check
-# yarn test:integration
+# 6. PostgreSQL integration/e2e-тесты
+yarn db:up:check
+yarn test:integration
 
-# # 7. Остановка локальной БД после успешного прохождения всех тестов
-# docker compose stop db
+# 7. Остановка локальной БД после успешного прохождения всех тестов
+docker compose stop db
 
-# # 8. Production-сборка
-# yarn build
+# 8. Production-сборка
+yarn build
 
-# # 9. Проверка circular dependencies
-# yarn madge
+# 9. Проверка circular dependencies
+yarn madge
 
-# # 10. Проверка неиспользуемых экспортов (Prisma/generated/d.ts исключены в package.json)
-# yarn ts-prune
+# 10. Проверка неиспользуемых экспортов (Prisma/generated/d.ts исключены в package.json)
+yarn ts-prune
 
-# # 11. Проверка неиспользуемых зависимостей (диагностическая)
-# yarn depcheck || true
+# 11. Проверка неиспользуемых зависимостей (диагностическая)
+yarn depcheck || true

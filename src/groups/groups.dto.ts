@@ -149,6 +149,16 @@ export class GroupMembersQueryDto {
   @IsOptional()
   @IsIn(['active', 'pending'])
   status?: 'active' | 'pending' = 'active';
+
+  @ApiPropertyOptional({ description: 'Maximum number of members to return, up to 100' })
+  @IsOptional()
+  @IsString()
+  limit?: string;
+
+  @ApiPropertyOptional({ description: 'Opaque cursor returned by the previous page' })
+  @IsOptional()
+  @IsString()
+  cursor?: string;
 }
 
 export class UpdateGroupMemberDto {
@@ -185,6 +195,16 @@ export class ListGroupEventsQueryDto {
   @IsOptional()
   @IsIn(['upcoming', 'past'])
   period?: 'upcoming' | 'past' = 'upcoming';
+
+  @ApiPropertyOptional({ description: 'Maximum number of events to return, up to 100' })
+  @IsOptional()
+  @IsString()
+  limit?: string;
+
+  @ApiPropertyOptional({ description: 'Opaque cursor returned by the previous page' })
+  @IsOptional()
+  @IsString()
+  cursor?: string;
 }
 
 export class CreateGroupEventDto {
