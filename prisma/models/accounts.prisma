@@ -93,6 +93,8 @@ model Profile {
   emailNotifications    Boolean?               @default(false)
   pushNotifications     Boolean                 @default(false) @map("push_notifications")
   inAppNotifications    Boolean                 @default(true) @map("in_app_notifications")
+  groupPostsNotifications  Boolean               @default(true) @map("group_posts_notifications")
+  groupEventsNotifications Boolean               @default(true) @map("group_events_notifications")
   profilePhotoBlurhash  String?
   profilePhotoPendingAssetId String? @map("profile_photo_pending_asset_id")
   profilePhotoPendingBlurhash String? @map("profile_photo_pending_blurhash")

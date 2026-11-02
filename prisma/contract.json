@@ -3005,6 +3005,13 @@
                   }
                 }
               },
+              "distanceKm": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
               "groupId": {
                 "nullable": false,
                 "type": {
@@ -3027,6 +3034,13 @@
                   "typeParams": {
                     "length": 160
                   }
+                }
+              },
+              "sport": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
                 }
               },
               "startsAt": {
@@ -3095,6 +3109,9 @@
                 "description": {
                   "column": "description"
                 },
+                "distanceKm": {
+                  "column": "distance_km"
+                },
                 "groupId": {
                   "column": "group_id"
                 },
@@ -3103,6 +3120,9 @@
                 },
                 "locationName": {
                   "column": "location_name"
+                },
+                "sport": {
+                  "column": "sport"
                 },
                 "startsAt": {
                   "column": "starts_at"
@@ -4788,6 +4808,20 @@
                   "kind": "scalar"
                 }
               },
+              "groupEventsNotifications": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "groupPostsNotifications": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "height": {
                 "nullable": true,
                 "type": {
@@ -5093,6 +5127,12 @@
                 },
                 "gender": {
                   "column": "gender"
+                },
+                "groupEventsNotifications": {
+                  "column": "group_events_notifications"
+                },
+                "groupPostsNotifications": {
+                  "column": "group_posts_notifications"
                 },
                 "height": {
                   "column": "height"
@@ -9196,6 +9236,11 @@
                     "length": 2000
                   }
                 },
+                "distance_km": {
+                  "codecId": "pg/float8@1",
+                  "dataType": "pg/float8",
+                  "nullable": true
+                },
                 "group_id": {
                   "codecId": "pg/uuid@1",
                   "dataType": "pg/uuid",
@@ -9217,6 +9262,11 @@
                   "typeParams": {
                     "length": 160
                   }
+                },
+                "sport": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
                 },
                 "starts_at": {
                   "codecId": "pg/timestamptz-string@1",
@@ -10944,6 +10994,24 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "group_events_notifications": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "group_posts_notifications": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
                 "height": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -12350,7 +12418,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "dc04cb7e1d6a3db4146fdba07c6b6c32b1af4c991eac31f39ec9217288046fd6"
+    "storageHash": "a6d0a5018be80f2d7c43d0dd8f0838ce0bff3dbd68c136ef7fa2d7c2b4b693bf"
   },
   "capabilities": {
     "postgres": {

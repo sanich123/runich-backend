@@ -93,6 +93,8 @@ model GroupEvent {
   title           VarChar(120)
   description     VarChar(2000)?
   locationName    VarChar(160)?        @map("location_name")
+  sport           String?
+  distanceKm      Float?               @map("distance_km")
   startsAt        TimestamptzString(6) @map("starts_at")
   createdAt       TimestamptzString(6) @default(now()) @map("created_at")
   group           Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)

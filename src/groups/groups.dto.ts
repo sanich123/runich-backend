@@ -7,9 +7,12 @@ import {
   IsDateString,
   IsIn,
   IsOptional,
+  IsNumber,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -202,6 +205,18 @@ export class CreateGroupEventDto {
   @IsString()
   @MaxLength(160)
   locationName?: string;
+
+  @ApiPropertyOptional({ enum: GROUP_SPORTS })
+  @IsOptional()
+  @IsIn(GROUP_SPORTS)
+  sport?: (typeof GROUP_SPORTS)[number];
+
+  @ApiPropertyOptional({ type: Number, minimum: 0.1, maximum: 500 })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(0.1)
+  @Max(500)
+  distanceKm?: number;
 
   @ApiProperty({ type: String, format: 'date-time' })
   @IsDateString()

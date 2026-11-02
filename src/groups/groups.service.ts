@@ -6,6 +6,8 @@ import { ActivityMetricsService } from 'src/statistic/activity-metrics.service';
 import { DEFAULT_TIME_ZONE, getLocalDateParts } from 'src/common/utils/time-zone';
 import { StorageService } from 'src/storage/services/storage.service';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
+import { createNotificationEvent } from 'src/notification/notification-event';
+import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
 import type {
   CreateGroupDto,
   CreateGroupEventDto,
@@ -339,9 +341,10 @@ export class GroupsService {
       })) as GroupRow | null;
       if (!group) throw new NotFoundException('Group not found');
       const current = group.members?.[0];
-      const canManage = current?.status === 'active' && (current.role === 'owner' || current.role === 'admin');
+      const isOwner = group.createdByUserId === userId;
+      const canManage = isOwner || (current?.status === 'active' && (current.role === 'owner' || current.role === 'admin'));
       if (status === 'pending' && !canManage) throw new ForbiddenException('Only group admins can view join requests');
-      if (status === 'active' && group.privacy === 'closed' && current?.status !== 'active') {
+      if (status === 'active' && group.privacy === 'closed' && current?.status !== 'active' && !isOwner) {
         throw new ForbiddenException('Join this group to view its members');
       }
       const blockedIds = await this.moderationAccess.blockedUserIds(userId);
@@ -411,7 +414,17 @@ export class GroupsService {
         where: { groupId, userId: actorUserId },
         select: { role: true, status: true },
       })) as Membership | null;
-      if (!actor || actor.status !== 'active' || (actor.role !== 'owner' && actor.role !== 'admin')) {
+      const hasManageRole = actor?.status === 'active' && (actor.role === 'owner' || actor.role === 'admin');
+      let isOwner = actor?.status === 'active' && actor.role === 'owner';
+      if (!hasManageRole) {
+        const group = (await this.prisma.group.findUnique({
+          where: { id: groupId },
+          select: { createdByUserId: true },
+        })) as { createdByUserId: string } | null;
+        if (!group) throw new NotFoundException('Group not found');
+        isOwner = group.createdByUserId === actorUserId;
+      }
+      if (!hasManageRole && !isOwner) {
         throw new ForbiddenException('Only group admins can manage members');
       }
       const target = (await this.prisma.groupMember.findUnique({
@@ -419,7 +432,7 @@ export class GroupsService {
         select: { role: true, status: true },
       })) as Membership | null;
       if (!target) throw new NotFoundException('Membership not found');
-      if (target.role === 'owner' || (actor.role !== 'owner' && target.role === 'admin')) {
+      if (target.role === 'owner' || (!isOwner && target.role === 'admin')) {
         throw new ForbiddenException('You cannot manage this member');
       }
       if (status === 'active' && target.status !== 'pending')
@@ -542,14 +555,20 @@ export class GroupsService {
     try {
       const group = (await this.prisma.group.findUnique({
         where: { id: groupId },
-        select: { privacy: true, members: { where: { userId }, select: { status: true, feedPreference: true } } },
+        select: {
+          privacy: true,
+          createdByUserId: true,
+          members: { where: { userId }, select: { status: true, feedPreference: true } },
+        },
       })) as {
         privacy: 'open' | 'closed';
+        createdByUserId: string;
         members: Array<{ status: string; feedPreference: 'all' | 'admins' }>;
       } | null;
       if (!group) throw new NotFoundException('Group not found');
       const membership = group.members[0];
-      if (group.privacy === 'closed' && membership?.status !== 'active') {
+      const isOwner = group.createdByUserId === userId;
+      if (group.privacy === 'closed' && membership?.status !== 'active' && !isOwner) {
         throw new ForbiddenException('Join this group to view its posts');
       }
 
@@ -620,11 +639,18 @@ export class GroupsService {
 
   async createPost(userId: string, groupId: string, body: CreateGroupPostDto) {
     try {
+      const group = (await this.prisma.group.findUnique({
+        where: { id: groupId },
+        select: { name: true, createdByUserId: true },
+      })) as { name: string; createdByUserId: string } | null;
+      if (!group) throw new NotFoundException('Group not found');
       const membership = (await this.prisma.groupMember.findUnique({
         where: { groupId_userId: { groupId, userId } },
-        select: { status: true },
-      })) as { status: string } | null;
-      if (membership?.status !== 'active') throw new ForbiddenException('Only active group members can publish posts');
+        select: { role: true, status: true },
+      })) as Membership | null;
+      if (group.createdByUserId !== userId && membership?.status !== 'active') {
+        throw new ForbiddenException('Only active group members can publish posts');
+      }
       const text = body.text.trim();
       if (!text) throw new BadRequestException('Post text is required');
       if (body.photoAssetId) {
@@ -636,8 +662,20 @@ export class GroupsService {
           throw new BadRequestException('Group post photo upload is not available');
         }
       }
-      return await this.prisma.groupPost.create({
-        data: { groupId, createdByUserId: userId, text, photoAssetId: body.photoAssetId ?? null },
+      return await this.prisma.$transaction(async (transaction) => {
+        const post = await transaction.groupPost.create({
+          data: { groupId, createdByUserId: userId, text, photoAssetId: body.photoAssetId ?? null },
+        });
+        await this.notifyGroupMembers(transaction, {
+          groupId,
+          groupName: group.name,
+          sourceId: post.id,
+          actorUserId: userId,
+          isAnnouncement: group.createdByUserId === userId || membership?.role === 'admin' || membership?.role === 'owner',
+          kind: 'post',
+          content: text,
+        });
+        return post;
       });
     } catch (error) {
       handleServiceError(error);
@@ -648,10 +686,14 @@ export class GroupsService {
     try {
       const group = (await this.prisma.group.findUnique({
         where: { id: groupId },
-        select: { privacy: true, members: { where: { userId }, select: { status: true } } },
-      })) as { privacy: 'open' | 'closed'; members: Array<{ status: string }> } | null;
+        select: {
+          privacy: true,
+          createdByUserId: true,
+          members: { where: { userId }, select: { status: true } },
+        },
+      })) as { privacy: 'open' | 'closed'; createdByUserId: string; members: Array<{ status: string }> } | null;
       if (!group) throw new NotFoundException('Group not found');
-      if (group.privacy === 'closed' && group.members[0]?.status !== 'active') {
+      if (group.privacy === 'closed' && group.members[0]?.status !== 'active' && group.createdByUserId !== userId) {
         throw new ForbiddenException('Join this group to view its events');
       }
       const now = new Date();
@@ -667,25 +709,54 @@ export class GroupsService {
 
   async createEvent(userId: string, groupId: string, body: CreateGroupEventDto) {
     try {
+      const group = (await this.prisma.group.findUnique({
+        where: { id: groupId },
+        select: { name: true, createdByUserId: true, sports: true },
+      })) as { name: string; createdByUserId: string; sports: string[] } | null;
+      if (!group) throw new NotFoundException('Group not found');
       const actor = (await this.prisma.groupMember.findUnique({
         where: { groupId_userId: { groupId, userId } },
         select: { role: true, status: true },
       })) as Membership | null;
-      if (!actor || actor.status !== 'active' || (actor.role !== 'owner' && actor.role !== 'admin')) {
+      const hasManageRole = actor?.status === 'active' && (actor.role === 'owner' || actor.role === 'admin');
+      if (group.createdByUserId !== userId && !hasManageRole) {
         throw new ForbiddenException('Only group admins can create events');
+      }
+      if (body.sport && !group.sports.includes(body.sport)) {
+        throw new BadRequestException('Event activity must match one of the group activities');
       }
       const startsAt = new Date(body.startsAt);
       if (startsAt.getTime() <= Date.now())
         throw new BadRequestException('Group events must be scheduled in the future');
-      return await this.prisma.groupEvent.create({
-        data: {
+      return await this.prisma.$transaction(async (transaction) => {
+        const event = await transaction.groupEvent.create({
+          data: {
+            groupId,
+            createdByUserId: userId,
+            title: body.title.trim(),
+            description: body.description?.trim() || null,
+            locationName: body.locationName?.trim() || null,
+            sport: body.sport ?? group.sports[0] ?? null,
+            distanceKm: body.distanceKm ?? null,
+            startsAt,
+          },
+        });
+        await this.notifyGroupMembers(transaction, {
           groupId,
-          createdByUserId: userId,
-          title: body.title.trim(),
-          description: body.description?.trim() || null,
-          locationName: body.locationName?.trim() || null,
-          startsAt,
-        },
+          groupName: group.name,
+          sourceId: event.id,
+          actorUserId: userId,
+          isAnnouncement: true,
+          kind: 'event',
+          content: [
+            event.title,
+            event.distanceKm ? `${event.distanceKm} km` : null,
+            event.locationName,
+          ]
+            .filter(Boolean)
+            .join(' · '),
+        });
+        return event;
       });
     } catch (error) {
       handleServiceError(error);
@@ -699,7 +770,8 @@ export class GroupsService {
       isOwner && group.photoAsset?.status !== 'approved' && this.storage
         ? await this.storage.getOwnerModerationPreviewUrl(userId, group.photoAssetId)
         : null;
-    const canManage = membership?.status === 'active' && (membership.role === 'owner' || membership.role === 'admin');
+    const canManage =
+      isOwner || (membership?.status === 'active' && (membership.role === 'owner' || membership.role === 'admin'));
     const pendingRequestCount =
       includeUpdatedAt && canManage
         ? await this.prisma.groupMember.count({ where: { groupId: group.id, status: 'pending' } })
@@ -734,5 +806,61 @@ export class GroupsService {
       canManage,
       pendingRequestCount,
     };
+  }
+
+  private async notifyGroupMembers(
+    transaction: PrismaService,
+    notification: {
+      groupId: string;
+      groupName: string;
+      sourceId: string;
+      actorUserId: string;
+      isAnnouncement: boolean;
+      kind: 'post' | 'event';
+      content: string;
+    },
+  ) {
+    const recipients = (await transaction.groupMember.findMany({
+      where: { groupId: notification.groupId, status: 'active', userId: { not: notification.actorUserId } },
+      select: { userId: true, notificationPreference: true },
+    })) as Array<{ userId: string; notificationPreference: 'all' | 'announcements' | 'off' }>;
+    if (!recipients.length) return;
+
+    const actor = await transaction.profile.findUnique({
+      where: { userId: notification.actorUserId },
+      select: { name: true, surname: true, profilePhoto: true, hideProfilePhotos: true },
+    });
+    const isPost = notification.kind === 'post';
+    const eventType = isPost ? NOTIFICATION_TYPE.groupPost : NOTIFICATION_TYPE.groupEvent;
+    const categoryPreference = isPost ? 'groupPostsNotifications' : 'groupEventsNotifications';
+    const localizedContent = isPost
+      ? {
+          russian: `Новая запись в группе «${notification.groupName}»: ${notification.content}`,
+          english: `New post in “${notification.groupName}”: ${notification.content}`,
+        }
+      : {
+          russian: `Новое событие в группе «${notification.groupName}»: ${notification.content}`,
+          english: `New event in “${notification.groupName}”: ${notification.content}`,
+        };
+
+    for (const { userId, notificationPreference } of recipients) {
+      if (notificationPreference === 'off' || (notificationPreference === 'announcements' && !notification.isAnnouncement)) {
+        continue;
+      }
+      await createNotificationEvent(transaction, {
+        recipientUserId: userId,
+        actorUserId: notification.actorUserId,
+        type: eventType,
+        sourceId: notification.sourceId,
+        targetType: isPost ? 'group-post' : 'group-event',
+        targetId: notification.groupId,
+        relatedId: notification.sourceId,
+        actorName: actor?.name,
+        actorSurname: actor?.surname,
+        actorProfilePhoto: actor?.hideProfilePhotos ? null : actor?.profilePhoto,
+        localizedContent,
+        categoryPreference,
+      });
+    }
   }
 }

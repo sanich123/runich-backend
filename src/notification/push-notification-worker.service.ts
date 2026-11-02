@@ -64,10 +64,27 @@ export class PushNotificationWorkerService {
           actorName: true,
           actorSurname: true,
           content: true,
-          recipient: { select: { profile: { select: { pushNotifications: true } } } },
+          recipient: {
+            select: {
+              profile: {
+                select: {
+                  pushNotifications: true,
+                  groupPostsNotifications: true,
+                  groupEventsNotifications: true,
+                },
+              },
+            },
+          },
         },
       });
-      if (!notification || notification.recipient.profile?.pushNotifications !== true) {
+      const profile = notification?.recipient.profile;
+      const groupCategoryEnabled =
+        notification?.type === 'group-post'
+          ? profile?.groupPostsNotifications !== false
+          : notification?.type === 'group-event'
+            ? profile?.groupEventsNotifications !== false
+            : true;
+      if (!notification || profile?.pushNotifications !== true || !groupCategoryEnabled) {
         await this.finish(job.id, PUSH_NOTIFICATION_JOB_STATUS.skipped);
         return true;
       }

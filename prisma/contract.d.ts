@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'dc04cb7e1d6a3db4146fdba07c6b6c32b1af4c991eac31f39ec9217288046fd6'>;
+  StorageHashBase<'a6d0a5018be80f2d7c43d0dd8f0838ce0bff3dbd68c136ef7fa2d7c2b4b693bf'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -821,9 +821,11 @@ export namespace Models {
     createdAt: FieldOutputTypes['public']['GroupEvent']['createdAt'];
     createdByUserId: FieldOutputTypes['public']['GroupEvent']['createdByUserId'];
     description: FieldOutputTypes['public']['GroupEvent']['description'];
+    distanceKm: FieldOutputTypes['public']['GroupEvent']['distanceKm'];
     groupId: FieldOutputTypes['public']['GroupEvent']['groupId'];
     id: FieldOutputTypes['public']['GroupEvent']['id'];
     locationName: FieldOutputTypes['public']['GroupEvent']['locationName'];
+    sport: FieldOutputTypes['public']['GroupEvent']['sport'];
     startsAt: FieldOutputTypes['public']['GroupEvent']['startsAt'];
     title: FieldOutputTypes['public']['GroupEvent']['title'];
     creator: public_User;
@@ -997,6 +999,8 @@ export namespace Models {
     email: FieldOutputTypes['public']['Profile']['email'];
     emailNotifications: FieldOutputTypes['public']['Profile']['emailNotifications'];
     gender: FieldOutputTypes['public']['Profile']['gender'];
+    groupEventsNotifications: FieldOutputTypes['public']['Profile']['groupEventsNotifications'];
+    groupPostsNotifications: FieldOutputTypes['public']['Profile']['groupPostsNotifications'];
     height: FieldOutputTypes['public']['Profile']['height'];
     hideActivityStatistics: FieldOutputTypes['public']['Profile']['hideActivityStatistics'];
     hideFollowingList: FieldOutputTypes['public']['Profile']['hideFollowingList'];
@@ -3118,6 +3122,12 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly length: 2000 };
                   readonly many: false;
                 };
+                readonly distance_km: {
+                  readonly dataType: 'pg/float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly group_id: {
                   readonly dataType: 'pg/uuid';
                   readonly codecId: 'pg/uuid@1';
@@ -3139,6 +3149,12 @@ type ContractBase = Omit<
                   readonly codecId: 'sql/varchar@1';
                   readonly nullable: true;
                   readonly typeParams: { readonly length: 160 };
+                  readonly many: false;
+                };
+                readonly sport: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
                   readonly many: false;
                 };
                 readonly starts_at: {
@@ -4507,6 +4523,26 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly group_events_notifications: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
+                readonly group_posts_notifications: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
                   readonly many: false;
                 };
                 readonly height: {
@@ -7362,6 +7398,10 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly length: 2000 };
                 };
               };
+              readonly distanceKm: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
               readonly groupId: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
@@ -7377,6 +7417,10 @@ type ContractBase = Omit<
                   readonly codecId: 'sql/varchar@1';
                   readonly typeParams: { readonly length: 160 };
                 };
+              };
+              readonly sport: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly startsAt: {
                 readonly nullable: false;
@@ -7425,9 +7469,11 @@ type ContractBase = Omit<
                 readonly createdAt: { readonly column: 'created_at' };
                 readonly createdByUserId: { readonly column: 'created_by_user_id' };
                 readonly description: { readonly column: 'description' };
+                readonly distanceKm: { readonly column: 'distance_km' };
                 readonly groupId: { readonly column: 'group_id' };
                 readonly id: { readonly column: 'id' };
                 readonly locationName: { readonly column: 'location_name' };
+                readonly sport: { readonly column: 'sport' };
                 readonly startsAt: { readonly column: 'starts_at' };
                 readonly title: { readonly column: 'title' };
               };
@@ -8468,6 +8514,14 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly groupEventsNotifications: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly groupPostsNotifications: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
               readonly height: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -8660,6 +8714,10 @@ type ContractBase = Omit<
                 readonly email: { readonly column: 'email' };
                 readonly emailNotifications: { readonly column: 'emailNotifications' };
                 readonly gender: { readonly column: 'gender' };
+                readonly groupEventsNotifications: {
+                  readonly column: 'group_events_notifications';
+                };
+                readonly groupPostsNotifications: { readonly column: 'group_posts_notifications' };
                 readonly height: { readonly column: 'height' };
                 readonly hideActivityStatistics: { readonly column: 'hide_activity_statistics' };
                 readonly hideFollowingList: { readonly column: 'hide_following_list' };
