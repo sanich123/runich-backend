@@ -73,6 +73,54 @@ describe('EmailNotificationService', () => {
     }
   });
 
+  it('sends group join requests in the owner language with a clean group requests link', async () => {
+    const service = new EmailNotificationService();
+
+    await service.sendGroupJoinRequest({
+      groupId: 'group/one',
+      groupName: 'Morning runners',
+      requesterName: 'Alex Runner',
+      recipientEmail: 'owner@example.com',
+      recipientName: 'Sam Owner',
+      locale: 'russian',
+    });
+    await service.sendGroupJoinRequest({
+      groupId: 'group-two',
+      groupName: 'City team',
+      requesterName: 'Runich user',
+      recipientEmail: 'team@example.com',
+      recipientName: null,
+      locale: 'english',
+    });
+
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      1,
+      'owner@example.com',
+      '[Runich] Новая заявка в группу «Morning runners»',
+      expect.stringContaining('Alex Runner хочет вступить в группу'),
+      [],
+      undefined,
+    );
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      2,
+      'team@example.com',
+      '[Runich] New request to join City team',
+      expect.stringContaining('Runich user wants to join your group'),
+      [],
+      undefined,
+    );
+    const russianHtml = sendEmail.mock.calls[0]?.[2] as string;
+    const englishHtml = sendEmail.mock.calls[1]?.[2] as string;
+    expect(russianHtml).toContain('Здравствуйте, Sam Owner!');
+    expect(russianHtml).toContain('https://frontend.example/groups/group%2Fone/requests');
+    expect(englishHtml).toContain('Hello!');
+    expect(englishHtml).toContain('https://frontend.example/groups/group-two/requests');
+    for (const html of [russianHtml, englishHtml]) {
+      expect(html).not.toContain('from=email');
+      expect(html).not.toContain('#anchor');
+    }
+  });
+
   it('renders fallback actor details when optional payload fields are empty', async () => {
     const service = new EmailNotificationService();
 
