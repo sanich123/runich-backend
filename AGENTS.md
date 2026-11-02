@@ -9,6 +9,13 @@
 
 - All project Git roots are inside the project/ directory; run Git commands from that directory.
 
+## Prisma schema and migration graph
+
+- For every change under `prisma/**/*.prisma`, regenerate the contract with `yarn db:generate` (also run by `yarn typecheck`). Review the generated `prisma/contract.json` and `prisma/contract.d.ts`; never edit generated contract files by hand.
+- Plan a checked-in migration from the last known/applied contract to the regenerated contract. Use `yarn prisma migration plan --from <current-contract-hash> --name <slug>` and review the generated migration operations, especially defaults, data changes, and destructive DDL.
+- Keep the schema change, generated contract, migration package, and target snapshot together. Run `yarn prisma migration check` after contract generation and before committing; resolve missing or unreachable migration edges before proceeding.
+- `migration check` validates the local graph but does not apply a migration or prove remote database compatibility. Apply only reviewed, checked-in migrations through the deployment workflow; do not repair Stage/Production drift with `db:sync`, `db update`, or by moving database refs.
+
 ## Verification before completion
 
 - For every task that changes application code, run the full project checks from this directory before reporting completion:
