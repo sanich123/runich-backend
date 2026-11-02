@@ -11,9 +11,10 @@ import type {
   CreateGroupEventDto,
   CreateGroupPostDto,
   ListGroupsQueryDto,
+  UpdateGroupDto,
   UpdateGroupPreferencesDto,
 } from './groups.dto';
-import { GROUP_CATEGORIES, GROUP_SPORTS } from './groups.dto';
+import { GROUP_CATEGORIES, GROUP_PRIVACY_VALUES, GROUP_SPORTS } from './groups.dto';
 
 type Membership = {
   role: 'owner' | 'admin' | 'member';
@@ -132,6 +133,88 @@ export class GroupsService {
         },
       })) as GroupRow;
       return this.getGroup(userId, group.id);
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }
+
+  async updateGroup(userId: string, groupId: string, body: UpdateGroupDto) {
+    try {
+      const group = (await this.prisma.group.findUnique({
+        where: { id: groupId },
+        select: { createdByUserId: true, photoAssetId: true },
+      })) as { createdByUserId: string; photoAssetId: string | null } | null;
+      if (!group) throw new NotFoundException('Group not found');
+      if (group.createdByUserId !== userId) throw new ForbiddenException('Only the group owner can edit it');
+
+      const data: Record<string, unknown> = {};
+      if (body.name !== undefined) {
+        const name = typeof body.name === 'string' ? body.name.trim() : '';
+        if (name.length < 2) throw new BadRequestException('Group name must contain at least two characters');
+        data.name = name;
+      }
+      if (body.description !== undefined) {
+        if (body.description !== null && typeof body.description !== 'string') {
+          throw new BadRequestException('Group description must be text');
+        }
+        data.description = typeof body.description === 'string' ? body.description.trim() || null : null;
+      }
+      if (body.sports !== undefined) {
+        const sports = Array.isArray(body.sports) ? [...new Set(body.sports)] : [];
+        if (sports.length !== 1) throw new BadRequestException('Choose exactly one group activity');
+        if (sports.some((sport) => !GROUP_SPORTS.includes(sport as (typeof GROUP_SPORTS)[number]))) {
+          throw new ForbiddenException('Unsupported group activity');
+        }
+        data.sports = sports;
+      }
+      if (body.categoryTags !== undefined) {
+        const categoryTags = Array.isArray(body.categoryTags) ? [...new Set(body.categoryTags)] : [];
+        if (
+          categoryTags.length > 3 ||
+          categoryTags.some((tag) => !GROUP_CATEGORIES.includes(tag as (typeof GROUP_CATEGORIES)[number]))
+        ) {
+          throw new BadRequestException('Choose up to three supported group categories');
+        }
+        data.categoryTags = categoryTags;
+      }
+      if (body.privacy !== undefined) {
+        if (!GROUP_PRIVACY_VALUES.includes(body.privacy as (typeof GROUP_PRIVACY_VALUES)[number])) {
+          throw new BadRequestException('Choose a supported group privacy');
+        }
+        data.privacy = body.privacy;
+      }
+      if (body.locationName !== undefined) {
+        if (body.locationName !== null && typeof body.locationName !== 'string') {
+          throw new BadRequestException('Group location must be text');
+        }
+        data.locationName = typeof body.locationName === 'string' ? body.locationName.trim() || null : null;
+      }
+
+      let nextPhotoAssetId = group.photoAssetId;
+      if (body.photoAssetId !== undefined) {
+        if (body.photoAssetId === null) {
+          nextPhotoAssetId = null;
+        } else {
+          if (typeof body.photoAssetId !== 'string')
+            throw new BadRequestException('Group photo upload is not available');
+          const photo = await this.prisma.mediaModerationAsset.findFirst({
+            where: { id: body.photoAssetId, ownerId: userId, scope: 'group', role: 'media' },
+            select: { status: true, contentType: true },
+          });
+          if (!photo || !photo.contentType.startsWith('image/') || ['failed', 'rejected'].includes(photo.status)) {
+            throw new BadRequestException('Group photo upload is not available');
+          }
+          nextPhotoAssetId = body.photoAssetId;
+        }
+        data.photoAssetId = nextPhotoAssetId;
+      }
+
+      if (!Object.keys(data).length) throw new BadRequestException('Provide at least one group field to update');
+      await this.prisma.group.update({ where: { id: groupId }, data });
+      if (body.photoAssetId !== undefined && group.photoAssetId !== nextPhotoAssetId && this.storage) {
+        await this.storage.deleteGroupPhotoAsset(userId, group.photoAssetId).catch(() => undefined);
+      }
+      return this.getGroup(userId, groupId);
     } catch (error) {
       handleServiceError(error);
     }
@@ -631,6 +714,7 @@ export class GroupsService {
       createdAt: group.createdAt,
       ...(includeUpdatedAt ? { updatedAt: group.updatedAt } : {}),
       createdByUserId: group.createdByUserId,
+      isOwner,
       memberCount: group._count?.members ?? 0,
       categoryTags: group.categoryTags ?? [],
       photoUrl:

@@ -22,6 +22,7 @@ import {
   ListGroupEventsQueryDto,
   GroupMembersQueryDto,
   ListGroupsQueryDto,
+  UpdateGroupDto,
   UpdateGroupMemberDto,
   UpdateGroupPreferencesDto,
 } from './groups.dto';
@@ -45,6 +46,12 @@ export class GroupsController {
   @ApiOperation({ summary: 'Create a group' })
   createGroup(@Req() request: AuthenticatedRequest, @Body() body: CreateGroupDto) {
     return this.groupsService.createGroup(getAuthenticatedUserId(request), body);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a group as its owner' })
+  updateGroup(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() body: UpdateGroupDto) {
+    return this.groupsService.updateGroup(getAuthenticatedUserId(request), id, body);
   }
 
   @Get(':id')
