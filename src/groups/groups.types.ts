@@ -37,6 +37,8 @@ export type GroupMemberQueryRow = {
   } | null;
 };
 
+export type GroupPhotoReviewStatus = 'queued' | 'processing' | 'review_required' | 'approved' | null;
+
 export type GroupPostListItem = {
   id: string;
   text: string;
@@ -44,6 +46,8 @@ export type GroupPostListItem = {
   author: { userId: string; name: string | null; profilePhoto: string | null } | null;
   photoUrl: string | null;
   photoPreviewUrl?: string | null;
+  photoBlurhash?: string | null;
+  photoReviewStatus?: GroupPhotoReviewStatus;
   hasPhoto?: boolean;
   photoPending?: boolean;
 };
@@ -63,7 +67,7 @@ export type GroupPostQueryRow = {
       hideProfilePhotos: boolean | null;
     } | null;
   } | null;
-  photoAsset?: { status: string; publishedKey: string | null } | null;
+  photoAsset?: { status: string; publishedKey: string | null; blurhash: string | null } | null;
 };
 
 export type GroupEventListItem = {
@@ -85,7 +89,7 @@ export type GroupRow = {
   sports: string[];
   categoryTags?: string[];
   photoAssetId?: string | null;
-  photoAsset?: { status: string; publishedKey: string | null } | null;
+  photoAsset?: { status: string; publishedKey: string | null; blurhash: string | null } | null;
   moderationStatus?: 'visible' | 'hidden' | 'removed';
   privacy: 'open' | 'closed';
   locationName: string | null;

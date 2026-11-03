@@ -6,7 +6,7 @@ import { StorageService } from 'src/storage/services/storage.service';
 import { createNotificationEvent } from 'src/notification/notification-event';
 import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
 import type { CreateGroupEventDto, CreateGroupPostDto } from './groups.dto';
-import type { GroupEventListItem, GroupPostQueryRow, Membership } from './groups.types';
+import type { GroupEventListItem, GroupPhotoReviewStatus, GroupPostQueryRow, Membership } from './groups.types';
 import { encodeGroupDateCursor } from './groups.pagination';
 import type { GroupDateCursor } from './groups.pagination';
 
@@ -79,7 +79,7 @@ export class GroupsContentService {
               profile: { select: { name: true, surname: true, profilePhoto: true, hideProfilePhotos: true } },
             },
           },
-          photoAsset: { select: { status: true, publishedKey: true } },
+          photoAsset: { select: { status: true, publishedKey: true, blurhash: true } },
         },
         orderBy: paginationRequested ? [{ createdAt: 'desc' }, { id: 'desc' }] : { createdAt: 'desc' },
         take: paginationRequested ? pageSize + 1 : 50,
@@ -101,29 +101,41 @@ export class GroupsContentService {
               .getOwnerModerationPreviewUrls(userId, ownerPreviewAssetIds)
               .catch((): Record<string, string> => ({}))
           : {};
-      const items = pagePosts.map((post) => ({
-        id: post.id,
-        text: post.text,
-        createdAt: post.createdAt,
-        ...(post.photoAssetId
-          ? {
-              hasPhoto: true,
-              photoPending: ['queued', 'processing', 'review_required'].includes(post.photoAsset?.status ?? ''),
-              photoPreviewUrl: ownerPreviewUrls[post.photoAssetId] ?? null,
-            }
-          : {}),
-        author: post.author?.profile
-          ? {
-              userId: post.author.id,
-              name: [post.author.profile.name, post.author.profile.surname].filter(Boolean).join(' ') || null,
-              profilePhoto: post.author.profile.hideProfilePhotos ? null : post.author.profile.profilePhoto,
-            }
-          : null,
-        photoUrl:
-          post.photoAsset?.status === 'approved' && post.photoAsset.publishedKey && this.storage
-            ? this.storage.getPublicUrl(post.photoAsset.publishedKey)
+      const items = pagePosts.map((post) => {
+        const photoStatus = post.photoAsset?.status;
+        const photoReviewStatus: GroupPhotoReviewStatus =
+          photoStatus === 'queued' ||
+          photoStatus === 'processing' ||
+          photoStatus === 'review_required' ||
+          (photoStatus === 'approved' && !post.photoAsset?.publishedKey)
+            ? photoStatus
+            : null;
+        return {
+          id: post.id,
+          text: post.text,
+          createdAt: post.createdAt,
+          ...(post.photoAssetId
+            ? {
+                hasPhoto: true,
+                photoPending: photoReviewStatus !== null,
+                photoBlurhash: photoReviewStatus ? (post.photoAsset?.blurhash ?? null) : null,
+                photoReviewStatus,
+                photoPreviewUrl: ownerPreviewUrls[post.photoAssetId] ?? null,
+              }
+            : {}),
+          author: post.author?.profile
+            ? {
+                userId: post.author.id,
+                name: [post.author.profile.name, post.author.profile.surname].filter(Boolean).join(' ') || null,
+                profilePhoto: post.author.profile.hideProfilePhotos ? null : post.author.profile.profilePhoto,
+              }
             : null,
-      }));
+          photoUrl:
+            post.photoAsset?.status === 'approved' && post.photoAsset.publishedKey && this.storage
+              ? this.storage.getPublicUrl(post.photoAsset.publishedKey)
+              : null,
+        };
+      });
       if (!paginationRequested) return items;
       const lastPost = pagePosts.at(-1);
       return {

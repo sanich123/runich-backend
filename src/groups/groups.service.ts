@@ -15,7 +15,14 @@ import type {
   UpdateGroupPreferencesDto,
 } from './groups.dto';
 import { GroupsContentService } from './groups-content.service';
-import type { GroupMemberListItem, GroupMemberQueryRow, GroupPostListItem, GroupRow, Membership } from './groups.types';
+import type {
+  GroupMemberListItem,
+  GroupMemberQueryRow,
+  GroupPhotoReviewStatus,
+  GroupPostListItem,
+  GroupRow,
+  Membership,
+} from './groups.types';
 import { encodeGroupDateCursor, encodeGroupDistanceCursor } from './groups.pagination';
 import type { GroupDateCursor, GroupDistanceCursor, GroupPage } from './groups.pagination';
 import { isGroupCategory, isGroupPrivacy, isGroupSport } from './groups.utils';
@@ -61,7 +68,7 @@ export class GroupsService {
             where: { userId },
             select: { role: true, status: true, notificationPreference: true, feedPreference: true },
           },
-          photoAsset: { select: { status: true, publishedKey: true } },
+          photoAsset: { select: { status: true, publishedKey: true, blurhash: true } },
           _count: { select: { members: { where: { status: 'active' } } } },
         },
         orderBy: { createdAt: 'desc' },
@@ -206,7 +213,7 @@ export class GroupsService {
             where: { userId },
             select: { role: true, status: true, notificationPreference: true, feedPreference: true },
           },
-          photoAsset: { select: { status: true, publishedKey: true } },
+          photoAsset: { select: { status: true, publishedKey: true, blurhash: true } },
           _count: { select: { members: { where: { status: 'active' } } } },
         },
       });
@@ -618,6 +625,14 @@ export class GroupsService {
   private async toSummary(group: GroupRow, userId: string, includeUpdatedAt = false) {
     const membership = group.members?.[0] ?? null;
     const isOwner = group.createdByUserId === userId;
+    const photoStatus = group.photoAsset?.status;
+    const photoReviewStatus: GroupPhotoReviewStatus =
+      photoStatus === 'queued' ||
+      photoStatus === 'processing' ||
+      photoStatus === 'review_required' ||
+      (photoStatus === 'approved' && !group.photoAsset?.publishedKey)
+        ? photoStatus
+        : null;
     const photoPreviewUrl =
       isOwner && group.photoAssetId && group.photoAsset?.status !== 'approved' && this.storage
         ? await this.storage.getOwnerModerationPreviewUrl(userId, group.photoAssetId)
@@ -646,7 +661,9 @@ export class GroupsService {
           ? this.storage.getPublicUrl(group.photoAsset.publishedKey)
           : null,
       photoPreviewUrl,
-      photoPending: ['queued', 'processing'].includes(group.photoAsset?.status ?? ''),
+      photoBlurhash: photoReviewStatus ? (group.photoAsset?.blurhash ?? null) : null,
+      photoReviewStatus,
+      photoPending: photoReviewStatus !== null,
       currentMembership: membership
         ? {
             role: membership.role,
