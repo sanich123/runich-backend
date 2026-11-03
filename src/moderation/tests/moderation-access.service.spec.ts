@@ -1,5 +1,5 @@
 import { asyncMock } from 'src/tests/helpers';
-import { ModerationAccessService } from '../moderation-access.service';
+import { ModerationAccessService } from '../services/moderation-access.service';
 
 describe('ModerationAccessService', () => {
   it('checks blocks in either direction and lists the other user from each relation', async () => {

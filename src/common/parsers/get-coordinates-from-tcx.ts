@@ -1,5 +1,5 @@
 import * as Tcx from 'tcx-js';
-import { LocationObject } from 'src/activity/activity.dto';
+import { LocationObject } from 'src/activity/dto/activity.dto';
 import { Logger } from '@nestjs/common';
 
 const logger = new Logger('TcxParser');

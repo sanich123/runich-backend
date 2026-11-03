@@ -19,9 +19,9 @@ import { asyncMock } from 'src/tests/helpers';
 import { makeActivityMediaFixture, makePhotoUpload } from './fixtures';
 import { makeMoscowCoordinate } from 'src/tests/fixtures/geography.fixtures';
 import { StorageService } from '../services/storage.service';
-import { decodeActivityRoute, encodeActivityRoute } from '../activity-route';
-import { getActivityPhotoKey, getExtensionFromStorageKey } from '../storage-key';
-import { getStorageErrorMessage } from '../utils';
+import { decodeActivityRoute, encodeActivityRoute } from '../shared/activity-route';
+import { getActivityPhotoKey, getExtensionFromStorageKey } from '../shared/storage-key';
+import { getStorageErrorMessage } from '../shared/utils';
 
 const s3Send = jest.spyOn(S3Client.prototype, 'send');
 

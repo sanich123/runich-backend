@@ -3,12 +3,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import {
-  ACTIVITY_MEDIA_PROCESSING_CONFIG,
-  ACTIVITY_MEDIA_PROCESSING_STATUS,
-} from './activity-media-processing.constants';
-import { getMediaProcessingErrorMessage } from './activity-media-processing.utils';
-import type { ActivityMediaProcessingRecord } from '../type';
+import { ACTIVITY_MEDIA_PROCESSING_CONFIG, ACTIVITY_MEDIA_PROCESSING_STATUS } from '../shared/const';
+import { getMediaProcessingErrorMessage } from '../shared/utils';
+import type { ActivityMediaProcessingRecord } from '../shared/types';
 
 @Injectable()
 export class ActivityMediaProcessingService {

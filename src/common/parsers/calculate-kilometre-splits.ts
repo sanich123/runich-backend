@@ -1,4 +1,4 @@
-import type { ActivityKilometreSplitObject, LocationObject } from 'src/activity/activity.dto';
+import type { ActivityKilometreSplitObject, LocationObject } from 'src/activity/dto/activity.dto';
 
 const EARTH_RADIUS_METERS = 6_371_008.8;
 const METERS_IN_KILOMETER = 1_000;

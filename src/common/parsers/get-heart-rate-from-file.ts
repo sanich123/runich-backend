@@ -4,8 +4,8 @@ import { extname } from 'node:path';
 import { SportsLib } from '@ardentcode/sports-lib';
 import { DOMParser } from 'xmldom-qsa';
 import { MAX_ACTIVITY_HEART_RATE_SAMPLES } from 'src/common/constants';
-import type { ActivityHeartRateSampleObject } from 'src/activity/activity.dto';
-import { getHeartRateStatistics } from 'src/activity/heart-rate.utils';
+import type { ActivityHeartRateSampleObject } from 'src/activity/dto/activity.dto';
+import { getHeartRateStatistics } from 'src/activity/shared/utils';
 import { resolveMigrationPath } from './migration-path';
 
 const logger = new Logger('HeartRateParser');

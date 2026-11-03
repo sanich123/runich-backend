@@ -3,9 +3,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { StorageService } from 'src/storage/services/storage.service';
 import { getLocalDateTimeParts, isValidIanaTimeZone } from 'src/common/utils/time-zone';
-import type { LocationObject } from '../activity.dto';
-import { ACTIVITY_ENRICHMENT_CONFIG, ACTIVITY_ENRICHMENT_STATUS } from './activity-enrichment.constants';
-import type { ActivityEnrichmentRecord, Coordinate, WeatherResponse } from './activity-enrichment.types';
+import type { LocationObject } from '../dto/activity.dto';
+import { ACTIVITY_ENRICHMENT_CONFIG, ACTIVITY_ENRICHMENT_STATUS } from '../shared/const';
+import type { ActivityEnrichmentRecord, Coordinate, WeatherResponse } from '../shared/types';
 
 @Injectable()
 export class ActivityEnrichmentService {

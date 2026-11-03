@@ -38,7 +38,7 @@ import {
   ActivityChartDataResponseDto,
   WatchWorkoutBatchImportDto,
   WatchWorkoutBatchImportResponseDto,
-} from './activity.dto';
+} from './dto/activity.dto';
 import {
   ActivityCardResponseDto,
   ActivityDetailsResponseDto,
@@ -48,14 +48,14 @@ import {
   ActivityLocationsResponseDto,
   ActivityMediaResponseDto,
   ActivityResponseDto,
-} from './activity.dto';
+} from './dto/activity.dto';
 import {
   ActivityMigrationJobParams,
   ActivityMigrationJobResponseDto,
   ActivityMigrationUploadStartDto,
-} from './activity.dto';
+} from './dto/activity.dto';
 import { ActivityMigrationService } from './services/activity-migration.service';
-import { getMigrationArchiveDirectory, getMigrationIncomingArchivePath } from './activity-migration-storage';
+import { getMigrationArchiveDirectory, getMigrationIncomingArchivePath } from './shared/activity-migration.utils';
 import { ParamsId } from 'src/common/dto/params-validation';
 import {
   ApiBearerAuth,
@@ -86,8 +86,8 @@ import {
   ACTIVITY_WITH_ROUTES_ROUTE,
   activity,
   id,
-} from './const';
-import { parseActivityCursor, parseActivityMediaCursor } from './activity.pagination';
+} from './shared/const';
+import { parseActivityCursor, parseActivityMediaCursor } from './shared/activity.pagination';
 
 function normalizeActivityIdsQuery(ids?: string | string[]) {
   return (Array.isArray(ids) ? ids : [ids ?? ''])

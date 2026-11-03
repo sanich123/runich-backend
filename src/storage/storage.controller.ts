@@ -43,7 +43,7 @@ import {
   PhotoUploadBatchResponseDto,
   PhotoUploadOptionsDto,
   PhotoUploadResponseDto,
-} from './storage.dto';
+} from './dto/storage.dto';
 import { StorageService } from './services/storage.service';
 
 @ApiTags('photo')

@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
-import { isSupportedVideoUpload } from './const';
+import { isSupportedVideoUpload } from './shared/const';
 
 export const photoUploadFileFilter: NonNullable<MulterOptions['fileFilter']> = (_request, file, callback) => {
   const isImage = file.mimetype.startsWith('image/');

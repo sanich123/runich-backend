@@ -1,12 +1,31 @@
 import { BadRequestException } from '@nestjs/common';
+import { jest } from '@jest/globals';
 import {
   encodeGroupDateCursor,
   encodeGroupDistanceCursor,
+  createGroupPage,
   parseGroupDateCursor,
   parseGroupDistanceCursor,
-} from '../groups.pagination';
+} from '../shared/groups.pagination';
 
 describe('group pagination cursors', () => {
+  it('creates a lookahead page with a cursor from the last visible row', () => {
+    const rows = [{ id: 'first' }, { id: 'second' }, { id: 'lookahead' }];
+
+    expect(createGroupPage(rows, 2, ({ id }) => id)).toEqual({
+      items: rows.slice(0, 2),
+      hasMore: true,
+      nextCursor: 'second',
+    });
+  });
+
+  it('creates an empty terminal page without requesting a cursor', () => {
+    const encodeCursor = jest.fn(() => 'unused');
+
+    expect(createGroupPage([], 10, encodeCursor)).toEqual({ items: [], hasMore: false, nextCursor: null });
+    expect(encodeCursor).not.toHaveBeenCalled();
+  });
+
   it('round-trips date cursors and leaves an omitted cursor undefined', () => {
     const cursor = { date: new Date('2026-10-29T10:00:00.000Z'), id: 'item-42' };
 

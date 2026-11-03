@@ -15,20 +15,17 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { getAuthenticatedUserId, type AuthenticatedRequest } from 'src/auth/request/auth-request';
-import {
-  CreateGroupDto,
-  CreateGroupEventDto,
-  CreateGroupPostDto,
-  ListGroupEventsQueryDto,
-  GroupMembersQueryDto,
-  ListGroupsQueryDto,
-  UpdateGroupDto,
-  UpdateGroupMemberDto,
-  UpdateGroupPreferencesDto,
-} from './groups.dto';
-import { GroupsService } from './groups.service';
+import { CreateGroupDto, ListGroupsQueryDto, UpdateGroupDto } from './dto/groups.dto';
+import { CreateGroupEventDto, CreateGroupPostDto, ListGroupEventsQueryDto } from './dto/groups-content.dto';
+import { GroupMembersQueryDto, UpdateGroupMemberDto, UpdateGroupPreferencesDto } from './dto/groups-members.dto';
+import { GroupsEventsService } from './services/groups-events.service';
+import { GroupsMembersService } from './services/groups-members.service';
+import { GroupsPostsService } from './services/groups-posts.service';
+import { GroupsStatisticsService } from './services/groups-statistics.service';
+import { GroupSummaryService } from './services/groups-summary.service';
+import { GroupsService } from './services/groups.service';
 import { validateOptionalIntegerQuery, validateOptionalIanaTimeZoneQuery } from 'src/common/utils/query-validation';
-import { GROUP_PAGE_SIZE, parseGroupDateCursor, parseGroupDistanceCursor } from './groups.pagination';
+import { GROUP_PAGE_SIZE, parseGroupDateCursor, parseGroupDistanceCursor } from './shared/groups.pagination';
 
 function parseGroupPageSize(limit?: string) {
   const validatedLimit = validateOptionalIntegerQuery(limit, 'limit', { min: 1, max: GROUP_PAGE_SIZE });
@@ -40,7 +37,14 @@ function parseGroupPageSize(limit?: string) {
 @UseGuards(JwtAuthGuard)
 @Controller('groups')
 export class GroupsController {
-  constructor(private readonly groupsService: GroupsService) {}
+  constructor(
+    private readonly groupsService: GroupsService,
+    private readonly groupSummaryService: GroupSummaryService,
+    private readonly groupsMembersService: GroupsMembersService,
+    private readonly groupsStatisticsService: GroupsStatisticsService,
+    private readonly groupsPostsService: GroupsPostsService,
+    private readonly groupsEventsService: GroupsEventsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List discoverable or joined groups' })
@@ -63,7 +67,7 @@ export class GroupsController {
   @Get(':id')
   @ApiOperation({ summary: 'Get group details and current membership' })
   getGroup(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return this.groupsService.getGroup(getAuthenticatedUserId(request), id);
+    return this.groupSummaryService.getGroup(getAuthenticatedUserId(request), id);
   }
 
   @Delete(':id')
@@ -76,21 +80,21 @@ export class GroupsController {
   @Post(':id/join')
   @ApiOperation({ summary: 'Join an open group or request access to a closed group' })
   joinGroup(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return this.groupsService.joinGroup(getAuthenticatedUserId(request), id);
+    return this.groupsMembersService.joinGroup(getAuthenticatedUserId(request), id);
   }
 
   @Delete(':id/membership')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Leave a group or cancel a join request' })
   async leaveGroup(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    await this.groupsService.leaveGroup(getAuthenticatedUserId(request), id);
+    await this.groupsMembersService.leaveGroup(getAuthenticatedUserId(request), id);
   }
 
   @Get(':id/members')
   @ApiOperation({ summary: 'List group members or pending join requests' })
   getMembers(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Query() query: GroupMembersQueryDto) {
     const paginationRequested = query.limit !== undefined || query.cursor !== undefined;
-    return this.groupsService.getMembers(
+    return this.groupsMembersService.getMembers(
       getAuthenticatedUserId(request),
       id,
       query.status ?? 'active',
@@ -108,7 +112,7 @@ export class GroupsController {
     @Param('userId') userId: string,
     @Body() body: UpdateGroupMemberDto,
   ) {
-    return this.groupsService.updateMember(getAuthenticatedUserId(request), id, userId, body.status);
+    return this.groupsMembersService.updateMember(getAuthenticatedUserId(request), id, userId, body.status);
   }
 
   @Get(':id/statistics/month')
@@ -126,7 +130,7 @@ export class GroupsController {
     const validatedMonth = validateOptionalIntegerQuery(month, 'month', { max: 11 });
     const validatedTimeZone = validateOptionalIanaTimeZoneQuery(timeZone, 'timeZone');
     const paginationRequested = limit !== undefined || cursor !== undefined;
-    return this.groupsService.getMonthlyLeaderboard(
+    return this.groupsStatisticsService.getMonthlyLeaderboard(
       getAuthenticatedUserId(request),
       id,
       validatedYear === undefined ? undefined : Number(validatedYear),
@@ -145,7 +149,7 @@ export class GroupsController {
     @Param('id') id: string,
     @Body() body: UpdateGroupPreferencesDto,
   ) {
-    return this.groupsService.updatePreferences(getAuthenticatedUserId(request), id, body);
+    return this.groupsMembersService.updatePreferences(getAuthenticatedUserId(request), id, body);
   }
 
   @Get(':id/posts')
@@ -157,7 +161,7 @@ export class GroupsController {
     @Query('cursor') cursor?: string,
   ) {
     const paginationRequested = limit !== undefined || cursor !== undefined;
-    return this.groupsService.getPosts(
+    return this.groupsPostsService.getPosts(
       getAuthenticatedUserId(request),
       id,
       parseGroupPageSize(limit),
@@ -169,14 +173,14 @@ export class GroupsController {
   @Post(':id/posts')
   @ApiOperation({ summary: 'Publish a post to a group' })
   createPost(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() body: CreateGroupPostDto) {
-    return this.groupsService.createPost(getAuthenticatedUserId(request), id, body);
+    return this.groupsPostsService.createPost(getAuthenticatedUserId(request), id, body);
   }
 
   @Get(':id/events')
   @ApiOperation({ summary: 'List upcoming or past group events' })
   getEvents(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Query() query: ListGroupEventsQueryDto) {
     const paginationRequested = query.limit !== undefined || query.cursor !== undefined;
-    return this.groupsService.getEvents(
+    return this.groupsEventsService.getEvents(
       getAuthenticatedUserId(request),
       id,
       query.period ?? 'upcoming',
@@ -189,6 +193,6 @@ export class GroupsController {
   @Post(':id/events')
   @ApiOperation({ summary: 'Create an event for a group' })
   createEvent(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() body: CreateGroupEventDto) {
-    return this.groupsService.createEvent(getAuthenticatedUserId(request), id, body);
+    return this.groupsEventsService.createEvent(getAuthenticatedUserId(request), id, body);
   }
 }

@@ -1,5 +1,5 @@
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
-import type { ActivityCursor } from '../activity.pagination';
+import type { ActivityCursor } from '../shared/activity.pagination';
 import { ActivityReadService } from '../services/activity-read.service';
 
 function createPrismaMock() {

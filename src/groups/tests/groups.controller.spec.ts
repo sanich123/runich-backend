@@ -1,12 +1,32 @@
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { asyncMock } from 'src/tests/helpers';
 import { GroupsController } from '../groups.controller';
-import { encodeGroupDateCursor, encodeGroupDistanceCursor } from '../groups.pagination';
+import { encodeGroupDateCursor, encodeGroupDistanceCursor } from '../shared/groups.pagination';
+
+function createController(
+  services: Partial<{
+    groups: object;
+    summary: object;
+    members: object;
+    statistics: object;
+    posts: object;
+    events: object;
+  }>,
+) {
+  return new GroupsController(
+    (services.groups ?? {}) as never,
+    (services.summary ?? {}) as never,
+    (services.members ?? {}) as never,
+    (services.statistics ?? {}) as never,
+    (services.posts ?? {}) as never,
+    (services.events ?? {}) as never,
+  );
+}
 
 describe('GroupsController', () => {
   it('uses the authenticated user and defaults the member status to active', async () => {
     const groupsService = { getMembers: asyncMock() };
-    const controller = new GroupsController(groupsService as never);
+    const controller = createController({ members: groupsService });
     const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
     groupsService.getMembers.mockResolvedValue([]);
 
@@ -17,7 +37,7 @@ describe('GroupsController', () => {
 
   it('passes explicit pending membership status through to the service', async () => {
     const groupsService = { getMembers: asyncMock() };
-    const controller = new GroupsController(groupsService as never);
+    const controller = createController({ members: groupsService });
     const request = { user: { id: 'user-1', userId: 'session-user-1' } } as AuthenticatedRequest;
     groupsService.getMembers.mockResolvedValue([]);
 
@@ -35,7 +55,7 @@ describe('GroupsController', () => {
 
   it('validates and passes monthly leaderboard filters to the service', async () => {
     const groupsService = { getMonthlyLeaderboard: asyncMock() };
-    const controller = new GroupsController(groupsService as never);
+    const controller = createController({ statistics: groupsService });
     const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
     groupsService.getMonthlyLeaderboard.mockResolvedValue({ items: [] });
 
@@ -69,7 +89,7 @@ describe('GroupsController', () => {
 
   it('updates preferences for the authenticated member', async () => {
     const groupsService = { updatePreferences: asyncMock() };
-    const controller = new GroupsController(groupsService as never);
+    const controller = createController({ members: groupsService });
     const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
     const preferences = { notificationPreference: 'off', feedPreference: 'admins' } as const;
 
@@ -80,7 +100,7 @@ describe('GroupsController', () => {
 
   it('passes group post creation to the service with the authenticated user', async () => {
     const groupsService = { createPost: asyncMock() };
-    const controller = new GroupsController(groupsService as never);
+    const controller = createController({ posts: groupsService });
     const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
     const body = { text: 'Sunday run' };
 
@@ -91,7 +111,7 @@ describe('GroupsController', () => {
 
   it('defaults group events to upcoming and passes the selected period', async () => {
     const groupsService = { getEvents: asyncMock() };
-    const controller = new GroupsController(groupsService as never);
+    const controller = createController({ events: groupsService });
     const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
 
     await controller.getEvents(request, 'group-1', {});
@@ -108,7 +128,12 @@ describe('GroupsController', () => {
       getPosts: asyncMock(),
       getEvents: asyncMock(),
     };
-    const controller = new GroupsController(groupsService as never);
+    const controller = createController({
+      members: groupsService,
+      statistics: groupsService,
+      posts: groupsService,
+      events: groupsService,
+    });
     const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
     const date = new Date('2026-10-29T10:00:00.000Z');
     const dateCursor = encodeGroupDateCursor({ date, id: 'item-42' });
@@ -150,7 +175,7 @@ describe('GroupsController', () => {
 
   it('passes event creation to the service with the authenticated user', async () => {
     const groupsService = { createEvent: asyncMock() };
-    const controller = new GroupsController(groupsService as never);
+    const controller = createController({ events: groupsService });
     const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
     const body = { title: 'Sunday run', startsAt: '2026-10-31T10:00:00.000Z' };
 

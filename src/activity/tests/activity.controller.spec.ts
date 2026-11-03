@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { encodeActivityCursor } from '../activity.pagination';
+import { encodeActivityCursor } from '../shared/activity.pagination';
 import { ActivityController } from '../activity.controller';
 import { ActivityService } from '../services/activity.service';
 import { AccountService } from 'src/account/account.service';

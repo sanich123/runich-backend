@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
-import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/activity-migration-config';
+import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/shared/const';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import {
   PUSH_NOTIFICATION_COPY,

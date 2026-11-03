@@ -28,13 +28,13 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
-import { CONTENT_REPORT_STATUSES } from './moderation.constants';
+import { CONTENT_REPORT_STATUSES } from './shared/moderation.constants';
 import {
   ModerationActionDto,
   ModerationAppealDecisionDto,
   SubmitContentReportDto,
   SubmitModerationAppealDto,
-} from './moderation.dto';
+} from './dto/moderation.dto';
 import { ModerationService } from './moderation.service';
 import { ModeratorGuard } from './moderator.guard';
 

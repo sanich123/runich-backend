@@ -1,8 +1,9 @@
 import { ForbiddenException, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ActivityService } from '../services/activity.service';
-import { MAX_MAP_ROUTE_LOCATIONS } from '../const';
+import { ActivityMediaService } from '../services/activity-media.service';
+import { MAX_MAP_ROUTE_LOCATIONS } from '../shared/const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
-import { encodeActivityCursor, parseActivityCursor, parseActivityMediaCursor } from '../activity.pagination';
+import { encodeActivityCursor, parseActivityCursor, parseActivityMediaCursor } from '../shared/activity.pagination';
 import { jest } from '@jest/globals';
 import {
   makeActivityDto,
@@ -1651,17 +1652,8 @@ describe('ActivityService', () => {
   });
 
   it('builds only valid activity media rows and applies defaults to quarantined assets', () => {
-    const service = new ActivityService(createPrismaMock() as never, {} as never);
-    const getActivityMediaRows = (
-      service as unknown as {
-        getActivityMediaRows: (
-          activityId: unknown,
-          userId: unknown,
-          activityDate: unknown,
-          media: unknown,
-        ) => Record<string, unknown>[];
-      }
-    ).getActivityMediaRows.bind(service);
+    const service = new ActivityMediaService(createPrismaMock() as never);
+    const getActivityMediaRows = service.getActivityMediaRows.bind(service);
     const activityDate = new Date('2026-10-21T12:00:00.000Z');
 
     expect(getActivityMediaRows(undefined, 'user-1', activityDate, [])).toEqual([]);

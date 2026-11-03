@@ -1,5 +1,5 @@
 import polyline from '@mapbox/polyline';
-import { LocationObject } from 'src/activity/activity.dto';
+import { LocationObject } from 'src/activity/dto/activity.dto';
 import { STATIC_MAP_ROUTE_WIDTH } from 'src/common/maps/static-map.constants';
 import { simplifyStaticMapLocations } from 'src/common/maps/static-map.utils';
 

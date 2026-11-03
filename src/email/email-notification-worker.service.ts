@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/activity-migration-config';
+import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/shared/const';
 import { EmailNotificationService } from './email-notification.service';
 import type { EmailNotificationPayload } from './email-notification.types';
 import { MAX_ATTEMPTS, MAX_RETRY_DELAY_MS, STALE_JOB_AGE_MS } from './email-notification-worker.constants';
