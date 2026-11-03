@@ -383,7 +383,9 @@ describe('GroupsService', () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 'group-1', privacy: 'open', createdByUserId: 'owner-1' })
       .mockResolvedValueOnce(groupRow({ members: [{ role: 'member', status: 'active' }] }));
-    prisma.groupMember.findUnique.mockResolvedValue(null);
+    prisma.groupMember.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ role: 'member', status: 'active' });
     prisma.groupMember.upsert.mockResolvedValue({ id: 'membership-1' });
 
     await expect(service.joinGroup('user-1', 'missing')).rejects.toBeInstanceOf(NotFoundException);
@@ -444,6 +446,11 @@ describe('GroupsService', () => {
           members: [],
         }),
       );
+    prisma.groupMember.findUnique
+      .mockResolvedValueOnce({ role: 'owner', status: 'active' })
+      .mockResolvedValueOnce({ role: 'member', status: 'active' })
+      .mockResolvedValueOnce({ role: 'member', status: 'pending' })
+      .mockResolvedValueOnce(null);
 
     const ownerView = await service.getGroup('owner-1', 'group-1');
     const memberView = await service.getGroup('member-1', 'group-1');
@@ -489,7 +496,9 @@ describe('GroupsService', () => {
     prisma.group.findUnique
       .mockResolvedValueOnce({ id: 'group-1', privacy: 'closed', createdByUserId: 'owner-1' })
       .mockResolvedValueOnce(groupRow({ privacy: 'closed', members: [{ role: 'member', status: 'pending' }] }));
-    prisma.groupMember.findUnique.mockResolvedValue(null);
+    prisma.groupMember.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ role: 'member', status: 'pending' });
     prisma.groupMember.upsert.mockResolvedValue({ id: 'membership-1' });
     prisma.groupMember.count.mockResolvedValue(0);
 

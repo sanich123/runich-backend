@@ -64,36 +64,44 @@ export class GroupsService {
       const groups: GroupRow[] = await this.prisma.group.findMany({
         where,
         include: {
-          members: {
-            where: { userId },
-            select: { role: true, status: true, notificationPreference: true, feedPreference: true },
-          },
+          ...(query.scope === 'mine'
+            ? {}
+            : {
+                members: {
+                  where: { userId },
+                  select: { role: true, status: true, notificationPreference: true, feedPreference: true },
+                },
+              }),
           photoAsset: { select: { status: true, publishedKey: true, blurhash: true } },
           _count: { select: { members: { where: { status: 'active' } } } },
         },
         orderBy: { createdAt: 'desc' },
         take: 200,
       });
-      const groupsMissingMembership =
-        query.scope === 'mine' ? groups.filter(({ members }) => Array.isArray(members) && members.length === 0) : [];
-      const membershipRows: Array<{ groupId: string } & Membership> = groupsMissingMembership.length
-        ? ((await this.prisma.groupMember.findMany({
-            where: { userId, groupId: { in: groupsMissingMembership.map(({ id }) => id) } },
-            select: {
-              groupId: true,
-              role: true,
-              status: true,
-              notificationPreference: true,
-              feedPreference: true,
-            },
-          })) ?? [])
-        : [];
+      const membershipRows: Array<{ groupId: string } & Membership> =
+        query.scope === 'mine' && groups.length
+          ? ((await this.prisma.groupMember.findMany({
+              where: { userId, groupId: { in: groups.map(({ id }) => id) } },
+              select: {
+                groupId: true,
+                role: true,
+                status: true,
+                notificationPreference: true,
+                feedPreference: true,
+              },
+            })) ?? [])
+          : [];
       const membershipByGroupId = new Map<string, Membership>(
         membershipRows.map(({ groupId, ...membership }) => [groupId, membership]),
       );
       return await Promise.all(
         groups.map((group) =>
-          this.toSummary(group, userId, false, group.members?.[0] ?? membershipByGroupId.get(group.id) ?? null),
+          this.toSummary(
+            group,
+            userId,
+            false,
+            query.scope === 'mine' ? (membershipByGroupId.get(group.id) ?? null) : (group.members?.[0] ?? null),
+          ),
         ),
       );
     } catch (error) {
@@ -230,10 +238,6 @@ export class GroupsService {
       const group: GroupRow | null = await this.prisma.group.findUnique({
         where: { id: groupId },
         include: {
-          members: {
-            where: { userId },
-            select: { role: true, status: true, notificationPreference: true, feedPreference: true },
-          },
           photoAsset: { select: { status: true, publishedKey: true, blurhash: true } },
           _count: { select: { members: { where: { status: 'active' } } } },
         },
@@ -243,13 +247,10 @@ export class GroupsService {
         throw new ForbiddenException('This group is unavailable');
       }
       const membership =
-        group.members?.[0] ??
-        (group.members?.length === 0
-          ? ((await this.prisma.groupMember.findUnique({
-              where: { groupId_userId: { groupId, userId } },
-              select: { role: true, status: true, notificationPreference: true, feedPreference: true },
-            })) ?? null)
-          : null);
+        (await this.prisma.groupMember.findUnique({
+          where: { groupId_userId: { groupId, userId } },
+          select: { role: true, status: true, notificationPreference: true, feedPreference: true },
+        })) ?? null;
       return await this.toSummary(group, userId, true, membership);
     } catch (error) {
       handleServiceError(error);
