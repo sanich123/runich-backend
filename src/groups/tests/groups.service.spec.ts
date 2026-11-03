@@ -410,7 +410,7 @@ describe('GroupsService', () => {
     await expect(service.getGroup('user-1', 'group-1')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('shows an owner preview for a pending group photo and a public URL for an approved photo', async () => {
+  it('shows pending group photo previews only to owners and active members', async () => {
     const getOwnerModerationPreviewUrl = asyncMock().mockResolvedValue('https://cdn.test/pending-preview.webp');
     const getPublicUrl = jest.fn().mockReturnValue('https://cdn.test/approved.webp');
     service = createGroupsService(prisma, moderationAccess, { getOwnerModerationPreviewUrl, getPublicUrl });
@@ -425,6 +425,20 @@ describe('GroupsService', () => {
       )
       .mockResolvedValueOnce(
         groupRow({
+          photoAssetId: 'pending-photo',
+          photoAsset: { status: 'processing', publishedKey: null },
+          members: [{ role: 'member', status: 'active' }],
+        }),
+      )
+      .mockResolvedValueOnce(
+        groupRow({
+          photoAssetId: 'pending-photo',
+          photoAsset: { status: 'processing', publishedKey: null },
+          members: [{ role: 'member', status: 'pending' }],
+        }),
+      )
+      .mockResolvedValueOnce(
+        groupRow({
           photoAssetId: 'approved-photo',
           photoAsset: { status: 'approved', publishedKey: 'groups/approved.webp' },
           members: [],
@@ -432,12 +446,18 @@ describe('GroupsService', () => {
       );
 
     const ownerView = await service.getGroup('owner-1', 'group-1');
-    const publicView = await service.getGroup('member-1', 'group-1');
+    const memberView = await service.getGroup('member-1', 'group-1');
+    const pendingApplicantView = await service.getGroup('pending-1', 'group-1');
+    const publicView = await service.getGroup('visitor-1', 'group-1');
 
     expect(ownerView).toMatchObject({ photoPreviewUrl: 'https://cdn.test/pending-preview.webp', photoPending: true });
     expect(ownerView?.pendingRequestCount).toBe(2);
     expect(getOwnerModerationPreviewUrl).toHaveBeenCalledWith('owner-1', 'pending-photo');
+    expect(memberView).toMatchObject({ photoPreviewUrl: 'https://cdn.test/pending-preview.webp', photoPending: true });
+    expect(pendingApplicantView).toMatchObject({ photoPreviewUrl: null, photoPending: true });
     expect(publicView).toMatchObject({ photoUrl: 'https://cdn.test/approved.webp', photoPreviewUrl: null });
+    expect(getOwnerModerationPreviewUrl).toHaveBeenCalledTimes(2);
+    expect(getOwnerModerationPreviewUrl).toHaveBeenNthCalledWith(2, 'owner-1', 'pending-photo');
     expect(getPublicUrl).toHaveBeenCalledWith('groups/approved.webp');
   });
 
@@ -773,6 +793,8 @@ describe('GroupsService', () => {
     const [query, ...parameters] = prisma.$queryRaw.mock.calls[0]!;
     expect(query.join('')).toContain('hide_activity_statistics');
     expect(query.join('')).toContain('HAVING COALESCE(SUM(a."distance"), 0) > 0');
+    expect(query.join('')).toContain('a."route_storage_key" IS NOT NULL');
+    expect(query.join('')).toContain('a."route_point_count" > 1');
     expect(parameters).toContainEqual(['blocked-user']);
     expect(result).toMatchObject({
       year: 2026,

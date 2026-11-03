@@ -539,6 +539,8 @@ export class GroupsService {
           AND a."date" < ${lt}::timestamptz
           AND a."visibility" = 'public'
           AND a."moderation_status" = 'visible'
+          AND a."route_storage_key" IS NOT NULL
+          AND a."route_point_count" > 1
         WHERE gm."group_id" = ${groupId}::uuid
           AND gm."status" = 'active'
           AND p."hide_activity_statistics" IS DISTINCT FROM TRUE
@@ -633,9 +635,10 @@ export class GroupsService {
       (photoStatus === 'approved' && !group.photoAsset?.publishedKey)
         ? photoStatus
         : null;
+    const canViewGroupPhotoPreview = isOwner || membership?.status === 'active';
     const photoPreviewUrl =
-      isOwner && group.photoAssetId && group.photoAsset?.status !== 'approved' && this.storage
-        ? await this.storage.getOwnerModerationPreviewUrl(userId, group.photoAssetId)
+      canViewGroupPhotoPreview && group.photoAssetId && group.photoAsset?.status !== 'approved' && this.storage
+        ? await this.storage.getOwnerModerationPreviewUrl(group.createdByUserId, group.photoAssetId)
         : null;
     const canManage =
       isOwner || (membership?.status === 'active' && (membership.role === 'owner' || membership.role === 'admin'));
