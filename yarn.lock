@@ -3595,9 +3595,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/mapped-types@npm:12.0.0":
-  version: 12.0.0
-  resolution: "@nestjs/mapped-types@npm:12.0.0"
+"@nestjs/mapped-types@npm:12.0.1":
+  version: 12.0.1
+  resolution: "@nestjs/mapped-types@npm:12.0.1"
   peerDependencies:
     "@nestjs/common": ^10.0.0 || ^11.0.0 || ^12.0.0
     class-transformer: ^0.4.0 || ^0.5.0
@@ -3608,13 +3608,13 @@ __metadata:
       optional: true
     class-validator:
       optional: true
-  checksum: 10c0/6b5d61f402b163b985060b3f8484b04ae6c176a46e3a7b49d006a2b19614b0640b18c327faf494288c3c48ae8fbaf1142b83ecd2c02bc29ca9f7c3b7f7cfc9bf
+  checksum: 10c0/df8bea0bbfc1f44a84f7f96569f43e1874a7eb85683229ab573a67ed86898ca28eea924a8266b1d5f93ed1ee6ad0b0bb3f13da2443aa81ca88c73632dcc5b4a7
   languageName: node
   linkType: hard
 
-"@nestjs/observe@npm:0.3.21":
-  version: 0.3.21
-  resolution: "@nestjs/observe@npm:0.3.21"
+"@nestjs/observe@npm:0.3.22":
+  version: 0.3.22
+  resolution: "@nestjs/observe@npm:0.3.22"
   dependencies:
     "@jridgewell/trace-mapping": "npm:0.3.31"
   peerDependencies:
@@ -3626,6 +3626,7 @@ __metadata:
     "@nestjs/microservices": ^11.0.0 || ^12.0.0
     "@nestjs/schedule": ^4.0.0 || ^5.0.0 || ^6.0.0 || ^12.0.0
     "@nestjs/websockets": ^11.0.0 || ^12.0.0
+    "@opentelemetry/api": ^1.0.0
     "@taskforcesh/bullmq-pro": ^7.0.0
     bull: ^3.3.0 || ^4.0.0
     bullmq: ^5.0.0 || ^6.0.0
@@ -3644,6 +3645,8 @@ __metadata:
       optional: true
     "@nestjs/websockets":
       optional: true
+    "@opentelemetry/api":
+      optional: true
     "@taskforcesh/bullmq-pro":
       optional: true
     bull:
@@ -3652,7 +3655,7 @@ __metadata:
       optional: true
   bin:
     observe: dist/cli/observe-cli.js
-  checksum: 10c0/5732cb47006bbfd0ed5622a99cbf2f8cd78f0e4ff6ba8aa638fba4b9601dbed0be463d89a28c69006df45cc5947fd64384d0b20d1dd79d2c40dbef53e4bccad7
+  checksum: 10c0/3a2148a37e82fedce8719bca5e2e1d629ec54c616d5186508794fa320416e0e5090892ddded8e7db986772f106e16a6be3e11a05835268c8820f0ff0070f1bf8
   languageName: node
   linkType: hard
 
@@ -3720,12 +3723,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/swagger@npm:12.0.5":
-  version: 12.0.5
-  resolution: "@nestjs/swagger@npm:12.0.5"
+"@nestjs/swagger@npm:12.1.0":
+  version: 12.1.0
+  resolution: "@nestjs/swagger@npm:12.1.0"
   dependencies:
     "@microsoft/tsdoc": "npm:0.17.1"
-    "@nestjs/mapped-types": "npm:12.0.0"
+    "@nestjs/mapped-types": "npm:12.0.1"
     "@standard-schema/spec": "npm:1.1.0"
     es-toolkit: "npm:1.52.0"
     js-yaml: "npm:5.5.0"
@@ -3748,7 +3751,7 @@ __metadata:
       optional: true
     typescript:
       optional: true
-  checksum: 10c0/c1df62964e6aba46e3c76037b1b18751d5ea42ca5c643c7fecd45d940fa9575892536f5e618af3615f43cf054eaf864197a9391fb62f49ac7715778ff3337034
+  checksum: 10c0/35f9b6fc8b813e34c16da909f6a7bfa506f6508296524929005cf4355a5bdc31f63c33f302a68aefa0bd159a99a0b7e3fff3360d7bfc2a2ecaefb7d87d53f77c
   languageName: node
   linkType: hard
 
@@ -9702,10 +9705,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:^17.13.0":
-  version: 17.13.0
-  resolution: "globals@npm:17.13.0"
-  checksum: 10c0/8371d9e4e5581640141b5cce70a098edd765d2e3ab063b14998e590698071e0afb4a4a6739ccfbdcbdeb2565c5553697ba07d95703c51039912cf341a7dba7a7
+"globals@npm:^17.14.0":
+  version: 17.14.0
+  resolution: "globals@npm:17.14.0"
+  checksum: 10c0/422d17c24e87170d4aa566b97a53339ae451c2f4d78512594a7ca951cdb939bc4a85c10071e6dcf77ca63de48713a77f2e71eb9214e44880233dff2090e92731
   languageName: node
   linkType: hard
 
@@ -13750,11 +13753,11 @@ __metadata:
     "@nestjs/common": "npm:12.3.2"
     "@nestjs/core": "npm:12.3.2"
     "@nestjs/jwt": "npm:12.0.3"
-    "@nestjs/observe": "npm:0.3.21"
+    "@nestjs/observe": "npm:0.3.22"
     "@nestjs/passport": "npm:12.0.0"
     "@nestjs/platform-express": "npm:12.3.2"
     "@nestjs/schematics": "npm:12.0.12"
-    "@nestjs/swagger": "npm:12.0.5"
+    "@nestjs/swagger": "npm:12.1.0"
     "@nestjs/testing": "npm:12.3.2"
     "@nestjs/throttler": "npm:6.7.1"
     "@prisma/cli-engine": "npm:0.9.0"
@@ -13787,7 +13790,7 @@ __metadata:
     dotenv: "npm:^18.0.9"
     eslint: "npm:^10.14.0"
     express: "npm:^5.3.0"
-    globals: "npm:^17.13.0"
+    globals: "npm:^17.14.0"
     husky: "npm:^9.1.7"
     jest: "npm:^30.5.2"
     js-yaml: "npm:^5.5.0"

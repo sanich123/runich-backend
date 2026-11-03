@@ -770,10 +770,10 @@ describe('GroupsService', () => {
     const result = await service.getMonthlyLeaderboard('viewer-1', 'group-1', 2026, 9, 'UTC');
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
-    const query = prisma.$queryRaw.mock.calls[0]! as unknown as [TemplateStringsArray, ...unknown[]];
-    expect(query[0].join('')).toContain('hide_activity_statistics');
-    expect(query[0].join('')).toContain('HAVING COALESCE(SUM(a."distance"), 0) > 0');
-    expect(query.slice(1)).toContainEqual(['blocked-user']);
+    const [query, ...parameters] = prisma.$queryRaw.mock.calls[0]!;
+    expect(query.join('')).toContain('hide_activity_statistics');
+    expect(query.join('')).toContain('HAVING COALESCE(SUM(a."distance"), 0) > 0');
+    expect(parameters).toContainEqual(['blocked-user']);
     expect(result).toMatchObject({
       year: 2026,
       month: 9,
