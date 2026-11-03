@@ -74,7 +74,8 @@ export class GroupsService {
         orderBy: { createdAt: 'desc' },
         take: 200,
       });
-      const groupsMissingMembership = groups.filter(({ members }) => Array.isArray(members) && members.length === 0);
+      const groupsMissingMembership =
+        query.scope === 'mine' ? groups.filter(({ members }) => Array.isArray(members) && members.length === 0) : [];
       const membershipRows: Array<{ groupId: string } & Membership> = groupsMissingMembership.length
         ? ((await this.prisma.groupMember.findMany({
             where: { userId, groupId: { in: groupsMissingMembership.map(({ id }) => id) } },
