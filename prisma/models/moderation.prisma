@@ -46,6 +46,7 @@ model MediaModerationAsset {
   scope               VarChar(16)           @default("activity")
   quarantineKey       VarChar(2048)          @map("quarantine_key")
   publishedKey        VarChar(2048)?         @map("published_key")
+  blurhash            String?
   contentType         VarChar(255)           @map("content_type")
   byteSize            Int                   @map("byte_size")
   status              MediaModerationStatus @default(queued)

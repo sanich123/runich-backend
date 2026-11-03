@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'a6d0a5018be80f2d7c43d0dd8f0838ce0bff3dbd68c136ef7fa2d7c2b4b693bf'>;
+  StorageHashBase<'6fdd1da2fcba0e6b71e090968b49587a573d2945052031afb803048e508f5d8f'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -901,6 +901,7 @@ export namespace Models {
   };
   export type public_MediaModerationAsset = {
     attempts: FieldOutputTypes['public']['MediaModerationAsset']['attempts'];
+    blurhash: FieldOutputTypes['public']['MediaModerationAsset']['blurhash'];
     byteSize: FieldOutputTypes['public']['MediaModerationAsset']['byteSize'];
     contentType: FieldOutputTypes['public']['MediaModerationAsset']['contentType'];
     createdAt: FieldOutputTypes['public']['MediaModerationAsset']['createdAt'];
@@ -3789,6 +3790,12 @@ type ContractBase = Omit<
                     readonly kind: 'literal';
                     readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
                   };
+                  readonly many: false;
+                };
+                readonly blurhash: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
                   readonly many: false;
                 };
                 readonly byte_size: {
@@ -7910,6 +7917,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
+              readonly blurhash: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly byteSize: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
@@ -8119,6 +8130,7 @@ type ContractBase = Omit<
               readonly namespaceId: 'public';
               readonly fields: {
                 readonly attempts: { readonly column: 'attempts' };
+                readonly blurhash: { readonly column: 'blurhash' };
                 readonly byteSize: { readonly column: 'byte_size' };
                 readonly contentType: { readonly column: 'content_type' };
                 readonly createdAt: { readonly column: 'created_at' };

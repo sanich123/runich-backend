@@ -3836,6 +3836,13 @@
                   "kind": "scalar"
                 }
               },
+              "blurhash": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "byteSize": {
                 "nullable": false,
                 "type": {
@@ -4129,6 +4136,9 @@
               "fields": {
                 "attempts": {
                   "column": "attempts"
+                },
+                "blurhash": {
+                  "column": "blurhash"
                 },
                 "byteSize": {
                   "column": "byte_size"
@@ -10092,6 +10102,11 @@
                   },
                   "nullable": false
                 },
+                "blurhash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
                 "byte_size": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
@@ -12418,7 +12433,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "a6d0a5018be80f2d7c43d0dd8f0838ce0bff3dbd68c136ef7fa2d7c2b4b693bf"
+    "storageHash": "6fdd1da2fcba0e6b71e090968b49587a573d2945052031afb803048e508f5d8f"
   },
   "capabilities": {
     "postgres": {

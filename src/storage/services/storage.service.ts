@@ -283,6 +283,7 @@ export class StorageService {
           scope: input.scope,
           quarantineKey,
           contentType: input.contentType,
+          blurhash: input.blurhash ?? null,
           byteSize: input.contentLength,
         },
         select: { id: true, status: true, contentType: true },
