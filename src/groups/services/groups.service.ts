@@ -42,44 +42,30 @@ export class GroupsService {
       const groups: GroupRow[] = await this.prisma.group.findMany({
         where,
         include: {
-          ...(query.scope === 'mine'
-            ? {}
-            : {
-                members: {
-                  where: { userId },
-                  select: { role: true, status: true, notificationPreference: true, feedPreference: true },
-                },
-              }),
           photoAsset: { select: { status: true, publishedKey: true, blurhash: true } },
           _count: { select: { members: { where: { status: 'active' } } } },
         },
         orderBy: { createdAt: 'desc' },
         take: 200,
       });
-      const membershipRows: Array<{ groupId: string } & Membership> =
-        query.scope === 'mine' && groups.length
-          ? ((await this.prisma.groupMember.findMany({
-              where: { userId, groupId: { in: groups.map(({ id }) => id) } },
-              select: {
-                groupId: true,
-                role: true,
-                status: true,
-                notificationPreference: true,
-                feedPreference: true,
-              },
-            })) ?? [])
-          : [];
+      const membershipRows: Array<{ groupId: string } & Membership> = groups.length
+        ? ((await this.prisma.groupMember.findMany({
+            where: { userId, groupId: { in: groups.map(({ id }) => id) } },
+            select: {
+              groupId: true,
+              role: true,
+              status: true,
+              notificationPreference: true,
+              feedPreference: true,
+            },
+          })) ?? [])
+        : [];
       const membershipByGroupId = new Map<string, Membership>(
         membershipRows.map(({ groupId, ...membership }) => [groupId, membership]),
       );
       return await Promise.all(
         groups.map((group) =>
-          this.groupSummaryService.toSummary(
-            group,
-            userId,
-            false,
-            query.scope === 'mine' ? (membershipByGroupId.get(group.id) ?? null) : (group.members?.[0] ?? null),
-          ),
+          this.groupSummaryService.toSummary(group, userId, false, membershipByGroupId.get(group.id) ?? null),
         ),
       );
     } catch (error) {
