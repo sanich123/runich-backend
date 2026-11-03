@@ -822,7 +822,7 @@ export class ActivityListResponseDto {
   isLastPage?: boolean;
 }
 
-export class ActivityRouteFilterOptionsResponseDto {
+class ActivityRouteFilterOptionsResponseDto {
   @ApiProperty({ type: [Number] })
   years: number[];
 
@@ -833,7 +833,7 @@ export class ActivityRouteFilterOptionsResponseDto {
   days: number[];
 }
 
-export class ActivityRouteWorkoutCardResponseDto extends ActivityCardResponseDto {
+class ActivityRouteWorkoutCardResponseDto extends ActivityCardResponseDto {
   @ApiProperty({ type: Number, minimum: 2, description: 'Number of recorded GPS route points' })
   routePointCount: number;
 }

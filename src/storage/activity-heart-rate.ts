@@ -39,6 +39,6 @@ export async function decodeActivityHeartRateSamples(body: Uint8Array): Promise<
   return parsed.samples;
 }
 
-export function getActivityHeartRateKey(userId: string, activityId: string, digest: string) {
+function getActivityHeartRateKey(userId: string, activityId: string, digest: string) {
   return `${userId}/activities/${activityId}/heart-rate/heart-rate-v${ACTIVITY_HEART_RATE_FORMAT_VERSION}-${digest}.json.gz`;
 }

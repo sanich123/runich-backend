@@ -29,7 +29,7 @@ export class LikeResponseDto {
   profile?: ProfileDto | null;
 }
 
-export class LikeAuthorReferenceDto {
+class LikeAuthorReferenceDto {
   @ApiProperty({ type: String, format: 'uuid' })
   id: string;
 

@@ -32,8 +32,8 @@ export const GROUP_CATEGORIES = [
   'other',
 ] as const;
 export const GROUP_PRIVACY_VALUES = ['open', 'closed'] as const;
-export const GROUP_NOTIFICATION_PREFERENCES = ['all', 'announcements', 'off'] as const;
-export const GROUP_FEED_PREFERENCES = ['all', 'admins'] as const;
+const GROUP_NOTIFICATION_PREFERENCES = ['all', 'announcements', 'off'] as const;
+const GROUP_FEED_PREFERENCES = ['all', 'admins'] as const;
 
 export class CreateGroupDto {
   @ApiProperty({ minLength: 2, maxLength: 80 })

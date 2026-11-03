@@ -13,10 +13,6 @@ export const CONTENT_REPORT_TARGET_TYPES = [
   'user',
   'group',
 ] as const satisfies readonly ContentReportTargetType[];
-export const MODERATION_TARGET_TYPES = [
-  ...CONTENT_REPORT_TARGET_TYPES,
-  'media_upload',
-] as const satisfies readonly ContentReportTargetType[];
 export const CONTENT_REPORT_REASONS = [
   'threats',
   'harassment',
