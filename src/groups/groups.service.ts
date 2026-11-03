@@ -74,7 +74,27 @@ export class GroupsService {
         orderBy: { createdAt: 'desc' },
         take: 200,
       });
-      return await Promise.all(groups.map((group) => this.toSummary(group, userId)));
+      const groupsMissingMembership = groups.filter(({ members }) => Array.isArray(members) && members.length === 0);
+      const membershipRows: Array<{ groupId: string } & Membership> = groupsMissingMembership.length
+        ? ((await this.prisma.groupMember.findMany({
+            where: { userId, groupId: { in: groupsMissingMembership.map(({ id }) => id) } },
+            select: {
+              groupId: true,
+              role: true,
+              status: true,
+              notificationPreference: true,
+              feedPreference: true,
+            },
+          })) ?? [])
+        : [];
+      const membershipByGroupId = new Map<string, Membership>(
+        membershipRows.map(({ groupId, ...membership }) => [groupId, membership]),
+      );
+      return await Promise.all(
+        groups.map((group) =>
+          this.toSummary(group, userId, false, group.members?.[0] ?? membershipByGroupId.get(group.id) ?? null),
+        ),
+      );
     } catch (error) {
       handleServiceError(error);
     }
@@ -221,7 +241,15 @@ export class GroupsService {
       if (await this.moderationAccess.areBlocked(userId, group.createdByUserId)) {
         throw new ForbiddenException('This group is unavailable');
       }
-      return await this.toSummary(group, userId, true);
+      const membership =
+        group.members?.[0] ??
+        (group.members?.length === 0
+          ? ((await this.prisma.groupMember.findUnique({
+              where: { groupId_userId: { groupId, userId } },
+              select: { role: true, status: true, notificationPreference: true, feedPreference: true },
+            })) ?? null)
+          : null);
+      return await this.toSummary(group, userId, true, membership);
     } catch (error) {
       handleServiceError(error);
     }
@@ -624,8 +652,13 @@ export class GroupsService {
     return this.contentService.createEvent(userId, groupId, body);
   }
 
-  private async toSummary(group: GroupRow, userId: string, includeUpdatedAt = false) {
-    const membership = group.members?.[0] ?? null;
+  private async toSummary(
+    group: GroupRow,
+    userId: string,
+    includeUpdatedAt = false,
+    membershipOverride?: Membership | null,
+  ) {
+    const membership = membershipOverride === undefined ? (group.members?.[0] ?? null) : membershipOverride;
     const isOwner = group.createdByUserId === userId;
     const photoStatus = group.photoAsset?.status;
     const photoReviewStatus: GroupPhotoReviewStatus =
