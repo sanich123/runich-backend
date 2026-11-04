@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
@@ -38,12 +39,12 @@ function parseGroupPageSize(limit?: string) {
 @Controller('groups')
 export class GroupsController {
   constructor(
-    private readonly groupsService: GroupsService,
-    private readonly groupSummaryService: GroupSummaryService,
-    private readonly groupsMembersService: GroupsMembersService,
-    private readonly groupsStatisticsService: GroupsStatisticsService,
-    private readonly groupsPostsService: GroupsPostsService,
-    private readonly groupsEventsService: GroupsEventsService,
+    @Inject(GroupsService) private readonly groupsService: GroupsService,
+    @Inject(GroupSummaryService) private readonly groupSummaryService: GroupSummaryService,
+    @Inject(GroupsMembersService) private readonly groupsMembersService: GroupsMembersService,
+    @Inject(GroupsStatisticsService) private readonly groupsStatisticsService: GroupsStatisticsService,
+    @Inject(GroupsPostsService) private readonly groupsPostsService: GroupsPostsService,
+    @Inject(GroupsEventsService) private readonly groupsEventsService: GroupsEventsService,
   ) {}
 
   @Get()

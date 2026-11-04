@@ -35,7 +35,7 @@ describe('GroupSummaryService', () => {
     await expect(service.getGroup('user-1', 'group-1')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('shows pending group photo previews only to owners and active members', async () => {
+  it('shows pending group photo previews only to owners', async () => {
     const getOwnerModerationPreviewUrl = asyncMock().mockResolvedValue('https://cdn.test/pending-preview.webp');
     const getPublicUrl = jest.fn().mockReturnValue('https://cdn.test/approved.webp');
     service = createGroupsService(prisma, moderationAccess, { getOwnerModerationPreviewUrl, getPublicUrl });
@@ -83,11 +83,10 @@ describe('GroupSummaryService', () => {
     expect(ownerView).toMatchObject({ photoPreviewUrl: 'https://cdn.test/pending-preview.webp', photoPending: true });
     expect(ownerView?.pendingRequestCount).toBe(2);
     expect(getOwnerModerationPreviewUrl).toHaveBeenCalledWith('owner-1', 'pending-photo');
-    expect(memberView).toMatchObject({ photoPreviewUrl: 'https://cdn.test/pending-preview.webp', photoPending: true });
+    expect(memberView).toMatchObject({ photoPreviewUrl: null, photoPending: true });
     expect(pendingApplicantView).toMatchObject({ photoPreviewUrl: null, photoPending: true });
     expect(publicView).toMatchObject({ photoUrl: 'https://cdn.test/approved.webp', photoPreviewUrl: null });
-    expect(getOwnerModerationPreviewUrl).toHaveBeenCalledTimes(2);
-    expect(getOwnerModerationPreviewUrl).toHaveBeenNthCalledWith(2, 'owner-1', 'pending-photo');
+    expect(getOwnerModerationPreviewUrl).toHaveBeenCalledTimes(1);
     expect(getPublicUrl).toHaveBeenCalledWith('groups/approved.webp');
   });
 });

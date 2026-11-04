@@ -2,6 +2,32 @@ import { jest } from '@jest/globals';
 import { ModelRepository } from '../database-repository';
 
 describe('ModelRepository', () => {
+  it('loads moderated photo assets for groups', async () => {
+    let photoAssetLoaded = false;
+    const photoAsset = { status: 'queued', publishedKey: null, blurhash: 'pending-blurhash' };
+    const photoAssetBranch = { select: () => photoAssetBranch };
+    const groupCollection: {
+      include: (relation: string, configure: (branch: never) => unknown) => unknown;
+      all: () => Promise<Array<{ id: string; photoAsset?: typeof photoAsset }>>;
+    } = {
+      include: (relation, configure) => {
+        if (relation === 'photoAsset') {
+          photoAssetLoaded = true;
+          configure(photoAssetBranch as never);
+        }
+        return groupCollection;
+      },
+      all: async () => [{ id: 'group-1', ...(photoAssetLoaded ? { photoAsset } : {}) }],
+    };
+    const repository = new ModelRepository({ orm: { public: { Group: groupCollection } } } as never, 'Group');
+
+    await expect(
+      repository.findMany({
+        include: { photoAsset: { select: { status: true, publishedKey: true, blurhash: true } } },
+      }),
+    ).resolves.toEqual([{ id: 'group-1', photoAsset }]);
+  });
+
   it('counts filtered relations and restores their names under _count', async () => {
     const countQueries: Record<string, Promise<number>> = {};
     const commentFilterValues: unknown[] = [];

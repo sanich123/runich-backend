@@ -1,6 +1,13 @@
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
+import { SELF_DECLARED_DEPS_METADATA } from '@nestjs/common/constants';
 import { asyncMock } from 'src/tests/helpers';
 import { GroupsController } from '../groups.controller';
+import { GroupsEventsService } from '../services/groups-events.service';
+import { GroupsMembersService } from '../services/groups-members.service';
+import { GroupsPostsService } from '../services/groups-posts.service';
+import { GroupsStatisticsService } from '../services/groups-statistics.service';
+import { GroupSummaryService } from '../services/groups-summary.service';
+import { GroupsService } from '../services/groups.service';
 import { encodeGroupDateCursor, encodeGroupDistanceCursor } from '../shared/groups.pagination';
 
 function createController(
@@ -24,6 +31,21 @@ function createController(
 }
 
 describe('GroupsController', () => {
+  it('declares explicit service injection tokens for tsx bootstrap', () => {
+    const dependencies: Array<{ index: number; param: unknown }> = Reflect.getMetadata(
+      SELF_DECLARED_DEPS_METADATA,
+      GroupsController,
+    );
+    expect(dependencies.sort((left, right) => left.index - right.index)).toEqual([
+      { index: 0, param: GroupsService },
+      { index: 1, param: GroupSummaryService },
+      { index: 2, param: GroupsMembersService },
+      { index: 3, param: GroupsStatisticsService },
+      { index: 4, param: GroupsPostsService },
+      { index: 5, param: GroupsEventsService },
+    ]);
+  });
+
   it('uses the authenticated user and defaults the member status to active', async () => {
     const groupsService = { getMembers: asyncMock() };
     const controller = createController({ members: groupsService });
