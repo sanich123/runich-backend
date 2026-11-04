@@ -15,7 +15,7 @@ import { MediaUploadManifestEntry, PhotoUploadOptions } from '../shared/types';
 @Injectable()
 export class StorageModerationService {
   constructor(
-    private readonly core: StorageCoreService,
+    @Inject(StorageCoreService) private readonly core: StorageCoreService,
     @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
   ) {}
 

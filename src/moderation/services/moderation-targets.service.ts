@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { BadRequestException } from '@nestjs/common';
 import { ContentReportTargetType, ModerationTarget } from '../shared/moderation.types';
 
 @Injectable()
 export class ModerationTargetsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async resolveReportTarget(targetType: ContentReportTargetType, targetId: string): Promise<ModerationTarget | null> {
     if (targetType === 'media_upload') return null;

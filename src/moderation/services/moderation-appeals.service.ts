@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ModerationTargetsService } from './moderation-targets.service';
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
@@ -8,8 +8,8 @@ import { ModerationAppealDecisionDto } from '../dto/moderation.dto';
 @Injectable()
 export class ModerationAppealsService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly targets: ModerationTargetsService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ModerationTargetsService) private readonly targets: ModerationTargetsService,
   ) {}
 
   async submitAppeal(reportId: string, appellantId: string, reason: string) {

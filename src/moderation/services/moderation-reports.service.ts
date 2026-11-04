@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { StorageService } from 'src/storage/services/storage.service';
 import { ModerationTargetsService } from './moderation-targets.service';
@@ -14,9 +14,9 @@ import { createReportDecisionCopy, createReportReceiptCopy } from '../shared/mod
 @Injectable()
 export class ModerationReportsService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly storage: StorageService,
-    private readonly targets: ModerationTargetsService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(StorageService) private readonly storage: StorageService,
+    @Inject(ModerationTargetsService) private readonly targets: ModerationTargetsService,
   ) {}
 
   async submitReport(reporterId: string, request: SubmitContentReportDto) {

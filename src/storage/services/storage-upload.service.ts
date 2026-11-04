@@ -16,8 +16,8 @@ import { MediaUploadManifestEntry, PhotoUploadOptions, StorageFile, UploadedPhot
 @Injectable()
 export class StorageUploadService {
   constructor(
-    private readonly core: StorageCoreService,
-    private readonly moderation: StorageModerationService,
+    @Inject(StorageCoreService) private readonly core: StorageCoreService,
+    @Inject(StorageModerationService) private readonly moderation: StorageModerationService,
     @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
   ) {}
 

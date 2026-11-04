@@ -17,7 +17,7 @@ export class StorageActivityService {
   private readonly activityRouteCache = new Map<string, ActivityRouteCacheEntry>();
 
   constructor(
-    private readonly core: StorageCoreService,
+    @Inject(StorageCoreService) private readonly core: StorageCoreService,
     @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
   ) {}
 

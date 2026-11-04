@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { StorageCoreService } from './storage-core.service';
 import { BadRequestException } from '@nestjs/common';
 import { getExtensionFromStorageKey, getProfilePhotoKey } from '../shared/storage-key';
 
 @Injectable()
 export class StorageProfileService {
-  constructor(private readonly core: StorageCoreService) {}
+  constructor(@Inject(StorageCoreService) private readonly core: StorageCoreService) {}
 
   async promoteProfilePhoto(userId: string, publicUrl: string) {
     if (this.core.isQuarantinePreviewUrl(publicUrl)) {

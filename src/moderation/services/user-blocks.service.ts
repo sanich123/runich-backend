@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { MAX_BLOCKED_USERS } from '../shared/moderation.constants';
 
 @Injectable()
 export class UserBlocksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async blockUser(blockerId: string, blockedId: string) {
     if (blockerId === blockedId) throw new BadRequestException('Нельзя заблокировать себя');
