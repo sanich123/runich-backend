@@ -33,8 +33,7 @@ export function parsePagination(query: Request['query']): Pagination {
   if (size === 0) throw new BadRequestException('Размер страницы должен быть больше нуля: size');
   if (size > MAX_SIZE) throw new BadRequestException(`Размер страницы не может быть больше ${MAX_SIZE}: size`);
 
-  const limit = size;
-  const offset = page * limit;
+  const offset = page * size;
   if (!Number.isSafeInteger(offset)) throw new BadRequestException('Некорректное смещение пагинации: offset');
-  return { page, limit, size, offset };
+  return { page, limit: size, size, offset };
 }

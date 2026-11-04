@@ -94,7 +94,6 @@ export class VkAuthService {
       if (!tokenPayload.access_token || !tokenPayload.user_id) {
         return this.redirectError(response, frontendUrl, 'VK не вернул данные токена', 'invalid_token_response');
       }
-      const tokens = tokenPayload;
       const accessToken = tokenPayload.access_token;
 
       const profileResponse = await fetch(VK_USER_INFO_URL, {
@@ -117,8 +116,8 @@ export class VkAuthService {
       }
       const profile = profilePayload.user;
 
-      const profileId = profile.user_id ?? String(tokens.user_id);
-      const email = normalizeEmail(tokens.email?.trim() || `vk_${profileId}@vk.local`);
+      const profileId = profile.user_id ?? String(tokenPayload.user_id);
+      const email = normalizeEmail(tokenPayload.email?.trim() || `vk_${profileId}@vk.local`);
       let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
       if (!user) {
         user = await this.prisma.user.create({

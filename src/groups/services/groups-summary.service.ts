@@ -41,9 +41,8 @@ export class GroupSummaryService {
     const membership = membershipOverride === undefined ? (group.members?.[0] ?? null) : membershipOverride;
     const isOwner = group.createdByUserId === userId;
     const photoReviewStatus = getGroupPhotoReviewStatus(group.photoAsset);
-    const canViewGroupPhotoPreview = isOwner;
     const photoPreviewUrl =
-      canViewGroupPhotoPreview && group.photoAssetId && group.photoAsset?.status !== 'approved' && this.storage
+      isOwner && group.photoAssetId && group.photoAsset?.status !== 'approved' && this.storage
         ? await this.storage.getOwnerModerationPreviewUrl(group.createdByUserId, group.photoAssetId)
         : null;
     const canManage =
