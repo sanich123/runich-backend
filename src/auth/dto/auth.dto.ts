@@ -1,5 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Matches, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class RegisterUserDto {
   @ApiProperty({ type: String, description: 'Email' })
@@ -20,6 +30,33 @@ export class LoginCodeDto {
   @IsString()
   @IsNotEmpty()
   code: string;
+}
+
+export class ProviderAccessTokenDto {
+  @ApiProperty({ type: String, description: 'Provider access token issued by the native sign-in SDK' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(8192)
+  accessToken: string;
+}
+
+export class NativeVkAuthCodeDto {
+  @ApiProperty({ type: String, description: 'Authorization code returned by VK ID Android SDK' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4096)
+  code: string;
+
+  @ApiProperty({ type: String, description: 'Device identifier returned by VK ID Android SDK' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(256)
+  deviceId: string;
+
+  @ApiProperty({ type: String, description: 'PKCE verifier generated for this authorization attempt' })
+  @IsString()
+  @Matches(/^[A-Za-z0-9._~-]{43,128}$/)
+  codeVerifier: string;
 }
 
 export class RefreshTokenDto {
