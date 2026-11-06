@@ -1,10 +1,17 @@
 import { ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { SELF_DECLARED_DEPS_METADATA } from '@nestjs/common/constants';
 import { jest } from '@jest/globals';
 import { LoadTestController } from '../load-test.controller';
 import { LoadTestSeedService } from '../load-test.service';
 import { asyncMock } from 'src/tests/helpers';
 
 describe('LoadTestController', () => {
+  it('declares its injection token for tsx bootstrap', () => {
+    expect(Reflect.getMetadata(SELF_DECLARED_DEPS_METADATA, LoadTestController)).toEqual([
+      { index: 0, param: LoadTestSeedService },
+    ]);
+  });
+
   const serviceMock = {
     enqueue: asyncMock(),
     getJob: asyncMock(),

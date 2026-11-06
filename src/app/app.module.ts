@@ -20,6 +20,7 @@ import { observeImports } from 'src/common/observe/observe.config';
 import { NotificationModule } from 'src/notification/notification.module';
 import { ModerationModule } from 'src/moderation/moderation.module';
 import { AdminModule } from 'src/admin/admin.module';
+import { GroupsModule } from 'src/groups/groups.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AdminModule } from 'src/admin/admin.module';
     NotificationModule,
     ModerationModule,
     AdminModule,
+    GroupsModule,
     AuthModule,
     HealthModule,
     StorageModule,

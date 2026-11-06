@@ -24,7 +24,9 @@ import {
   ConfirmationCodeDto,
   EmailLoginLinkDto,
   GetEmailCodeForPasswordDto,
+  NativeVkAuthCodeDto,
   PasswordChangeCodeDto,
+  ProviderAccessTokenDto,
   RefreshTokenDto,
   RegisterUserDto,
   SessionLocationDto,
@@ -54,7 +56,7 @@ export class AuthController {
   @Get('config')
   @ApiOkResponse({ type: AppConfigResponseDto })
   getConfig() {
-    return { appVersion: '1.0.0' };
+    return { appVersion: '1.3.1' };
   }
 
   @Get('yandex')
@@ -65,6 +67,18 @@ export class AuthController {
   @Get('yandex/callback')
   async yandexCallback(@Query('code') code: string, @Query('error') error: string, @Res() response: Response) {
     return this.authService.handleYandexCallback(code, error, response);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('yandex/native')
+  @RateLimit(RATE_LIMITS.authAttempt.limit, RATE_LIMITS.authAttempt.ttl)
+  @ApiBody({ type: ProviderAccessTokenDto })
+  @ApiOkResponse({ type: LoginResponseDto })
+  async loginWithYandexNative(@Body() { accessToken }: ProviderAccessTokenDto, @Req() request?: Request) {
+    return this.authService.loginWithYandexAccessToken(
+      accessToken,
+      request ? this.getSessionMetadata(request) : undefined,
+    );
   }
 
   @Get('vk')
@@ -81,6 +95,20 @@ export class AuthController {
     @Res() response: Response,
   ) {
     return this.authService.handleVkCallback(code, state, error, response, deviceId);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('vk/native')
+  @RateLimit(RATE_LIMITS.authAttempt.limit, RATE_LIMITS.authAttempt.ttl)
+  @ApiBody({ type: NativeVkAuthCodeDto })
+  @ApiOkResponse({ type: LoginResponseDto })
+  async loginWithVkNative(@Body() { code, deviceId, codeVerifier }: NativeVkAuthCodeDto, @Req() request?: Request) {
+    return this.authService.loginWithVkNativeCode(
+      code,
+      deviceId,
+      codeVerifier,
+      request ? this.getSessionMetadata(request) : undefined,
+    );
   }
 
   @HttpCode(HttpStatus.CREATED)

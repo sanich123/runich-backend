@@ -55,7 +55,11 @@ type ModelName =
   | 'ModerationAppeal'
   | 'MediaModerationAsset'
   | 'AdminRoleAssignment'
-  | 'AdminAccessAudit';
+  | 'AdminAccessAudit'
+  | 'Group'
+  | 'GroupMember'
+  | 'GroupPost'
+  | 'GroupEvent';
 
 const relationModels: Record<ModelName, Record<string, ModelName>> = {
   User: {
@@ -63,6 +67,10 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
     activityMigrationJobs: 'ActivityMigrationJob',
     authExchanges: 'AuthExchange',
     friends: 'Friend',
+    groupsCreated: 'Group',
+    groupMemberships: 'GroupMember',
+    groupPostsAuthored: 'GroupPost',
+    groupEventsCreated: 'GroupEvent',
     profile: 'Profile',
     userSessions: 'UserSession',
     subscriptions: 'Subscription',
@@ -106,6 +114,16 @@ const relationModels: Record<ModelName, Record<string, ModelName>> = {
   MediaModerationAsset: {},
   AdminRoleAssignment: { user: 'User', grantedBy: 'User' },
   AdminAccessAudit: { actor: 'User', target: 'User' },
+  Group: {
+    creator: 'User',
+    members: 'GroupMember',
+    posts: 'GroupPost',
+    events: 'GroupEvent',
+    photoAsset: 'MediaModerationAsset',
+  },
+  GroupMember: { group: 'Group', user: 'User' },
+  GroupPost: { group: 'Group', author: 'User', photoAsset: 'MediaModerationAsset' },
+  GroupEvent: { group: 'Group', creator: 'User' },
 };
 
 const dateFields: Record<ModelName, ReadonlySet<string>> = {
@@ -148,6 +166,10 @@ const dateFields: Record<ModelName, ReadonlySet<string>> = {
   MediaModerationAsset: new Set(['processingStartedAt', 'scannedAt', 'reviewedAt', 'createdAt']),
   AdminRoleAssignment: new Set(['createdAt', 'updatedAt']),
   AdminAccessAudit: new Set(['createdAt']),
+  Group: new Set(['createdAt', 'updatedAt']),
+  GroupMember: new Set(['requestedAt', 'joinedAt']),
+  GroupPost: new Set(['createdAt']),
+  GroupEvent: new Set(['startsAt', 'createdAt']),
 };
 
 function normalizeInput(model: ModelName, value: unknown): unknown {
@@ -569,6 +591,10 @@ export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics
     mediaModerationAsset: new ModelRepository(client, 'MediaModerationAsset', latencyMetrics),
     adminRoleAssignment: new ModelRepository(client, 'AdminRoleAssignment', latencyMetrics),
     adminAccessAudit: new ModelRepository(client, 'AdminAccessAudit', latencyMetrics),
+    group: new ModelRepository(client, 'Group', latencyMetrics),
+    groupMember: new ModelRepository(client, 'GroupMember', latencyMetrics),
+    groupPost: new ModelRepository(client, 'GroupPost', latencyMetrics),
+    groupEvent: new ModelRepository(client, 'GroupEvent', latencyMetrics),
   };
 }
 

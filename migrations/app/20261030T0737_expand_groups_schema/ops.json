@@ -1,0 +1,1207 @@
+[
+  {
+    "id": "table.GroupEvent",
+    "label": "Create table \"GroupEvent\"",
+    "summary": "Creates table \"GroupEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "GroupEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"GroupEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupEvent\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"GroupEvent\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"GroupEvent\"",
+        "sql": "CREATE TABLE \"public\".\"GroupEvent\" (\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"created_by_user_id\" uuid NOT NULL,\n  \"description\" character varying(2000),\n  \"group_id\" uuid NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"location_name\" character varying(160),\n  \"starts_at\" timestamptz(6) NOT NULL,\n  \"title\" character varying(120) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"GroupEvent\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupEvent\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"GroupEvent\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.GroupPost",
+    "label": "Create table \"GroupPost\"",
+    "summary": "Creates table \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"GroupPost\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"GroupPost\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"GroupPost\"",
+        "sql": "CREATE TABLE \"public\".\"GroupPost\" (\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"created_by_user_id\" uuid NOT NULL,\n  \"group_id\" uuid NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"photo_asset_id\" uuid,\n  \"text\" character varying(2000) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"GroupPost\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"GroupPost\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "column.public.Group.category_tags",
+    "label": "Add column \"category_tags\" to \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "category_tags",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"category_tags\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "category_tags"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"category_tags\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"category_tags\"",
+        "sql": "ALTER TABLE \"public\".\"Group\" ADD COLUMN \"category_tags\" text[] DEFAULT '{}' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"category_tags\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "category_tags"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"category_tags\" on \"Group\""
+        }
+      },
+      {
+        "description": "verify column \"category_tags\" has type \"text[]\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "category_tags",
+          "text[]"
+        ]
+      },
+      {
+        "description": "verify column \"category_tags\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "category_tags",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Group.photo_asset_id",
+    "label": "Add column \"photo_asset_id\" to \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "photo_asset_id",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"photo_asset_id\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "photo_asset_id"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"photo_asset_id\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"photo_asset_id\"",
+        "sql": "ALTER TABLE \"public\".\"Group\" ADD COLUMN \"photo_asset_id\" uuid"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"photo_asset_id\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "photo_asset_id"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"photo_asset_id\" on \"Group\""
+        }
+      },
+      {
+        "description": "verify column \"photo_asset_id\" has type \"uuid\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "photo_asset_id",
+          "uuid"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.GroupMember.feed_preference",
+    "label": "Add column \"feed_preference\" to \"GroupMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "feed_preference",
+        "table": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"feed_preference\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupMember",
+          "feed_preference"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"feed_preference\" on \"GroupMember\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"feed_preference\"",
+        "sql": "ALTER TABLE \"public\".\"GroupMember\" ADD COLUMN \"feed_preference\" text DEFAULT 'all' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"feed_preference\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupMember",
+          "feed_preference"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"feed_preference\" on \"GroupMember\""
+        }
+      },
+      {
+        "description": "verify column \"feed_preference\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "GroupMember",
+          "feed_preference",
+          "text"
+        ]
+      },
+      {
+        "description": "verify column \"feed_preference\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupMember",
+          "feed_preference",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.GroupMember.notification_preference",
+    "label": "Add column \"notification_preference\" to \"GroupMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "notification_preference",
+        "table": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"notification_preference\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupMember",
+          "notification_preference"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"notification_preference\" on \"GroupMember\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"notification_preference\"",
+        "sql": "ALTER TABLE \"public\".\"GroupMember\" ADD COLUMN \"notification_preference\" text DEFAULT 'all' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"notification_preference\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupMember",
+          "notification_preference"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"notification_preference\" on \"GroupMember\""
+        }
+      },
+      {
+        "description": "verify column \"notification_preference\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "GroupMember",
+          "notification_preference",
+          "text"
+        ]
+      },
+      {
+        "description": "verify column \"notification_preference\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupMember",
+          "notification_preference",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.Group.Group_category_tags_elem_not_null_d1c10078",
+    "label": "Add check constraint \"Group_category_tags_elem_not_null_d1c10078\" on \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Group_category_tags_elem_not_null_d1c10078",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Group_category_tags_elem_not_null_d1c10078\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Group_category_tags_elem_not_null_d1c10078",
+          "public",
+          "\"public\".\"Group\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Group_category_tags_elem_not_null_d1c10078\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"Group_category_tags_elem_not_null_d1c10078\"",
+        "sql": "ALTER TABLE \"public\".\"Group\" ADD CONSTRAINT \"Group_category_tags_elem_not_null_d1c10078\" CHECK (array_position(\"category_tags\", NULL) IS NULL)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"Group_category_tags_elem_not_null_d1c10078\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "Group_category_tags_elem_not_null_d1c10078",
+          "public",
+          "\"public\".\"Group\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Group.Group_photo_asset_id_key",
+    "label": "Add unique constraint on \"Group\" (photo_asset_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Group_photo_asset_id_key",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Group_photo_asset_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Group_photo_asset_id_key",
+          "public",
+          "\"public\".\"Group\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Group_photo_asset_id_key\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Group_photo_asset_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"Group\" ADD CONSTRAINT \"Group_photo_asset_id_key\" UNIQUE (\"photo_asset_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify unique constraint \"Group_photo_asset_id_key\" exists on (photo_asset_id)",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb)) AS \"result\"",
+        "params": [
+          "Group_photo_asset_id_key",
+          "public",
+          "\"public\".\"Group\"",
+          "u",
+          "[\"photo_asset_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.GroupMember.GroupMember_feed_preference_check_955f9ea8",
+    "label": "Add check constraint \"GroupMember_feed_preference_check_955f9ea8\" on \"GroupMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "GroupMember_feed_preference_check_955f9ea8",
+        "table": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"GroupMember_feed_preference_check_955f9ea8\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupMember_feed_preference_check_955f9ea8",
+          "public",
+          "\"public\".\"GroupMember\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"GroupMember_feed_preference_check_955f9ea8\" on \"GroupMember\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"GroupMember_feed_preference_check_955f9ea8\"",
+        "sql": "ALTER TABLE \"public\".\"GroupMember\" ADD CONSTRAINT \"GroupMember_feed_preference_check_955f9ea8\" CHECK (\"feed_preference\" IN ('all', 'admins'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"GroupMember_feed_preference_check_955f9ea8\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "GroupMember_feed_preference_check_955f9ea8",
+          "public",
+          "\"public\".\"GroupMember\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.GroupMember.GroupMember_notification_preference_check_74ff9fdc",
+    "label": "Add check constraint \"GroupMember_notification_preference_check_74ff9fdc\" on \"GroupMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "GroupMember_notification_preference_check_74ff9fdc",
+        "table": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"GroupMember_notification_preference_check_74ff9fdc\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupMember_notification_preference_check_74ff9fdc",
+          "public",
+          "\"public\".\"GroupMember\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"GroupMember_notification_preference_check_74ff9fdc\" on \"GroupMember\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"GroupMember_notification_preference_check_74ff9fdc\"",
+        "sql": "ALTER TABLE \"public\".\"GroupMember\" ADD CONSTRAINT \"GroupMember_notification_preference_check_74ff9fdc\" CHECK (\"notification_preference\" IN ('all', 'announcements', 'off'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"GroupMember_notification_preference_check_74ff9fdc\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "GroupMember_notification_preference_check_74ff9fdc",
+          "public",
+          "\"public\".\"GroupMember\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.GroupPost.GroupPost_photo_asset_id_key",
+    "label": "Add unique constraint on \"GroupPost\" (photo_asset_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "GroupPost_photo_asset_id_key",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"GroupPost_photo_asset_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupPost_photo_asset_id_key",
+          "public",
+          "\"public\".\"GroupPost\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"GroupPost_photo_asset_id_key\" on \"GroupPost\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"GroupPost_photo_asset_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"GroupPost\" ADD CONSTRAINT \"GroupPost_photo_asset_id_key\" UNIQUE (\"photo_asset_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify unique constraint \"GroupPost_photo_asset_id_key\" exists on (photo_asset_id)",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb)) AS \"result\"",
+        "params": [
+          "GroupPost_photo_asset_id_key",
+          "public",
+          "\"public\".\"GroupPost\"",
+          "u",
+          "[\"photo_asset_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GroupEvent.GroupEvent_created_by_user_id_idx_764eade2",
+    "label": "Create index \"GroupEvent_created_by_user_id_idx_764eade2\" on \"GroupEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GroupEvent_created_by_user_id_idx_764eade2",
+        "table": "GroupEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GroupEvent_created_by_user_id_idx_764eade2\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupEvent_created_by_user_id_idx_764eade2\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GroupEvent_created_by_user_id_idx_764eade2\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GroupEvent_created_by_user_id_idx_764eade2\"",
+        "sql": "CREATE INDEX \"GroupEvent_created_by_user_id_idx_764eade2\" ON \"public\".\"GroupEvent\" (\"created_by_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GroupEvent_created_by_user_id_idx_764eade2\" exists on \"GroupEvent\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupEvent_created_by_user_id_idx_764eade2\"",
+          "i",
+          "I",
+          "\"public\".\"GroupEvent\"",
+          "btree",
+          "[\"created_by_user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GroupEvent.GroupEvent_group_id_idx_704354b6",
+    "label": "Create index \"GroupEvent_group_id_idx_704354b6\" on \"GroupEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GroupEvent_group_id_idx_704354b6",
+        "table": "GroupEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GroupEvent_group_id_idx_704354b6\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupEvent_group_id_idx_704354b6\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GroupEvent_group_id_idx_704354b6\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GroupEvent_group_id_idx_704354b6\"",
+        "sql": "CREATE INDEX \"GroupEvent_group_id_idx_704354b6\" ON \"public\".\"GroupEvent\" (\"group_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GroupEvent_group_id_idx_704354b6\" exists on \"GroupEvent\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupEvent_group_id_idx_704354b6\"",
+          "i",
+          "I",
+          "\"public\".\"GroupEvent\"",
+          "btree",
+          "[\"group_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GroupEvent.GroupEvent_group_id_starts_at_idx",
+    "label": "Create index \"GroupEvent_group_id_starts_at_idx\" on \"GroupEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GroupEvent_group_id_starts_at_idx",
+        "table": "GroupEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GroupEvent_group_id_starts_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupEvent_group_id_starts_at_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GroupEvent_group_id_starts_at_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GroupEvent_group_id_starts_at_idx\"",
+        "sql": "CREATE INDEX \"GroupEvent_group_id_starts_at_idx\" ON \"public\".\"GroupEvent\" (\"group_id\", \"starts_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GroupEvent_group_id_starts_at_idx\" exists on \"GroupEvent\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupEvent_group_id_starts_at_idx\"",
+          "i",
+          "I",
+          "\"public\".\"GroupEvent\"",
+          "btree",
+          "[\"group_id\",\"starts_at\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GroupPost.GroupPost_created_by_user_id_idx_764eade2",
+    "label": "Create index \"GroupPost_created_by_user_id_idx_764eade2\" on \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GroupPost_created_by_user_id_idx_764eade2",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GroupPost_created_by_user_id_idx_764eade2\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost_created_by_user_id_idx_764eade2\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GroupPost_created_by_user_id_idx_764eade2\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GroupPost_created_by_user_id_idx_764eade2\"",
+        "sql": "CREATE INDEX \"GroupPost_created_by_user_id_idx_764eade2\" ON \"public\".\"GroupPost\" (\"created_by_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GroupPost_created_by_user_id_idx_764eade2\" exists on \"GroupPost\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost_created_by_user_id_idx_764eade2\"",
+          "i",
+          "I",
+          "\"public\".\"GroupPost\"",
+          "btree",
+          "[\"created_by_user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GroupPost.GroupPost_group_id_created_at_idx",
+    "label": "Create index \"GroupPost_group_id_created_at_idx\" on \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GroupPost_group_id_created_at_idx",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GroupPost_group_id_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost_group_id_created_at_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GroupPost_group_id_created_at_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GroupPost_group_id_created_at_idx\"",
+        "sql": "CREATE INDEX \"GroupPost_group_id_created_at_idx\" ON \"public\".\"GroupPost\" (\"group_id\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GroupPost_group_id_created_at_idx\" exists on \"GroupPost\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost_group_id_created_at_idx\"",
+          "i",
+          "I",
+          "\"public\".\"GroupPost\"",
+          "btree",
+          "[\"group_id\",\"created_at\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GroupPost.GroupPost_group_id_idx_704354b6",
+    "label": "Create index \"GroupPost_group_id_idx_704354b6\" on \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GroupPost_group_id_idx_704354b6",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GroupPost_group_id_idx_704354b6\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost_group_id_idx_704354b6\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GroupPost_group_id_idx_704354b6\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GroupPost_group_id_idx_704354b6\"",
+        "sql": "CREATE INDEX \"GroupPost_group_id_idx_704354b6\" ON \"public\".\"GroupPost\" (\"group_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GroupPost_group_id_idx_704354b6\" exists on \"GroupPost\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost_group_id_idx_704354b6\"",
+          "i",
+          "I",
+          "\"public\".\"GroupPost\"",
+          "btree",
+          "[\"group_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Group.Group_photo_asset_id_fkey",
+    "label": "Add foreign key \"Group_photo_asset_id_fkey\" on \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Group_photo_asset_id_fkey",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Group_photo_asset_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Group_photo_asset_id_fkey",
+          "public",
+          "\"public\".\"Group\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Group_photo_asset_id_fkey\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Group_photo_asset_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Group\"\nADD CONSTRAINT \"Group_photo_asset_id_fkey\"\nFOREIGN KEY (\"photo_asset_id\")\nREFERENCES \"public\".\"MediaModerationAsset\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Group_photo_asset_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Group_photo_asset_id_fkey",
+          "public",
+          "\"public\".\"Group\"",
+          "f",
+          "[\"photo_asset_id\"]",
+          "\"public\".\"MediaModerationAsset\"",
+          "[\"id\"]",
+          "n",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GroupEvent.GroupEvent_group_id_fkey",
+    "label": "Add foreign key \"GroupEvent_group_id_fkey\" on \"GroupEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GroupEvent_group_id_fkey",
+        "table": "GroupEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GroupEvent_group_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupEvent_group_id_fkey",
+          "public",
+          "\"public\".\"GroupEvent\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GroupEvent_group_id_fkey\" on \"GroupEvent\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GroupEvent_group_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GroupEvent\"\nADD CONSTRAINT \"GroupEvent_group_id_fkey\"\nFOREIGN KEY (\"group_id\")\nREFERENCES \"public\".\"Group\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GroupEvent_group_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GroupEvent_group_id_fkey",
+          "public",
+          "\"public\".\"GroupEvent\"",
+          "f",
+          "[\"group_id\"]",
+          "\"public\".\"Group\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GroupEvent.GroupEvent_created_by_user_id_fkey",
+    "label": "Add foreign key \"GroupEvent_created_by_user_id_fkey\" on \"GroupEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GroupEvent_created_by_user_id_fkey",
+        "table": "GroupEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GroupEvent_created_by_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupEvent_created_by_user_id_fkey",
+          "public",
+          "\"public\".\"GroupEvent\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GroupEvent_created_by_user_id_fkey\" on \"GroupEvent\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GroupEvent_created_by_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GroupEvent\"\nADD CONSTRAINT \"GroupEvent_created_by_user_id_fkey\"\nFOREIGN KEY (\"created_by_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GroupEvent_created_by_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GroupEvent_created_by_user_id_fkey",
+          "public",
+          "\"public\".\"GroupEvent\"",
+          "f",
+          "[\"created_by_user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GroupPost.GroupPost_group_id_fkey",
+    "label": "Add foreign key \"GroupPost_group_id_fkey\" on \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GroupPost_group_id_fkey",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GroupPost_group_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupPost_group_id_fkey",
+          "public",
+          "\"public\".\"GroupPost\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GroupPost_group_id_fkey\" on \"GroupPost\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GroupPost_group_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GroupPost\"\nADD CONSTRAINT \"GroupPost_group_id_fkey\"\nFOREIGN KEY (\"group_id\")\nREFERENCES \"public\".\"Group\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GroupPost_group_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GroupPost_group_id_fkey",
+          "public",
+          "\"public\".\"GroupPost\"",
+          "f",
+          "[\"group_id\"]",
+          "\"public\".\"Group\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GroupPost.GroupPost_created_by_user_id_fkey",
+    "label": "Add foreign key \"GroupPost_created_by_user_id_fkey\" on \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GroupPost_created_by_user_id_fkey",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GroupPost_created_by_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupPost_created_by_user_id_fkey",
+          "public",
+          "\"public\".\"GroupPost\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GroupPost_created_by_user_id_fkey\" on \"GroupPost\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GroupPost_created_by_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GroupPost\"\nADD CONSTRAINT \"GroupPost_created_by_user_id_fkey\"\nFOREIGN KEY (\"created_by_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GroupPost_created_by_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GroupPost_created_by_user_id_fkey",
+          "public",
+          "\"public\".\"GroupPost\"",
+          "f",
+          "[\"created_by_user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GroupPost.GroupPost_photo_asset_id_fkey",
+    "label": "Add foreign key \"GroupPost_photo_asset_id_fkey\" on \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GroupPost_photo_asset_id_fkey",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GroupPost_photo_asset_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupPost_photo_asset_id_fkey",
+          "public",
+          "\"public\".\"GroupPost\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GroupPost_photo_asset_id_fkey\" on \"GroupPost\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GroupPost_photo_asset_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GroupPost\"\nADD CONSTRAINT \"GroupPost_photo_asset_id_fkey\"\nFOREIGN KEY (\"photo_asset_id\")\nREFERENCES \"public\".\"MediaModerationAsset\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GroupPost_photo_asset_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GroupPost_photo_asset_id_fkey",
+          "public",
+          "\"public\".\"GroupPost\"",
+          "f",
+          "[\"photo_asset_id\"]",
+          "\"public\".\"MediaModerationAsset\"",
+          "[\"id\"]",
+          "n",
+          "a"
+        ]
+      }
+    ]
+  }
+]

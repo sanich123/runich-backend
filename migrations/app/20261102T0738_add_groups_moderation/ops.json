@@ -1,0 +1,216 @@
+[
+  {
+    "id": "dropCheckConstraint.ContentReport.ContentReport_target_type_check_15fa25b2",
+    "label": "Drop check constraint \"ContentReport_target_type_check_15fa25b2\" on \"ContentReport\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ContentReport_target_type_check_15fa25b2",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ContentReport_target_type_check_15fa25b2\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_target_type_check_15fa25b2",
+          "public",
+          "\"public\".\"ContentReport\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "constraint \"ContentReport_target_type_check_15fa25b2\" on \"ContentReport\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"ContentReport_target_type_check_15fa25b2\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\" DROP CONSTRAINT \"ContentReport_target_type_check_15fa25b2\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ContentReport_target_type_check_15fa25b2\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_target_type_check_15fa25b2",
+          "public",
+          "\"public\".\"ContentReport\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"ContentReport_target_type_check_15fa25b2\" on \"ContentReport\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "column.public.Group.moderation_status",
+    "label": "Add column \"moderation_status\" to \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "moderation_status",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"moderation_status\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "moderation_status"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"moderation_status\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"moderation_status\"",
+        "sql": "ALTER TABLE \"public\".\"Group\" ADD COLUMN \"moderation_status\" text DEFAULT 'visible' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"moderation_status\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "moderation_status"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"moderation_status\" on \"Group\""
+        }
+      },
+      {
+        "description": "verify column \"moderation_status\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "moderation_status",
+          "text"
+        ]
+      },
+      {
+        "description": "verify column \"moderation_status\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "Group",
+          "moderation_status",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.ContentReport.ContentReport_target_type_check_e609e753",
+    "label": "Add check constraint \"ContentReport_target_type_check_e609e753\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ContentReport_target_type_check_e609e753",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ContentReport_target_type_check_e609e753\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_target_type_check_e609e753",
+          "public",
+          "\"public\".\"ContentReport\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"ContentReport_target_type_check_e609e753\" on \"ContentReport\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"ContentReport_target_type_check_e609e753\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\" ADD CONSTRAINT \"ContentReport_target_type_check_e609e753\" CHECK (\"target_type\" IN ('activity', 'comment', 'media', 'media_upload', 'user', 'group'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"ContentReport_target_type_check_e609e753\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "ContentReport_target_type_check_e609e753",
+          "public",
+          "\"public\".\"ContentReport\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.Group.Group_moderation_status_check_9e17caab",
+    "label": "Add check constraint \"Group_moderation_status_check_9e17caab\" on \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Group_moderation_status_check_9e17caab",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Group_moderation_status_check_9e17caab\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Group_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Group\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Group_moderation_status_check_9e17caab\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"Group_moderation_status_check_9e17caab\"",
+        "sql": "ALTER TABLE \"public\".\"Group\" ADD CONSTRAINT \"Group_moderation_status_check_9e17caab\" CHECK (\"moderation_status\" IN ('visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"Group_moderation_status_check_9e17caab\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "Group_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Group\"",
+          "c"
+        ]
+      }
+    ]
+  }
+]

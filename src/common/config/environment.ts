@@ -1,6 +1,6 @@
 type AppEnvironment = 'local' | 'stage' | 'production';
 
-export interface ApiStartupConfiguration {
+interface ApiStartupConfiguration {
   databaseUrl: string;
   jwtSecret: string;
   port: number;
@@ -28,7 +28,7 @@ export function getDatabaseUrl() {
   return process.env.DATABASE_URL;
 }
 
-export function getHttpPort() {
+function getHttpPort() {
   return Number(process.env.PORT) || 3000;
 }
 

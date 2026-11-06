@@ -3,7 +3,7 @@ import { getCoordinatesFromTcxFile } from './get-coordinates-from-tcx';
 import { getCoordinatesFromGpxFile } from './get-coordinates-from-gpx';
 import { existsSync } from 'node:fs';
 import { join } from 'path';
-import { LocationObject } from 'src/activity/activity.dto';
+import { LocationObject } from 'src/activity/dto/activity.dto';
 import { Logger } from '@nestjs/common';
 import { resolveMigrationPath } from './migration-path';
 

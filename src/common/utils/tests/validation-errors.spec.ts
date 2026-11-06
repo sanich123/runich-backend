@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { ActivityDto } from 'src/activity/activity.dto';
+import { ActivityDto } from 'src/activity/dto/activity.dto';
 import { RegisterUserDto } from 'src/auth/dto/auth.dto';
 import { formatValidationErrors } from '../validation-errors';
 

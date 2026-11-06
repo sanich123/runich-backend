@@ -7,20 +7,17 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { StorageService } from './storage.service';
-import type { GoogleCloudVisionSafeSearch } from './google-cloud-vision-safe-search';
+import type { GoogleCloudVisionSafeSearch } from './google-cloud-vision-safe-search.service';
 import {
   MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION,
   MEDIA_MODERATION_MAX_VIDEO_FRAMES,
   MEDIA_MODERATION_MAX_VIDEO_SECONDS,
   MEDIA_MODERATION_MODEL_VERSION,
   MEDIA_MODERATION_VIDEO_SAMPLE_INTERVAL_SECONDS,
-} from './media-moderation-thresholds';
-import { mergeMediaModerationScores } from './media-moderation-worker.helpers';
-import type { MediaAsset, MediaModerationScanResult } from './media-moderation-worker.types';
-
-import { MODEL_URL } from './media-moderation-scanner.constants';
-import type { Prediction } from './media-moderation-scanner.types';
-import { execFileAsync } from './media-moderation-scanner.utils';
+  MODEL_URL,
+} from '../shared/const';
+import { execFileAsync, mergeMediaModerationScores } from '../shared/utils';
+import type { MediaAsset, MediaModerationScanResult, Prediction } from '../shared/types';
 
 export class MediaModerationScannerService {
   private readonly logger = new Logger(MediaModerationScannerService.name);

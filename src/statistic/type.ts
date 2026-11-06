@@ -27,7 +27,7 @@ export interface YearCategoryAggregate {
   totalCaloriesActive: number;
 }
 
-export interface YearCategoryDailyActivity {
+interface YearCategoryDailyActivity {
   duration: number;
   distance: number;
   steps: number;

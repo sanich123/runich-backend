@@ -3,22 +3,31 @@ import { rm } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setImmediate as yieldToEventLoop, setTimeout as delay } from 'node:timers/promises';
-import { ACTIVITY_MIGRATION_STATUS, ActivityMigrationJobResponseDto, ActivityMigrationStatus } from '../activity.dto';
-import { getMigrationIncomingArchivePath, getMigrationWorkDirectory } from '../activity-migration-storage';
-import { generateActivityTitle } from './activity-title';
+import {
+  ACTIVITY_MIGRATION_STATUS,
+  ActivityMigrationJobResponseDto,
+  ActivityMigrationStatus,
+} from '../dto/activity.dto';
+import { generateActivityTitle } from '../shared/utils';
+import {
+  fileExists,
+  getMigrationErrorMessage,
+  getMigrationIncomingArchivePath,
+  getMigrationWorkDirectory,
+  getTimestamp,
+} from '../shared/activity-migration.utils';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-with-coordinates';
 import { parseCsvFileIntoArray } from 'src/common/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
-import { ACTIVITY_MIGRATION_CONFIG } from '../activity-migration-config';
+import { ACTIVITY_MIGRATION_CONFIG } from '../shared/const';
 import type {
   EnqueueMigrationInput,
   MigratedActivity,
   MigrationJob,
   MigrationProgress,
   StartMigrationUploadInput,
-} from '../type';
-import { fileExists, getMigrationErrorMessage, getTimestamp } from './activity-migration.utils';
+} from '../shared/types';
 import { ActivityService } from './activity.service';
 import { StorageService } from 'src/storage/services/storage.service';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';

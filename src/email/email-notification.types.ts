@@ -1,3 +1,12 @@
+export interface GroupJoinRequestEmailPayload {
+  groupId: string;
+  groupName: string;
+  requesterName: string;
+  recipientEmail: string;
+  recipientName?: string | null;
+  locale: 'russian' | 'english';
+}
+
 export interface EmailNotificationPayload {
   activityId: string;
   actorName?: string | null;

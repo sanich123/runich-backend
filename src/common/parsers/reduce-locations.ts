@@ -1,5 +1,5 @@
 import { MAX_ACTIVITY_LOCATIONS } from 'src/common/constants';
-import type { LocationObject } from 'src/activity/activity.dto';
+import type { LocationObject } from 'src/activity/dto/activity.dto';
 
 export function reduceLocations(locations: LocationObject[], maxLocations = MAX_ACTIVITY_LOCATIONS) {
   if (locations.length <= maxLocations) return locations;

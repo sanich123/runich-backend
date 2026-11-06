@@ -1,0 +1,496 @@
+[
+  {
+    "id": "table.Group",
+    "label": "Create table \"Group\"",
+    "summary": "Creates table \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Group\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Group\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Group\"",
+        "sql": "CREATE TABLE \"public\".\"Group\" (\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"created_by_user_id\" uuid NOT NULL,\n  \"description\" character varying(2000),\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"location_name\" character varying(160),\n  \"name\" character varying(80) NOT NULL,\n  \"privacy\" text DEFAULT 'open' NOT NULL,\n  \"sports\" text[] DEFAULT '{}' NOT NULL,\n  \"updated_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  CONSTRAINT \"Group_pkey\" PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Group_privacy_check_76d46d47\" CHECK (\"privacy\" IN ('open', 'closed')),\n  CONSTRAINT \"Group_sports_elem_not_null_fae29714\" CHECK (array_position(\"sports\", NULL) IS NULL)\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Group\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"Group\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"Group\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.GroupMember",
+    "label": "Create table \"GroupMember\"",
+    "summary": "Creates table \"GroupMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"GroupMember\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupMember\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"GroupMember\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"GroupMember\"",
+        "sql": "CREATE TABLE \"public\".\"GroupMember\" (\n  \"group_id\" uuid NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"joined_at\" timestamptz(6),\n  \"requested_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"role\" text DEFAULT 'member' NOT NULL,\n  \"status\" text DEFAULT 'active' NOT NULL,\n  \"user_id\" uuid NOT NULL,\n  CONSTRAINT \"GroupMember_pkey\" PRIMARY KEY (\"id\"),\n  CONSTRAINT \"GroupMember_role_check_7f9f6ca4\" CHECK (\"role\" IN ('owner', 'admin', 'member')),\n  CONSTRAINT \"GroupMember_status_check_d20bf5cf\" CHECK (\"status\" IN ('active', 'pending', 'rejected'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"GroupMember\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupMember\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"GroupMember\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "unique.GroupMember.GroupMember_group_id_user_id_key",
+    "label": "Add unique constraint on \"GroupMember\" (group_id, user_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "GroupMember_group_id_user_id_key",
+        "table": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"GroupMember_group_id_user_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupMember_group_id_user_id_key",
+          "public",
+          "\"public\".\"GroupMember\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"GroupMember_group_id_user_id_key\" on \"GroupMember\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"GroupMember_group_id_user_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"GroupMember\" ADD CONSTRAINT \"GroupMember_group_id_user_id_key\" UNIQUE (\"group_id\", \"user_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify unique constraint \"GroupMember_group_id_user_id_key\" exists on (group_id, user_id)",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb)) AS \"result\"",
+        "params": [
+          "GroupMember_group_id_user_id_key",
+          "public",
+          "\"public\".\"GroupMember\"",
+          "u",
+          "[\"group_id\",\"user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Group.Group_created_by_user_id_idx",
+    "label": "Create index \"Group_created_by_user_id_idx\" on \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Group_created_by_user_id_idx",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Group_created_by_user_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Group_created_by_user_id_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Group_created_by_user_id_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Group_created_by_user_id_idx\"",
+        "sql": "CREATE INDEX \"Group_created_by_user_id_idx\" ON \"public\".\"Group\" (\"created_by_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Group_created_by_user_id_idx\" exists on \"Group\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Group_created_by_user_id_idx\"",
+          "i",
+          "I",
+          "\"public\".\"Group\"",
+          "btree",
+          "[\"created_by_user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Group.Group_privacy_created_at_idx",
+    "label": "Create index \"Group_privacy_created_at_idx\" on \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Group_privacy_created_at_idx",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Group_privacy_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Group_privacy_created_at_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Group_privacy_created_at_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Group_privacy_created_at_idx\"",
+        "sql": "CREATE INDEX \"Group_privacy_created_at_idx\" ON \"public\".\"Group\" (\"privacy\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Group_privacy_created_at_idx\" exists on \"Group\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Group_privacy_created_at_idx\"",
+          "i",
+          "I",
+          "\"public\".\"Group\"",
+          "btree",
+          "[\"privacy\",\"created_at\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GroupMember.GroupMember_group_id_status_requested_at_idx",
+    "label": "Create index \"GroupMember_group_id_status_requested_at_idx\" on \"GroupMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GroupMember_group_id_status_requested_at_idx",
+        "table": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GroupMember_group_id_status_requested_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupMember_group_id_status_requested_at_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GroupMember_group_id_status_requested_at_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GroupMember_group_id_status_requested_at_idx\"",
+        "sql": "CREATE INDEX \"GroupMember_group_id_status_requested_at_idx\" ON \"public\".\"GroupMember\" (\"group_id\", \"status\", \"requested_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GroupMember_group_id_status_requested_at_idx\" exists on \"GroupMember\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupMember_group_id_status_requested_at_idx\"",
+          "i",
+          "I",
+          "\"public\".\"GroupMember\"",
+          "btree",
+          "[\"group_id\",\"status\",\"requested_at\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GroupMember.GroupMember_user_id_status_group_id_idx",
+    "label": "Create index \"GroupMember_user_id_status_group_id_idx\" on \"GroupMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GroupMember_user_id_status_group_id_idx",
+        "table": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GroupMember_user_id_status_group_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupMember_user_id_status_group_id_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GroupMember_user_id_status_group_id_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GroupMember_user_id_status_group_id_idx\"",
+        "sql": "CREATE INDEX \"GroupMember_user_id_status_group_id_idx\" ON \"public\".\"GroupMember\" (\"user_id\", \"status\", \"group_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GroupMember_user_id_status_group_id_idx\" exists on \"GroupMember\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupMember_user_id_status_group_id_idx\"",
+          "i",
+          "I",
+          "\"public\".\"GroupMember\"",
+          "btree",
+          "[\"user_id\",\"status\",\"group_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Group.Group_created_by_user_id_fkey",
+    "label": "Add foreign key \"Group_created_by_user_id_fkey\" on \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Group_created_by_user_id_fkey",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Group_created_by_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Group_created_by_user_id_fkey",
+          "public",
+          "\"public\".\"Group\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Group_created_by_user_id_fkey\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Group_created_by_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Group\"\nADD CONSTRAINT \"Group_created_by_user_id_fkey\"\nFOREIGN KEY (\"created_by_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Group_created_by_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Group_created_by_user_id_fkey",
+          "public",
+          "\"public\".\"Group\"",
+          "f",
+          "[\"created_by_user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GroupMember.GroupMember_group_id_fkey",
+    "label": "Add foreign key \"GroupMember_group_id_fkey\" on \"GroupMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GroupMember_group_id_fkey",
+        "table": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GroupMember_group_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupMember_group_id_fkey",
+          "public",
+          "\"public\".\"GroupMember\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GroupMember_group_id_fkey\" on \"GroupMember\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GroupMember_group_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GroupMember\"\nADD CONSTRAINT \"GroupMember_group_id_fkey\"\nFOREIGN KEY (\"group_id\")\nREFERENCES \"public\".\"Group\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GroupMember_group_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GroupMember_group_id_fkey",
+          "public",
+          "\"public\".\"GroupMember\"",
+          "f",
+          "[\"group_id\"]",
+          "\"public\".\"Group\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GroupMember.GroupMember_user_id_fkey",
+    "label": "Add foreign key \"GroupMember_user_id_fkey\" on \"GroupMember\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GroupMember_user_id_fkey",
+        "table": "GroupMember"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GroupMember_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupMember_user_id_fkey",
+          "public",
+          "\"public\".\"GroupMember\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GroupMember_user_id_fkey\" on \"GroupMember\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GroupMember_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GroupMember\"\nADD CONSTRAINT \"GroupMember_user_id_fkey\"\nFOREIGN KEY (\"user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GroupMember_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GroupMember_user_id_fkey",
+          "public",
+          "\"public\".\"GroupMember\"",
+          "f",
+          "[\"user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  }
+]

@@ -19,9 +19,9 @@ import { asyncMock } from 'src/tests/helpers';
 import { makeActivityMediaFixture, makePhotoUpload } from './fixtures';
 import { makeMoscowCoordinate } from 'src/tests/fixtures/geography.fixtures';
 import { StorageService } from '../services/storage.service';
-import { decodeActivityRoute, encodeActivityRoute } from '../activity-route';
-import { getActivityPhotoKey, getExtensionFromStorageKey } from '../storage-key';
-import { getStorageErrorMessage } from '../utils';
+import { decodeActivityRoute, encodeActivityRoute } from '../shared/activity-route';
+import { getActivityPhotoKey, getExtensionFromStorageKey } from '../shared/storage-key';
+import { getStorageErrorMessage } from '../shared/utils';
 
 const s3Send = jest.spyOn(S3Client.prototype, 'send');
 
@@ -38,6 +38,7 @@ function createModerationPrismaMock() {
     },
     activityMedia: { findFirst: asyncMock(), findMany: asyncMock(), updateMany: asyncMock() },
     profile: { findFirst: asyncMock(), updateMany: asyncMock() },
+    groupMember: { findUnique: asyncMock() },
   };
 }
 
@@ -457,6 +458,31 @@ describe('StorageService', () => {
     });
     expect((s3Send.mock.calls[0]?.[0] as PutObjectCommand).input.Key).toMatch(
       /^moderation-quarantine\/user-1\/.+\.webp$/,
+    );
+  });
+
+  it('persists a blurhash for moderated group photos', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const prisma = createModerationPrismaMock();
+    prisma.groupMember.findUnique.mockResolvedValue({ role: 'owner', status: 'active' });
+    prisma.mediaModerationAsset.create.mockResolvedValue({
+      id: 'group-photo-asset',
+      status: 'queued',
+      contentType: 'image/webp',
+    });
+    const service = new StorageService(undefined, prisma as never);
+    const image = await createTestImage();
+
+    await service.uploadPhoto(
+      'user-1',
+      { buffer: image, originalname: 'group.jpg', mimetype: 'image/jpeg' },
+      { scope: 'group', groupId: 'group-1' },
+    );
+
+    expect(prisma.mediaModerationAsset.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ scope: 'group', blurhash: expect.any(String) }),
+      }),
     );
   });
 

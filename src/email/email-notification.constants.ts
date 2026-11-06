@@ -4,6 +4,7 @@ const MODERATION_REPORT_TARGET_TITLES: Record<string, string> = {
   media: 'фото или видео',
   media_upload: 'фото или видео',
   user: 'профиль',
+  group: 'группу',
 };
 
 export function getModerationReportTitle(targetType: string) {
@@ -20,6 +21,7 @@ export const EMAIL_NOTIFICATION_TYPE = {
   moderationAppeal: 'moderation-appeal',
   reporterReceipt: 'reporter-receipt',
   reporterDecision: 'reporter-decision',
+  groupJoinRequest: 'group-join-request',
 } as const;
 
 export type EmailNotificationType = (typeof EMAIL_NOTIFICATION_TYPE)[keyof typeof EMAIL_NOTIFICATION_TYPE];

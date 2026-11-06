@@ -1,4 +1,4 @@
-import type { SubmitContentReportDto } from '../moderation.dto';
+import type { SubmitContentReportDto } from '../dto/moderation.dto';
 
 type ReportSubmissionFixture = {
   targetType: SubmitContentReportDto['targetType'];

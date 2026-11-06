@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, createHash } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -9,6 +9,7 @@ import { VK_AUTHORIZE_URL, VK_TOKEN_URL, VK_USER_INFO_URL } from '../constants/a
 import type { VkState } from '../types/auth.types';
 import { normalizeEmail } from '../utils/russian-email';
 import { SuperuserEmailBootstrapService } from './superuser-email-bootstrap.service';
+import type { SessionMetadata } from '../types/auth.types';
 
 @Injectable()
 export class VkAuthService {
@@ -19,6 +20,91 @@ export class VkAuthService {
     @Inject(SuperuserEmailBootstrapService)
     private readonly superuserEmailBootstrapService = new SuperuserEmailBootstrapService(prisma),
   ) {}
+
+  async loginWithNativeCode(code: string, deviceId: string, codeVerifier: string, metadata: SessionMetadata = {}) {
+    if (
+      !code ||
+      code.length > 4096 ||
+      !deviceId ||
+      deviceId.length > 256 ||
+      !/^[A-Za-z0-9._~-]{43,128}$/.test(codeVerifier)
+    ) {
+      throw new UnauthorizedException('Недействительные параметры авторизации VK');
+    }
+
+    const clientId = process.env.VK_NATIVE_CLIENT_ID || '54878048';
+    const redirectUri = process.env.VK_NATIVE_REDIRECT_URI || `vk${clientId}://vk.ru/blank.html`;
+    const tokenResponse = await fetch(VK_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        grant_type: 'authorization_code',
+        device_id: deviceId,
+        redirect_uri: redirectUri,
+        code,
+        code_verifier: codeVerifier,
+      }),
+    });
+    const tokenPayload = (await tokenResponse.json()) as {
+      access_token?: string;
+      user_id?: string | number;
+      email?: string;
+      error?: string;
+    };
+    if (!tokenResponse.ok || !tokenPayload.access_token || !tokenPayload.user_id) {
+      throw new UnauthorizedException('Не удалось проверить авторизацию VK');
+    }
+
+    const profileResponse = await fetch(VK_USER_INFO_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ access_token: tokenPayload.access_token, client_id: clientId }),
+    });
+    const profilePayload = (await profileResponse.json()) as {
+      user?: {
+        user_id?: string;
+        first_name?: string;
+        last_name?: string;
+        avatar?: string;
+        city?: string;
+        email?: string;
+      };
+    };
+    if (!profileResponse.ok || !profilePayload.user) {
+      throw new UnauthorizedException('Не удалось получить профиль VK');
+    }
+
+    const profile = profilePayload.user;
+    const profileId = profile.user_id ?? String(tokenPayload.user_id);
+    const email = normalizeEmail(tokenPayload.email?.trim() || profile.email?.trim() || `vk_${profileId}@vk.local`);
+    let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          authProvider: 'VK',
+          emailConfirmedAt: new Date(),
+          createdAt: new Date(),
+          profile: {
+            create: {
+              name: profile.first_name,
+              surname: profile.last_name,
+              city: profile.city,
+              profilePhoto: profile.avatar,
+              email,
+            },
+          },
+        },
+      });
+    } else if (!user.emailConfirmedAt) {
+      user = await this.prisma.user.update({ where: { id: user.id }, data: { emailConfirmedAt: new Date() } });
+    }
+
+    await this.superuserEmailBootstrapService.grantIfAllowlisted(user.id, email);
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
+    return this.tokenService.createSessionTokens(user.id, metadata);
+  }
 
   start(response: Response) {
     const clientId = process.env.VK_CLIENT_ID!;
@@ -94,7 +180,6 @@ export class VkAuthService {
       if (!tokenPayload.access_token || !tokenPayload.user_id) {
         return this.redirectError(response, frontendUrl, 'VK не вернул данные токена', 'invalid_token_response');
       }
-      const tokens = tokenPayload;
       const accessToken = tokenPayload.access_token;
 
       const profileResponse = await fetch(VK_USER_INFO_URL, {
@@ -117,8 +202,8 @@ export class VkAuthService {
       }
       const profile = profilePayload.user;
 
-      const profileId = profile.user_id ?? String(tokens.user_id);
-      const email = normalizeEmail(tokens.email?.trim() || `vk_${profileId}@vk.local`);
+      const profileId = profile.user_id ?? String(tokenPayload.user_id);
+      const email = normalizeEmail(tokenPayload.email?.trim() || `vk_${profileId}@vk.local`);
       let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
       if (!user) {
         user = await this.prisma.user.create({

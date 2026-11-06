@@ -1,5 +1,5 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { ModerationAccessService } from 'src/moderation/moderation-access.service';
+import { ModerationAccessService } from 'src/moderation/services/moderation-access.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { StorageService } from 'src/storage/services/storage.service';
 import { handleServiceError } from 'src/common/utils/database-errors';

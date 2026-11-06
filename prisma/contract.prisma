@@ -20,6 +20,7 @@ enum ContentReportTargetType {
   media
   media_upload
   user
+  group
 }
 
 enum ContentReportReason {

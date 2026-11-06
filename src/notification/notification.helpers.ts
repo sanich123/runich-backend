@@ -6,14 +6,14 @@ export function getNotificationActorName(name?: string | null, surname?: string 
 
 export function getPushNotificationTitle(type: string, actorName: string) {
   const templates = PUSH_NOTIFICATION_COPY.titleTemplates;
-  const title =
-    type === 'activity-like'
-      ? templates.activityLike
-      : type === 'comment'
-        ? templates.comment
-        : type === 'comment-like'
-          ? templates.commentLike
-          : templates.generic;
+  const templatesByType: Record<string, string> = {
+    'activity-like': templates.activityLike,
+    comment: templates.comment,
+    'comment-like': templates.commentLike,
+    'group-post': templates.groupPost,
+    'group-event': templates.groupEvent,
+  };
+  const title = templatesByType[type] ?? templates.generic;
   return title.replace('{actor}', actorName);
 }
 

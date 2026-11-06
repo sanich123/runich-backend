@@ -52,6 +52,22 @@
       "model": "GoogleVisionMonthlyUsage",
       "namespace": "public"
     },
+    "Group": {
+      "model": "Group",
+      "namespace": "public"
+    },
+    "GroupEvent": {
+      "model": "GroupEvent",
+      "namespace": "public"
+    },
+    "GroupMember": {
+      "model": "GroupMember",
+      "namespace": "public"
+    },
+    "GroupPost": {
+      "model": "GroupPost",
+      "namespace": "public"
+    },
     "Like": {
       "model": "Like",
       "namespace": "public"
@@ -210,6 +226,87 @@
               {
                 "name": "user",
                 "value": "user"
+              },
+              {
+                "name": "group",
+                "value": "group"
+              }
+            ]
+          },
+          "GroupFeedPreference": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "all",
+                "value": "all"
+              },
+              {
+                "name": "admins",
+                "value": "admins"
+              }
+            ]
+          },
+          "GroupMemberRole": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "owner",
+                "value": "owner"
+              },
+              {
+                "name": "admin",
+                "value": "admin"
+              },
+              {
+                "name": "member",
+                "value": "member"
+              }
+            ]
+          },
+          "GroupMemberStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "active",
+                "value": "active"
+              },
+              {
+                "name": "pending",
+                "value": "pending"
+              },
+              {
+                "name": "rejected",
+                "value": "rejected"
+              }
+            ]
+          },
+          "GroupNotificationPreference": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "all",
+                "value": "all"
+              },
+              {
+                "name": "announcements",
+                "value": "announcements"
+              },
+              {
+                "name": "off",
+                "value": "off"
+              }
+            ]
+          },
+          "GroupPrivacy": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "open",
+                "value": "open"
+              },
+              {
+                "name": "closed",
+                "value": "closed"
               }
             ]
           },
@@ -2637,6 +2734,697 @@
               "table": "GoogleVisionMonthlyUsage"
             }
           },
+          "Group": {
+            "fields": {
+              "categoryTags": {
+                "many": {
+                  "elementNullable": false
+                },
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "createdByUserId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "description": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 2000
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "locationName": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 160
+                  }
+                }
+              },
+              "moderationStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationContentStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 80
+                  }
+                }
+              },
+              "photoAssetId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "privacy": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "GroupPrivacy",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "sports": {
+                "many": {
+                  "elementNullable": false
+                },
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              }
+            },
+            "relations": {
+              "creator": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "createdByUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "events": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "groupId"
+                  ]
+                },
+                "to": {
+                  "model": "GroupEvent",
+                  "namespace": "public"
+                }
+              },
+              "members": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "groupId"
+                  ]
+                },
+                "to": {
+                  "model": "GroupMember",
+                  "namespace": "public"
+                }
+              },
+              "photoAsset": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "photoAssetId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "MediaModerationAsset",
+                  "namespace": "public"
+                }
+              },
+              "posts": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "groupId"
+                  ]
+                },
+                "to": {
+                  "model": "GroupPost",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "categoryTags": {
+                  "column": "category_tags"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "createdByUserId": {
+                  "column": "created_by_user_id"
+                },
+                "description": {
+                  "column": "description"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "locationName": {
+                  "column": "location_name"
+                },
+                "moderationStatus": {
+                  "column": "moderation_status"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "photoAssetId": {
+                  "column": "photo_asset_id"
+                },
+                "privacy": {
+                  "column": "privacy"
+                },
+                "sports": {
+                  "column": "sports"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Group"
+            }
+          },
+          "GroupEvent": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "createdByUserId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "description": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 2000
+                  }
+                }
+              },
+              "distanceKm": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "groupId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "locationName": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 160
+                  }
+                }
+              },
+              "sport": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "startsAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "title": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 120
+                  }
+                }
+              }
+            },
+            "relations": {
+              "creator": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "createdByUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "group": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "groupId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Group",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "createdByUserId": {
+                  "column": "created_by_user_id"
+                },
+                "description": {
+                  "column": "description"
+                },
+                "distanceKm": {
+                  "column": "distance_km"
+                },
+                "groupId": {
+                  "column": "group_id"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "locationName": {
+                  "column": "location_name"
+                },
+                "sport": {
+                  "column": "sport"
+                },
+                "startsAt": {
+                  "column": "starts_at"
+                },
+                "title": {
+                  "column": "title"
+                }
+              },
+              "namespaceId": "public",
+              "table": "GroupEvent"
+            }
+          },
+          "GroupMember": {
+            "fields": {
+              "feedPreference": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "GroupFeedPreference",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "groupId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "joinedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "notificationPreference": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "GroupNotificationPreference",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "requestedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "role": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "GroupMemberRole",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "GroupMemberStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "group": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "groupId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Group",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "feedPreference": {
+                  "column": "feed_preference"
+                },
+                "groupId": {
+                  "column": "group_id"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "joinedAt": {
+                  "column": "joined_at"
+                },
+                "notificationPreference": {
+                  "column": "notification_preference"
+                },
+                "requestedAt": {
+                  "column": "requested_at"
+                },
+                "role": {
+                  "column": "role"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "userId": {
+                  "column": "user_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "GroupMember"
+            }
+          },
+          "GroupPost": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "createdByUserId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "groupId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "photoAssetId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "text": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 2000
+                  }
+                }
+              }
+            },
+            "relations": {
+              "author": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "createdByUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "group": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "groupId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Group",
+                  "namespace": "public"
+                }
+              },
+              "photoAsset": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "photoAssetId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "MediaModerationAsset",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "createdByUserId": {
+                  "column": "created_by_user_id"
+                },
+                "groupId": {
+                  "column": "group_id"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "photoAssetId": {
+                  "column": "photo_asset_id"
+                },
+                "text": {
+                  "column": "text"
+                }
+              },
+              "namespaceId": "public",
+              "table": "GroupPost"
+            }
+          },
           "Like": {
             "fields": {
               "activityId": {
@@ -3048,6 +3836,13 @@
                   "kind": "scalar"
                 }
               },
+              "blurhash": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "byteSize": {
                 "nullable": false,
                 "type": {
@@ -3241,6 +4036,38 @@
                   "namespace": "public"
                 }
               },
+              "groupPhoto": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "photoAssetId"
+                  ]
+                },
+                "to": {
+                  "model": "Group",
+                  "namespace": "public"
+                }
+              },
+              "groupPostPhoto": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "photoAssetId"
+                  ]
+                },
+                "to": {
+                  "model": "GroupPost",
+                  "namespace": "public"
+                }
+              },
               "owner": {
                 "cardinality": "N:1",
                 "nullable": false,
@@ -3309,6 +4136,9 @@
               "fields": {
                 "attempts": {
                   "column": "attempts"
+                },
+                "blurhash": {
+                  "column": "blurhash"
                 },
                 "byteSize": {
                   "column": "byte_size"
@@ -3988,6 +4818,20 @@
                   "kind": "scalar"
                 }
               },
+              "groupEventsNotifications": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "groupPostsNotifications": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "height": {
                 "nullable": true,
                 "type": {
@@ -4293,6 +5137,12 @@
                 },
                 "gender": {
                   "column": "gender"
+                },
+                "groupEventsNotifications": {
+                  "column": "group_events_notifications"
+                },
+                "groupPostsNotifications": {
+                  "column": "group_posts_notifications"
                 },
                 "height": {
                   "column": "height"
@@ -5267,6 +6117,66 @@
                 },
                 "to": {
                   "model": "AdminRoleAssignment",
+                  "namespace": "public"
+                }
+              },
+              "groupEventsCreated": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "createdByUserId"
+                  ]
+                },
+                "to": {
+                  "model": "GroupEvent",
+                  "namespace": "public"
+                }
+              },
+              "groupMemberships": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "GroupMember",
+                  "namespace": "public"
+                }
+              },
+              "groupPostsAuthored": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "createdByUserId"
+                  ]
+                },
+                "to": {
+                  "model": "GroupPost",
+                  "namespace": "public"
+                }
+              },
+              "groupsCreated": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "createdByUserId"
+                  ]
+                },
+                "to": {
+                  "model": "Group",
                   "namespace": "public"
                 }
               },
@@ -7416,8 +8326,8 @@
                   "prefix": "ContentReport_status_check"
                 },
                 {
-                  "expression": "\"target_type\" IN ('activity', 'comment', 'media', 'media_upload', 'user')",
-                  "name": "ContentReport_target_type_check_15fa25b2",
+                  "expression": "\"target_type\" IN ('activity', 'comment', 'media', 'media_upload', 'user', 'group')",
+                  "name": "ContentReport_target_type_check_e609e753",
                   "prefix": "ContentReport_target_type_check"
                 }
               ],
@@ -8090,6 +9000,724 @@
               },
               "uniques": []
             },
+            "Group": {
+              "checks": [
+                {
+                  "expression": "array_position(\"category_tags\", NULL) IS NULL",
+                  "name": "Group_category_tags_elem_not_null_d1c10078",
+                  "prefix": "Group_category_tags_elem_not_null"
+                },
+                {
+                  "expression": "\"moderation_status\" IN ('visible', 'hidden', 'removed')",
+                  "name": "Group_moderation_status_check_9e17caab",
+                  "prefix": "Group_moderation_status_check"
+                },
+                {
+                  "expression": "\"privacy\" IN ('open', 'closed')",
+                  "name": "Group_privacy_check_76d46d47",
+                  "prefix": "Group_privacy_check"
+                },
+                {
+                  "expression": "array_position(\"sports\", NULL) IS NULL",
+                  "name": "Group_sports_elem_not_null_fae29714",
+                  "prefix": "Group_sports_elem_not_null"
+                }
+              ],
+              "columns": {
+                "category_tags": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": []
+                  },
+                  "many": {
+                    "elementNullable": false
+                  },
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "created_by_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "description": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 2000
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "location_name": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 160
+                  }
+                },
+                "moderation_status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "visible"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationContentStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "name": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 80
+                  }
+                },
+                "photo_asset_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "privacy": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "open"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "GroupPrivacy",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "sports": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": []
+                  },
+                  "many": {
+                    "elementNullable": false
+                  },
+                  "nullable": false
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "unique": [
+                      "photo_asset_id"
+                    ]
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "photo_asset_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Group"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaModerationAsset"
+                  }
+                },
+                {
+                  "name": "Group_created_by_user_id_fkey",
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "created_by_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Group"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "created_by_user_id"
+                  ],
+                  "name": "Group_created_by_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "privacy",
+                    "created_at"
+                  ],
+                  "name": "Group_privacy_created_at_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ],
+                "name": "Group_pkey"
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "photo_asset_id"
+                  ]
+                }
+              ]
+            },
+            "GroupEvent": {
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "created_by_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "description": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 2000
+                  }
+                },
+                "distance_km": {
+                  "codecId": "pg/float8@1",
+                  "dataType": "pg/float8",
+                  "nullable": true
+                },
+                "group_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "location_name": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 160
+                  }
+                },
+                "sport": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "starts_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "title": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 120
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "GroupEvent_group_id_idx_704354b6"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "group_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "GroupEvent"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Group"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "GroupEvent_created_by_user_id_idx_764eade2"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "created_by_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "GroupEvent"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "created_by_user_id"
+                  ],
+                  "name": "GroupEvent_created_by_user_id_idx_764eade2",
+                  "prefix": "GroupEvent_created_by_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "group_id"
+                  ],
+                  "name": "GroupEvent_group_id_idx_704354b6",
+                  "prefix": "GroupEvent_group_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "group_id",
+                    "starts_at"
+                  ],
+                  "name": "GroupEvent_group_id_starts_at_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "GroupMember": {
+              "checks": [
+                {
+                  "expression": "\"feed_preference\" IN ('all', 'admins')",
+                  "name": "GroupMember_feed_preference_check_955f9ea8",
+                  "prefix": "GroupMember_feed_preference_check"
+                },
+                {
+                  "expression": "\"notification_preference\" IN ('all', 'announcements', 'off')",
+                  "name": "GroupMember_notification_preference_check_74ff9fdc",
+                  "prefix": "GroupMember_notification_preference_check"
+                },
+                {
+                  "expression": "\"role\" IN ('owner', 'admin', 'member')",
+                  "name": "GroupMember_role_check_7f9f6ca4",
+                  "prefix": "GroupMember_role_check"
+                },
+                {
+                  "expression": "\"status\" IN ('active', 'pending', 'rejected')",
+                  "name": "GroupMember_status_check_d20bf5cf",
+                  "prefix": "GroupMember_status_check"
+                }
+              ],
+              "columns": {
+                "feed_preference": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "all"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "GroupFeedPreference",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "group_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "joined_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "notification_preference": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "all"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "GroupNotificationPreference",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "requested_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "role": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "member"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "GroupMemberRole",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "active"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "GroupMemberStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "name": "GroupMember_group_id_fkey",
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "group_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "GroupMember"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Group"
+                  }
+                },
+                {
+                  "name": "GroupMember_user_id_fkey",
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "GroupMember"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "group_id",
+                    "status",
+                    "requested_at"
+                  ],
+                  "name": "GroupMember_group_id_status_requested_at_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "user_id",
+                    "status",
+                    "group_id"
+                  ],
+                  "name": "GroupMember_user_id_status_group_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ],
+                "name": "GroupMember_pkey"
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "group_id",
+                    "user_id"
+                  ],
+                  "name": "GroupMember_group_id_user_id_key"
+                }
+              ]
+            },
+            "GroupPost": {
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "created_by_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "group_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "photo_asset_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "text": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 2000
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "GroupPost_group_id_idx_704354b6"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "group_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "GroupPost"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Group"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "GroupPost_created_by_user_id_idx_764eade2"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "created_by_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "GroupPost"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                },
+                {
+                  "index": {
+                    "unique": [
+                      "photo_asset_id"
+                    ]
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "photo_asset_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "GroupPost"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaModerationAsset"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "created_by_user_id"
+                  ],
+                  "name": "GroupPost_created_by_user_id_idx_764eade2",
+                  "prefix": "GroupPost_created_by_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "group_id",
+                    "created_at"
+                  ],
+                  "name": "GroupPost_group_id_created_at_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "group_id"
+                  ],
+                  "name": "GroupPost_group_id_idx_704354b6",
+                  "prefix": "GroupPost_group_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "photo_asset_id"
+                  ]
+                }
+              ]
+            },
             "Like": {
               "columns": {
                 "activityId": {
@@ -8473,6 +10101,11 @@
                     "value": 0
                   },
                   "nullable": false
+                },
+                "blurhash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
                 },
                 "byte_size": {
                   "codecId": "pg/int4@1",
@@ -9375,6 +11008,24 @@
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
                   "nullable": true
+                },
+                "group_events_notifications": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "group_posts_notifications": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
                 },
                 "height": {
                   "codecId": "pg/text@1",
@@ -10681,7 +12332,46 @@
                 "comment",
                 "media",
                 "media_upload",
-                "user"
+                "user",
+                "group"
+              ]
+            },
+            "GroupFeedPreference": {
+              "kind": "valueSet",
+              "values": [
+                "all",
+                "admins"
+              ]
+            },
+            "GroupMemberRole": {
+              "kind": "valueSet",
+              "values": [
+                "owner",
+                "admin",
+                "member"
+              ]
+            },
+            "GroupMemberStatus": {
+              "kind": "valueSet",
+              "values": [
+                "active",
+                "pending",
+                "rejected"
+              ]
+            },
+            "GroupNotificationPreference": {
+              "kind": "valueSet",
+              "values": [
+                "all",
+                "announcements",
+                "off"
+              ]
+            },
+            "GroupPrivacy": {
+              "kind": "valueSet",
+              "values": [
+                "open",
+                "closed"
               ]
             },
             "MediaModerationStatus": {
@@ -10743,7 +12433,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "259f8d1ae7b33173f81399515933481f656ffee90e4976acc7b303e0c47e62c5"
+    "storageHash": "6fdd1da2fcba0e6b71e090968b49587a573d2945052031afb803048e508f5d8f"
   },
   "capabilities": {
     "postgres": {
