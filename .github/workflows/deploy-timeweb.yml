@@ -31,8 +31,10 @@ jobs:
           set -euo pipefail
           TREE_SHA="$(git rev-parse 'HEAD^{tree}')"
           DEPLOY_IMAGE="ghcr.io/sanich123/runich-backend:production-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          NGINX_IMAGE="ghcr.io/sanich123/runich-nginx:production-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           printf 'TREE_SHA=%s\n' "$TREE_SHA" >> "$GITHUB_ENV"
           printf 'DEPLOY_IMAGE=%s\n' "$DEPLOY_IMAGE" >> "$GITHUB_ENV"
+          printf 'NGINX_IMAGE=%s\n' "$NGINX_IMAGE" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -53,6 +55,17 @@ jobs:
           tags: ${{ env.DEPLOY_IMAGE }}
           cache-from: type=gha,scope=runich-backend-production
           cache-to: type=gha,mode=max,scope=runich-backend-production
+
+      - name: Build and publish immutable Production Nginx image with Brotli
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/nginx/Dockerfile
+          pull: true
+          push: true
+          tags: ${{ env.NGINX_IMAGE }}
+          cache-from: type=gha,scope=runich-nginx-production
+          cache-to: type=gha,mode=max,scope=runich-nginx-production
 
       - name: Pull and deploy the Production image
         env:
@@ -84,7 +97,7 @@ jobs:
               -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
               -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \
               "$DEPLOY_USER@$DEPLOY_HOST" \
-              "set -euo pipefail; umask 077; config_dir=\$(mktemp -d); trap 'rm -rf \"\$config_dir\"' EXIT; DOCKER_CONFIG=\"\$config_dir\" docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null; DOCKER_CONFIG=\"\$config_dir\" docker pull '$DEPLOY_IMAGE'"
+              "set -euo pipefail; umask 077; config_dir=\$(mktemp -d); trap 'rm -rf \"\$config_dir\"' EXIT; DOCKER_CONFIG=\"\$config_dir\" docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null; DOCKER_CONFIG=\"\$config_dir\" docker pull '$DEPLOY_IMAGE'; DOCKER_CONFIG=\"\$config_dir\" docker pull '$NGINX_IMAGE'"
           unset GITHUB_TOKEN
 
           printf '%s\n' "$GRAFANA_LOKI_TOKEN" |
@@ -119,7 +132,7 @@ jobs:
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_IMAGE='$DEPLOY_IMAGE' DEPLOY_TREE_SHA='$TREE_SHA' bash -s" <<'REMOTE'
+            "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_IMAGE='$DEPLOY_IMAGE' NGINX_IMAGE='$NGINX_IMAGE' DEPLOY_TREE_SHA='$TREE_SHA' bash -s" <<'REMOTE'
             set -euo pipefail
 
             cd /opt/runich-backend/project
@@ -141,6 +154,7 @@ jobs:
             chmod 0644 logs.log
 
             export BACKEND_IMAGE="$DEPLOY_IMAGE"
+            export NGINX_IMAGE
             COMPOSE=(docker compose -f docker-compose.timeweb.yml)
             "${COMPOSE[@]}" config --quiet
             "${COMPOSE[@]}" pull nginx certbot certbot_renew
@@ -202,6 +216,12 @@ jobs:
                   echo 'Production API does not advertise HTTP/3.' >&2
                   exit 1
                 fi
+                if ! curl --silent --show-error --max-time 10 -H 'Accept-Encoding: br' -D - -o /dev/null \
+                  --resolve runich-app.ru:443:127.0.0.1 https://runich-app.ru/ \
+                  | grep -iq '^content-encoding: br'; then
+                  echo 'Production web did not return Brotli-compressed HTML.' >&2
+                  exit 1
+                fi
                 if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
                   --resolve runich-app.ru:443:127.0.0.1 https://runich-app.ru/ \
                   | grep -iq '^alt-svc:.*h3='; then
@@ -224,6 +244,13 @@ jobs:
                   echo 'Grafana Alloy failed to reach running state.' >&2
                   exit 1
                 fi
+                nginx_env="$(mktemp .env.XXXXXX)"
+                awk -F= '$1 != "NGINX_IMAGE" { print }' .env > "$nginx_env"
+                printf 'NGINX_IMAGE=%s\n' "$NGINX_IMAGE" >> "$nginx_env"
+                chmod --reference=.env "$nginx_env"
+                chown --reference=.env "$nginx_env"
+                mv "$nginx_env" .env
+
                 printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
                 echo "Production is ready at commit $DEPLOY_SHA using image $DEPLOY_IMAGE"
                 exit 0
@@ -261,6 +288,11 @@ jobs:
             echo 'Production web HTTPS readiness failed.' >&2
             exit 1
           fi
+          if ! curl --silent --show-error --max-time 10 -H 'Accept-Encoding: br' -D - -o /dev/null https://runich-app.ru/ \
+            | grep -iq '^content-encoding: br'; then
+            echo 'Production web did not return Brotli-compressed HTML.' >&2
+            exit 1
+          fi
           if ! curl --silent --show-error --max-time 10 -D - -o /dev/null https://runich-app.ru/ \
             | grep -iq '^alt-svc:.*h3='; then
             echo 'Production web does not advertise HTTP/3.' >&2
@@ -295,9 +327,10 @@ jobs:
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=120 \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
+            "NGINX_IMAGE='$NGINX_IMAGE' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
           set -euo pipefail
           cd /opt/runich-backend/project
+          export NGINX_IMAGE
           running_container="$(docker compose -f docker-compose.timeweb.yml ps -q nestjs_app)"
           test -n "$running_container"
           DEPLOY_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$running_container")"
