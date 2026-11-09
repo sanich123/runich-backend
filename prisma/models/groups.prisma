@@ -30,15 +30,15 @@ enum GroupFeedPreference {
 
 model Group {
   id              Uuid                 @id(map: "Group_pkey") @default(sql`gen_random_uuid()`)
-  name            VarChar(80)
-  description     VarChar(2000)?
+  name            Varchar(80)
+  description     Varchar(2000)?
   sports          String[]             @default([])
   categoryTags    String[]             @default([]) @map("category_tags")
   photoAssetId    Uuid?                @unique @map("photo_asset_id")
   photoAsset      MediaModerationAsset? @relation("GroupPhotoAsset", fields: [photoAssetId], references: [id], onDelete: SetNull)
   moderationStatus ModerationContentStatus @default(visible) @map("moderation_status")
   privacy         GroupPrivacy         @default(open)
-  locationName    VarChar(160)?         @map("location_name")
+  locationName    Varchar(160)?         @map("location_name")
   createdAt       TimestamptzString(6) @default(now()) @map("created_at")
   updatedAt       TimestamptzString(6) @default(now()) @map("updated_at")
   createdByUserId Uuid                 @map("created_by_user_id")
@@ -75,7 +75,7 @@ model GroupPost {
   id              Uuid                  @id @default(sql`gen_random_uuid()`)
   groupId         Uuid                  @map("group_id")
   createdByUserId Uuid                  @map("created_by_user_id")
-  text            VarChar(2000)
+  text            Varchar(2000)
   photoAssetId    Uuid?                 @unique @map("photo_asset_id")
   createdAt       TimestamptzString(6)  @default(now()) @map("created_at")
   group           Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -90,9 +90,9 @@ model GroupEvent {
   id              Uuid                 @id @default(sql`gen_random_uuid()`)
   groupId         Uuid                 @map("group_id")
   createdByUserId Uuid                 @map("created_by_user_id")
-  title           VarChar(120)
-  description     VarChar(2000)?
-  locationName    VarChar(160)?        @map("location_name")
+  title           Varchar(120)
+  description     Varchar(2000)?
+  locationName    Varchar(160)?        @map("location_name")
   sport           String?
   distanceKm      Float?               @map("distance_km")
   startsAt        TimestamptzString(6) @map("starts_at")

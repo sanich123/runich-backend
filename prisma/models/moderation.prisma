@@ -12,7 +12,7 @@ model ContentReport {
   targetUserId        Uuid?                   @map("target_user_id")
   subjectUserId       Uuid?                   @map("subject_user_id")
   reason              ContentReportReason
-  details             VarChar(1000)?
+  details             Varchar(1000)?
   status              ContentReportStatus     @default(open)
   priority            ModerationPriority      @default(normal)
   assignedModeratorId Uuid?                   @map("assigned_moderator_id")
@@ -41,24 +41,24 @@ model ContentReport {
 model MediaModerationAsset {
   id                  Uuid                  @id @default(sql`gen_random_uuid()`)
   ownerId             Uuid                  @map("owner_id")
-  mediaId             VarChar(100)          @map("media_id")
-  role                VarChar(16)           @default("media")
-  scope               VarChar(16)           @default("activity")
-  quarantineKey       VarChar(2048)          @map("quarantine_key")
-  publishedKey        VarChar(2048)?         @map("published_key")
+  mediaId             Varchar(100)          @map("media_id")
+  role                Varchar(16)           @default("media")
+  scope               Varchar(16)           @default("activity")
+  quarantineKey       Varchar(2048)          @map("quarantine_key")
+  publishedKey        Varchar(2048)?         @map("published_key")
   blurhash            String?
-  contentType         VarChar(255)           @map("content_type")
+  contentType         Varchar(255)           @map("content_type")
   byteSize            Int                   @map("byte_size")
   status              MediaModerationStatus @default(queued)
   scores              Jsonb?
   frameCount          Int?                  @map("frame_count")
-  modelVersion        VarChar(100)?          @map("model_version")
+  modelVersion        Varchar(100)?          @map("model_version")
   attempts            Int                   @default(0)
   processingStartedAt TimestamptzString(6)?  @map("processing_started_at")
   scannedAt           TimestamptzString(6)?  @map("scanned_at")
   reviewedAt          TimestamptzString(6)?  @map("reviewed_at")
   reviewerId          Uuid?                 @map("reviewer_id")
-  reviewNote          VarChar(1000)?         @map("review_note")
+  reviewNote          Varchar(1000)?         @map("review_note")
   createdAt           TimestamptzString(6)  @default(now()) @map("created_at")
   owner               User                  @relation("MediaModerationAssetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   reviewer            User?                 @relation("MediaModerationAssetReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
@@ -75,7 +75,7 @@ model MediaModerationAsset {
 }
 
 model GoogleVisionMonthlyUsage {
-  monthKey  VarChar(7) @id @map("month_key")
+  monthKey  Varchar(7) @id @map("month_key")
   usedUnits Int        @default(0) @map("used_units")
 
   @@map("GoogleVisionMonthlyUsage")
@@ -86,7 +86,7 @@ model ModerationAction {
   reportId  Uuid                 @map("report_id")
   actorId   Uuid?                @map("actor_id")
   action    ModerationActionType
-  note      VarChar(1000)?
+  note      Varchar(1000)?
   createdAt TimestamptzString(6) @default(now()) @map("created_at")
   report    ContentReport        @relation(fields: [reportId], references: [id], onDelete: Restrict)
   actor     User?                @relation("ModerationActionActor", fields: [actorId], references: [id], onDelete: SetNull)
@@ -100,12 +100,12 @@ model ModerationAppeal {
   id             Uuid                    @id @default(sql`gen_random_uuid()`)
   reportId       Uuid                    @map("report_id")
   appellantId    Uuid?                   @map("appellant_id")
-  reason         VarChar(1000)
+  reason         Varchar(1000)
   status         ModerationAppealStatus   @default(pending)
   createdAt      TimestamptzString(6)     @default(now()) @map("created_at")
   reviewedAt     TimestamptzString(6)?    @map("reviewed_at")
   reviewerId     Uuid?                   @map("reviewer_id")
-  resolutionNote VarChar(1000)?           @map("resolution_note")
+  resolutionNote Varchar(1000)?           @map("resolution_note")
   report         ContentReport            @relation(fields: [reportId], references: [id], onDelete: Restrict)
   appellant      User?                    @relation("ModerationAppealAppellant", fields: [appellantId], references: [id], onDelete: SetNull)
   reviewer       User?                    @relation("ModerationAppealReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
