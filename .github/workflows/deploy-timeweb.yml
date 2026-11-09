@@ -212,19 +212,19 @@ jobs:
                 if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
                   --resolve api.runich-app.ru:443:127.0.0.1 \
                   https://api.runich-app.ru/health/ready \
-                  | grep -iq '^alt-svc:.*h3='; then
+                  | grep -i '^alt-svc:.*h3=' >/dev/null; then
                   echo 'Production API does not advertise HTTP/3.' >&2
                   exit 1
                 fi
                 if ! curl --silent --show-error --max-time 10 -H 'Accept-Encoding: br' -D - -o /dev/null \
                   --resolve runich-app.ru:443:127.0.0.1 https://runich-app.ru/ \
-                  | grep -iq '^content-encoding: br'; then
+                  | grep -i '^content-encoding: br' >/dev/null; then
                   echo 'Production web did not return Brotli-compressed HTML.' >&2
                   exit 1
                 fi
                 if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
                   --resolve runich-app.ru:443:127.0.0.1 https://runich-app.ru/ \
-                  | grep -iq '^alt-svc:.*h3='; then
+                  | grep -i '^alt-svc:.*h3=' >/dev/null; then
                   echo 'Production web does not advertise HTTP/3.' >&2
                   exit 1
                 fi
@@ -280,7 +280,7 @@ jobs:
             exit 1
           fi
           if ! curl --silent --show-error --max-time 10 -D - -o /dev/null "$PRODUCTION_API_URL" \
-            | grep -iq '^alt-svc:.*h3='; then
+            | grep -i '^alt-svc:.*h3=' >/dev/null; then
             echo 'Production API does not advertise HTTP/3.' >&2
             exit 1
           fi
@@ -289,12 +289,12 @@ jobs:
             exit 1
           fi
           if ! curl --silent --show-error --max-time 10 -H 'Accept-Encoding: br' -D - -o /dev/null https://runich-app.ru/ \
-            | grep -iq '^content-encoding: br'; then
+            | grep -i '^content-encoding: br' >/dev/null; then
             echo 'Production web did not return Brotli-compressed HTML.' >&2
             exit 1
           fi
           if ! curl --silent --show-error --max-time 10 -D - -o /dev/null https://runich-app.ru/ \
-            | grep -iq '^alt-svc:.*h3='; then
+            | grep -i '^alt-svc:.*h3=' >/dev/null; then
             echo 'Production web does not advertise HTTP/3.' >&2
             exit 1
           fi

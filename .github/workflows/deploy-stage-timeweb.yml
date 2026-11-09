@@ -221,7 +221,7 @@ jobs:
           fi
           if ! curl --silent --show-error --max-time 10 -H 'Accept-Encoding: br' -D - -o /dev/null \
             --resolve "$STAGE_WEB_DOMAIN:443:127.0.0.1" "https://$STAGE_WEB_DOMAIN/" \
-            | grep -iq '^content-encoding: br'; then
+            | grep -i '^content-encoding: br' >/dev/null; then
             echo 'Stage web did not return Brotli-compressed HTML.' >&2
             exit 1
           fi
