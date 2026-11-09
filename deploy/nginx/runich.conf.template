@@ -46,7 +46,20 @@ server {
     client_max_body_size 160M;
     client_body_timeout 300s;
 
-    location / {
+    # Compress only the large activity route and chart JSON responses.
+    location ~ ^/activity/[^/]+/(?:locations|chart-data)$ {
+        brotli on;
+        brotli_min_length 1024;
+        brotli_comp_level 5;
+        brotli_types application/json;
+
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_comp_level 5;
+        gzip_proxied auth;
+        gzip_types application/json;
+
         add_header Alt-Svc 'h3=":443"; ma=86400' always;
         proxy_pass http://api_backend;
         proxy_http_version 1.1;
@@ -69,6 +82,7 @@ server {
     server_name ${WEB_DOMAIN};
 
     brotli on;
+    brotli_static on;
     brotli_min_length 1024;
     brotli_comp_level 5;
     brotli_types

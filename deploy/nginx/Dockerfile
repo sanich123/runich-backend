@@ -35,7 +35,8 @@ RUN apk add --no-cache --virtual .build-deps \
     && cd "/tmp/nginx-${NGINX_VERSION}" \
     && ./configure "$@" --add-dynamic-module=/tmp/ngx_brotli \
     && make -j2 modules \
-    && test -s objs/ngx_http_brotli_filter_module.so
+    && test -s objs/ngx_http_brotli_filter_module.so \
+    && test -s objs/ngx_http_brotli_static_module.so
 
 FROM nginx:1.30.6-alpine-slim
 
@@ -45,9 +46,14 @@ RUN apk add --no-cache libstdc++ \
 COPY --from=brotli-builder \
   /tmp/nginx-1.30.6/objs/ngx_http_brotli_filter_module.so \
   /usr/lib/nginx/modules/ngx_http_brotli_filter_module.so
+COPY --from=brotli-builder \
+  /tmp/nginx-1.30.6/objs/ngx_http_brotli_static_module.so \
+  /usr/lib/nginx/modules/ngx_http_brotli_static_module.so
 
 RUN { \
-      printf '%s\n' 'load_module /usr/lib/nginx/modules/ngx_http_brotli_filter_module.so;'; \
+      printf '%s\n' \
+        'load_module /usr/lib/nginx/modules/ngx_http_brotli_filter_module.so;' \
+        'load_module /usr/lib/nginx/modules/ngx_http_brotli_static_module.so;'; \
       cat /etc/nginx/nginx.conf; \
     } > /tmp/nginx.conf \
     && mv /tmp/nginx.conf /etc/nginx/nginx.conf
