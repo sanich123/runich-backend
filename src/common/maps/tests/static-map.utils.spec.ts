@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import type { LocationObject } from 'src/activity/activity.dto';
+import type { LocationObject } from 'src/activity/dto/activity.dto';
 import {
   calculateStaticMapViewport,
   createAttributionOverlay,

@@ -1,4 +1,4 @@
-import { getHeartRateStatistics } from '../heart-rate.utils';
+import { getHeartRateStatistics } from '../shared/utils';
 
 describe('getHeartRateStatistics', () => {
   it('returns empty statistics when there are no heart rate samples', () => {

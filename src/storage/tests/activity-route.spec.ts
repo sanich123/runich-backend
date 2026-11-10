@@ -1,4 +1,4 @@
-import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from '../activity-route';
+import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from '../shared/activity-route';
 
 describe('activity route storage format', () => {
   it('compresses route points into a versioned compact payload and restores them', async () => {

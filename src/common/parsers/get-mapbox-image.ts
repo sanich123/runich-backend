@@ -1,5 +1,5 @@
 import polyline from '@mapbox/polyline';
-import { LocationObject } from 'src/activity/activity.dto';
+import { LocationObject } from 'src/activity/dto/activity.dto';
 import { STATIC_MAP_ROUTE_WIDTH } from 'src/common/maps/static-map.constants';
 import { simplifyStaticMapLocations } from 'src/common/maps/static-map.utils';
 
@@ -23,10 +23,9 @@ export function getMapBoxImage(locations: LocationObject[]) {
     const polylineLatLang = routeLocations.map(({ coords }) => [coords.latitude, coords.longitude]);
     const encodedPolyline = polyline.encode(polylineLatLang);
     const lineOpacity = 0.8;
-    const lineWidth = STATIC_MAP_ROUTE_WIDTH;
     const routeOverlay =
       routeLocations.length > 1
-        ? `path-${lineWidth}+EA5B22-${lineOpacity}(${encodeURIComponent(encodedPolyline)})`
+        ? `path-${STATIC_MAP_ROUTE_WIDTH}+EA5B22-${lineOpacity}(${encodeURIComponent(encodedPolyline)})`
         : '';
     const overlays = routeOverlay ? `${routeOverlay}/` : '';
 

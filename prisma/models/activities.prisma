@@ -3,7 +3,7 @@
 model Activity {
   id                  Uuid                 @id(map: "Activity_pkey") @default(sql`gen_random_uuid()`)
   date                TimestamptzString(6) @default(now())
-  timeZone            VarChar(64)?         @map("time_zone")
+  timeZone            Varchar(64)?         @map("time_zone")
   createdAt           TimestamptzString(6) @default(now())
   updatedAt           TimestamptzString(6)
   description         String?
@@ -11,12 +11,12 @@ model Activity {
   elevationGain       Float?
   duration            Int
   emotion             String?
-  routeStorageKey     VarChar(512)?        @map("route_storage_key")
+  routeStorageKey     Varchar(512)?        @map("route_storage_key")
   routeFormatVersion  Int?                 @map("route_format_version")
   routePointCount     Int?                 @map("route_point_count")
   routeSizeBytes      Int?                 @map("route_size_bytes")
-  routeChecksum       VarChar(64)?         @map("route_checksum")
-  heartRateStorageKey VarChar(512)?        @map("heart_rate_storage_key")
+  routeChecksum       Varchar(64)?         @map("route_checksum")
+  heartRateStorageKey Varchar(512)?        @map("heart_rate_storage_key")
   userId              Uuid                 @map("user_id")
   speed               Float
   sport               String
@@ -24,20 +24,20 @@ model Activity {
   kilometresSplit     Jsonb?
   mapPhotoUrl         String?
   routeOnlyMapPhotoUrl String?             @map("route_only_map_photo_url")
-  mediaProcessingStatus VarChar(16)       @default("queued") @map("media_processing_status")
+  mediaProcessingStatus Varchar(16)       @default("queued") @map("media_processing_status")
   locationName        String?             @map("location_name")
   weatherTemperature  Float?              @map("weather_temperature")
   weatherWindSpeed    Float?              @map("weather_wind_speed")
   weatherCode         Int?                @map("weather_code")
   caloriesActive      Int?                @map("calories_active")
-  locationEnrichmentStatus VarChar(16)    @default("queued") @map("location_enrichment_status")
+  locationEnrichmentStatus Varchar(16)    @default("queued") @map("location_enrichment_status")
   visibility          ActivityVisibility   @default(public)
   hideMap             Boolean              @default(false) @map("hide_map")
   isFavorite          Boolean              @default(false) @map("is_favorite")
   mapPhotoUrlBlurhash String?
   profileId           Uuid
-  source              VarChar(32)?
-  sourceActivityId    VarChar(128)?
+  source              Varchar(32)?
+  sourceActivityId    Varchar(128)?
   steps               Int?
   averageHeartRate    Int?                 @map("average_heart_rate")
   minHeartRate        Int?                 @map("min_heart_rate")
@@ -86,8 +86,8 @@ model ActivityMigrationJob {
   id                  Uuid                  @id(map: "ActivityMigrationJob_pkey") @default(sql`gen_random_uuid()`)
   userId              Uuid                  @map("user_id")
   profileId           Uuid
-  archivePath         VarChar(2048)?
-  status              VarChar(32)
+  archivePath         Varchar(2048)?
+  status              Varchar(32)
   uploadBytesReceived Int                   @default(0) @map("upload_bytes_received")
   uploadBytesTotal    Int                   @default(0) @map("upload_bytes_total")
   uploadUpdatedAt     TimestamptzString(6)?  @map("upload_updated_at")

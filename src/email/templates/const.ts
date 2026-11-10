@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 
 import { RUNICH_LOGO_CID } from '../../common/email/constants';
 
-export const emailColors = {
+const emailColors = {
   accent: '#F15A3E',
   accentDark: '#C63A32',
   background: '#F2F2F0',
@@ -15,7 +15,7 @@ export const emailColors = {
   softAccent: '#FFF2E3',
 } as const;
 
-export const emailFontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
+const emailFontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
 export const emailLogoUrl = `cid:${RUNICH_LOGO_CID}`;
 
 export const emailLayoutStyles = {

@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Get,
   Headers,
+  Inject,
   NotFoundException,
   Param,
   Post,
@@ -18,7 +19,7 @@ import { LoadTestSeedService } from './load-test.service';
 @ApiExcludeController()
 @Controller('load-test')
 export class LoadTestController {
-  constructor(private readonly service: LoadTestSeedService) {}
+  constructor(@Inject(LoadTestSeedService) private readonly service: LoadTestSeedService) {}
 
   @Post('seed')
   async enqueue(@Headers('x-load-test-token') token: string | undefined, @Body() input: LoadTestSeedRequestDto) {

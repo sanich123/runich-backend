@@ -8,7 +8,7 @@ import {
   normalizeActivityDetails,
   omitMediaProcessingStatus,
   reduceActivityChartHeartRateSamples,
-} from '../utils';
+} from '../shared/utils';
 import { makeActivityRouteCoordinate, makeApprovedActivityMedia, makeQueuedActivity } from './fixtures';
 
 describe('activity utilities', () => {

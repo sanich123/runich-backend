@@ -11,7 +11,7 @@ import {
   RegisterUserDto,
 } from '../../auth/dto/auth.dto';
 import { UserIdParamsDto } from '../../auth/dto/auth.dto';
-import { ActivityDto, ActivityMediaAppendDto } from '../../activity/activity.dto';
+import { ActivityDto, ActivityMediaAppendDto } from '../../activity/dto/activity.dto';
 import { CommentDTO, CommentLikeDto, CommentUpdateDto } from '../../comment/comment.dto';
 import { FriendDto } from '../../friend/friend.dto';
 import { LikeDto } from '../../like/like.dto';

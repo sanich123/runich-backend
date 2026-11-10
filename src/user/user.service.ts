@@ -13,7 +13,7 @@ import { UserDto } from './user.dto';
 import { blurhashFromUrl } from 'src/common/images/blurhash';
 import { StorageService } from 'src/storage/services/storage.service';
 import { PUBLIC_USER_PROFILE_SELECT } from 'src/account/const';
-import { ModerationAccessService } from 'src/moderation/moderation-access.service';
+import { ModerationAccessService } from 'src/moderation/services/moderation-access.service';
 import type { ProfilePhotoReviewStage, ProfileWithPendingPhoto } from './user.types';
 
 @Injectable()

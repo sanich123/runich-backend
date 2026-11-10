@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-with-coordinates';
 import { parseCsvFileIntoArray } from 'src/common/parsers/parse-csv';
 import { unzipTransferArchive } from 'src/common/parsers/unzip-archive';
-import { encodeActivityRoute } from 'src/storage/activity-route';
+import { encodeActivityRoute } from 'src/storage/shared/activity-route';
 import { StorageService } from 'src/storage/services/storage.service';
 import type { LoadTestActivityAsset, LoadTestAssetManifest } from 'src/load-test/load-test.types';
 

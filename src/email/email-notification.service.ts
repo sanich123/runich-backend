@@ -8,7 +8,8 @@ import { ModerationReportEmail, type ModerationReportEmailProps } from './templa
 import { ReporterModerationEmail, type ReporterModerationEmailProps } from './templates/ReporterModerationEmail';
 import { EmailType } from './templates/types';
 import { MODERATION_EMAIL_RECIPIENT, getModerationReportTitle } from './email-notification.constants';
-import type { EmailNotificationPayload } from './email-notification.types';
+import type { EmailNotificationPayload, GroupJoinRequestEmailPayload } from './email-notification.types';
+import { GroupJoinRequestEmail } from './templates/GroupJoinRequestEmail';
 
 @Injectable()
 export class EmailNotificationService {
@@ -24,6 +25,41 @@ export class EmailNotificationService {
 
   sendCommentLike(payload: EmailNotificationPayload) {
     return this.send(payload, EmailType.commentLike, 'Лайк к вашему комментарию');
+  }
+
+  async sendGroupJoinRequest(payload: GroupJoinRequestEmailPayload) {
+    const requestsUrl = new URL(getAuthFrontendRedirectUri());
+    requestsUrl.pathname = '/groups/' + encodeURIComponent(payload.groupId) + '/requests';
+    requestsUrl.search = '';
+    requestsUrl.hash = '';
+    const copy =
+      payload.locale === 'russian'
+        ? {
+            subject: '[Runich] Новая заявка в группу «' + payload.groupName + '»',
+            heading: 'Новая заявка в группу',
+            greeting: payload.recipientName ? 'Здравствуйте, ' + payload.recipientName + '!' : 'Здравствуйте!',
+            body: payload.requesterName + ' хочет вступить в группу «' + payload.groupName + '».',
+            button: 'Рассмотреть заявку',
+          }
+        : {
+            subject: '[Runich] New request to join ' + payload.groupName,
+            heading: 'New group join request',
+            greeting: payload.recipientName ? 'Hello, ' + payload.recipientName + '!' : 'Hello!',
+            body: payload.requesterName + ' wants to join your group “' + payload.groupName + '”.',
+            button: 'Review request',
+          };
+    const html = await render(
+      GroupJoinRequestEmail({
+        locale: payload.locale,
+        preview: copy.subject,
+        heading: copy.heading,
+        greeting: copy.greeting,
+        body: copy.body,
+        button: copy.button,
+        requestsUrl: requestsUrl.toString(),
+      }),
+    );
+    return sendEmail(payload.recipientEmail, copy.subject, html, [], this.latencyMetrics);
   }
 
   async sendModerationUpdate(payload: ModerationReportEmailProps) {

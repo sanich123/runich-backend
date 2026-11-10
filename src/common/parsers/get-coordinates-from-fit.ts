@@ -1,6 +1,6 @@
 import { SportsLib } from '@ardentcode/sports-lib';
 import { readFile } from 'fs/promises';
-import { LocationObject } from 'src/activity/activity.dto';
+import { LocationObject } from 'src/activity/dto/activity.dto';
 import { Logger } from '@nestjs/common';
 
 const logger = new Logger('FitParser');

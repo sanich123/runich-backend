@@ -6,7 +6,7 @@ import {
   STATIC_MAP_WEBP_EFFORT,
   STATIC_MAP_WEBP_QUALITY,
 } from './static-map.constants';
-import type { LocationObject } from 'src/activity/activity.dto';
+import type { LocationObject } from 'src/activity/dto/activity.dto';
 
 const WEB_MERCATOR_MAX_LATITUDE = 85.05112878;
 const ROUTE_MAP_PADDING = 44;

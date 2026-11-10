@@ -25,6 +25,7 @@ jobs:
       STAGE_DOMAIN: stage.runich-app.ru
       STAGE_WEB_DOMAIN: stage-web.runich-app.ru
       DEPLOY_IMAGE: ghcr.io/sanich123/runich-backend:stage-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      NGINX_IMAGE: ghcr.io/sanich123/runich-nginx:stage-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Check out the exact commit
@@ -49,6 +50,17 @@ jobs:
           tags: ${{ env.DEPLOY_IMAGE }}
           cache-from: type=gha,scope=runich-backend-stage
           cache-to: type=gha,mode=max,scope=runich-backend-stage
+
+      - name: Build and publish immutable Stage Nginx image with Brotli
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/nginx/Dockerfile
+          pull: true
+          push: true
+          tags: ${{ env.NGINX_IMAGE }}
+          cache-from: type=gha,scope=runich-nginx-stage
+          cache-to: type=gha,mode=max,scope=runich-nginx-stage
 
       - name: Deploy the exact image over SSH
         env:
@@ -96,13 +108,13 @@ jobs:
           # после завершения команды загрузки.
           printf '%s\n' "$GITHUB_TOKEN" |
             "${SSH[@]}" "$TARGET" \
-              "set -euo pipefail; umask 077; config_dir=\$(mktemp -d); trap 'rm -rf \"\$config_dir\"' EXIT; DOCKER_CONFIG=\"\$config_dir\" docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null; DOCKER_CONFIG=\"\$config_dir\" docker pull '$DEPLOY_IMAGE'"
+              "set -euo pipefail; umask 077; config_dir=\$(mktemp -d); trap 'rm -rf \"\$config_dir\"' EXIT; DOCKER_CONFIG=\"\$config_dir\" docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null; DOCKER_CONFIG=\"\$config_dir\" docker pull '$DEPLOY_IMAGE'; DOCKER_CONFIG=\"\$config_dir\" docker pull '$NGINX_IMAGE'"
           unset GITHUB_TOKEN
           unset STAGE_DEPLOY_SSH_KEY
 
           "${SCP[@]}" docker-compose.timeweb.stage.yml deploy/nginx/runich.conf.template deploy/grafana/config.alloy "$TARGET:/tmp/"
 
-          "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' STAGE_WEB_DOMAIN='$STAGE_WEB_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
+          "${SSH[@]}" "$TARGET" "DEPLOY_IMAGE='$DEPLOY_IMAGE' NGINX_IMAGE='$NGINX_IMAGE' STAGE_DOMAIN='$STAGE_DOMAIN' STAGE_WEB_DOMAIN='$STAGE_WEB_DOMAIN' DEPLOY_SHA='$GITHUB_SHA' DEPLOY_RUN_URL='$DEPLOY_RUN_URL' bash -s" <<'REMOTE'
           set -euo pipefail
           cd /opt/runich-stage
 
@@ -124,6 +136,7 @@ jobs:
           rm -f /tmp/docker-compose.timeweb.stage.yml /tmp/runich.conf.template /tmp/config.alloy
 
           export BACKEND_IMAGE="$DEPLOY_IMAGE"
+          export NGINX_IMAGE
           COMPOSE=(docker compose --project-name runich-stage -f docker-compose.timeweb.stage.yml)
 
           "${COMPOSE[@]}" config --quiet
@@ -206,6 +219,12 @@ jobs:
             echo 'Stage web HTTPS certificate/route check failed.' >&2
             exit 1
           fi
+          if ! curl --silent --show-error --max-time 10 -H 'Accept-Encoding: br' -D - -o /dev/null \
+            --resolve "$STAGE_WEB_DOMAIN:443:127.0.0.1" "https://$STAGE_WEB_DOMAIN/" \
+            | grep -i '^content-encoding: br' >/dev/null; then
+            echo 'Stage web did not return Brotli-compressed HTML.' >&2
+            exit 1
+          fi
 
           if ! curl --silent --show-error --max-time 10 -D - -o /dev/null \
             --resolve "$STAGE_WEB_DOMAIN:443:127.0.0.1" "https://$STAGE_WEB_DOMAIN/" \
@@ -213,6 +232,13 @@ jobs:
             echo 'Stage web does not advertise HTTP/3.' >&2
             exit 1
           fi
+
+          nginx_env="$(mktemp .env.XXXXXX)"
+          awk -F= '$1 != "NGINX_IMAGE" { print }' .env > "$nginx_env"
+          printf 'NGINX_IMAGE=%s\n' "$NGINX_IMAGE" >> "$nginx_env"
+          chmod --reference=.env "$nginx_env"
+          chown --reference=.env "$nginx_env"
+          mv "$nginx_env" .env
 
           printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
           echo "Stage is healthy at commit $DEPLOY_SHA"

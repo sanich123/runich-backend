@@ -1,11 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/activity-migration-config';
+import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/shared/const';
 import { StorageService } from './storage.service';
-import { MEDIA_CLEANUP_STATUS } from '../const';
-import type { CleanupDatabase } from '../type';
-import { getStorageErrorMessage } from '../utils';
+import { MEDIA_CLEANUP_STATUS } from '../shared/const';
+import type { CleanupDatabase } from '../shared/types';
+import { getStorageErrorMessage } from '../shared/utils';
 
 @Injectable()
 export class MediaCleanupService {

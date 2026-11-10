@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 import { BadRequestException } from '@nestjs/common';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { asyncMock } from 'src/tests/helpers';
-import { isSupportedVideoUpload } from '../const';
+import { isSupportedVideoUpload } from '../shared/const';
 import { StorageController } from '../storage.controller';
 import { StorageService } from '../services/storage.service';
 import { makeActivityMediaFixture, makePhotoUpload } from './fixtures';

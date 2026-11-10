@@ -1,6 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { jest } from '@jest/globals';
 import { VkAuthService } from '../services/vk-auth.service';
+import type { SessionMetadata } from '../types/auth.types';
 import { makeConfirmedAuthUser } from './fixtures';
 
 type RedirectResponse = { redirect: jest.Mock };
@@ -14,22 +15,199 @@ describe('VkAuthService', () => {
   const tokenService = {
     createAccessToken: jest.fn(() => 'app-token'),
     createEmailLoginCredential: jest.fn(() => 'app-token'),
+    createSessionTokens: jest.fn(async (userId: string) => ({
+      userId,
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    })),
   } as unknown as ConstructorParameters<typeof VkAuthService>[2];
+  const superuserBootstrap = { grantIfAllowlisted: jest.fn() };
   let service: VkAuthService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.VK_CLIENT_ID = '123';
     process.env.VK_REDIRECT_URI = 'https://runich.example/auth/vk/callback';
+    process.env.VK_NATIVE_CLIENT_ID = 'native-client-id';
+    process.env.VK_NATIVE_REDIRECT_URI = 'runich://vk/callback';
     process.env.JWT_SECRET = 'secret';
     service = new VkAuthService(
       prismaMock as unknown as ConstructorParameters<typeof VkAuthService>[0],
       jwt,
       tokenService,
+      superuserBootstrap as unknown as ConstructorParameters<typeof VkAuthService>[3],
     );
   });
 
   afterEach(() => jest.restoreAllMocks());
+
+  it.each([
+    ['missing code', '', 'device-1', 'v'.repeat(43)],
+    ['oversized code', 'c'.repeat(4097), 'device-1', 'v'.repeat(43)],
+    ['missing device id', 'code', '', 'v'.repeat(43)],
+    ['oversized device id', 'code', 'd'.repeat(257), 'v'.repeat(43)],
+    ['invalid PKCE verifier', 'code', 'device-1', 'short'],
+  ])('rejects native VK login with %s before contacting VK', async (_case, code, deviceId, verifier) => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch');
+
+    await expect(service.loginWithNativeCode(code, deviceId, verifier)).rejects.toThrow(
+      'Недействительные параметры авторизации VK',
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a failed token response', { payload: {}, status: 401 }],
+    ['a token without an access token', { payload: { user_id: '42' }, status: 200 }],
+    ['a token without a user id', { payload: { access_token: 'vk-token' }, status: 200 }],
+  ])('rejects native VK login with %s', async (_case, tokenResponse) => {
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(tokenResponse.payload), { status: tokenResponse.status }));
+
+    await expect(service.loginWithNativeCode('code', 'device-1', 'v'.repeat(43))).rejects.toThrow(
+      'Не удалось проверить авторизацию VK',
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['a failed profile response', { payload: {}, status: 503 }],
+    ['a response without a user profile', { payload: {}, status: 200 }],
+  ])('rejects native VK login with %s', async (_case, profileResponse) => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: '42' })))
+      .mockResolvedValueOnce(new Response(JSON.stringify(profileResponse.payload), { status: profileResponse.status }));
+
+    await expect(service.loginWithNativeCode('code', 'device-1', 'v'.repeat(43))).rejects.toThrow(
+      'Не удалось получить профиль VK',
+    );
+  });
+
+  it('creates a VK user from the native profile and uses the configured redirect URI', async () => {
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42, email: ' Runner@Example.COM ' })),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            user: {
+              user_id: 'vk-profile-42',
+              first_name: 'Ivan',
+              last_name: 'Runner',
+              city: 'Moscow',
+              avatar: 'https://example.com/avatar.jpg',
+            },
+          }),
+        ),
+      );
+    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
+    (prismaMock.user.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+      makeConfirmedAuthUser(),
+    );
+
+    const result = await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43));
+
+    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('client_id=native-client-id');
+    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain(
+      'redirect_uri=runich%3A%2F%2Fvk%2Fcallback',
+    );
+    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('code_verifier=' + 'v'.repeat(43));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.com/oauth2/user_info', expect.any(Object));
+    expect(prismaMock.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        email: 'runner@example.com',
+        authProvider: 'VK',
+        profile: {
+          create: expect.objectContaining({
+            name: 'Ivan',
+            surname: 'Runner',
+            city: 'Moscow',
+            profilePhoto: 'https://example.com/avatar.jpg',
+            email: 'runner@example.com',
+          }),
+        },
+      }),
+    });
+    expect(tokenService.createSessionTokens).toHaveBeenCalledWith('user-1', {});
+    expect(result).toEqual({ userId: 'user-1', accessToken: 'access-token', refreshToken: 'refresh-token' });
+  });
+
+  it('uses profile email and confirms an existing VK user with supplied session metadata', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42 })))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ user: { email: ' Profile@Example.COM ', first_name: 'Ivan' } })),
+      );
+    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue({
+      id: 'user-1',
+      emailConfirmedAt: null,
+    });
+    (prismaMock.user.update as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+      makeConfirmedAuthUser(),
+    );
+    const metadata: SessionMetadata = { deviceId: 'device-1', platform: 'android' };
+
+    await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), metadata);
+
+    expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'profile@example.com' } }),
+    );
+    expect(prismaMock.user.update).toHaveBeenNthCalledWith(1, {
+      where: { id: 'user-1' },
+      data: { emailConfirmedAt: expect.any(Date) },
+    });
+    expect(prismaMock.user.update).toHaveBeenNthCalledWith(2, {
+      where: { id: 'user-1' },
+      data: { lastSignInAt: expect.any(Date) },
+    });
+    expect(tokenService.createSessionTokens).toHaveBeenCalledWith('user-1', metadata);
+  });
+
+  it('uses a synthetic VK email when the provider returns no email', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42 })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ user: {} })));
+    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
+    (prismaMock.user.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+      makeConfirmedAuthUser(),
+    );
+
+    await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43));
+
+    expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'vk_42@vk.local' } }),
+    );
+    expect(prismaMock.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ email: 'vk_42@vk.local' }) }),
+    );
+  });
+
+  it('uses the default VK native client and redirect values when no overrides are configured', async () => {
+    delete process.env.VK_NATIVE_CLIENT_ID;
+    delete process.env.VK_NATIVE_REDIRECT_URI;
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42 })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ user: {} })));
+    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
+    (prismaMock.user.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+      makeConfirmedAuthUser(),
+    );
+
+    await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43));
+
+    const tokenRequest = String((fetchMock.mock.calls[0][1] as RequestInit).body);
+    expect(tokenRequest).toContain('client_id=54878048');
+    expect(tokenRequest).toContain('redirect_uri=vk54878048%3A%2F%2Fvk.ru%2Fblank.html');
+  });
 
   it('builds a VK ID authorization URL with S256 PKCE', () => {
     const response = { redirect: jest.fn() } as RedirectResponse;

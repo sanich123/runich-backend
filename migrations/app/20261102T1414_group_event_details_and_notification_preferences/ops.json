@@ -1,0 +1,262 @@
+[
+  {
+    "id": "column.public.GroupEvent.distance_km",
+    "label": "Add column \"distance_km\" to \"GroupEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "distance_km",
+        "table": "GroupEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"distance_km\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupEvent",
+          "distance_km"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"distance_km\" on \"GroupEvent\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"distance_km\"",
+        "sql": "ALTER TABLE \"public\".\"GroupEvent\" ADD COLUMN \"distance_km\" float8"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"distance_km\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupEvent",
+          "distance_km"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"distance_km\" on \"GroupEvent\""
+        }
+      },
+      {
+        "description": "verify column \"distance_km\" has type \"double precision\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "GroupEvent",
+          "distance_km",
+          "double precision"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.GroupEvent.sport",
+    "label": "Add column \"sport\" to \"GroupEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "sport",
+        "table": "GroupEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"sport\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupEvent",
+          "sport"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"sport\" on \"GroupEvent\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"sport\"",
+        "sql": "ALTER TABLE \"public\".\"GroupEvent\" ADD COLUMN \"sport\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"sport\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupEvent",
+          "sport"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"sport\" on \"GroupEvent\""
+        }
+      },
+      {
+        "description": "verify column \"sport\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "GroupEvent",
+          "sport",
+          "text"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Profile.group_events_notifications",
+    "label": "Add column \"group_events_notifications\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "group_events_notifications",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"group_events_notifications\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "group_events_notifications"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"group_events_notifications\" on \"Profile\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"group_events_notifications\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"group_events_notifications\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"group_events_notifications\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "group_events_notifications"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"group_events_notifications\" on \"Profile\""
+        }
+      },
+      {
+        "description": "verify column \"group_events_notifications\" has type \"boolean\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "group_events_notifications",
+          "boolean"
+        ]
+      },
+      {
+        "description": "verify column \"group_events_notifications\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "group_events_notifications",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Profile.group_posts_notifications",
+    "label": "Add column \"group_posts_notifications\" to \"Profile\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "group_posts_notifications",
+        "table": "Profile"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"group_posts_notifications\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "group_posts_notifications"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"group_posts_notifications\" on \"Profile\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"group_posts_notifications\"",
+        "sql": "ALTER TABLE \"public\".\"Profile\" ADD COLUMN \"group_posts_notifications\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"group_posts_notifications\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "group_posts_notifications"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"group_posts_notifications\" on \"Profile\""
+        }
+      },
+      {
+        "description": "verify column \"group_posts_notifications\" has type \"boolean\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "group_posts_notifications",
+          "boolean"
+        ]
+      },
+      {
+        "description": "verify column \"group_posts_notifications\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "Profile",
+          "group_posts_notifications",
+          "NO"
+        ]
+      }
+    ]
+  }
+]

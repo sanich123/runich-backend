@@ -5,6 +5,11 @@ import { ActivityController } from './activity.controller';
 import { ActivityService } from './services/activity.service';
 import { ActivityAccessService } from './services/activity-access.service';
 import { ActivityReadService } from './services/activity-read.service';
+import { ActivityContentReadService } from './services/activity-content-read.service';
+import { ActivityFeedService } from './services/activity-feed.service';
+import { ActivityMediaService } from './services/activity-media.service';
+import { ActivityWriteService } from './services/activity-write.service';
+import { ActivityImportService } from './services/activity-import.service';
 import { FriendModule } from '../friend/friend.module';
 import { AccountModule } from '../account/account.module';
 import { ActivityPersistenceService } from './services/activity-persistence.service';
@@ -29,6 +34,11 @@ import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
     ActivityService,
     ActivityAccessService,
     ActivityReadService,
+    ActivityContentReadService,
+    ActivityFeedService,
+    ActivityMediaService,
+    ActivityWriteService,
+    ActivityImportService,
     ActivityPersistenceService,
     ActivityMigrationService,
     StaticMapService,

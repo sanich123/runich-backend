@@ -1,4 +1,4 @@
-import type { LocationObject } from 'src/activity/activity.dto';
+import type { LocationObject } from 'src/activity/dto/activity.dto';
 import { calculateKilometreSplits } from '../calculate-kilometre-splits';
 
 const METERS_PER_EQUATOR_DEGREE = 111_195.080233;

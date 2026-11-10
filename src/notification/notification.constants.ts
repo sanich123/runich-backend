@@ -2,6 +2,8 @@ export const NOTIFICATION_TYPE = {
   activityLike: 'activity-like',
   comment: 'comment',
   commentLike: 'comment-like',
+  groupPost: 'group-post',
+  groupEvent: 'group-event',
   moderationReportReceived: 'moderation-report-received',
   moderationReportDecision: 'moderation-report-decision',
 } as const;
@@ -46,6 +48,8 @@ export const PUSH_NOTIFICATION_COPY = {
     activityLike: '{actor} поставил(а) лайк',
     comment: '{actor} прокомментировал(а) тренировку',
     commentLike: '{actor} оценил(а) ваш комментарий',
+    groupPost: '{actor} опубликовал(а) запись в группе',
+    groupEvent: '{actor} создал(а) событие группы',
     generic: 'Новое уведомление',
   },
   body: {

@@ -15,6 +15,7 @@ export interface NotificationEventInput {
   actorProfilePhoto?: string | null;
   content?: string | null;
   localizedContent?: Partial<Record<'russian' | 'english', string>>;
+  categoryPreference?: 'groupPostsNotifications' | 'groupEventsNotifications';
   mandatory?: boolean;
 }
 

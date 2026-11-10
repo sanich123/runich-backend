@@ -1,4 +1,4 @@
-import type { LocationObject } from 'src/activity/activity.dto';
+import type { LocationObject } from 'src/activity/dto/activity.dto';
 
 export type GeneratedActivityMap = {
   url: string;

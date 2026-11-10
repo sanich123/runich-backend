@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { asyncMock, syncMock } from 'src/tests/helpers';
-import type { LocationObject } from 'src/activity/activity.dto';
+import type { LocationObject } from 'src/activity/dto/activity.dto';
 
 const parseCoordinatesFromFile = asyncMock();
 const ungzipFile = asyncMock();

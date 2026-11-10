@@ -3,18 +3,18 @@
 model User {
   id                       Uuid                   @id(map: "Users_pkey") @default(sql`gen_random_uuid()`)
   instanceId               Uuid?                  @map("instance_id")
-  aud                      VarChar(255)?
-  role                     VarChar(255)?
-  email                    VarChar(255)
-  encryptedPassword        VarChar(255)?          @map("encrypted_password")
+  aud                      Varchar(255)?
+  role                     Varchar(255)?
+  email                    Varchar(255)
+  encryptedPassword        Varchar(255)?          @map("encrypted_password")
   emailConfirmedAt         TimestamptzString(6)?  @map("email_confirmed_at")
   invitedAt                TimestamptzString(6)?  @map("invited_at")
-  confirmationToken        VarChar(255)?          @map("confirmation_token")
+  confirmationToken        Varchar(255)?          @map("confirmation_token")
   confirmationSentAt       TimestamptzString(6)?  @map("confirmation_sent_at")
-  recoveryToken            VarChar(255)?          @map("recovery_token")
+  recoveryToken            Varchar(255)?          @map("recovery_token")
   recoverySentAt           TimestamptzString(6)?  @map("recovery_sent_at")
-  emailChangeTokenNew      VarChar(255)?          @map("email_change_token_new")
-  emailChange              VarChar(255)?          @map("email_change")
+  emailChangeTokenNew      Varchar(255)?          @map("email_change_token_new")
+  emailChange              Varchar(255)?          @map("email_change")
   emailChangeSentAt        TimestamptzString(6)?  @map("email_change_sent_at")
   lastSignInAt             TimestamptzString(6)?  @map("last_sign_in_at")
   rawAppMetaData           Jsonb?                 @map("raw_app_meta_data")
@@ -25,19 +25,23 @@ model User {
   phone                    String?
   phoneConfirmedAt         TimestamptzString(6)?  @map("phone_confirmed_at")
   phoneChange              String?                @default("") @map("phone_change")
-  phoneChangeToken         VarChar(255)?          @default("") @map("phone_change_token")
+  phoneChangeToken         Varchar(255)?          @default("") @map("phone_change_token")
   phoneChangeSentAt        TimestamptzString(6)?  @map("phone_change_sent_at")
-  emailChangeTokenCurrent  VarChar(255)?          @default("") @map("email_change_token_current")
-  emailChangeConfirmStatus SmallInt?              @default(0) @map("email_change_confirm_status")
+  emailChangeTokenCurrent  Varchar(255)?          @default("") @map("email_change_token_current")
+  emailChangeConfirmStatus Int2?                  @default(0) @map("email_change_confirm_status")
   bannedUntil              TimestamptzString(6)?  @map("banned_until")
-  reauthenticationToken    VarChar(255)?          @default("") @map("reauthentication_token")
+  reauthenticationToken    Varchar(255)?          @default("") @map("reauthentication_token")
   reauthenticationSentAt   TimestamptzString(6)?  @map("reauthentication_sent_at")
   deletedAt                TimestamptzString(6)?  @map("deleted_at")
-  authProvider             VarChar(32)?           @map("auth_provider")
+  authProvider             Varchar(32)?           @map("auth_provider")
   activities               Activity[]
   activityMigrationJobs    ActivityMigrationJob[]
   authExchanges            AuthExchange[]
   friends                  Friend[]
+  groupsCreated            Group[]                  @relation("GroupCreator")
+  groupMemberships         GroupMember[]
+  groupPostsAuthored       GroupPost[]               @relation("GroupPostAuthor")
+  groupEventsCreated       GroupEvent[]              @relation("GroupEventCreator")
   profile                  Profile?
   userSessions             UserSession[]
   subscriptions            Subscription[]
@@ -89,6 +93,8 @@ model Profile {
   emailNotifications    Boolean?               @default(false)
   pushNotifications     Boolean                 @default(false) @map("push_notifications")
   inAppNotifications    Boolean                 @default(true) @map("in_app_notifications")
+  groupPostsNotifications  Boolean               @default(true) @map("group_posts_notifications")
+  groupEventsNotifications Boolean               @default(true) @map("group_events_notifications")
   profilePhotoBlurhash  String?
   profilePhotoPendingAssetId String? @map("profile_photo_pending_asset_id")
   profilePhotoPendingBlurhash String? @map("profile_photo_pending_blurhash")
@@ -121,8 +127,8 @@ model Profile {
 model AuthExchange {
   id         Uuid                  @id(map: "AuthExchange_pkey") @default(sql`gen_random_uuid()`)
   userId     Uuid                  @map("user_id")
-  codeHash   VarChar(128)          @map("code_hash")
-  purpose    VarChar(32)
+  codeHash   Varchar(128)          @map("code_hash")
+  purpose    Varchar(32)
   expiresAt  TimestamptzString(6)  @map("expires_at")
   consumedAt TimestamptzString(6)? @map("consumed_at")
   createdAt  TimestamptzString(6)  @default(now()) @map("created_at")
@@ -137,19 +143,19 @@ model AuthExchange {
 model UserSession {
   id             Uuid                  @id(map: "UserSession_pkey") @default(sql`gen_random_uuid()`)
   userId         Uuid                  @map("user_id")
-  refreshHash    VarChar(128)          @map("refresh_hash")
-  deviceId       VarChar(128)          @map("device_id")
-  deviceName     VarChar(255)?         @map("device_name")
-  platform       VarChar(64)?
-  deviceModel    VarChar(128)?         @map("device_model")
-  manufacturer   VarChar(128)?
-  osName         VarChar(64)?          @map("os_name")
-  osVersion      VarChar(64)?          @map("os_version")
-  deviceType     VarChar(64)?          @map("device_type")
-  appVersion     VarChar(32)?          @map("app_version")
-  appBuild       VarChar(32)?          @map("app_build")
-  userAgent      VarChar(512)?         @map("user_agent")
-  ipAddress      VarChar(128)?         @map("ip_address")
+  refreshHash    Varchar(128)          @map("refresh_hash")
+  deviceId       Varchar(128)          @map("device_id")
+  deviceName     Varchar(255)?         @map("device_name")
+  platform       Varchar(64)?
+  deviceModel    Varchar(128)?         @map("device_model")
+  manufacturer   Varchar(128)?
+  osName         Varchar(64)?          @map("os_name")
+  osVersion      Varchar(64)?          @map("os_version")
+  deviceType     Varchar(64)?          @map("device_type")
+  appVersion     Varchar(32)?          @map("app_version")
+  appBuild       Varchar(32)?          @map("app_build")
+  userAgent      Varchar(512)?         @map("user_agent")
+  ipAddress      Varchar(128)?         @map("ip_address")
   lastSeenAt     TimestamptzString(6)  @default(now()) @map("last_seen_at")
   lastLatitude   Float?                @map("last_latitude")
   lastLongitude  Float?                @map("last_longitude")
@@ -167,7 +173,7 @@ model UserSession {
 model AdminRoleAssignment {
   id               Uuid                 @id(map: "AdminRoleAssignments_pkey") @default(sql`gen_random_uuid()`)
   userId           Uuid                 @map("user_id")
-  role             VarChar(32)
+  role             Varchar(32)
   isActive         Boolean              @default(true) @map("is_active")
   grantedByUserId  Uuid?                @map("granted_by_user_id")
   createdAt        TimestamptzString(6) @default(now()) @map("created_at")
@@ -184,10 +190,10 @@ model AdminAccessAudit {
   id           Uuid                 @id(map: "AdminAccessAudit_pkey") @default(sql`gen_random_uuid()`)
   actorUserId  Uuid?                @map("actor_user_id")
   targetUserId Uuid?                @map("target_user_id")
-  actorEmail   VarChar(255)          @map("actor_email")
-  targetEmail  VarChar(255)          @map("target_email")
-  role         VarChar(32)
-  action       VarChar(16)
+  actorEmail   Varchar(255)          @map("actor_email")
+  targetEmail  Varchar(255)          @map("target_email")
+  role         Varchar(32)
+  action       Varchar(16)
   createdAt    TimestamptzString(6) @default(now()) @map("created_at")
   actor        User?                @relation("AdminAccessAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull, map: "AdminAccessAudit_actor_user_id_fkey")
   target       User?                @relation("AdminAccessAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull, map: "AdminAccessAudit_target_user_id_fkey")

@@ -125,7 +125,7 @@ services:
       - grafana_alloy_data:/var/lib/alloy/data
 
   nginx:
-    image: nginx:1.30.6-alpine-slim
+    image: ${NGINX_IMAGE:?NGINX_IMAGE must identify the immutable edge image}
     restart: always
     depends_on:
       nestjs_app:

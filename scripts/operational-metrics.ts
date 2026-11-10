@@ -144,7 +144,7 @@ export async function collectOperationalMetrics(databaseUrl = process.env.DATABA
   }
 }
 
-export type OperationalMetricRow = { label: string; value: string };
+type OperationalMetricRow = { label: string; value: string };
 
 const numberFormatter = new Intl.NumberFormat('ru-RU');
 

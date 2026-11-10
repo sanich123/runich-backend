@@ -1,4 +1,4 @@
-import { generateActivityTitle } from '../services/activity-title';
+import { generateActivityTitle } from '../shared/utils';
 import { jest } from '@jest/globals';
 
 describe('generateActivityTitle', () => {

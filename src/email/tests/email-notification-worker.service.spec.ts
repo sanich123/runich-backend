@@ -10,6 +10,7 @@ describe('EmailNotificationWorkerService', () => {
     like: { findUnique: asyncMock() },
     comment: { findUnique: asyncMock() },
     commentLike: { findUnique: asyncMock() },
+    groupMember: { findUnique: asyncMock() },
     contentReport: { findUnique: asyncMock() },
     profile: { findUnique: asyncMock() },
     moderationAction: { findUnique: asyncMock() },
@@ -19,6 +20,7 @@ describe('EmailNotificationWorkerService', () => {
     sendLike: asyncMock(),
     sendComment: asyncMock(),
     sendCommentLike: asyncMock(),
+    sendGroupJoinRequest: asyncMock(),
     sendModerationUpdate: asyncMock(),
     sendReporterModerationUpdate: asyncMock(),
   };
@@ -37,6 +39,7 @@ describe('EmailNotificationWorkerService', () => {
     notifications.sendLike.mockResolvedValue(undefined);
     notifications.sendComment.mockResolvedValue(undefined);
     notifications.sendCommentLike.mockResolvedValue(undefined);
+    notifications.sendGroupJoinRequest.mockResolvedValue(undefined);
     notifications.sendModerationUpdate.mockResolvedValue(undefined);
     notifications.sendReporterModerationUpdate.mockResolvedValue(undefined);
   });
@@ -198,6 +201,87 @@ describe('EmailNotificationWorkerService', () => {
         recipientName: 'Carol',
       }),
     );
+  });
+
+  it('sends a pending group request to the owner in their preferred language', async () => {
+    prisma.emailNotificationJob.findFirst.mockResolvedValue({
+      id: 'job-group-request',
+      notificationType: 'group-join-request',
+      sourceId: 'membership-1',
+      attempts: 0,
+    });
+    prisma.groupMember.findUnique.mockResolvedValue({
+      status: 'pending',
+      user: { profile: { name: 'Alex', surname: 'Runner' } },
+      group: {
+        id: 'group-1',
+        name: 'Morning runners',
+        creator: { email: 'owner@example.com', profile: { name: 'Sam', language: 'russian' } },
+      },
+    });
+
+    await worker.processNextJob();
+
+    expect(notifications.sendGroupJoinRequest).toHaveBeenCalledWith({
+      groupId: 'group-1',
+      groupName: 'Morning runners',
+      requesterName: 'Alex Runner',
+      recipientEmail: 'owner@example.com',
+      recipientName: 'Sam',
+      locale: 'russian',
+    });
+    expect(prisma.emailNotificationJob.update).toHaveBeenLastCalledWith({
+      where: { id: 'job-group-request' },
+      data: expect.objectContaining({ status: 'sent' }),
+    });
+  });
+
+  it('uses safe group-request fallbacks when profile names and language are missing', async () => {
+    prisma.emailNotificationJob.findFirst.mockResolvedValue({
+      id: 'job-group-request',
+      notificationType: 'group-join-request',
+      sourceId: 'membership-1',
+      attempts: 0,
+    });
+    prisma.groupMember.findUnique.mockResolvedValue({
+      status: 'pending',
+      user: { profile: null },
+      group: { id: 'group-1', name: 'City team', creator: { email: 'owner@example.com', profile: null } },
+    });
+
+    await worker.processNextJob();
+
+    expect(notifications.sendGroupJoinRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ requesterName: 'Runich user', recipientName: undefined, locale: 'english' }),
+    );
+  });
+
+  it.each([
+    ['missing request', null],
+    ['request already handled', { status: 'active' }],
+    [
+      'owner without an email',
+      {
+        status: 'pending',
+        group: { creator: { email: null } },
+      },
+    ],
+  ])('skips group request email for %s', async (_label, request) => {
+    prisma.emailNotificationJob.findFirst.mockResolvedValue({
+      id: 'job-group-request',
+      notificationType: 'group-join-request',
+      sourceId: 'membership-1',
+      attempts: 0,
+    });
+    prisma.groupMember.findUnique.mockResolvedValue(request);
+
+    await worker.processNextJob();
+
+    expect(notifications.sendGroupJoinRequest).not.toHaveBeenCalled();
+    expect(prisma.emailNotificationJob.update).toHaveBeenLastCalledWith({
+      where: { id: 'job-group-request' },
+      data: expect.objectContaining({ status: 'skipped' }),
+    });
   });
 
   it('sends a moderator report email with reporter details and the reported profile', async () => {

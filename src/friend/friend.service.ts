@@ -3,7 +3,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { handleServiceError, isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
 import { FRIEND_PROFILE_SELECT } from './const';
-import { ModerationAccessService } from 'src/moderation/moderation-access.service';
+import { ModerationAccessService } from 'src/moderation/services/moderation-access.service';
 
 @Injectable()
 export class FriendService {

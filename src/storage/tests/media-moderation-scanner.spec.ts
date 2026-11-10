@@ -3,10 +3,7 @@ import { Logger } from '@nestjs/common';
 import * as childProcess from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-  MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION,
-  MEDIA_MODERATION_MODEL_VERSION,
-} from '../services/media-moderation-thresholds';
+import { MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION, MEDIA_MODERATION_MODEL_VERSION } from '../shared/const';
 
 type ExecFileCallback = (error: Error | null, result?: { stdout: string; stderr: string }) => void;
 

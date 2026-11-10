@@ -48,6 +48,10 @@ export class ProfileDto {
   pushNotifications?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'In-app notifications enabled' })
   inAppNotifications?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Group post notifications enabled' })
+  groupPostsNotifications?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Group event notifications enabled' })
+  groupEventsNotifications?: boolean;
   @ApiPropertyOptional({ type: Boolean, description: 'Allow this profile to appear in user search' })
   profileSearchVisible?: boolean;
   @ApiPropertyOptional({
@@ -88,6 +92,8 @@ export class PublicProfileDto extends OmitType(ProfileDto, [
   'emailNotifications',
   'pushNotifications',
   'inAppNotifications',
+  'groupPostsNotifications',
+  'groupEventsNotifications',
   'profileSearchVisible',
   'email',
 ] as const) {}

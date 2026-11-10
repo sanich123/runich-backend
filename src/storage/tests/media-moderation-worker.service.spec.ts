@@ -6,11 +6,8 @@ import {
   MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION,
   MEDIA_MODERATION_MODEL_VERSION,
   MEDIA_MODERATION_RETRY_LIMIT,
-} from '../services/media-moderation-thresholds';
-import {
-  getMediaModerationProviderName,
-  getMediaModerationReviewReason,
-} from '../services/media-moderation-worker.helpers';
+} from '../shared/const';
+import { getMediaModerationProviderName, getMediaModerationReviewReason } from '../shared/utils';
 import { MediaModerationWorkerService } from '../services/media-moderation-worker.service';
 
 function createPrismaMock() {

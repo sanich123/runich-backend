@@ -10,7 +10,7 @@ import {
   STATIC_MAP_WIDTH,
   STATIC_MAP_ZOOM_FIT_PADDING_PX,
 } from './static-map.constants';
-import type { LocationObject } from 'src/activity/activity.dto';
+import type { LocationObject } from 'src/activity/dto/activity.dto';
 
 export function normalizeStaticMapLocations(locations: LocationObject[]) {
   const validLocations = locations.filter(

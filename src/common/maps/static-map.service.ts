@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
-import { getActivityMapKey, getActivityRouteOnlyMapKey } from 'src/storage/storage-key';
+import { getActivityMapKey, getActivityRouteOnlyMapKey } from 'src/storage/shared/storage-key';
 import { StorageService } from 'src/storage/services/storage.service';
 import { STATIC_MAP_CACHE_CONTROL, STATIC_MAP_MAX_CONCURRENCY } from './static-map.constants';
 import { renderRunichVectorMap } from './static-map.vector';

@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
-import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/activity-migration-config';
+import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/shared/const';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import {
   PUSH_NOTIFICATION_COPY,
@@ -64,10 +64,27 @@ export class PushNotificationWorkerService {
           actorName: true,
           actorSurname: true,
           content: true,
-          recipient: { select: { profile: { select: { pushNotifications: true } } } },
+          recipient: {
+            select: {
+              profile: {
+                select: {
+                  pushNotifications: true,
+                  groupPostsNotifications: true,
+                  groupEventsNotifications: true,
+                },
+              },
+            },
+          },
         },
       });
-      if (!notification || notification.recipient.profile?.pushNotifications !== true) {
+      const profile = notification?.recipient.profile;
+      const groupCategoryEnabled =
+        notification?.type === 'group-post'
+          ? profile?.groupPostsNotifications !== false
+          : notification?.type === 'group-event'
+            ? profile?.groupEventsNotifications !== false
+            : true;
+      if (!notification || profile?.pushNotifications !== true || !groupCategoryEnabled) {
         await this.finish(job.id, PUSH_NOTIFICATION_JOB_STATUS.skipped);
         return true;
       }

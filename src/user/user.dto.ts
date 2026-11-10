@@ -108,6 +108,16 @@ export class UserDto {
   @IsOptional()
   inAppNotifications?: boolean;
 
+  @ApiPropertyOptional({ type: Boolean, description: 'Enable group post notifications' })
+  @IsBoolean()
+  @IsOptional()
+  groupPostsNotifications?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Enable group event notifications' })
+  @IsBoolean()
+  @IsOptional()
+  groupEventsNotifications?: boolean;
+
   @ApiPropertyOptional({ type: Boolean, description: 'Allow this profile to appear in user search' })
   @IsBoolean()
   @IsOptional()

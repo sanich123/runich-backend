@@ -31,7 +31,9 @@ export const DATABASE_ERROR_TO_HTTP_STATUS = {
   P2025: HttpStatus.NOT_FOUND,
 };
 
-// The mobile client reduces tracked routes to this size before sending them.
+// Initial activity submissions and legacy clients may include up to this many route points.
 export const MAX_ACTIVITY_LOCATIONS = 5_000;
+export const MAX_RAW_ACTIVITY_LOCATIONS = 100_000;
 export const MAX_ACTIVITY_HEART_RATE_SAMPLES = 15_000;
 export const MAX_JSON_BODY_BYTES = 5 * 1024 * 1024;
+export const MAX_RAW_ACTIVITY_ROUTE_BODY_BYTES = 32 * 1024 * 1024;

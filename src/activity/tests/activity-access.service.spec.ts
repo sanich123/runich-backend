@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ActivityAccessService } from '../services/activity-access.service';
-import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from '../activity-visibility';
+import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from '../shared/activity-visibility';
 
 describe('ActivityAccessService', () => {
   const prisma = {

@@ -74,12 +74,20 @@ export class AuthService {
     return this.vkAuthService.callback(code, state, error, response, deviceId);
   }
 
+  loginWithVkNativeCode(code: string, deviceId: string, codeVerifier: string, metadata: SessionMetadata = {}) {
+    return this.vkAuthService.loginWithNativeCode(code, deviceId, codeVerifier, metadata);
+  }
+
   startYandexAuth(response: Response) {
     return this.yandexAuthService.start(response);
   }
 
   async handleYandexCallback(code: string, error: string, response: Response) {
     return this.yandexAuthService.callback(code, error, response);
+  }
+
+  loginWithYandexAccessToken(accessToken: string, metadata: SessionMetadata = {}) {
+    return this.yandexAuthService.loginWithAccessToken(accessToken, metadata);
   }
 
   async signUp(email: string, password: string) {

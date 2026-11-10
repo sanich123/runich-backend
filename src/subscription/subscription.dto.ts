@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export const SUBSCRIPTION_STATUSES = ['none', 'pending', 'active', 'cancelled', 'expired'] as const;
+const SUBSCRIPTION_STATUSES = ['none', 'pending', 'active', 'cancelled', 'expired'] as const;
 export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 
 export class CurrentSubscriptionResponseDto {

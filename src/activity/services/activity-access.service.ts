@@ -1,7 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ModerationAccessService } from 'src/moderation/moderation-access.service';
-import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from '../activity-visibility';
+import { ModerationAccessService } from 'src/moderation/services/moderation-access.service';
+import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from '../shared/activity-visibility';
 
 @Injectable()
 export class ActivityAccessService {

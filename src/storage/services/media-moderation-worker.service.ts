@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { GoogleCloudVisionSafeSearch } from './google-cloud-vision-safe-search';
+import { GoogleCloudVisionSafeSearch } from './google-cloud-vision-safe-search.service';
 import { MediaModerationScannerService } from './media-moderation-scanner.service';
 import {
   MEDIA_MODERATION_GOOGLE_VISION_MONTHLY_LIMIT,
@@ -10,13 +10,13 @@ import {
   MEDIA_MODERATION_POLL_INTERVAL_MS,
   MEDIA_MODERATION_RETRY_LIMIT,
   MEDIA_MODERATION_STALE_PROCESSING_MS,
-} from './media-moderation-thresholds';
+} from '../shared/const';
 import {
   getMediaModerationProviderName,
   getMediaModerationReportReason,
   getMediaModerationReviewReason,
-} from './media-moderation-worker.helpers';
-import type { MediaAsset } from './media-moderation-worker.types';
+} from '../shared/utils';
+import type { MediaAsset } from '../shared/types';
 import { StorageService } from './storage.service';
 
 @Injectable()

@@ -1,7 +1,7 @@
 import { parseGPXWithCustomParser } from '@we-gold/gpxjs';
 import { readFile } from 'fs/promises';
 import { DOMParser } from 'xmldom-qsa';
-import { LocationObject } from 'src/activity/activity.dto';
+import { LocationObject } from 'src/activity/dto/activity.dto';
 import { Logger } from '@nestjs/common';
 
 const logger = new Logger('GpxParser');

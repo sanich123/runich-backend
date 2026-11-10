@@ -1,5 +1,5 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { S3_REGION } from 'src/storage/const';
+import { S3_REGION } from 'src/storage/shared/const';
 import {
   MOCK_ACTIVITY_COUNT,
   MOCK_ACTIVITY_PHOTO_KEYS,

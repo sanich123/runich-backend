@@ -1,0 +1,62 @@
+[
+  {
+    "id": "column.public.MediaModerationAsset.blurhash",
+    "label": "Add column \"blurhash\" to \"MediaModerationAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "blurhash",
+        "table": "MediaModerationAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"blurhash\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "MediaModerationAsset",
+          "blurhash"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"blurhash\" on \"MediaModerationAsset\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"blurhash\"",
+        "sql": "ALTER TABLE \"public\".\"MediaModerationAsset\" ADD COLUMN \"blurhash\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"blurhash\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "MediaModerationAsset",
+          "blurhash"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"blurhash\" on \"MediaModerationAsset\""
+        }
+      },
+      {
+        "description": "verify column \"blurhash\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "MediaModerationAsset",
+          "blurhash",
+          "text"
+        ]
+      }
+    ]
+  }
+]

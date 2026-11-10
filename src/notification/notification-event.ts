@@ -12,11 +12,14 @@ export async function createNotificationEvent(transaction: PrismaService, input:
       emailNotifications: true,
       inAppNotifications: true,
       pushNotifications: true,
+      groupPostsNotifications: true,
+      groupEventsNotifications: true,
       language: true,
       user: { select: { email: true, emailConfirmedAt: true } },
     },
   });
   if (!recipient) return null;
+  if (input.categoryPreference && recipient[input.categoryPreference] === false) return null;
 
   const emailEnabled = input.mandatory
     ? Boolean(recipient.user?.email && recipient.user.emailConfirmedAt)

@@ -1,4 +1,4 @@
-import { calculateActiveCalories } from '../services/activity-calories';
+import { calculateActiveCalories } from '../shared/utils';
 import { makeActivityCaloriesInput } from './fixtures';
 
 describe('calculateActiveCalories', () => {

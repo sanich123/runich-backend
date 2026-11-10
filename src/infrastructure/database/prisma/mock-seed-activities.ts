@@ -44,11 +44,10 @@ export async function seedMockActivities(
 
   for (const [userIndex, user] of mockUsers.entries()) {
     const profile = user.profile!;
-    const activityCount = MOCK_ACTIVITY_COUNT;
     const activityRows: AnyRecord[] = [];
     const mediaRows: AnyRecord[] = [];
 
-    for (let activityIndex = 0; activityIndex < activityCount; activityIndex += 1) {
+    for (let activityIndex = 0; activityIndex < MOCK_ACTIVITY_COUNT; activityIndex += 1) {
       const template =
         activityTemplates[(userIndex * MAX_MOCK_RELATION_COUNT + activityIndex) % activityTemplates.length];
       const activityDate = new Date(seedStartedAt - (activityIndex + MAX_MOCK_RELATION_COUNT) * DAY_IN_MS);

@@ -3,8 +3,8 @@
 model MediaCleanupJob {
   id           Uuid                  @id(map: "MediaCleanupJob_pkey") @default(sql`gen_random_uuid()`)
   userId       Uuid                  @map("user_id")
-  storageKey   VarChar(512)?         @map("storage_key")
-  status       VarChar(32)
+  storageKey   Varchar(512)?         @map("storage_key")
+  status       Varchar(32)
   errorMessage String?
   createdAt    TimestamptzString(6)  @default(now())
   startedAt    TimestamptzString(6)?
@@ -17,11 +17,11 @@ model MediaCleanupJob {
 
 model LoadTestSeedJob {
   id                  Uuid                  @id(map: "LoadTestSeedJob_pkey") @default(sql`gen_random_uuid()`)
-  runId               VarChar(64)           @unique(map: "LoadTestSeedJob_runId_key") @map("run_id")
+  runId               Varchar(64)           @unique(map: "LoadTestSeedJob_runId_key") @map("run_id")
   targetUserId        Uuid                  @map("target_user_id")
-  manifestKey         VarChar(512)          @map("manifest_key")
+  manifestKey         Varchar(512)          @map("manifest_key")
   config              Jsonb
-  status              VarChar(32)
+  status              Varchar(32)
   totalUsers          Int                   @default(0) @map("total_users")
   totalActivities     Int                   @default(0) @map("total_activities")
   processedActivities Int                   @default(0) @map("processed_activities")

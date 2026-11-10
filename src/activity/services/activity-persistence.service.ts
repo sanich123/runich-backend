@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { ACTIVITY_UPDATE_FIELDS } from './activity-persistence.constants';
-import type { ActivityDatabase } from './activity-persistence.types';
+import { ACTIVITY_UPDATE_FIELDS } from '../shared/const';
+import type { ActivityDatabase } from '../shared/types';
 
 @Injectable()
 export class ActivityPersistenceService {

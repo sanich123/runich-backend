@@ -5,7 +5,7 @@ import {
   encodeActivityMediaCursor,
   parseActivityCursor,
   parseActivityMediaCursor,
-} from '../activity.pagination';
+} from '../shared/activity.pagination';
 
 describe('activity pagination', () => {
   const date = new Date('2026-09-09T12:00:00.000Z');
