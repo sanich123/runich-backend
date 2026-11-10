@@ -56,7 +56,7 @@ export class AuthController {
   @Get('config')
   @ApiOkResponse({ type: AppConfigResponseDto })
   getConfig() {
-    return { appVersion: '1.4.0' };
+    return { appVersion: '1.3.0' };
   }
 
   @Get('yandex')
