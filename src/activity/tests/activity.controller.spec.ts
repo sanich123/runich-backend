@@ -2,10 +2,13 @@ import { jest } from '@jest/globals';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { encodeActivityCursor } from '../shared/activity.pagination';
 import { ActivityController } from '../activity.controller';
+import { ActivityMediaController } from '../activity-media.controller';
+import { ActivityMigrationController } from '../activity-migration.controller';
 import { ActivityService } from '../services/activity.service';
 import { AccountService } from 'src/account/account.service';
 import { asyncMock } from 'src/tests/helpers';
 import { ActivityMigrationService } from '../services/activity-migration.service';
+import { MigrationArchiveUploadService } from '../services/migration-archive-upload.service';
 import { makeSmallActivityDto } from './fixtures';
 
 describe('ActivityController', () => {
@@ -28,10 +31,13 @@ describe('ActivityController', () => {
   };
   const accountService = { getOrCreateAccountByUserId: asyncMock() };
   const activityMigrationService = { enqueue: asyncMock(), getJobForUser: asyncMock() };
-  const controller = new ActivityController(
-    activityService as unknown as ActivityService,
+  const controller = new ActivityController(activityService as unknown as ActivityService);
+  const mediaController = new ActivityMediaController(activityService as unknown as ActivityService);
+  const archiveUploadService = { upload: asyncMock() };
+  const migrationController = new ActivityMigrationController(
     accountService as unknown as AccountService,
     activityMigrationService as unknown as ActivityMigrationService,
+    archiveUploadService as unknown as MigrationArchiveUploadService,
   );
 
   beforeEach(() => jest.clearAllMocks());
@@ -51,18 +57,22 @@ describe('ActivityController', () => {
     activityService.deleteActivityById.mockResolvedValue(result);
 
     const request = { user: { id: 'u1' } } as never;
-    await expect(controller.getMediaByUserId({ id: 'u1' }, undefined, '10', request)).resolves.toEqual({ media: [] });
+    await expect(mediaController.getMediaByUserId({ id: 'u1' }, undefined, '10', request)).resolves.toEqual({
+      media: [],
+    });
     expect(activityService.getMediaByUserId).toHaveBeenCalledWith('u1', '10', undefined, 'u1');
-    await expect(controller.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, request)).resolves.toBeUndefined();
+    await expect(mediaController.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, request)).resolves.toBeUndefined();
     expect(activityService.deleteActivityMedia).toHaveBeenCalledWith('a1', 'm1', 'u1');
-    await expect(controller.getLocationsByActivityId({ id: 'a1' }, request)).resolves.toEqual({ locations: [] });
+    await expect(mediaController.getLocationsByActivityId({ id: 'a1' }, request)).resolves.toEqual({ locations: [] });
     expect(activityService.getLocationsByActivityId).toHaveBeenLastCalledWith('a1', 'u1', false);
-    await expect(controller.getLocationsByActivityId({ id: 'a1' }, request, 'true')).resolves.toEqual({
+    await expect(mediaController.getLocationsByActivityId({ id: 'a1' }, request, 'true')).resolves.toEqual({
       locations: [],
     });
     expect(activityService.getLocationsByActivityId).toHaveBeenLastCalledWith('a1', 'u1', true);
     const locations = [{ coords: { latitude: 55.75, longitude: 37.61 } }];
-    await expect(controller.uploadRawActivityLocations({ id: 'a1' }, { locations }, request)).resolves.toBeUndefined();
+    await expect(
+      mediaController.uploadRawActivityLocations({ id: 'a1' }, { locations }, request),
+    ).resolves.toBeUndefined();
     expect(activityService.uploadRawActivityLocations).toHaveBeenCalledWith('a1', 'u1', locations);
     await expect(controller.getActivitiesByActivitiesIds(activityIds.join(','))).resolves.toEqual([result]);
     await expect(controller.getActivitiesByActivitiesIds(activityIds)).resolves.toEqual([result]);
@@ -109,12 +119,14 @@ describe('ActivityController', () => {
   });
 
   it('rejects migration requests without an archive or account', async () => {
-    await expect(controller.getArchiveWithActivitiesFromStrava(undefined, { id: 'u1' })).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      migrationController.getArchiveWithActivitiesFromStrava(undefined, { id: 'u1' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
     accountService.getOrCreateAccountByUserId.mockResolvedValue(null);
     await expect(
-      controller.getArchiveWithActivitiesFromStrava({ path: '/tmp/archive.zip' } as Express.Multer.File, { id: 'u1' }),
+      migrationController.getArchiveWithActivitiesFromStrava({ path: '/tmp/archive.zip' } as Express.Multer.File, {
+        id: 'u1',
+      }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -142,7 +154,7 @@ describe('ActivityController', () => {
   });
 
   it('rejects malformed pagination queries before calling the activity service', async () => {
-    await expect(controller.getMediaByUserId({ id: 'u1' }, undefined, 'not-a-number')).rejects.toBeInstanceOf(
+    await expect(mediaController.getMediaByUserId({ id: 'u1' }, undefined, 'not-a-number')).rejects.toBeInstanceOf(
       BadRequestException,
     );
     await expect(controller.getActivitiesByUserId({ id: 'u1' }, '-1', '10')).rejects.toBeInstanceOf(
@@ -161,11 +173,11 @@ describe('ActivityController', () => {
     const request = { user: { id: 'u1' } } as never;
     Object.values(activityService).forEach((method) => method.mockRejectedValue(error));
 
-    await expect(controller.getMediaByUserId({ id: 'u1' }, undefined, '10')).rejects.toBe(error);
+    await expect(mediaController.getMediaByUserId({ id: 'u1' }, undefined, '10')).rejects.toBe(error);
     await expect(
-      controller.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, { user: { id: 'u1' } } as never),
+      mediaController.deleteActivityMedia({ id: 'a1', mediaId: 'm1' }, { user: { id: 'u1' } } as never),
     ).rejects.toBe(error);
-    await expect(controller.getLocationsByActivityId({ id: 'a1' }, request)).rejects.toBe(error);
+    await expect(mediaController.getLocationsByActivityId({ id: 'a1' }, request)).rejects.toBe(error);
     await expect(controller.getActivitiesByActivitiesIds(activityIds[0])).rejects.toBe(error);
     await expect(controller.createActivity(makeSmallActivityDto(), { id: 'u1' })).rejects.toBe(error);
     await expect(controller.patchActivity(makeSmallActivityDto(), { id: 'a1' })).rejects.toBe(error);

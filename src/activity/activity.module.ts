@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { ActivityController } from './activity.controller';
+import { ActivityMediaController } from './activity-media.controller';
+import { ActivityMigrationController } from './activity-migration.controller';
 import { ActivityService } from './services/activity.service';
 import { ActivityAccessService } from './services/activity-access.service';
 import { ActivityReadService } from './services/activity-read.service';
@@ -15,6 +17,7 @@ import { AccountModule } from '../account/account.module';
 import { ActivityPersistenceService } from './services/activity-persistence.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ActivityMigrationService } from './services/activity-migration.service';
+import { MigrationArchiveUploadService } from './services/migration-archive-upload.service';
 import { StorageModule } from 'src/storage/storage.module';
 import { StaticMapService } from 'src/common/maps/static-map.service';
 import { ModerationModule } from 'src/moderation/moderation.module';
@@ -29,7 +32,7 @@ import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
     ModerationModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
   ],
-  controllers: [ActivityController],
+  controllers: [ActivityController, ActivityMediaController, ActivityMigrationController],
   providers: [
     ActivityService,
     ActivityAccessService,
@@ -41,6 +44,7 @@ import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
     ActivityImportService,
     ActivityPersistenceService,
     ActivityMigrationService,
+    MigrationArchiveUploadService,
     StaticMapService,
     ThrottlerGuard,
     ThrottlerReflector,

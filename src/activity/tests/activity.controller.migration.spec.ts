@@ -48,13 +48,12 @@ jest.unstable_mockModule('fs/promises', () => ({
   writeFile,
 }));
 
-const { ActivityController } = await import('../activity.controller');
-import { ActivityService } from '../services/activity.service';
+const { ActivityMigrationController } = await import('../activity-migration.controller');
 import { ActivityMigrationService } from '../services/activity-migration.service';
 import { AccountService } from 'src/account/account.service';
+import { MigrationArchiveUploadService } from '../services/migration-archive-upload.service';
 
-describe('ActivityController Strava migration', () => {
-  const activityService = {} as ActivityService;
+describe('ActivityMigrationController Strava migration', () => {
   const accountService = { getOrCreateAccountByUserId: asyncMock() };
   const activityMigrationService = {
     enqueue: asyncMock(),
@@ -66,10 +65,11 @@ describe('ActivityController Strava migration', () => {
     getJobForUser: asyncMock(),
     getCurrentJobForUser: asyncMock(),
   };
-  const controller = new ActivityController(
-    activityService,
+  const archiveUploadService = { upload: asyncMock() };
+  const controller = new ActivityMigrationController(
     accountService as unknown as AccountService,
     activityMigrationService as unknown as ActivityMigrationService,
+    archiveUploadService as unknown as MigrationArchiveUploadService,
   );
   const file = { path: '/tmp/runich-strava-archive.zip' } as Express.Multer.File;
 
