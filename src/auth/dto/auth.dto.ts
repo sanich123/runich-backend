@@ -59,6 +59,32 @@ export class NativeVkAuthCodeDto {
   codeVerifier: string;
 }
 
+export class NativeAppleAuthDto {
+  @ApiProperty({ type: String, description: 'Apple identity token signed by Apple' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(8192)
+  identityToken: string;
+
+  @ApiProperty({ type: String, description: 'One-time nonce used in the Apple sign-in request' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(256)
+  nonce: string;
+
+  @ApiProperty({ type: String, required: false, description: 'First name shared by Apple on first sign-in' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  givenName?: string;
+
+  @ApiProperty({ type: String, required: false, description: 'Last name shared by Apple on first sign-in' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  familyName?: string;
+}
+
 export class RefreshTokenDto {
   @ApiProperty({ type: String, description: 'Refresh Token' })
   @IsNotEmpty()

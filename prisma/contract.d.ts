@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'6fdd1da2fcba0e6b71e090968b49587a573d2945052031afb803048e508f5d8f'>;
+  StorageHashBase<'1d490068eb085eaa563a0d25ab41b1ead1ca7c34cc27d75328860e6a70bf13e3'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -1080,6 +1080,7 @@ export namespace Models {
     readonly [RelationKeys]?: 'user';
   };
   export type public_User = {
+    appleSubject: FieldOutputTypes['public']['User']['appleSubject'];
     aud: FieldOutputTypes['public']['User']['aud'];
     authProvider: FieldOutputTypes['public']['User']['authProvider'];
     bannedUntil: FieldOutputTypes['public']['User']['bannedUntil'];
@@ -5180,6 +5181,13 @@ type ContractBase = Omit<
             };
             readonly Users: {
               columns: {
+                readonly apple_subject: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 255 };
+                  readonly many: false;
+                };
                 readonly aud: {
                   readonly dataType: 'pg/varchar';
                   readonly codecId: 'sql/varchar@1';
@@ -5430,6 +5438,10 @@ type ContractBase = Omit<
               };
               primaryKey: { readonly columns: readonly ['id']; readonly name: 'Users_pkey' };
               uniques: readonly [
+                {
+                  readonly columns: readonly ['apple_subject'];
+                  readonly name: 'User_apple_subject_key';
+                },
                 { readonly columns: readonly ['email']; readonly name: 'Users_email_key' },
                 { readonly columns: readonly ['phone']; readonly name: 'Users_phone_key' },
               ];
@@ -9038,6 +9050,14 @@ type ContractBase = Omit<
           };
           readonly User: {
             readonly fields: {
+              readonly appleSubject: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 255 };
+                };
+              };
               readonly aud: {
                 readonly nullable: true;
                 readonly type: {
@@ -9597,6 +9617,7 @@ type ContractBase = Omit<
               readonly table: 'Users';
               readonly namespaceId: 'public';
               readonly fields: {
+                readonly appleSubject: { readonly column: 'apple_subject' };
                 readonly aud: { readonly column: 'aud' };
                 readonly authProvider: { readonly column: 'auth_provider' };
                 readonly bannedUntil: { readonly column: 'banned_until' };

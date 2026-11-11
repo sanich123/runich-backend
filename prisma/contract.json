@@ -5632,6 +5632,16 @@
           },
           "User": {
             "fields": {
+              "appleSubject": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 255
+                  }
+                }
+              },
               "aud": {
                 "nullable": true,
                 "type": {
@@ -6379,6 +6389,9 @@
             },
             "storage": {
               "fields": {
+                "appleSubject": {
+                  "column": "apple_subject"
+                },
                 "aud": {
                   "column": "aud"
                 },
@@ -11997,6 +12010,14 @@
             },
             "Users": {
               "columns": {
+                "apple_subject": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 255
+                  }
+                },
                 "aud": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
@@ -12281,6 +12302,12 @@
               "uniques": [
                 {
                   "columns": [
+                    "apple_subject"
+                  ],
+                  "name": "User_apple_subject_key"
+                },
+                {
+                  "columns": [
                     "email"
                   ],
                   "name": "Users_email_key"
@@ -12433,7 +12460,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "6fdd1da2fcba0e6b71e090968b49587a573d2945052031afb803048e508f5d8f"
+    "storageHash": "1d490068eb085eaa563a0d25ab41b1ead1ca7c34cc27d75328860e6a70bf13e3"
   },
   "capabilities": {
     "postgres": {

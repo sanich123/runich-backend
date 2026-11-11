@@ -9887,6 +9887,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"jose@npm:^6.2.17":
+  version: 6.2.17
+  resolution: "jose@npm:6.2.17"
+  checksum: 10c0/1a00d44656e38664c54a8b2d903b6c947b3fc4275f7ede2462f74e50ce320359ea324deba15652dcc158c14ed99135a2382a4c5718be350923a9e583bea727db
+  languageName: node
+  linkType: hard
+
 "js-tokens@npm:^4.0.0":
   version: 4.0.0
   resolution: "js-tokens@npm:4.0.0"
@@ -12437,6 +12444,7 @@ __metadata:
     globals: "npm:^17.14.0"
     husky: "npm:^9.1.7"
     jest: "npm:^30.5.2"
+    jose: "npm:^6.2.17"
     js-yaml: "npm:^5.5.0"
     lint-staged: "npm:^17.6.0"
     madge: "npm:^8.0.0"
