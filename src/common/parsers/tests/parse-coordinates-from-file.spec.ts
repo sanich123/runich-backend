@@ -2,20 +2,25 @@ import { jest } from '@jest/globals';
 
 const existsSync = jest.fn<(...args: unknown[]) => boolean>();
 const getCoordinatesFromFitFile = jest.fn<(...args: unknown[]) => Promise<unknown>>();
+const parseFitActivityFromFile = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 const getCoordinatesFromTcxFile = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 const getCoordinatesFromGpxFile = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 jest.unstable_mockModule('node:fs', () => ({ existsSync }));
-jest.unstable_mockModule('../get-coordinates-from-fit', () => ({ getCoordinatesFromFitFile }));
+jest.unstable_mockModule('../get-coordinates-from-fit', () => ({
+  getCoordinatesFromFitFile,
+  parseFitActivityFromFile,
+}));
 jest.unstable_mockModule('../get-coordinates-from-tcx', () => ({ getCoordinatesFromTcxFile }));
 jest.unstable_mockModule('../get-coordinates-from-gpx', () => ({ getCoordinatesFromGpxFile }));
 
-const { parseCoordinatesFromFile } = await import('../parse-coordinates-from-file');
+const { parseCoordinatesFromFile, parseFitActivityFromMigrationFile } = await import('../parse-coordinates-from-file');
 
 describe('parseCoordinatesFromFile', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     existsSync.mockReturnValue(true);
     getCoordinatesFromFitFile.mockResolvedValue([{ coords: { latitude: 1, longitude: 2 } }]);
+    parseFitActivityFromFile.mockResolvedValue({ locations: [], heartRateData: { samples: [] } });
     getCoordinatesFromTcxFile.mockResolvedValue([{ coords: { latitude: 3, longitude: 4 } }]);
     getCoordinatesFromGpxFile.mockResolvedValue([{ coords: { latitude: 5, longitude: 6 } }]);
   });
@@ -32,6 +37,16 @@ describe('parseCoordinatesFromFile', () => {
   it('returns an empty list for unsupported files', async () => {
     await expect(parseCoordinatesFromFile('activities.csv')).resolves.toEqual([]);
     expect(getCoordinatesFromFitFile).not.toHaveBeenCalled();
+  });
+
+  it('routes FIT migration files through the combined activity parser', async () => {
+    await expect(parseFitActivityFromMigrationFile('activity.fit', '/tmp/migration')).resolves.toEqual({
+      locations: [],
+      heartRateData: { samples: [] },
+    });
+
+    expect(existsSync).toHaveBeenCalledWith('/tmp/migration/activity.fit');
+    expect(parseFitActivityFromFile).toHaveBeenCalledWith('/tmp/migration/activity.fit');
   });
 
   it('rejects files that are absent from the migration directory', async () => {

@@ -12,11 +12,37 @@ const logger = new Logger('HeartRateParser');
 const HEART_RATE_STREAM = 'Heart Rate';
 
 type HeartRateStatistics = ReturnType<typeof getHeartRateStatistics>;
+export type SportsActivityEvent = Awaited<ReturnType<typeof SportsLib.importFromFit>>;
 
 export type ParsedHeartRate = {
   samples: ActivityHeartRateSampleObject[];
   statistics?: HeartRateStatistics;
 };
+
+export function parseHeartRateFromEvent(event: SportsActivityEvent): ParsedHeartRate {
+  const samples = event
+    .getActivities()
+    .flatMap((activity) => {
+      const heartRateStream = activity.getAllStreams().find((stream) => stream.type === HEART_RATE_STREAM);
+      if (!heartRateStream) return [];
+
+      return heartRateStream
+        .getStreamDataByTime(activity.startDate, true)
+        .flatMap(({ time, value }) =>
+          Number.isFinite(time) && time >= 0 && typeof value === 'number' && value >= 1 && value <= 300
+            ? [{ timestamp: time, beatsPerMinute: Math.round(value) }]
+            : [],
+        );
+    })
+    .sort((first, second) => first.timestamp - second.timestamp);
+
+  if (!samples.length) return { samples: [] };
+
+  return {
+    samples: limitHeartRateSamples(samples),
+    statistics: getHeartRateStatistics(samples),
+  };
+}
 
 function limitHeartRateSamples(samples: ActivityHeartRateSampleObject[]) {
   if (samples.length <= MAX_ACTIVITY_HEART_RATE_SAMPLES) return samples;
@@ -52,28 +78,7 @@ export async function getHeartRateFromFile(filePath: string, migrationDirectory:
       return { samples: [] };
     }
 
-    const samples = event
-      .getActivities()
-      .flatMap((activity) => {
-        const heartRateStream = activity.getAllStreams().find((stream) => stream.type === HEART_RATE_STREAM);
-        if (!heartRateStream) return [];
-
-        return heartRateStream
-          .getStreamDataByTime(activity.startDate, true)
-          .flatMap(({ time, value }) =>
-            Number.isFinite(time) && time >= 0 && typeof value === 'number' && value >= 1 && value <= 300
-              ? [{ timestamp: time, beatsPerMinute: Math.round(value) }]
-              : [],
-          );
-      })
-      .sort((first, second) => first.timestamp - second.timestamp);
-
-    if (!samples.length) return { samples: [] };
-
-    return {
-      samples: limitHeartRateSamples(samples),
-      statistics: getHeartRateStatistics(samples),
-    };
+    return parseHeartRateFromEvent(event);
   } catch (error) {
     logger.warn(
       `Не удалось обработать данные пульса ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
