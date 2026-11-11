@@ -1,6 +1,6 @@
 type PushTokenInputFixture = {
   token: string;
-  platform: 'android';
+  platform: 'android' | 'ios';
 };
 
 export function makePushTokenInput(overrides: Partial<PushTokenInputFixture> = {}) {

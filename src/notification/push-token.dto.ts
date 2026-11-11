@@ -9,7 +9,7 @@ export class PushTokenDto {
   @Matches(/^(Expo|Exponent)PushToken\[[^\]]+\]$/)
   token!: string;
 
-  @ApiProperty({ enum: ['android'] })
-  @IsIn(['android'])
-  platform!: 'android';
+  @ApiProperty({ enum: ['android', 'ios'] })
+  @IsIn(['android', 'ios'])
+  platform!: 'android' | 'ios';
 }
