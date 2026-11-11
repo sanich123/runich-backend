@@ -32,6 +32,7 @@ describe('AuthController additional routes', () => {
     handleYandexCallback: asyncMock(),
     startVkAuth: syncMock(),
     handleVkCallback: syncMock(),
+    loginWithAppleIdentityToken: asyncMock(),
     login: asyncMock(),
     refreshAccessToken: asyncMock(),
     logout: asyncMock(),
@@ -66,6 +67,7 @@ describe('AuthController additional routes', () => {
   it.each([
     ['YANDEX', 'Яндекс'],
     ['VK', 'VK'],
+    ['APPLE', 'Apple'],
   ])('rejects registration for a confirmed %s account', async (provider, providerName) => {
     prisma.user.findUnique.mockResolvedValue({ emailConfirmedAt: new Date(), authProvider: provider });
 
@@ -96,6 +98,31 @@ describe('AuthController additional routes', () => {
     );
     expect(authService.refreshAccessToken).toHaveBeenCalledWith('refresh-token', expect.any(Object));
     expect(authService.verifyToken).toHaveBeenCalledWith('login-code', expect.any(Object));
+  });
+
+  it('passes Apple identity claims and request device metadata to the Apple login service', async () => {
+    const request = createRequest();
+    authService.loginWithAppleIdentityToken.mockResolvedValue('apple-login');
+
+    await expect(
+      controller.loginWithAppleNative(
+        {
+          identityToken: 'signed-identity-token',
+          nonce: 'one-time-nonce',
+          givenName: 'Alex',
+          familyName: 'Runner',
+        },
+        request as never,
+      ),
+    ).resolves.toBe('apple-login');
+
+    expect(authService.loginWithAppleIdentityToken).toHaveBeenCalledWith(
+      'signed-identity-token',
+      'one-time-nonce',
+      'Alex',
+      'Runner',
+      expect.objectContaining({ deviceId: 'device-1', platform: 'ios', ipAddress: '127.0.0.1' }),
+    );
   });
 
   it('uses the stateless overload when request metadata is absent', async () => {
