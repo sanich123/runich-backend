@@ -4,20 +4,12 @@ import { AccountService } from 'src/account/account.service';
 import { ActivityPersistenceService } from './activity-persistence.service';
 import { ActivityMediaService } from './activity-media.service';
 import { ActivityWriteService } from './activity-write.service';
-import { StorageService } from 'src/storage/services/storage.service';
 import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
-import { StaticMapService } from 'src/common/maps/static-map.service';
-import { ServiceUnavailableException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { type WatchWorkoutImportDto } from '../dto/activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { chunkArray } from 'src/common/parsers/chunk-array';
-import {
-  calculateActiveCalories,
-  generateActivityTitle,
-  getHeartRateStatistics,
-  omitActivityHeartRateSamples,
-} from '../shared/utils';
+import { calculateActiveCalories, generateActivityTitle } from '../shared/utils';
 import { ACTIVITY_ENRICHMENT_STATUS, ACTIVITY_MEDIA_PROCESSING_STATUS } from '../shared/const';
 import type { ActivityDatabase, MigratedActivity } from '../shared/types';
 
@@ -29,9 +21,7 @@ export class ActivityImportService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AccountService) private readonly accountService: AccountService,
     @Inject(ActivityPersistenceService) private readonly persistenceService: ActivityPersistenceService,
-    @Optional() @Inject(StorageService) private readonly storageService: StorageService | undefined,
     @Optional() @Inject(MediaCleanupService) private readonly mediaCleanupService: MediaCleanupService | undefined,
-    @Optional() @Inject(StaticMapService) private readonly staticMapService: StaticMapService | undefined,
     @Inject(ActivityWriteService) private readonly writeService: ActivityWriteService,
     @Inject(ActivityMediaService) private readonly mediaService: ActivityMediaService,
   ) {}
@@ -45,52 +35,23 @@ export class ActivityImportService {
       );
     });
 
-    type ExistingWatchWorkoutActivity = {
-      id: string;
-      source: string | null;
-      sourceActivityId: string | null;
-      profileId: string;
-      routeStorageKey: string | null;
-      heartRateStorageKey: string | null;
-      mapPhotoUrl: string | null;
-      routeOnlyMapPhotoUrl: string | null;
-      hideMap: boolean;
-    };
-    const existingActivities = (
-      uniqueWorkouts.length
-        ? await this.prisma.activity.findMany({
-            where: {
-              userId,
-              OR: uniqueWorkouts.map(({ source, sourceActivityId }) => ({ source, sourceActivityId })),
-            },
-            select: {
-              id: true,
-              source: true,
-              sourceActivityId: true,
-              profileId: true,
-              routeStorageKey: true,
-              heartRateStorageKey: true,
-              mapPhotoUrl: true,
-              routeOnlyMapPhotoUrl: true,
-              hideMap: true,
-            },
-          })
-        : []
-    ) as ExistingWatchWorkoutActivity[];
-    const existingActivitiesBySource = new Map<string, ExistingWatchWorkoutActivity>(
-      existingActivities.map((activity) => [`${activity.source}\u0000${activity.sourceActivityId}`, activity] as const),
+    const existingActivities: Array<{ source: string | null; sourceActivityId: string | null }> = uniqueWorkouts.length
+      ? await this.prisma.activity.findMany({
+          where: {
+            userId,
+            OR: uniqueWorkouts.map(({ source, sourceActivityId }) => ({ source, sourceActivityId })),
+          },
+          select: { source: true, sourceActivityId: true },
+        })
+      : [];
+    const existingSourceKeys = new Set(
+      existingActivities.map(({ source, sourceActivityId }) => `${source}\u0000${sourceActivityId}`),
     );
     const activities: unknown[] = [];
 
     for (const workout of uniqueWorkouts) {
       const key = `${workout.source}\u0000${workout.sourceActivityId}`;
-      const existingActivity = existingActivitiesBySource.get(key);
-      if (existingActivity) {
-        if (existingActivity.id) {
-          activities.push(await this.syncExistingWatchWorkout(workout, existingActivity, userId));
-        }
-        continue;
-      }
+      if (existingSourceKeys.has(key)) continue;
       activities.push(await this.writeService.createActivity(workout, userId));
     }
 
@@ -99,134 +60,6 @@ export class ActivityImportService {
       skipped: workouts.length - activities.length,
       activities,
     };
-  }
-
-  async syncExistingWatchWorkout(
-    workout: WatchWorkoutImportDto,
-    existingActivity: {
-      id: string;
-      profileId: string;
-      routeStorageKey: string | null;
-      heartRateStorageKey: string | null;
-      mapPhotoUrl: string | null;
-      routeOnlyMapPhotoUrl: string | null;
-      hideMap: boolean;
-    },
-    userId: string,
-  ) {
-    let uploadedRouteKey: string | undefined;
-    let uploadedHeartRateKey: string | undefined;
-    let uploadedMapKey: string | undefined;
-    let uploadedRouteOnlyMapKey: string | undefined;
-    let preparedData: Record<string, unknown> = {};
-    let updatedActivity: unknown;
-    let didUpdateHeartRate = false;
-
-    try {
-      if (workout.locations?.length) {
-        const prepared = await this.mediaService.prepareActivityRoute({
-          ...workout,
-          heartRateSamples: undefined,
-          // Use a fresh storage namespace so route and map caches cannot serve an older sync.
-          id: randomUUID(),
-          userId,
-          profileId: existingActivity.profileId,
-          hideMap: existingActivity.hideMap,
-        });
-        preparedData = prepared.data as unknown as Record<string, unknown>;
-        uploadedRouteKey = prepared.routeKey;
-        uploadedMapKey = prepared.mapKey;
-        uploadedRouteOnlyMapKey = prepared.routeOnlyMapKey;
-      }
-
-      const updateData: Record<string, unknown> = {
-        date: workout.date,
-        sport: workout.sport,
-        duration: workout.duration,
-        distance: workout.distance,
-        speed: workout.speed,
-      };
-      if (workout.timeZone !== undefined) updateData.timeZone = workout.timeZone;
-      if (workout.steps !== undefined) updateData.steps = workout.steps;
-      if (workout.heartRateSamples !== undefined) {
-        didUpdateHeartRate = true;
-        if (workout.heartRateSamples.length) {
-          if (!this.storageService) throw new ServiceUnavailableException('Сервис хранения данных пульса не настроен');
-          uploadedHeartRateKey = await this.storageService.uploadActivityHeartRateSamples(
-            userId,
-            existingActivity.id,
-            workout.heartRateSamples,
-          );
-          updateData.heartRateStorageKey = uploadedHeartRateKey;
-        } else {
-          updateData.heartRateStorageKey = null;
-        }
-        Object.assign(updateData, getHeartRateStatistics(workout.heartRateSamples));
-      }
-      if (workout.title?.trim()) updateData.title = workout.title.trim();
-      const profile = await this.accountService.getAccountByUserId(userId);
-      updateData.caloriesActive = this.writeService.getWatchWorkoutCalories(workout, profile);
-      if (workout.kilometresSplit !== undefined) updateData.kilometresSplit = workout.kilometresSplit;
-      if (preparedData.elevationGain !== undefined) updateData.elevationGain = preparedData.elevationGain;
-
-      if (uploadedRouteKey) {
-        updateData.routeStorageKey = preparedData.routeStorageKey;
-        updateData.routeFormatVersion = preparedData.routeFormatVersion;
-        updateData.routePointCount = preparedData.routePointCount;
-        updateData.routeSizeBytes = preparedData.routeSizeBytes;
-        updateData.routeChecksum = preparedData.routeChecksum;
-        updateData.mediaProcessingStatus = ACTIVITY_MEDIA_PROCESSING_STATUS.queued;
-        updateData.mapPhotoUrlBlurhash = null;
-        updateData.locationName = null;
-        updateData.weatherTemperature = null;
-        updateData.weatherWindSpeed = null;
-        updateData.weatherCode = null;
-        updateData.locationEnrichmentStatus = ACTIVITY_ENRICHMENT_STATUS.queued;
-        if ('mapPhotoUrl' in preparedData) updateData.mapPhotoUrl = preparedData.mapPhotoUrl;
-        if ('routeOnlyMapPhotoUrl' in preparedData) {
-          updateData.routeOnlyMapPhotoUrl = preparedData.routeOnlyMapPhotoUrl;
-        }
-      }
-
-      updatedActivity = await this.prisma.activity.update({
-        where: { id: existingActivity.id },
-        data: updateData as never,
-      });
-    } catch (error) {
-      await Promise.all([
-        this.mediaService.deleteUploadedRoute(uploadedRouteKey),
-        this.mediaService.deleteUploadedRoute(uploadedMapKey),
-        this.mediaService.deleteUploadedRoute(uploadedRouteOnlyMapKey),
-        this.mediaService.deleteUploadedRoute(uploadedHeartRateKey),
-      ]);
-      handleServiceError(error);
-    }
-
-    if ((uploadedRouteKey || didUpdateHeartRate) && this.mediaCleanupService) {
-      const oldKeys = this.mediaService.getActivityStorageKeys(userId, {
-        routeStorageKey: existingActivity.routeStorageKey,
-        heartRateStorageKey: existingActivity.heartRateStorageKey,
-        mapPhotoUrl: existingActivity.mapPhotoUrl,
-        routeOnlyMapPhotoUrl: existingActivity.routeOnlyMapPhotoUrl,
-        media: [],
-      });
-      const newKeys = new Set(
-        [uploadedRouteKey, uploadedMapKey, uploadedRouteOnlyMapKey, uploadedHeartRateKey].filter((key): key is string =>
-          Boolean(key),
-        ),
-      );
-      try {
-        await Promise.all(
-          oldKeys
-            .filter((key) => !newKeys.has(key))
-            .map((storageKey) => this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey)),
-        );
-      } catch (error) {
-        this.logger.error('Не удалось поставить старые файлы активности в очередь удаления', error);
-      }
-    }
-
-    return omitActivityHeartRateSamples(updatedActivity);
   }
 
   async createActivitiesFromMigrationArchive(
