@@ -13,7 +13,7 @@ This ledger records which Runich client release is paired with which backend rel
 
 ## Unreleased Apple sign-in contract (source only)
 
-The client source sends `POST /auth/apple/native` with `{ identityToken, nonce, givenName?, familyName? }` and expects the existing `LoginResponse`. Backend source verifies Apple's JWT signature using Apple's JWKS, then checks issuer, app bundle audience, token age and the request nonce; it stores the signed Apple subject in a nullable unique `Users.apple_subject` column and accepts Apple's verified relay email. Migration `migrations/app/20261111T0748_add_apple_sign_in` adds the nullable column and unique constraint. Client app version remains `1.4.0`; backend package and Swagger versions are `1.4.1`. This source change has no automated or live API verification and has not been deployed to Stage or Production as of `2026-11-11`.
+The client source sends `POST /auth/apple/native` with `{ identityToken, nonce, givenName?, familyName? }` and expects the existing `LoginResponse`. Backend source verifies Apple's JWT signature using Apple's JWKS, then checks issuer, app bundle audience, token age and the request nonce; it stores the signed Apple subject in a nullable unique `Users.apple_subject` column and accepts Apple's verified relay email. Migration `migrations/app/20261111T0748_add_apple_sign_in` adds the nullable column and unique constraint. Client app version remains `1.4.0`; backend package and Swagger versions are `1.4.2`. This source change has no automated or live API verification and has not been deployed to Stage or Production as of `2026-11-11`.
 
 ## Unreleased iOS push-token contract (source only)
 
