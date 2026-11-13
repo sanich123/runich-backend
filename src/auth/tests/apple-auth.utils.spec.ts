@@ -2,7 +2,7 @@ import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/comm
 import { jest } from '@jest/globals';
 
 type VerificationResult = {
-  payload: { sub?: string; nonce?: string; email?: unknown; email_verified?: unknown };
+  payload: { sub?: string; aud?: string | string[]; nonce?: string; email?: unknown; email_verified?: unknown };
   protectedHeader: { alg?: string };
 };
 
@@ -24,7 +24,13 @@ describe('Apple authentication token helpers', () => {
   beforeEach(() => {
     jwtVerify.mockClear();
     jwtVerify.mockResolvedValue({
-      payload: { sub: 'apple-subject', nonce: 'request-nonce', email: 'runner@example.com', email_verified: true },
+      payload: {
+        sub: 'apple-subject',
+        aud: 'com.sanich123.runich',
+        nonce: 'request-nonce',
+        email: 'runner@example.com',
+        email_verified: true,
+      },
       protectedHeader: { alg: 'RS256' },
     });
   });
@@ -32,6 +38,7 @@ describe('Apple authentication token helpers', () => {
   it('verifies the Apple issuer, audience, signature algorithm, age and request nonce', async () => {
     await expect(verifyAppleIdentityToken('signed-token', 'request-nonce')).resolves.toEqual({
       subject: 'apple-subject',
+      clientId: 'com.sanich123.runich',
       email: 'runner@example.com',
       emailVerified: true,
     });
@@ -52,18 +59,31 @@ describe('Apple authentication token helpers', () => {
 
   it('treats Apple string verification claims as verified and ignores non-string emails', async () => {
     jwtVerify.mockResolvedValueOnce({
-      payload: { sub: 'apple-subject', nonce: 'request-nonce', email: 42, email_verified: 'true' },
+      payload: {
+        sub: 'apple-subject',
+        aud: 'com.sanich123.runich.dev',
+        nonce: 'request-nonce',
+        email: 42,
+        email_verified: 'true',
+      },
       protectedHeader: { alg: 'RS256' },
     });
 
     await expect(verifyAppleIdentityToken('signed-token', 'request-nonce')).resolves.toEqual({
       subject: 'apple-subject',
+      clientId: 'com.sanich123.runich.dev',
       email: undefined,
       emailVerified: true,
     });
 
     jwtVerify.mockResolvedValueOnce({
-      payload: { sub: 'apple-subject', nonce: 'request-nonce', email: 'runner@example.com', email_verified: false },
+      payload: {
+        sub: 'apple-subject',
+        aud: 'com.sanich123.runich',
+        nonce: 'request-nonce',
+        email: 'runner@example.com',
+        email_verified: false,
+      },
       protectedHeader: { alg: 'RS256' },
     });
     await expect(verifyAppleIdentityToken('signed-token', 'request-nonce')).resolves.toMatchObject({
@@ -72,9 +92,10 @@ describe('Apple authentication token helpers', () => {
   });
 
   it.each([
-    ['missing subject', { sub: undefined, nonce: 'request-nonce' }, 'RS256'],
-    ['wrong nonce', { sub: 'apple-subject', nonce: 'different-nonce' }, 'RS256'],
-    ['wrong signing algorithm', { sub: 'apple-subject', nonce: 'request-nonce' }, 'HS256'],
+    ['missing subject', { sub: undefined, aud: 'com.sanich123.runich', nonce: 'request-nonce' }, 'RS256'],
+    ['wrong audience', { sub: 'apple-subject', aud: 'other-app', nonce: 'request-nonce' }, 'RS256'],
+    ['wrong nonce', { sub: 'apple-subject', aud: 'com.sanich123.runich', nonce: 'different-nonce' }, 'RS256'],
+    ['wrong signing algorithm', { sub: 'apple-subject', aud: 'com.sanich123.runich', nonce: 'request-nonce' }, 'HS256'],
   ])('rejects a token with %s', async (_case, payload, alg) => {
     jwtVerify.mockResolvedValueOnce({ payload, protectedHeader: { alg } });
 

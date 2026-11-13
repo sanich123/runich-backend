@@ -5632,6 +5632,16 @@
           },
           "User": {
             "fields": {
+              "appleRefreshTokenEncrypted": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 4096
+                  }
+                }
+              },
               "appleSubject": {
                 "nullable": true,
                 "type": {
@@ -6389,6 +6399,9 @@
             },
             "storage": {
               "fields": {
+                "appleRefreshTokenEncrypted": {
+                  "column": "apple_refresh_token_encrypted"
+                },
                 "appleSubject": {
                   "column": "apple_subject"
                 },
@@ -12010,6 +12023,14 @@
             },
             "Users": {
               "columns": {
+                "apple_refresh_token_encrypted": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 4096
+                  }
+                },
                 "apple_subject": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
@@ -12460,7 +12481,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "1d490068eb085eaa563a0d25ab41b1ead1ca7c34cc27d75328860e6a70bf13e3"
+    "storageHash": "89dfeed8d75c41dd73e3559493d8e9b730d7b8ec8efbef9209e3b9e4c832afaf"
   },
   "capabilities": {
     "postgres": {

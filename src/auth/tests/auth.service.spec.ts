@@ -243,11 +243,19 @@ describe('AuthService', () => {
     const metadata = { deviceId: 'device-1', deviceName: 'Phone', platform: 'ios' as const };
 
     await expect(
-      service.loginWithAppleIdentityToken('signed-token', 'one-time-nonce', 'Alex', 'Runner', metadata),
+      service.loginWithAppleIdentityToken(
+        'signed-token',
+        'one-time-authorization-code',
+        'one-time-nonce',
+        'Alex',
+        'Runner',
+        metadata,
+      ),
     ).resolves.toEqual(makeSessionTokens());
 
     expect(appleAuth.loginWithIdentityToken).toHaveBeenCalledWith(
       'signed-token',
+      'one-time-authorization-code',
       'one-time-nonce',
       'Alex',
       'Runner',

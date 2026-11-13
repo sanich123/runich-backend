@@ -108,6 +108,7 @@ describe('AuthController additional routes', () => {
       controller.loginWithAppleNative(
         {
           identityToken: 'signed-identity-token',
+          authorizationCode: 'one-time-authorization-code',
           nonce: 'one-time-nonce',
           givenName: 'Alex',
           familyName: 'Runner',
@@ -118,6 +119,7 @@ describe('AuthController additional routes', () => {
 
     expect(authService.loginWithAppleIdentityToken).toHaveBeenCalledWith(
       'signed-identity-token',
+      'one-time-authorization-code',
       'one-time-nonce',
       'Alex',
       'Runner',

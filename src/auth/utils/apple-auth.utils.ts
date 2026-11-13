@@ -6,6 +6,7 @@ const appleJwks = createRemoteJWKSet(new URL(APPLE_JWKS_URL), { timeoutDuration:
 
 export interface VerifiedAppleIdentity {
   subject: string;
+  clientId: string;
   email?: string;
   emailVerified: boolean;
 }
@@ -19,12 +20,15 @@ export async function verifyAppleIdentityToken(identityToken: string, nonce: str
       issuer: APPLE_ID_TOKEN_ISSUER,
       maxTokenAge: '10m',
     });
-    if (protectedHeader.alg !== 'RS256' || !payload.sub || payload.nonce !== nonce) {
+    const audiences = Array.isArray(payload.aud) ? payload.aud : typeof payload.aud === 'string' ? [payload.aud] : [];
+    const clientId = audiences.find((audience) => APPLE_APP_BUNDLE_IDS.some((bundleId) => bundleId === audience));
+    if (protectedHeader.alg !== 'RS256' || !payload.sub || !clientId || payload.nonce !== nonce) {
       throw new UnauthorizedException('Недействительный ответ Apple');
     }
 
     return {
       subject: payload.sub,
+      clientId,
       email: typeof payload.email === 'string' ? payload.email : undefined,
       emailVerified: payload.email_verified === true || payload.email_verified === 'true',
     };

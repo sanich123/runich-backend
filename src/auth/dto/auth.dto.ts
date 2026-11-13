@@ -66,6 +66,12 @@ export class NativeAppleAuthDto {
   @MaxLength(8192)
   identityToken: string;
 
+  @ApiProperty({ type: String, description: 'One-time authorization code returned by Apple' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4096)
+  authorizationCode: string;
+
   @ApiProperty({ type: String, description: 'One-time nonce used in the Apple sign-in request' })
   @IsString()
   @IsNotEmpty()

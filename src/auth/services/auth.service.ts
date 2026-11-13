@@ -98,12 +98,20 @@ export class AuthService {
 
   loginWithAppleIdentityToken(
     identityToken: string,
+    authorizationCode: string,
     nonce: string,
     givenName: string | undefined,
     familyName: string | undefined,
     metadata: SessionMetadata = {},
   ) {
-    return this.appleAuthService.loginWithIdentityToken(identityToken, nonce, givenName, familyName, metadata);
+    return this.appleAuthService.loginWithIdentityToken(
+      identityToken,
+      authorizationCode,
+      nonce,
+      givenName,
+      familyName,
+      metadata,
+    );
   }
 
   async signUp(email: string, password: string) {
@@ -237,6 +245,7 @@ export class AuthService {
 
   async deleteUser(userId: string) {
     try {
+      await this.appleAuthService.revokeUserToken(userId);
       const deletedUser = await this.prisma.$transaction(
         async (transaction) => {
           if (this.mediaCleanupService) {

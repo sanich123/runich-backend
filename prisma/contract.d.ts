@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'1d490068eb085eaa563a0d25ab41b1ead1ca7c34cc27d75328860e6a70bf13e3'>;
+  StorageHashBase<'89dfeed8d75c41dd73e3559493d8e9b730d7b8ec8efbef9209e3b9e4c832afaf'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -1080,6 +1080,7 @@ export namespace Models {
     readonly [RelationKeys]?: 'user';
   };
   export type public_User = {
+    appleRefreshTokenEncrypted: FieldOutputTypes['public']['User']['appleRefreshTokenEncrypted'];
     appleSubject: FieldOutputTypes['public']['User']['appleSubject'];
     aud: FieldOutputTypes['public']['User']['aud'];
     authProvider: FieldOutputTypes['public']['User']['authProvider'];
@@ -5181,6 +5182,13 @@ type ContractBase = Omit<
             };
             readonly Users: {
               columns: {
+                readonly apple_refresh_token_encrypted: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 4096 };
+                  readonly many: false;
+                };
                 readonly apple_subject: {
                   readonly dataType: 'pg/varchar';
                   readonly codecId: 'sql/varchar@1';
@@ -9050,6 +9058,14 @@ type ContractBase = Omit<
           };
           readonly User: {
             readonly fields: {
+              readonly appleRefreshTokenEncrypted: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 4096 };
+                };
+              };
               readonly appleSubject: {
                 readonly nullable: true;
                 readonly type: {
@@ -9617,6 +9633,9 @@ type ContractBase = Omit<
               readonly table: 'Users';
               readonly namespaceId: 'public';
               readonly fields: {
+                readonly appleRefreshTokenEncrypted: {
+                  readonly column: 'apple_refresh_token_encrypted';
+                };
                 readonly appleSubject: { readonly column: 'apple_subject' };
                 readonly aud: { readonly column: 'aud' };
                 readonly authProvider: { readonly column: 'auth_provider' };

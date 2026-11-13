@@ -57,7 +57,7 @@ export class AuthController {
   @Get('config')
   @ApiOkResponse({ type: AppConfigResponseDto })
   getConfig() {
-    return { appVersion: '1.3.0' };
+    return { appVersion: '1.5.0' };
   }
 
   @Get('yandex')
@@ -118,11 +118,12 @@ export class AuthController {
   @ApiBody({ type: NativeAppleAuthDto })
   @ApiOkResponse({ type: LoginResponseDto })
   async loginWithAppleNative(
-    @Body() { identityToken, nonce, givenName, familyName }: NativeAppleAuthDto,
+    @Body() { identityToken, authorizationCode, nonce, givenName, familyName }: NativeAppleAuthDto,
     @Req() request?: Request,
   ) {
     return this.authService.loginWithAppleIdentityToken(
       identityToken,
+      authorizationCode,
       nonce,
       givenName,
       familyName,
