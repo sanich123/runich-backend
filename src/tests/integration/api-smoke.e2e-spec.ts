@@ -197,9 +197,12 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
         }),
       ]),
     );
-    for (const listActivity of listResponse.body.activities as Array<Record<string, unknown>>) {
-      expect(listActivity).not.toHaveProperty('description');
-    }
+    const listActivities = listResponse.body.activities as Array<Record<string, unknown>>;
+    expect(listActivities.find((activity) => activity.id === createdActivityId)).toMatchObject({
+      title: null,
+      description: null,
+    });
+    expect(listActivities.find((activity) => activity.id === activityId)).not.toHaveProperty('description');
 
     await request(app.getHttpServer())
       .get(`/activity/activityId/${activityId}`)
@@ -275,14 +278,33 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       where: { activityId, authorId: ownerId, comment: 'Created through API' },
       orderBy: { date: 'desc' },
     });
-    expect(comment).not.toBeNull();
+    expect(comment).toMatchObject({ moderationStatus: 'pending' });
     const commentId = comment!.id;
 
-    const commentsResponse = await request(app.getHttpServer())
+    const pendingCommentsResponse = await request(app.getHttpServer())
       .get(`/comment/${activityId}`)
       .set('Authorization', `Bearer ${visitorToken}`)
       .expect(200);
-    expect(commentsResponse.body.comments.map((item: { id: string }) => item.id)).toContain(commentId);
+    expect(pendingCommentsResponse.body.comments).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: commentId, moderationStatus: 'pending', comment: null })]),
+    );
+
+    await request(app.getHttpServer())
+      .get(`/comment/${activityId}/count`)
+      .set('Authorization', `Bearer ${visitorToken}`)
+      .expect(200)
+      .expect((response) => expect(Number(response.text)).toBe(0));
+
+    await prisma.comment.update({ where: { id: commentId }, data: { moderationStatus: 'visible' } });
+    const visibleCommentsResponse = await request(app.getHttpServer())
+      .get(`/comment/${activityId}`)
+      .set('Authorization', `Bearer ${visitorToken}`)
+      .expect(200);
+    expect(visibleCommentsResponse.body.comments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: commentId, moderationStatus: 'visible', comment: 'Created through API' }),
+      ]),
+    );
 
     await request(app.getHttpServer())
       .get(`/comment/${activityId}/count`)
@@ -295,7 +317,20 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ comment: 'Updated through API' })
       .expect(201);
-    expect(updateCommentResponse.body).toMatchObject({ id: commentId, comment: 'Updated through API' });
+    expect(updateCommentResponse.body).toMatchObject({
+      id: commentId,
+      comment: 'Updated through API',
+      moderationStatus: 'pending',
+    });
+
+    const updatedPendingCommentsResponse = await request(app.getHttpServer())
+      .get(`/comment/${activityId}`)
+      .set('Authorization', `Bearer ${visitorToken}`)
+      .expect(200);
+    expect(updatedPendingCommentsResponse.body.comments).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: commentId, moderationStatus: 'pending', comment: null })]),
+    );
+    await prisma.comment.update({ where: { id: commentId }, data: { moderationStatus: 'visible' } });
 
     const commentLikeResponse = await request(app.getHttpServer())
       .post(`/comment/${commentId}/like`)
