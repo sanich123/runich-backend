@@ -22,8 +22,24 @@ export class ModerationTargetsService {
         where: { id: targetId },
         select: { authorId: true, moderationStatus: true },
       });
-      if (!comment || comment.moderationStatus !== 'visible') return null;
+      if (!comment || !['visible', 'pending', 'processing'].includes(comment.moderationStatus)) return null;
       return { targetType, targetId, subjectUserId: comment.authorId, commentId: targetId };
+    }
+    if (targetType === 'activity_text') {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: targetId },
+        select: { id: true, userId: true, textModerationStatus: true },
+      });
+      if (!activity || !['visible', 'pending', 'processing'].includes(activity.textModerationStatus)) return null;
+      return { targetType, targetId, subjectUserId: activity.userId, activityId: targetId };
+    }
+    if (targetType === 'group_post') {
+      const post = await this.prisma.groupPost.findUnique({
+        where: { id: targetId },
+        select: { id: true, createdByUserId: true, moderationStatus: true },
+      });
+      if (!post || !['visible', 'pending', 'processing'].includes(post.moderationStatus)) return null;
+      return { targetType, targetId, subjectUserId: post.createdByUserId, groupPostId: targetId };
     }
     if (targetType === 'media') {
       const media = await this.prisma.activityMedia.findUnique({
@@ -62,7 +78,20 @@ export class ModerationTargetsService {
     if (targetType === 'activity') {
       await transaction.activity.update({ where: { id: targetId }, data: { moderationStatus: status } });
     } else if (targetType === 'comment') {
-      await transaction.comment.update({ where: { id: targetId }, data: { moderationStatus: status } });
+      await transaction.comment.update({
+        where: { id: targetId },
+        data: { moderationStatus: status, moderationProcessingStartedAt: null },
+      });
+    } else if (targetType === 'activity_text') {
+      await transaction.activity.update({
+        where: { id: targetId },
+        data: { textModerationStatus: status, textModerationProcessingStartedAt: null },
+      });
+    } else if (targetType === 'group_post') {
+      await transaction.groupPost.update({
+        where: { id: targetId },
+        data: { moderationStatus: status, moderationProcessingStartedAt: null },
+      });
     } else if (targetType === 'media') {
       await transaction.activityMedia.update({ where: { id: targetId }, data: { moderationStatus: status } });
     } else if (targetType === 'group') {

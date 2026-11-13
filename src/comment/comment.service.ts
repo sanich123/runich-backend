@@ -64,9 +64,20 @@ export class CommentService {
         select: {
           comments: {
             where: {
-              moderationStatus: 'visible',
-              ...(blockedUserIds.length ? { authorId: { notIn: blockedUserIds } } : {}),
-              ...(cursor ? { OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }] } : {}),
+              AND: [
+                {
+                  OR: [
+                    { moderationStatus: { in: ['visible', 'pending', 'processing'] } },
+                    ...(currentUserId
+                      ? [{ authorId: currentUserId, moderationStatus: { in: ['hidden', 'removed'] } }]
+                      : []),
+                  ],
+                },
+                ...(blockedUserIds.length ? [{ authorId: { notIn: blockedUserIds } }] : []),
+                ...(cursor
+                  ? [{ OR: [{ date: { lt: cursor.date } }, { date: cursor.date, id: { lt: cursor.id } }] }]
+                  : []),
+              ],
             },
             orderBy: [{ date: 'desc' }, { id: 'desc' }],
             select: {
@@ -76,6 +87,7 @@ export class CommentService {
               activityId: true,
               profileId: true,
               id: true,
+              moderationStatus: true,
               profile: { select: COMMENT_PROFILE_SELECT },
               commentLikes: {
                 ...(blockedUserIds.length ? { where: { authorId: { notIn: blockedUserIds } } } : {}),
@@ -94,7 +106,8 @@ export class CommentService {
       const hasMore = commentsWithExtraItem.length > pageSize;
       const comments = commentsWithExtraItem.slice(0, pageSize).map((value: Record<string, unknown>) => {
         const { commentLikes, ...comment } = value;
-        return { ...comment, commentLike: commentLikes ?? [] };
+        const isHiddenForViewer = comment.moderationStatus !== 'visible' && comment.authorId !== currentUserId;
+        return { ...comment, comment: isHiddenForViewer ? null : comment.comment, commentLike: commentLikes ?? [] };
       });
       return {
         comments,
@@ -137,6 +150,7 @@ export class CommentService {
             activityId: id,
             authorId: currentUserId ?? '',
             comment,
+            moderationStatus: 'pending',
           },
         });
         const activity = await transaction.activity.findUnique({ where: { id }, select: { userId: true } });
@@ -153,7 +167,10 @@ export class CommentService {
             actorName: account.name,
             actorSurname: account.surname,
             actorProfilePhoto: account.profilePhoto,
-            content: comment,
+            localizedContent: {
+              russian: 'Новый комментарий отправлен на проверку.',
+              english: 'A new comment is awaiting moderation.',
+            },
           });
         }
       });
@@ -184,7 +201,7 @@ export class CommentService {
     try {
       return await this.prisma.comment.update({
         where: authorId ? { id, authorId } : { id },
-        data: { comment },
+        data: { comment, moderationStatus: 'pending', moderationProcessingStartedAt: null },
       });
     } catch (error) {
       handleServiceError(error);

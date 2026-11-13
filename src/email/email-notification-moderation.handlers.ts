@@ -26,6 +26,7 @@ export async function resolveModerationReportNotification(
       },
       activity: { select: { title: true, description: true } },
       comment: { select: { comment: true } },
+      groupPost: { select: { text: true } },
       media: { select: { url: true, thumbnail: true, mediaReviewStatus: true } },
       mediaUpload: {
         select: {
@@ -42,13 +43,15 @@ export async function resolveModerationReportNotification(
   });
   if (!report) return null;
   const reportedContent =
-    report.targetType === 'activity'
+    report.targetType === 'activity' || report.targetType === 'activity_text'
       ? [report.activity?.title, report.activity?.description].filter(Boolean).join('\n') || null
       : report.targetType === 'comment'
         ? (report.comment?.comment ?? null)
-        : report.targetType === 'user'
-          ? (report.subjectUser?.profile?.bio ?? null)
-          : null;
+        : report.targetType === 'group_post'
+          ? (report.groupPost?.text ?? null)
+          : report.targetType === 'user'
+            ? (report.subjectUser?.profile?.bio ?? null)
+            : null;
   const contentAuthor = report.subjectUser ?? report.mediaUpload?.owner;
   const payload = {
     reportId: report.id,

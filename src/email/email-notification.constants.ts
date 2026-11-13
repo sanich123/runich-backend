@@ -1,6 +1,8 @@
 const MODERATION_REPORT_TARGET_TITLES: Record<string, string> = {
   activity: 'тренировку',
+  activity_text: 'текст тренировки',
   comment: 'комментарий',
+  group_post: 'публикацию группы',
   media: 'фото или видео',
   media_upload: 'фото или видео',
   user: 'профиль',

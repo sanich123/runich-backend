@@ -43,6 +43,7 @@ export class ModerationReportsService {
           targetId: request.targetId,
           ...(target.activityId ? { activityId: target.activityId } : {}),
           ...(target.commentId ? { commentId: target.commentId } : {}),
+          ...(target.groupPostId ? { groupPostId: target.groupPostId } : {}),
           ...(target.mediaId ? { mediaId: target.mediaId } : {}),
           ...(target.targetUserId ? { targetUserId: target.targetUserId } : {}),
           subjectUserId: target.subjectUserId,
@@ -124,6 +125,20 @@ export class ModerationReportsService {
         where: { id: report.targetId },
         select: { comment: true, authorId: true, activityId: true, moderationStatus: true },
       });
+    } else if (report.targetType === 'activity_text') {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: report.targetId },
+        select: { title: true, description: true, userId: true, textModerationStatus: true },
+      });
+      context = activity ? { ...activity, moderationStatus: activity.textModerationStatus } : null;
+    } else if (report.targetType === 'group_post') {
+      const post = await this.prisma.groupPost.findUnique({
+        where: { id: report.targetId },
+        select: { text: true, createdByUserId: true, moderationStatus: true },
+      });
+      context = post
+        ? { comment: post.text, authorId: post.createdByUserId, moderationStatus: post.moderationStatus }
+        : null;
     } else if (report.targetType === 'media') {
       context = await this.prisma.activityMedia.findUnique({
         where: { id: report.targetId },
@@ -230,16 +245,18 @@ export class ModerationReportsService {
         },
       });
       if (updatedReport.count !== 1) throw new ConflictException('Жалоба уже рассмотрена');
-      await createNotificationEvent(transaction, {
-        recipientUserId: report.reporterId ?? '',
-        type: NOTIFICATION_TYPE.moderationReportDecision,
-        emailNotificationType: EMAIL_NOTIFICATION_TYPE.reporterDecision,
-        sourceId: moderationAction.id,
-        targetType: 'moderation-report',
-        targetId: report.id,
-        localizedContent: createReportDecisionCopy(report, action),
-        mandatory: true,
-      });
+      if (report.reporterId) {
+        await createNotificationEvent(transaction, {
+          recipientUserId: report.reporterId,
+          type: NOTIFICATION_TYPE.moderationReportDecision,
+          emailNotificationType: EMAIL_NOTIFICATION_TYPE.reporterDecision,
+          sourceId: moderationAction.id,
+          targetType: 'moderation-report',
+          targetId: report.id,
+          localizedContent: createReportDecisionCopy(report, action),
+          mandatory: true,
+        });
+      }
     });
 
     return await this.prisma.contentReport.findUnique({ where: { id: reportId } });

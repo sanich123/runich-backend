@@ -156,6 +156,10 @@ export class ActivityImportService {
         return {
           ...activity,
           caloriesActive,
+          textModerationStatus:
+            activity.textModerationStatus ??
+            (activity.title?.trim() || activity.description?.trim() ? 'pending' : 'visible'),
+          textModerationProcessingStartedAt: null,
           hideMap: existingActivity?.hideMap ?? activity.hideMap ?? false,
           // Use a fresh storage namespace for replacements so immutable map caches cannot serve old imagery.
           id: existingActivity ? randomUUID() : sourceId,

@@ -243,7 +243,7 @@ describe('ModerationService', () => {
     });
     expect(prisma.comment.update).toHaveBeenCalledWith({
       where: { id: 'comment-1' },
-      data: { moderationStatus: 'hidden' },
+      data: { moderationStatus: 'hidden', moderationProcessingStartedAt: null },
     });
     expect(prisma.moderationAction.create).toHaveBeenCalledWith({
       data: { reportId: 'report-1', actorId: 'moderator-1', action: 'hide_content', note: 'review' },

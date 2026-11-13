@@ -109,10 +109,14 @@ describe('CommentService', () => {
         select: {
           comments: expect.objectContaining({
             where: {
-              moderationStatus: 'visible',
-              OR: [
-                { date: { lt: new Date('2026-08-20T11:00:00.000Z') } },
-                { date: new Date('2026-08-20T11:00:00.000Z'), id: { lt: 'cursor-comment' } },
+              AND: [
+                { OR: [{ moderationStatus: { in: ['visible', 'pending', 'processing'] } }] },
+                {
+                  OR: [
+                    { date: { lt: new Date('2026-08-20T11:00:00.000Z') } },
+                    { date: new Date('2026-08-20T11:00:00.000Z'), id: { lt: 'cursor-comment' } },
+                  ],
+                },
               ],
             },
             orderBy: [{ date: 'desc' }, { id: 'desc' }],
@@ -121,6 +125,50 @@ describe('CommentService', () => {
         },
       }),
     );
+  });
+
+  it('returns pending comment text only to its author', async () => {
+    const prisma = createPrismaMock();
+    const activityService = { canAccessActivity: asyncMock().mockResolvedValue(true) };
+    const moderationAccess = { blockedUserIds: asyncMock().mockResolvedValue([]) };
+    const service = new CommentService(
+      prisma as never,
+      {} as never,
+      activityService as never,
+      undefined,
+      moderationAccess as never,
+    );
+    prisma.activity.findUnique.mockResolvedValue({
+      comments: [
+        {
+          id: 'pending-comment',
+          authorId: 'author-1',
+          comment: 'Pending text',
+          moderationStatus: 'pending',
+          commentLikes: [],
+        },
+        {
+          id: 'visible-comment',
+          authorId: 'author-2',
+          comment: 'Visible text',
+          moderationStatus: 'visible',
+          commentLikes: [],
+        },
+      ],
+    });
+
+    await expect(service.getCommentsbyActivityId('activity-1', '10', undefined, 'viewer-1')).resolves.toMatchObject({
+      comments: [
+        { id: 'pending-comment', comment: null },
+        { id: 'visible-comment', comment: 'Visible text' },
+      ],
+    });
+    await expect(service.getCommentsbyActivityId('activity-1', '10', undefined, 'author-1')).resolves.toMatchObject({
+      comments: [
+        { id: 'pending-comment', comment: 'Pending text' },
+        { id: 'visible-comment', comment: 'Visible text' },
+      ],
+    });
   });
 
   it('creates an in-app notification when a user comments on another user activity', async () => {
@@ -151,7 +199,7 @@ describe('CommentService', () => {
         targetType: 'activity',
         targetId: 'activity-1',
         relatedId: 'comment-1',
-        content: 'Nice run',
+        content: 'A new comment is awaiting moderation.',
         inApp: true,
       }),
       select: { id: true },
@@ -259,10 +307,17 @@ describe('CommentService', () => {
       expect.objectContaining({
         select: {
           comments: expect.objectContaining({
-            where: expect.objectContaining({
-              moderationStatus: 'visible',
-              authorId: { notIn: ['blocked-user'] },
-            }),
+            where: {
+              AND: [
+                {
+                  OR: [
+                    { moderationStatus: { in: ['visible', 'pending', 'processing'] } },
+                    { authorId: 'viewer-1', moderationStatus: { in: ['hidden', 'removed'] } },
+                  ],
+                },
+                { authorId: { notIn: ['blocked-user'] } },
+              ],
+            },
             select: expect.objectContaining({
               commentLikes: {
                 where: { authorId: { notIn: ['blocked-user'] } },

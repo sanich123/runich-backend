@@ -1,5 +1,6 @@
 export type ReportLanguage = 'russian' | 'english';
-export type ContentReportTargetType = 'activity' | 'comment' | 'media' | 'user' | 'group' | 'media_upload';
+export type ContentReportTargetType =
+  'activity' | 'activity_text' | 'comment' | 'group_post' | 'media' | 'user' | 'group' | 'media_upload';
 export type ContentReportReason =
   'threats' | 'harassment' | 'hate_speech' | 'sexual_content' | 'violence' | 'spam' | 'other';
 export type ContentReportStatus = 'open' | 'in_review' | 'resolved' | 'rejected' | 'appealed';
@@ -23,6 +24,7 @@ export type ModerationTarget = {
   subjectUserId: string;
   activityId?: string;
   commentId?: string;
+  groupPostId?: string;
   mediaId?: string;
   targetUserId?: string;
 };

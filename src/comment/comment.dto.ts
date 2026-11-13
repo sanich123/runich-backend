@@ -48,8 +48,11 @@ export class CommentResponseDto {
   @ApiProperty({ type: String, format: 'date-time' })
   date: Date | string;
 
-  @ApiProperty({ type: String })
-  comment: string;
+  @ApiProperty({ type: String, nullable: true })
+  comment: string | null;
+
+  @ApiProperty({ enum: ['pending', 'processing', 'visible', 'hidden', 'removed'] })
+  moderationStatus: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
 
   @ApiProperty({ type: String, format: 'uuid' })
   authorId: string;

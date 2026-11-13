@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'89dfeed8d75c41dd73e3559493d8e9b730d7b8ec8efbef9209e3b9e4c832afaf'>;
+  StorageHashBase<'efaff73a1d0c739fb5d6e31c4c1620ab73277ca4fcd6e71af28c24d8ede56750'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -279,8 +279,12 @@ type FieldTypeOverrides = {
     readonly models: {
       readonly Activity: {
         readonly moderationStatus: {
-          readonly output: 'visible' | 'hidden' | 'removed';
-          readonly input: 'visible' | 'hidden' | 'removed';
+          readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+          readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+        };
+        readonly textModerationStatus: {
+          readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+          readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
         };
         readonly visibility: {
           readonly output: 'public' | 'followers' | 'private';
@@ -295,14 +299,14 @@ type FieldTypeOverrides = {
             'queued' | 'processing' | 'review_required' | 'approved' | 'rejected' | 'failed';
         };
         readonly moderationStatus: {
-          readonly output: 'visible' | 'hidden' | 'removed';
-          readonly input: 'visible' | 'hidden' | 'removed';
+          readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+          readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
         };
       };
       readonly Comment: {
         readonly moderationStatus: {
-          readonly output: 'visible' | 'hidden' | 'removed';
-          readonly input: 'visible' | 'hidden' | 'removed';
+          readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+          readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
         };
       };
       readonly ContentReport: {
@@ -333,14 +337,30 @@ type FieldTypeOverrides = {
           readonly input: 'open' | 'in_review' | 'resolved' | 'rejected' | 'appealed';
         };
         readonly targetType: {
-          readonly output: 'activity' | 'comment' | 'media' | 'media_upload' | 'user' | 'group';
-          readonly input: 'activity' | 'comment' | 'media' | 'media_upload' | 'user' | 'group';
+          readonly output:
+            | 'activity'
+            | 'activity_text'
+            | 'comment'
+            | 'group_post'
+            | 'media'
+            | 'media_upload'
+            | 'user'
+            | 'group';
+          readonly input:
+            | 'activity'
+            | 'activity_text'
+            | 'comment'
+            | 'group_post'
+            | 'media'
+            | 'media_upload'
+            | 'user'
+            | 'group';
         };
       };
       readonly Group: {
         readonly moderationStatus: {
-          readonly output: 'visible' | 'hidden' | 'removed';
-          readonly input: 'visible' | 'hidden' | 'removed';
+          readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+          readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
         };
         readonly privacy: { readonly output: 'open' | 'closed'; readonly input: 'open' | 'closed' };
       };
@@ -360,6 +380,12 @@ type FieldTypeOverrides = {
         readonly status: {
           readonly output: 'active' | 'pending' | 'rejected';
           readonly input: 'active' | 'pending' | 'rejected';
+        };
+      };
+      readonly GroupPost: {
+        readonly moderationStatus: {
+          readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+          readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
         };
       };
       readonly MediaModerationAsset: {
@@ -429,8 +455,12 @@ type ColumnTypeOverrides = {
   readonly public: {
     readonly Activity: {
       readonly moderation_status: {
-        readonly output: 'visible' | 'hidden' | 'removed';
-        readonly input: 'visible' | 'hidden' | 'removed';
+        readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+        readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+      };
+      readonly text_moderation_status: {
+        readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+        readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
       };
       readonly visibility: {
         readonly output: 'public' | 'followers' | 'private';
@@ -445,14 +475,14 @@ type ColumnTypeOverrides = {
           'queued' | 'processing' | 'review_required' | 'approved' | 'rejected' | 'failed';
       };
       readonly moderation_status: {
-        readonly output: 'visible' | 'hidden' | 'removed';
-        readonly input: 'visible' | 'hidden' | 'removed';
+        readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+        readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
       };
     };
     readonly Comment: {
       readonly moderation_status: {
-        readonly output: 'visible' | 'hidden' | 'removed';
-        readonly input: 'visible' | 'hidden' | 'removed';
+        readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+        readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
       };
     };
     readonly ContentReport: {
@@ -483,14 +513,30 @@ type ColumnTypeOverrides = {
         readonly input: 'open' | 'in_review' | 'resolved' | 'rejected' | 'appealed';
       };
       readonly target_type: {
-        readonly output: 'activity' | 'comment' | 'media' | 'media_upload' | 'user' | 'group';
-        readonly input: 'activity' | 'comment' | 'media' | 'media_upload' | 'user' | 'group';
+        readonly output:
+          | 'activity'
+          | 'activity_text'
+          | 'comment'
+          | 'group_post'
+          | 'media'
+          | 'media_upload'
+          | 'user'
+          | 'group';
+        readonly input:
+          | 'activity'
+          | 'activity_text'
+          | 'comment'
+          | 'group_post'
+          | 'media'
+          | 'media_upload'
+          | 'user'
+          | 'group';
       };
     };
     readonly Group: {
       readonly moderation_status: {
-        readonly output: 'visible' | 'hidden' | 'removed';
-        readonly input: 'visible' | 'hidden' | 'removed';
+        readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+        readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
       };
       readonly privacy: { readonly output: 'open' | 'closed'; readonly input: 'open' | 'closed' };
     };
@@ -510,6 +556,12 @@ type ColumnTypeOverrides = {
       readonly status: {
         readonly output: 'active' | 'pending' | 'rejected';
         readonly input: 'active' | 'pending' | 'rejected';
+      };
+    };
+    readonly GroupPost: {
+      readonly moderation_status: {
+        readonly output: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
+        readonly input: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
       };
     };
     readonly MediaModerationAsset: {
@@ -609,6 +661,8 @@ export namespace Models {
     speed: FieldOutputTypes['public']['Activity']['speed'];
     sport: FieldOutputTypes['public']['Activity']['sport'];
     steps: FieldOutputTypes['public']['Activity']['steps'];
+    textModerationProcessingStartedAt: FieldOutputTypes['public']['Activity']['textModerationProcessingStartedAt'];
+    textModerationStatus: FieldOutputTypes['public']['Activity']['textModerationStatus'];
     timeZone: FieldOutputTypes['public']['Activity']['timeZone'];
     title: FieldOutputTypes['public']['Activity']['title'];
     updatedAt: FieldOutputTypes['public']['Activity']['updatedAt'];
@@ -710,6 +764,7 @@ export namespace Models {
     comment: FieldOutputTypes['public']['Comment']['comment'];
     date: FieldOutputTypes['public']['Comment']['date'];
     id: FieldOutputTypes['public']['Comment']['id'];
+    moderationProcessingStartedAt: FieldOutputTypes['public']['Comment']['moderationProcessingStartedAt'];
     moderationStatus: FieldOutputTypes['public']['Comment']['moderationStatus'];
     profileId: FieldOutputTypes['public']['Comment']['profileId'];
     activity: public_Activity;
@@ -734,6 +789,7 @@ export namespace Models {
     commentId: FieldOutputTypes['public']['ContentReport']['commentId'];
     createdAt: FieldOutputTypes['public']['ContentReport']['createdAt'];
     details: FieldOutputTypes['public']['ContentReport']['details'];
+    groupPostId: FieldOutputTypes['public']['ContentReport']['groupPostId'];
     id: FieldOutputTypes['public']['ContentReport']['id'];
     mediaId: FieldOutputTypes['public']['ContentReport']['mediaId'];
     mediaUploadId: FieldOutputTypes['public']['ContentReport']['mediaUploadId'];
@@ -751,6 +807,7 @@ export namespace Models {
     appeals: public_ModerationAppeal[];
     assignedModerator: public_User | null;
     comment: public_Comment | null;
+    groupPost: public_GroupPost | null;
     media: public_ActivityMedia | null;
     mediaUpload: public_MediaModerationAsset | null;
     reporter: public_User | null;
@@ -762,6 +819,7 @@ export namespace Models {
       | 'appeals'
       | 'assignedModerator'
       | 'comment'
+      | 'groupPost'
       | 'media'
       | 'mediaUpload'
       | 'reporter'
@@ -851,12 +909,15 @@ export namespace Models {
     createdByUserId: FieldOutputTypes['public']['GroupPost']['createdByUserId'];
     groupId: FieldOutputTypes['public']['GroupPost']['groupId'];
     id: FieldOutputTypes['public']['GroupPost']['id'];
+    moderationProcessingStartedAt: FieldOutputTypes['public']['GroupPost']['moderationProcessingStartedAt'];
+    moderationStatus: FieldOutputTypes['public']['GroupPost']['moderationStatus'];
     photoAssetId: FieldOutputTypes['public']['GroupPost']['photoAssetId'];
     text: FieldOutputTypes['public']['GroupPost']['text'];
     author: public_User;
+    contentReports: public_ContentReport[];
     group: public_Group;
     photoAsset: public_MediaModerationAsset | null;
-    readonly [RelationKeys]?: 'author' | 'group' | 'photoAsset';
+    readonly [RelationKeys]?: 'author' | 'contentReports' | 'group' | 'photoAsset';
   };
   export type public_Like = {
     activityId: FieldOutputTypes['public']['Like']['activityId'];
@@ -1503,6 +1564,23 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/int4';
                   readonly codecId: 'pg/int4@1';
                   readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly text_moderation_processing_started_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly text_moderation_status: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'visible'>;
+                  };
                   readonly many: false;
                 };
                 readonly time_zone: {
@@ -2312,6 +2390,13 @@ type ContractBase = Omit<
                   };
                   readonly many: false;
                 };
+                readonly moderation_processing_started_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
                 readonly moderation_status: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
@@ -2484,6 +2569,12 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly length: 1000 };
                   readonly many: false;
                 };
+                readonly group_post_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly id: {
                   readonly dataType: 'pg/uuid';
                   readonly codecId: 'pg/uuid@1';
@@ -2594,6 +2685,11 @@ type ContractBase = Omit<
                   readonly name: 'ContentReport_comment_id_idx_fe121171';
                   readonly prefix: 'ContentReport_comment_id_idx';
                   readonly columns: readonly ['comment_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'ContentReport_group_post_id_idx';
+                  readonly columns: readonly ['group_post_id'];
                   readonly unique: false;
                 },
                 {
@@ -2740,6 +2836,18 @@ type ContractBase = Omit<
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'MediaModerationAsset';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'ContentReport';
+                    readonly columns: readonly ['group_post_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'GroupPost';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -3380,6 +3488,23 @@ type ContractBase = Omit<
                   readonly default: {
                     readonly kind: 'function';
                     readonly expression: 'gen_random_uuid()';
+                  };
+                  readonly many: false;
+                };
+                readonly moderation_processing_started_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly moderation_status: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'visible'>;
                   };
                   readonly many: false;
                 };
@@ -5677,7 +5802,9 @@ type ContractBase = Omit<
               readonly kind: 'valueSet';
               readonly values: readonly [
                 'activity',
+                'activity_text',
                 'comment',
+                'group_post',
                 'media',
                 'media_upload',
                 'user',
@@ -5738,7 +5865,7 @@ type ContractBase = Omit<
             };
             readonly ModerationContentStatus: {
               readonly kind: 'valueSet';
-              readonly values: readonly ['visible', 'hidden', 'removed'];
+              readonly values: readonly ['pending', 'processing', 'visible', 'hidden', 'removed'];
             };
             readonly ModerationPriority: {
               readonly kind: 'valueSet';
@@ -6027,6 +6154,18 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
+              readonly textModerationProcessingStartedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly textModerationStatus: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly timeZone: {
                 readonly nullable: true;
                 readonly type: {
@@ -6172,6 +6311,10 @@ type ContractBase = Omit<
                 readonly speed: { readonly column: 'speed' };
                 readonly sport: { readonly column: 'sport' };
                 readonly steps: { readonly column: 'steps' };
+                readonly textModerationProcessingStartedAt: {
+                  readonly column: 'text_moderation_processing_started_at';
+                };
+                readonly textModerationStatus: { readonly column: 'text_moderation_status' };
                 readonly timeZone: { readonly column: 'time_zone' };
                 readonly title: { readonly column: 'title' };
                 readonly updatedAt: { readonly column: 'updatedAt' };
@@ -6723,6 +6866,14 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
+              readonly moderationProcessingStartedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
               readonly moderationStatus: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -6789,6 +6940,9 @@ type ContractBase = Omit<
                 readonly comment: { readonly column: 'comment' };
                 readonly date: { readonly column: 'date' };
                 readonly id: { readonly column: 'id' };
+                readonly moderationProcessingStartedAt: {
+                  readonly column: 'moderation_processing_started_at';
+                };
                 readonly moderationStatus: { readonly column: 'moderation_status' };
                 readonly profileId: { readonly column: 'profileId' };
               };
@@ -6888,6 +7042,10 @@ type ContractBase = Omit<
                   readonly codecId: 'sql/varchar@1';
                   readonly typeParams: { readonly length: 1000 };
                 };
+              };
+              readonly groupPostId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
               readonly id: {
                 readonly nullable: false;
@@ -6998,6 +7156,18 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['id'];
                 };
               };
+              readonly groupPost: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'GroupPost';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['groupPostId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
               readonly media: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -7059,6 +7229,7 @@ type ContractBase = Omit<
                 readonly commentId: { readonly column: 'comment_id' };
                 readonly createdAt: { readonly column: 'created_at' };
                 readonly details: { readonly column: 'details' };
+                readonly groupPostId: { readonly column: 'group_post_id' };
                 readonly id: { readonly column: 'id' };
                 readonly mediaId: { readonly column: 'media_id' };
                 readonly mediaUploadId: { readonly column: 'media_upload_id' };
@@ -7614,6 +7785,18 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
+              readonly moderationProcessingStartedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 6 };
+                };
+              };
+              readonly moderationStatus: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly photoAssetId: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
@@ -7635,6 +7818,17 @@ type ContractBase = Omit<
                 readonly on: {
                   readonly localFields: readonly ['createdByUserId'];
                   readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly contentReports: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'ContentReport';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['groupPostId'];
                 };
               };
               readonly group: {
@@ -7670,6 +7864,10 @@ type ContractBase = Omit<
                 readonly createdByUserId: { readonly column: 'created_by_user_id' };
                 readonly groupId: { readonly column: 'group_id' };
                 readonly id: { readonly column: 'id' };
+                readonly moderationProcessingStartedAt: {
+                  readonly column: 'moderation_processing_started_at';
+                };
+                readonly moderationStatus: { readonly column: 'moderation_status' };
                 readonly photoAssetId: { readonly column: 'photo_asset_id' };
                 readonly text: { readonly column: 'text' };
               };
@@ -9959,7 +10157,9 @@ type ContractBase = Omit<
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
               { readonly name: 'activity'; readonly value: 'activity' },
+              { readonly name: 'activity_text'; readonly value: 'activity_text' },
               { readonly name: 'comment'; readonly value: 'comment' },
+              { readonly name: 'group_post'; readonly value: 'group_post' },
               { readonly name: 'media'; readonly value: 'media' },
               { readonly name: 'media_upload'; readonly value: 'media_upload' },
               { readonly name: 'user'; readonly value: 'user' },
@@ -10043,6 +10243,8 @@ type ContractBase = Omit<
           readonly ModerationContentStatus: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
+              { readonly name: 'pending'; readonly value: 'pending' },
+              { readonly name: 'processing'; readonly value: 'processing' },
               { readonly name: 'visible'; readonly value: 'visible' },
               { readonly name: 'hidden'; readonly value: 'hidden' },
               { readonly name: 'removed'; readonly value: 'removed' },
@@ -10082,7 +10284,9 @@ type ContractBase = Omit<
           ];
           readonly ContentReportTargetType: readonly [
             { readonly name: 'activity'; readonly value: 'activity' },
+            { readonly name: 'activity_text'; readonly value: 'activity_text' },
             { readonly name: 'comment'; readonly value: 'comment' },
+            { readonly name: 'group_post'; readonly value: 'group_post' },
             { readonly name: 'media'; readonly value: 'media' },
             { readonly name: 'media_upload'; readonly value: 'media_upload' },
             { readonly name: 'user'; readonly value: 'user' },
@@ -10139,6 +10343,8 @@ type ContractBase = Omit<
             { readonly name: 'rejected'; readonly value: 'rejected' },
           ];
           readonly ModerationContentStatus: readonly [
+            { readonly name: 'pending'; readonly value: 'pending' },
+            { readonly name: 'processing'; readonly value: 'processing' },
             { readonly name: 'visible'; readonly value: 'visible' },
             { readonly name: 'hidden'; readonly value: 'hidden' },
             { readonly name: 'removed'; readonly value: 'removed' },

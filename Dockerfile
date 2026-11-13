@@ -52,6 +52,10 @@ ENV NODE_ENV=development
 
 RUN yarn install --immutable
 
+COPY scripts/download-text-moderation-model.mjs ./scripts/
+
+RUN yarn model:download:text-moderation
+
 COPY . .
 
 RUN yarn db:generate && yarn prisma migration check && yarn build
@@ -75,6 +79,7 @@ COPY --from=builder /usr/src/app/prisma ./prisma
 COPY --from=builder /usr/src/app/migrations ./migrations
 COPY --from=builder /usr/src/app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /usr/src/app/assets ./assets
+COPY --from=builder /usr/src/app/models ./models
 COPY --from=builder /usr/src/app/scripts/send-deployment-success-email.mjs ./scripts/send-deployment-success-email.mjs
 COPY --from=builder /usr/src/app/scripts/send-daily-metrics-email.mjs ./scripts/send-daily-metrics-email.mjs
 COPY --from=builder /usr/src/app/scripts/validate-deployment-env.mjs ./scripts/validate-deployment-env.mjs

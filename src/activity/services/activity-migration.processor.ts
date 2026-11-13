@@ -162,6 +162,8 @@ export class ActivityMigrationProcessor {
   ): Promise<MigrationProgress> {
     const activitiesWithTitles = activities.map((activity) => ({
       ...activity,
+      textModerationStatus:
+        activity.title?.trim() || activity.description?.trim() ? ('pending' as const) : ('visible' as const),
       title: activity.title?.trim() ? activity.title : generateActivityTitle(activity.sport, activity.date),
     }));
 

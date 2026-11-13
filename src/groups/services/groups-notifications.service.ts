@@ -15,6 +15,7 @@ export class GroupsNotificationsService {
       isAnnouncement: boolean;
       kind: 'post' | 'event';
       content: string;
+      awaitingModeration?: boolean;
     },
   ) {
     const recipients: Array<{ userId: string; notificationPreference: 'all' | 'announcements' | 'off' }> =
@@ -31,15 +32,21 @@ export class GroupsNotificationsService {
     const isPost = notification.kind === 'post';
     const eventType = isPost ? NOTIFICATION_TYPE.groupPost : NOTIFICATION_TYPE.groupEvent;
     const categoryPreference = isPost ? 'groupPostsNotifications' : 'groupEventsNotifications';
-    const localizedContent = isPost
-      ? {
-          russian: `Новая запись в группе «${notification.groupName}»: ${notification.content}`,
-          english: `New post in “${notification.groupName}”: ${notification.content}`,
-        }
-      : {
-          russian: `Новое событие в группе «${notification.groupName}»: ${notification.content}`,
-          english: `New event in “${notification.groupName}”: ${notification.content}`,
-        };
+    const localizedContent =
+      isPost && notification.awaitingModeration
+        ? {
+            russian: `Новая запись в группе «${notification.groupName}» отправлена на проверку.`,
+            english: `A new post in “${notification.groupName}” is awaiting moderation.`,
+          }
+        : isPost
+          ? {
+              russian: `Новая запись в группе «${notification.groupName}»: ${notification.content}`,
+              english: `New post in “${notification.groupName}”: ${notification.content}`,
+            }
+          : {
+              russian: `Новое событие в группе «${notification.groupName}»: ${notification.content}`,
+              english: `New event in “${notification.groupName}”: ${notification.content}`,
+            };
 
     for (const { userId, notificationPreference } of recipients) {
       if (

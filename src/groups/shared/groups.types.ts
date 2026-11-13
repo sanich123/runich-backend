@@ -42,6 +42,7 @@ export type GroupPhotoReviewStatus = 'queued' | 'processing' | 'review_required'
 export type GroupPostListItem = {
   id: string;
   text: string;
+  moderationStatus: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
   createdAt: Date | string;
   author: { userId: string; name: string | null; profilePhoto: string | null } | null;
   photoUrl: string | null;
@@ -56,6 +57,7 @@ export type GroupPostQueryRow = {
   id: string;
   createdByUserId: string;
   text: string;
+  moderationStatus: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
   createdAt: Date | string;
   photoAssetId: string | null;
   author?: {

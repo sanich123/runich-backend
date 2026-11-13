@@ -9,6 +9,7 @@ model ContentReport {
   commentId           Uuid?                   @map("comment_id")
   mediaId             Uuid?                   @map("media_id")
   mediaUploadId       Uuid?                   @map("media_upload_id")
+  groupPostId         Uuid?                   @map("group_post_id")
   targetUserId        Uuid?                   @map("target_user_id")
   subjectUserId       Uuid?                   @map("subject_user_id")
   reason              ContentReportReason
@@ -26,6 +27,7 @@ model ContentReport {
   comment             Comment?                @relation("ContentReportComment", fields: [commentId], references: [id], onDelete: SetNull)
   media               ActivityMedia?          @relation("ContentReportMedia", fields: [mediaId], references: [id], onDelete: SetNull)
   mediaUpload         MediaModerationAsset?   @relation(fields: [mediaUploadId], references: [id], onDelete: SetNull)
+  groupPost           GroupPost?              @relation("ContentReportGroupPost", fields: [groupPostId], references: [id], onDelete: SetNull)
   actions             ModerationAction[]
   appeals             ModerationAppeal[]
 
@@ -35,6 +37,7 @@ model ContentReport {
   @@index([subjectUserId, createdAt], map: "ContentReport_subject_createdAt_idx")
   @@index([targetType, targetId], map: "ContentReport_target_idx")
   @@index([mediaUploadId], map: "ContentReport_media_upload_id_idx")
+  @@index([groupPostId], map: "ContentReport_group_post_id_idx")
   @@map("ContentReport")
 }
 
