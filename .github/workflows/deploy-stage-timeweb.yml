@@ -164,12 +164,13 @@ jobs:
           "${COMPOSE[@]}" up -d --wait db
           "${COMPOSE[@]}" up --force-recreate --abort-on-container-exit \
             --exit-code-from db_migrate db_migrate
-          "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nestjs_app background_worker
+          # Migration already completed above; avoid rerunning completed dependencies on each up.
+          "${COMPOSE[@]}" up -d --no-deps --force-recreate --remove-orphans nestjs_app background_worker
 
           "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps nginx nginx -t
-          "${COMPOSE[@]}" up -d --force-recreate --remove-orphans nginx
+          "${COMPOSE[@]}" up -d --no-deps --force-recreate --remove-orphans nginx
 
-          "${COMPOSE[@]}" up -d --force-recreate certbot_renew
+          "${COMPOSE[@]}" up -d --no-deps --force-recreate certbot_renew
 
           healthy=false
           for attempt in $(seq 1 30); do
