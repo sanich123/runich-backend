@@ -1,11 +1,20 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Optional } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { BadRequestException } from '@nestjs/common';
 import { ContentReportTargetType, ModerationTarget } from '../shared/moderation.types';
+import { ModerationContentNotificationsService } from './moderation-content-notifications.service';
 
 @Injectable()
 export class ModerationTargetsService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  private readonly contentNotifications: ModerationContentNotificationsService;
+
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(ModerationContentNotificationsService)
+    contentNotifications?: ModerationContentNotificationsService,
+  ) {
+    this.contentNotifications = contentNotifications ?? new ModerationContentNotificationsService();
+  }
 
   async resolveReportTarget(targetType: ContentReportTargetType, targetId: string): Promise<ModerationTarget | null> {
     if (targetType === 'media_upload') return null;
@@ -78,20 +87,40 @@ export class ModerationTargetsService {
     if (targetType === 'activity') {
       await transaction.activity.update({ where: { id: targetId }, data: { moderationStatus: status } });
     } else if (targetType === 'comment') {
-      await transaction.comment.update({
-        where: { id: targetId },
-        data: { moderationStatus: status, moderationProcessingStartedAt: null },
-      });
+      const data = { moderationStatus: status, moderationProcessingStartedAt: null };
+      if (status === 'visible') {
+        const update = await transaction.comment.updateMany({
+          where: { id: targetId, moderationStatus: { not: 'visible' } },
+          data,
+        });
+        if (update.count === 1) {
+          await this.contentNotifications.notifyPublishedComment(transaction, targetId);
+        } else {
+          await transaction.comment.update({ where: { id: targetId }, data });
+        }
+      } else {
+        await transaction.comment.update({ where: { id: targetId }, data });
+      }
     } else if (targetType === 'activity_text') {
       await transaction.activity.update({
         where: { id: targetId },
         data: { textModerationStatus: status, textModerationProcessingStartedAt: null },
       });
     } else if (targetType === 'group_post') {
-      await transaction.groupPost.update({
-        where: { id: targetId },
-        data: { moderationStatus: status, moderationProcessingStartedAt: null },
-      });
+      const data = { moderationStatus: status, moderationProcessingStartedAt: null };
+      if (status === 'visible') {
+        const update = await transaction.groupPost.updateMany({
+          where: { id: targetId, moderationStatus: { not: 'visible' } },
+          data,
+        });
+        if (update.count === 1) {
+          await this.contentNotifications.notifyPublishedGroupPost(transaction, targetId);
+        } else {
+          await transaction.groupPost.update({ where: { id: targetId }, data });
+        }
+      } else {
+        await transaction.groupPost.update({ where: { id: targetId }, data });
+      }
     } else if (targetType === 'media') {
       await transaction.activityMedia.update({ where: { id: targetId }, data: { moderationStatus: status } });
     } else if (targetType === 'group') {

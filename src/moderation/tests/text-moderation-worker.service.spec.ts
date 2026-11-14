@@ -23,11 +23,9 @@ function createPrismaMock() {
 
 describe('TextModerationWorkerService', () => {
   const originalEnvironment = {
-    token: process.env.HF_TOKEN,
-    model: process.env.TEXT_MODERATION_HF_MODEL,
-    threshold: process.env.TEXT_MODERATION_REVIEW_THRESHOLD,
-    localThreshold: process.env.TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD,
-    localTerms: process.env.TEXT_MODERATION_LOCAL_TERMS,
+    legacyToken: process.env.HF_TOKEN,
+    legacyModel: process.env.TEXT_MODERATION_HF_MODEL,
+    threshold: process.env.TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD,
   };
   const localClassifier = {
     classify: jest.fn(async () => [
@@ -35,24 +33,26 @@ describe('TextModerationWorkerService', () => {
       { label: 'toxic', score: 0.01 },
     ]),
   };
+  const contentNotifications = {
+    notifyPublishedComment: asyncMock(),
+    notifyPublishedGroupPost: asyncMock(),
+  };
   let prisma: ReturnType<typeof createPrismaMock>;
   let service: TextModerationWorkerService;
 
   beforeEach(() => {
-    process.env.HF_TOKEN = 'test-hf-token';
+    delete process.env.HF_TOKEN;
     delete process.env.TEXT_MODERATION_HF_MODEL;
-    delete process.env.TEXT_MODERATION_REVIEW_THRESHOLD;
     delete process.env.TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD;
-    delete process.env.TEXT_MODERATION_LOCAL_TERMS;
     localClassifier.classify.mockReset().mockResolvedValue([
       { label: 'not-toxic', score: 0.99 },
       { label: 'toxic', score: 0.01 },
     ]);
+    contentNotifications.notifyPublishedComment.mockReset().mockResolvedValue(undefined);
+    contentNotifications.notifyPublishedGroupPost.mockReset().mockResolvedValue(undefined);
     prisma = createPrismaMock();
-    service = new TextModerationWorkerService(prisma as never, localClassifier as never);
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify([[{ label: 'toxic', score: 0.01 }]]), { status: 200 }));
+    service = new TextModerationWorkerService(prisma as never, localClassifier as never, contentNotifications as never);
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('payment required', { status: 402 }));
     prisma.comment.updateMany.mockResolvedValue({ count: 1 });
     prisma.groupPost.updateMany.mockResolvedValue({ count: 1 });
     prisma.activity.updateMany.mockResolvedValue({ count: 1 });
@@ -66,18 +66,16 @@ describe('TextModerationWorkerService', () => {
   afterEach(() => {
     jest.restoreAllMocks();
     for (const [name, value] of Object.entries({
-      HF_TOKEN: originalEnvironment.token,
-      TEXT_MODERATION_HF_MODEL: originalEnvironment.model,
-      TEXT_MODERATION_REVIEW_THRESHOLD: originalEnvironment.threshold,
-      TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD: originalEnvironment.localThreshold,
-      TEXT_MODERATION_LOCAL_TERMS: originalEnvironment.localTerms,
+      HF_TOKEN: originalEnvironment.legacyToken,
+      TEXT_MODERATION_HF_MODEL: originalEnvironment.legacyModel,
+      TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD: originalEnvironment.threshold,
     })) {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
     }
   });
 
-  it('claims a pending comment and makes it visible when Hugging Face reports a low risk score', async () => {
+  it('uses the local ONNX classifier to make a low risk comment visible without network requests', async () => {
     prisma.comment.findFirst.mockResolvedValue({
       id: 'comment-1',
       comment: 'A friendly comment',
@@ -95,33 +93,20 @@ describe('TextModerationWorkerService', () => {
         data: expect.objectContaining({ moderationStatus: 'processing' }),
       }),
     );
-    expect(prisma.comment.updateMany).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        where: { id: 'comment-1', moderationStatus: 'processing' },
-        data: { moderationStatus: 'visible', moderationProcessingStartedAt: null },
-      }),
-    );
-    expect(fetch).toHaveBeenCalledWith(
-      'https://router.huggingface.co/hf-inference/models/unitary/multilingual-toxic-xlm-roberta',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({ Authorization: 'Bearer test-hf-token' }),
-        body: JSON.stringify({
-          inputs: 'A friendly comment',
-          parameters: { function_to_apply: 'sigmoid', top_k: 20 },
-        }),
-      }),
-    );
+    expect(prisma.transaction.comment.updateMany).toHaveBeenCalledWith({
+      where: { id: 'comment-1', moderationStatus: 'processing' },
+      data: { moderationStatus: 'visible', moderationProcessingStartedAt: null },
+    });
+    expect(contentNotifications.notifyPublishedComment).toHaveBeenCalledWith(prisma.transaction, 'comment-1');
+    expect(fetch).not.toHaveBeenCalled();
     expect(prisma.transaction.contentReport.create).not.toHaveBeenCalled();
-    expect(localClassifier.classify).not.toHaveBeenCalled();
+    expect(localClassifier.classify).toHaveBeenCalledWith('A friendly comment');
   });
 
-  it('sends text matching a configured local term to manual review without calling Hugging Face', async () => {
-    process.env.TEXT_MODERATION_LOCAL_TERMS = 'blocked phrase';
+  it('sends repeated links to manual review without classification', async () => {
     prisma.comment.findFirst.mockResolvedValue({
       id: 'comment-2',
-      comment: 'This contains BLOCKED PHRASE',
+      comment: 'Repeated links https://example.test https://example.test',
       authorId: 'author-2',
     });
     prisma.groupPost.findFirst.mockResolvedValue(null);
@@ -130,6 +115,7 @@ describe('TextModerationWorkerService', () => {
     await expect(service.processNextText()).resolves.toBe(true);
 
     expect(fetch).not.toHaveBeenCalled();
+    expect(localClassifier.classify).not.toHaveBeenCalled();
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -137,17 +123,17 @@ describe('TextModerationWorkerService', () => {
           commentId: 'comment-2',
           subjectUserId: 'author-2',
           priority: 'high',
-          details: expect.stringContaining('local-rules-v1'),
+          details: expect.stringContaining('link_spam'),
         }),
       }),
     );
+    expect(contentNotifications.notifyPublishedComment).not.toHaveBeenCalled();
     expect(prisma.transaction.emailNotificationJob.create).toHaveBeenCalledWith({
       data: { notificationType: 'moderation-report', sourceId: 'report-1', status: 'queued' },
     });
   });
 
-  it('uses the local classifier when the Hugging Face token is missing', async () => {
-    delete process.env.HF_TOKEN;
+  it('sends locally classified toxic content to manual review', async () => {
     localClassifier.classify.mockResolvedValueOnce([
       { label: 'not-toxic', score: 0.1 },
       { label: 'toxic', score: 0.9 },
@@ -167,14 +153,13 @@ describe('TextModerationWorkerService', () => {
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          details: expect.stringContaining('HF_TOKEN не настроен; локальная ONNX оценка toxic=0.900'),
+          details: expect.stringContaining('Локальная ONNX оценка toxic=0.900'),
         }),
       }),
     );
   });
 
-  it('makes non-toxic content visible when the Hugging Face token is missing', async () => {
-    delete process.env.HF_TOKEN;
+  it('makes non-toxic content visible based on its local ONNX score', async () => {
     localClassifier.classify.mockResolvedValueOnce([
       { label: 'not-toxic', score: 0.7 },
       { label: 'toxic', score: 0.3 },
@@ -189,17 +174,17 @@ describe('TextModerationWorkerService', () => {
 
     await service.processNextText();
 
-    expect(prisma.comment.updateMany).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        where: { id: 'comment-local-safe', moderationStatus: 'processing' },
-        data: { moderationStatus: 'visible', moderationProcessingStartedAt: null },
-      }),
-    );
+    expect(prisma.transaction.comment.updateMany).toHaveBeenCalledWith({
+      where: { id: 'comment-local-safe', moderationStatus: 'processing' },
+      data: { moderationStatus: 'visible', moderationProcessingStartedAt: null },
+    });
+    expect(contentNotifications.notifyPublishedComment).toHaveBeenCalledWith(prisma.transaction, 'comment-local-safe');
     expect(prisma.transaction.contentReport.create).not.toHaveBeenCalled();
   });
 
-  it('uses the local classifier when Hugging Face rejects the exhausted quota', async () => {
+  it('ignores legacy Hugging Face settings and keeps classification local', async () => {
+    process.env.HF_TOKEN = 'legacy-token';
+    process.env.TEXT_MODERATION_HF_MODEL = 'org/legacy-model';
     localClassifier.classify.mockResolvedValueOnce([
       { label: 'not-toxic', score: 0.2 },
       { label: 'toxic', score: 0.8 },
@@ -211,24 +196,20 @@ describe('TextModerationWorkerService', () => {
     });
     prisma.groupPost.findFirst.mockResolvedValue(null);
     prisma.activity.findFirst.mockResolvedValue(null);
-    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('quota exceeded', { status: 429 }));
-
     await service.processNextText();
 
+    expect(fetch).not.toHaveBeenCalled();
     expect(localClassifier.classify).toHaveBeenCalledWith('A potentially toxic comment');
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          details: expect.stringContaining(
-            'Hugging Face недоступен (Hugging Face вернул HTTP 429); локальная ONNX оценка toxic=0.800',
-          ),
+          details: expect.stringContaining('Локальная ONNX оценка toxic=0.800'),
         }),
       }),
     );
   });
 
-  it('keeps content in manual review when both Hugging Face and the local model are unavailable', async () => {
-    delete process.env.HF_TOKEN;
+  it('keeps content in manual review when the local model is unavailable', async () => {
     localClassifier.classify.mockRejectedValueOnce(new Error('weights are missing'));
     prisma.comment.findFirst.mockResolvedValue({
       id: 'comment-manual-fallback',
@@ -243,18 +224,18 @@ describe('TextModerationWorkerService', () => {
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          details: expect.stringContaining('HF_TOKEN не настроен; локальная модель недоступна: weights are missing'),
+          details: expect.stringContaining('Автоматическая проверка недоступна: weights are missing.'),
         }),
       }),
     );
   });
 
   it('queues scores at the configured threshold for moderator review', async () => {
-    process.env.TEXT_MODERATION_HF_MODEL = 'org/custom-model';
-    process.env.TEXT_MODERATION_REVIEW_THRESHOLD = '0.7';
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify([{ label: 'threat', score: 0.7 }]), { status: 200 }));
+    process.env.TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD = '0.7';
+    localClassifier.classify.mockResolvedValueOnce([
+      { label: 'not-toxic', score: 0.3 },
+      { label: 'toxic', score: 0.7 },
+    ]);
     prisma.groupPost.findFirst.mockResolvedValue({
       id: 'post-1',
       text: 'Post text',
@@ -264,10 +245,8 @@ describe('TextModerationWorkerService', () => {
 
     await expect(service.processNextText()).resolves.toBe(true);
 
-    expect(fetch).toHaveBeenCalledWith(
-      'https://router.huggingface.co/hf-inference/models/org/custom-model',
-      expect.anything(),
-    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(localClassifier.classify).toHaveBeenCalledWith('Post text');
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -283,6 +262,7 @@ describe('TextModerationWorkerService', () => {
         data: { moderationStatus: 'pending', moderationProcessingStartedAt: null },
       }),
     );
+    expect(contentNotifications.notifyPublishedGroupPost).not.toHaveBeenCalled();
   });
 
   it('queues activity title and description together for manual review', async () => {
@@ -294,21 +274,15 @@ describe('TextModerationWorkerService', () => {
       description: 'A route through the park',
       userId: 'activity-owner',
     });
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify([{ label: 'toxic', score: 0.8 }]), { status: 200 }));
+    localClassifier.classify.mockResolvedValueOnce([
+      { label: 'not-toxic', score: 0.2 },
+      { label: 'toxic', score: 0.8 },
+    ]);
 
     await expect(service.processNextText()).resolves.toBe(true);
 
-    expect(fetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        body: JSON.stringify({
-          inputs: 'Morning run A route through the park',
-          parameters: { function_to_apply: 'sigmoid', top_k: 20 },
-        }),
-      }),
-    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(localClassifier.classify).toHaveBeenCalledWith('Morning run A route through the park');
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -333,6 +307,7 @@ describe('TextModerationWorkerService', () => {
     await expect(service.processNextText()).resolves.toBe(false);
 
     expect(fetch).not.toHaveBeenCalled();
+    expect(localClassifier.classify).not.toHaveBeenCalled();
     expect(prisma.activity.update).toHaveBeenCalledWith({
       where: { id: 'activity-2' },
       data: { textModerationStatus: 'visible', textModerationProcessingStartedAt: null },
@@ -350,6 +325,7 @@ describe('TextModerationWorkerService', () => {
     await expect(service.processNextText()).resolves.toBe(true);
 
     expect(fetch).not.toHaveBeenCalled();
+    expect(localClassifier.classify).not.toHaveBeenCalled();
     expect(prisma.transaction.contentReport.create).not.toHaveBeenCalled();
   });
 
@@ -383,9 +359,10 @@ describe('TextModerationWorkerService', () => {
     });
     prisma.groupPost.findFirst.mockResolvedValue(null);
     prisma.activity.findFirst.mockResolvedValue(null);
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify([{ label: 'threat', score: 0.9 }]), { status: 200 }));
+    localClassifier.classify.mockResolvedValueOnce([
+      { label: 'not-toxic', score: 0.1 },
+      { label: 'toxic', score: 0.9 },
+    ]);
     prisma.transaction.comment.updateMany.mockResolvedValueOnce({ count: 0 });
 
     await expect(service.processNextText()).resolves.toBe(true);
@@ -411,6 +388,8 @@ describe('TextModerationWorkerService', () => {
     await service.processNextText();
 
     expect(prisma.groupPost.findFirst).toHaveBeenCalledTimes(1);
+    expect(contentNotifications.notifyPublishedComment).toHaveBeenCalledWith(prisma.transaction, 'comment-6');
+    expect(contentNotifications.notifyPublishedGroupPost).toHaveBeenCalledWith(prisma.transaction, 'post-2');
     service.requestStop();
     const worker = service.runWorker();
     service.requestStop();
@@ -426,7 +405,7 @@ describe('TextModerationWorkerService', () => {
     );
   });
 
-  it('falls back to the local classifier for invalid HF results and keeps classifier failures in manual review', async () => {
+  it('keeps classifier failures in manual review and reports locally classified toxic content', async () => {
     const content = {
       id: 'comment-7',
       comment: 'A comment',
@@ -436,16 +415,11 @@ describe('TextModerationWorkerService', () => {
     prisma.groupPost.findFirst.mockResolvedValue(null);
     prisma.activity.findFirst.mockResolvedValue(null);
     localClassifier.classify.mockRejectedValueOnce(new Error('local model is unavailable'));
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify([{ label: 'LABEL_0', score: 0.1 }]), { status: 200 }));
     await service.processNextText();
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          details: expect.stringContaining(
-            'Модель не вернула ни одной распознанной категории риска); локальная модель недоступна: local model is unavailable',
-          ),
+          details: expect.stringContaining('Автоматическая проверка недоступна: local model is unavailable.'),
         }),
       }),
     );
@@ -455,15 +429,13 @@ describe('TextModerationWorkerService', () => {
       { label: 'not-toxic', score: 0.1 },
       { label: 'toxic', score: 0.9 },
     ]);
-    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('unavailable', { status: 503 }));
     await service.processNextText();
+    expect(fetch).not.toHaveBeenCalled();
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledTimes(2);
     expect(prisma.transaction.contentReport.create).toHaveBeenLastCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          details: expect.stringContaining(
-            'Hugging Face недоступен (Hugging Face вернул HTTP 503); локальная ONNX оценка toxic=0.900',
-          ),
+          details: expect.stringContaining('Локальная ONNX оценка toxic=0.900'),
         }),
       }),
     );

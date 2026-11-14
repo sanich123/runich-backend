@@ -330,26 +330,10 @@ describe('GroupsPostsService', () => {
     );
   });
 
-  it('notifies post readers according to announcement and per-group preferences', async () => {
+  it('does not notify group members while a post is pending moderation', async () => {
     prisma.group.findUnique.mockResolvedValue({ name: 'Morning runners', createdByUserId: 'owner-1' });
     prisma.groupMember.findUnique.mockResolvedValue({ role: 'member', status: 'active' });
     prisma.groupPost.create.mockResolvedValue({ id: 'post-notify-1' });
-    prisma.transaction.groupMember.findMany.mockResolvedValue([
-      { userId: 'all-reader', notificationPreference: 'all' },
-      { userId: 'announcement-reader', notificationPreference: 'announcements' },
-      { userId: 'muted-reader', notificationPreference: 'off' },
-    ]);
-    prisma.transaction.profile.findUnique
-      .mockResolvedValueOnce({ name: 'Alex', surname: 'Runner', profilePhoto: 'private.webp', hideProfilePhotos: true })
-      .mockResolvedValue({
-        emailNotifications: false,
-        inAppNotifications: true,
-        pushNotifications: false,
-        groupPostsNotifications: true,
-        groupEventsNotifications: true,
-        language: 'russian',
-      });
-    prisma.transaction.notification.create.mockResolvedValue({ id: 'notification-1' });
 
     await service.createPost('member-1', 'group-1', { text: '  Sunday run  ' });
 
@@ -363,17 +347,9 @@ describe('GroupsPostsService', () => {
         photoAssetId: null,
       },
     });
-    expect(prisma.transaction.notification.create).toHaveBeenCalledTimes(1);
-    expect(prisma.transaction.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        recipientUserId: 'all-reader',
-        type: 'group-post',
-        targetType: 'group-post',
-        actorProfilePhoto: null,
-        content: 'Новая запись в группе «Morning runners» отправлена на проверку.',
-      }),
-      select: { id: true },
-    });
+    expect(prisma.transaction.groupMember.findMany).not.toHaveBeenCalled();
+    expect(prisma.transaction.notification.create).not.toHaveBeenCalled();
+    expect(prisma.transaction.pushNotificationJob.create).not.toHaveBeenCalled();
   });
 
   it('returns not found for missing group posts', async () => {

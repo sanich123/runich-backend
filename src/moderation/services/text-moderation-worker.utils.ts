@@ -1,7 +1,5 @@
 export const TEXT_MODERATION_POLL_INTERVAL_MS = 5_000;
 export const TEXT_MODERATION_STALE_PROCESSING_MS = 15 * 60_000;
-export const DEFAULT_TEXT_MODERATION_MODEL = 'unitary/multilingual-toxic-xlm-roberta';
-export const DEFAULT_TEXT_MODERATION_REVIEW_THRESHOLD = 0.25;
 export const DEFAULT_TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD = 0.5;
 export const LOCAL_TEXT_MODERATION_MODEL_VERSION =
   'onnx-community/distilbert-multilingual-toxicity-classifier-ONNX@4fbacce:model_quantized.onnx';
@@ -24,7 +22,7 @@ export type ClassificationResult = {
   modelVersion: string;
   reason: string;
 };
-type HuggingFaceLabel = { label: string; score: number };
+type ClassificationLabel = { label: string; score: number };
 
 export function normalizeModerationText(value: string) {
   return value
@@ -35,12 +33,7 @@ export function normalizeModerationText(value: string) {
 }
 
 export function getLocalReviewReason(text: string) {
-  const configuredTerms = (process.env.TEXT_MODERATION_LOCAL_TERMS ?? '')
-    .split('|')
-    .map((term) => normalizeModerationText(term).toLocaleLowerCase())
-    .filter(Boolean);
   const normalized = text.toLocaleLowerCase();
-  if (configuredTerms.some((term) => normalized.includes(term))) return 'configured_term';
   const links = normalized.match(/https?:\/\/\S+/g) ?? [];
   if (links.length >= 4 || (links.length >= 2 && new Set(links).size < links.length)) return 'link_spam';
   if (/\b([\p{L}\p{N}]{2,})\b(?:\s+\1\b){5,}/iu.test(normalized)) return 'repeated_text';
@@ -51,10 +44,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function parseHuggingFaceLabels(payload: unknown): HuggingFaceLabel[] {
+export function parseClassificationLabels(payload: unknown): ClassificationLabel[] {
   const raw = Array.isArray(payload) && Array.isArray(payload[0]) ? payload.flat() : payload;
   if (!Array.isArray(raw) || raw.length === 0) return [];
-  const labels: HuggingFaceLabel[] = [];
+  const labels: ClassificationLabel[] = [];
   for (const item of raw) {
     if (!isRecord(item)) return [];
     const candidate = item;
@@ -69,9 +62,4 @@ export function parseHuggingFaceLabels(payload: unknown): HuggingFaceLabel[] {
     labels.push({ label: candidate.label.toLocaleLowerCase(), score: candidate.score });
   }
   return labels;
-}
-
-export function isRiskLabel(label: string) {
-  if (/^(not|non)[\s_-]/.test(label) || label.includes('non-toxic')) return false;
-  return /(toxic|threat|insult|obscene|identity|sexual|hate|offensive|abuse|dangerous)/i.test(label);
 }

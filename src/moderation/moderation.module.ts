@@ -15,6 +15,7 @@ import { AdminModule } from 'src/admin/admin.module';
 import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
 import { TextModerationWorkerService } from './services/text-moderation-worker.service';
 import { TextModerationLocalClassifierService } from './services/text-moderation-local-classifier.service';
+import { ModerationContentNotificationsService } from './services/moderation-content-notifications.service';
 
 @Module({
   imports: [PrismaModule, StorageModule, AdminModule, PassportModule.register({ defaultStrategy: 'jwt' })],
@@ -30,6 +31,7 @@ import { TextModerationLocalClassifierService } from './services/text-moderation
     ThrottlerGuard,
     ThrottlerReflector,
     TextModerationLocalClassifierService,
+    ModerationContentNotificationsService,
     TextModerationWorkerService,
   ],
   exports: [ModerationAccessService, TextModerationWorkerService],

@@ -7,7 +7,6 @@ import type { CreateGroupPostDto } from '../dto/groups-content.dto';
 import type { GroupPostListItem, GroupPostQueryRow, Membership } from '../shared/groups.types';
 import { createGroupPage, encodeGroupDateCursor } from '../shared/groups.pagination';
 import type { GroupDateCursor, GroupPage } from '../shared/groups.pagination';
-import { GroupsNotificationsService } from './groups-notifications.service';
 import { getGroupPhotoReviewStatus } from '../shared/groups.utils';
 
 @Injectable()
@@ -16,7 +15,6 @@ export class GroupsPostsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ModerationAccessService) private readonly moderationAccess: ModerationAccessService,
     @Inject(StorageService) private readonly storage: StorageService | undefined,
-    @Inject(GroupsNotificationsService) private readonly groupNotificationsService: GroupsNotificationsService,
   ) {}
   getPosts(userId: string, groupId: string): Promise<GroupPostListItem[]>;
   getPosts(
@@ -156,9 +154,9 @@ export class GroupsPostsService {
 
   async createPost(userId: string, groupId: string, body: CreateGroupPostDto) {
     try {
-      const group: { name: string; createdByUserId: string } | null = await this.prisma.group.findUnique({
+      const group: { createdByUserId: string } | null = await this.prisma.group.findUnique({
         where: { id: groupId },
-        select: { name: true, createdByUserId: true },
+        select: { createdByUserId: true },
       });
       if (!group) throw new NotFoundException('Group not found');
       const membership: Membership | null = await this.prisma.groupMember.findUnique({
@@ -188,17 +186,6 @@ export class GroupsPostsService {
             moderationStatus: 'pending',
             photoAssetId: body.photoAssetId ?? null,
           },
-        });
-        await this.groupNotificationsService.notifyGroupMembers(transaction, {
-          groupId,
-          groupName: group.name,
-          sourceId: post.id,
-          actorUserId: userId,
-          isAnnouncement:
-            group.createdByUserId === userId || membership?.role === 'admin' || membership?.role === 'owner',
-          kind: 'post',
-          awaitingModeration: true,
-          content: text,
         });
         return post;
       });

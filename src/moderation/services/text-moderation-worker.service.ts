@@ -2,20 +2,17 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { ModerationContentNotificationsService } from './moderation-content-notifications.service';
 import { TextModerationLocalClassifierService } from './text-moderation-local-classifier.service';
 import {
   ACTIVE_REPORT_STATUSES,
-  DEFAULT_TEXT_MODERATION_MODEL,
   DEFAULT_TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD,
-  DEFAULT_TEXT_MODERATION_REVIEW_THRESHOLD,
   LOCAL_TEXT_MODERATION_MODEL_VERSION,
   TEXT_MODERATION_POLL_INTERVAL_MS,
   TEXT_MODERATION_STALE_PROCESSING_MS,
   getTextModerationThreshold,
   getLocalReviewReason,
   normalizeModerationText,
-  parseHuggingFaceLabels,
-  isRiskLabel,
 } from './text-moderation-worker.utils';
 import type { ClassificationResult, TextModerationItem, TextTargetType } from './text-moderation-worker.utils';
 
@@ -29,6 +26,8 @@ export class TextModerationWorkerService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(TextModerationLocalClassifierService)
     private readonly localClassifier: TextModerationLocalClassifierService,
+    @Inject(ModerationContentNotificationsService)
+    private readonly contentNotifications: ModerationContentNotificationsService,
   ) {}
 
   requestStop() {
@@ -56,7 +55,7 @@ export class TextModerationWorkerService {
           needsReview: true,
           scores: {},
           modelVersion: 'unavailable',
-          reason: `Автоматическая проверка недоступна: ${error instanceof Error ? error.message : 'ошибка запроса'}.`,
+          reason: `Автоматическая проверка недоступна: ${error instanceof Error ? error.message : 'ошибка ONNX-классификации'}.`,
         });
       }
       return true;
@@ -68,7 +67,7 @@ export class TextModerationWorkerService {
     this.stopRequested = false;
     await this.requeueInterruptedItems();
     this.logger.log(
-      `Worker премодерации текста запущен: poll=${TEXT_MODERATION_POLL_INTERVAL_MS}ms, model=${process.env.TEXT_MODERATION_HF_MODEL || DEFAULT_TEXT_MODERATION_MODEL}, локальный ONNX fallback включен`,
+      `Worker премодерации текста запущен: poll=${TEXT_MODERATION_POLL_INTERVAL_MS}ms, model=${LOCAL_TEXT_MODERATION_MODEL_VERSION}`,
     );
 
     while (!this.stopRequested) {
@@ -166,83 +165,50 @@ export class TextModerationWorkerService {
       };
     }
 
-    const token = process.env.HF_TOKEN?.trim();
-    if (!token) {
-      return this.classifyLocally(normalized, 'HF_TOKEN не настроен');
-    }
-
-    const model = process.env.TEXT_MODERATION_HF_MODEL?.trim() || DEFAULT_TEXT_MODERATION_MODEL;
-    try {
-      const response = await fetch(`https://router.huggingface.co/hf-inference/models/${model}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inputs: normalized, parameters: { function_to_apply: 'sigmoid', top_k: 20 } }),
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (!response.ok) throw new Error(`Hugging Face вернул HTTP ${response.status}`);
-
-      const payload: unknown = await response.json();
-      const labels = parseHuggingFaceLabels(payload);
-      if (!labels.length) throw new Error('Hugging Face вернул неожиданный формат оценки');
-      const scores = Object.fromEntries(labels.map(({ label, score }) => [label, score]));
-      const riskLabels = labels.filter(({ label }) => isRiskLabel(label));
-      if (!riskLabels.length) throw new Error('Модель не вернула ни одной распознанной категории риска');
-      const riskScore = Math.max(...riskLabels.map(({ score }) => score));
-      const threshold = getTextModerationThreshold(
-        'TEXT_MODERATION_REVIEW_THRESHOLD',
-        DEFAULT_TEXT_MODERATION_REVIEW_THRESHOLD,
-      );
-      return {
-        needsReview: riskScore >= threshold,
-        scores,
-        modelVersion: `huggingface:${model}`,
-        reason: `Максимальная оценка риска ${riskScore.toFixed(3)}; порог ручной проверки ${threshold.toFixed(3)}.`,
-      };
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : 'ошибка запроса';
-      this.logger.warn(`Hugging Face недоступен, переключаемся на локальную модель: ${reason}`);
-      return this.classifyLocally(normalized, `Hugging Face недоступен (${reason})`);
-    }
+    return this.classifyLocally(normalized);
   }
 
-  private async classifyLocally(text: string, fallbackReason: string): Promise<ClassificationResult> {
-    try {
-      const labels = await this.localClassifier.classify(text);
-      const toxic = labels.find(({ label }) => label === 'toxic');
-      if (!toxic) throw new Error('не найдена оценка toxic');
-      const threshold = getTextModerationThreshold(
-        'TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD',
-        DEFAULT_TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD,
-      );
-      return {
-        needsReview: toxic.score >= threshold,
-        scores: Object.fromEntries(labels.map(({ label, score }) => [label, score])),
-        modelVersion: LOCAL_TEXT_MODERATION_MODEL_VERSION,
-        reason: `${fallbackReason}; локальная ONNX оценка toxic=${toxic.score.toFixed(3)}, порог=${threshold.toFixed(3)}.`,
-      };
-    } catch (error) {
-      const localError = error instanceof Error ? error.message : 'ошибка локальной модели';
-      throw new Error(`${fallbackReason}; локальная модель недоступна: ${localError}`, { cause: error });
-    }
+  private async classifyLocally(text: string): Promise<ClassificationResult> {
+    const labels = await this.localClassifier.classify(text);
+    const toxic = labels.find(({ label }) => label === 'toxic');
+    if (!toxic) throw new Error('Локальная ONNX-модель не вернула оценку toxic');
+    const threshold = getTextModerationThreshold(
+      'TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD',
+      DEFAULT_TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD,
+    );
+    return {
+      needsReview: toxic.score >= threshold,
+      scores: Object.fromEntries(labels.map(({ label, score }) => [label, score])),
+      modelVersion: LOCAL_TEXT_MODERATION_MODEL_VERSION,
+      reason: `Локальная ONNX оценка toxic=${toxic.score.toFixed(3)}, порог=${threshold.toFixed(3)}.`,
+    };
   }
 
   private async setStatus(item: TextModerationItem, status: 'visible' | 'pending') {
-    if (item.targetType === 'comment') {
-      await this.prisma.comment.updateMany({
-        where: { id: item.id, moderationStatus: 'processing' },
-        data: { moderationStatus: status, moderationProcessingStartedAt: null },
-      });
-    } else if (item.targetType === 'group_post') {
-      await this.prisma.groupPost.updateMany({
-        where: { id: item.id, moderationStatus: 'processing' },
-        data: { moderationStatus: status, moderationProcessingStartedAt: null },
-      });
-    } else {
-      await this.prisma.activity.updateMany({
-        where: { id: item.id, textModerationStatus: 'processing' },
-        data: { textModerationStatus: status, textModerationProcessingStartedAt: null },
-      });
-    }
+    await this.prisma.$transaction(async (transaction) => {
+      if (item.targetType === 'comment') {
+        const update = await transaction.comment.updateMany({
+          where: { id: item.id, moderationStatus: 'processing' },
+          data: { moderationStatus: status, moderationProcessingStartedAt: null },
+        });
+        if (status === 'visible' && update.count === 1) {
+          await this.contentNotifications.notifyPublishedComment(transaction, item.id);
+        }
+      } else if (item.targetType === 'group_post') {
+        const update = await transaction.groupPost.updateMany({
+          where: { id: item.id, moderationStatus: 'processing' },
+          data: { moderationStatus: status, moderationProcessingStartedAt: null },
+        });
+        if (status === 'visible' && update.count === 1) {
+          await this.contentNotifications.notifyPublishedGroupPost(transaction, item.id);
+        }
+      } else {
+        await transaction.activity.updateMany({
+          where: { id: item.id, textModerationStatus: 'processing' },
+          data: { textModerationStatus: status, textModerationProcessingStartedAt: null },
+        });
+      }
+    });
   }
 
   private async queueForReview(item: TextModerationItem, result: ClassificationResult) {

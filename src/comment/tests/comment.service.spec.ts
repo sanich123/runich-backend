@@ -64,9 +64,8 @@ describe('CommentService', () => {
       user: { email: 'owner@example.com' },
     });
     await expect(service.createCommentByActivityId({ comment: 'Hello' }, 'activity-1')).resolves.toBeUndefined();
-    expect(prisma.emailNotificationJob.create).toHaveBeenCalledWith({
-      data: { notificationType: 'comment', sourceId: 'comment-1', status: 'queued' },
-    });
+    expect(prisma.emailNotificationJob.create).not.toHaveBeenCalled();
+    expect(prisma.notification.create).not.toHaveBeenCalled();
     await expect(service.deleteCommentByCommentId('comment-1')).resolves.toEqual(comment);
     await expect(service.updateCommentByCommentId('Updated', 'comment-1')).resolves.toEqual(comment);
     await expect(service.getCommentByCommentId('comment-1')).resolves.toEqual({
@@ -171,7 +170,7 @@ describe('CommentService', () => {
     });
   });
 
-  it('creates an in-app notification when a user comments on another user activity', async () => {
+  it('does not notify the activity owner while a comment is pending moderation', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1', name: 'Alice' }) };
     const activityService = {
@@ -190,20 +189,8 @@ describe('CommentService', () => {
 
     await service.createCommentByActivityId({ comment: 'Nice run' }, 'activity-1', 'actor-1');
 
-    expect(prisma.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        recipientUserId: 'owner-1',
-        actorUserId: 'actor-1',
-        type: 'comment',
-        sourceId: 'comment-1',
-        targetType: 'activity',
-        targetId: 'activity-1',
-        relatedId: 'comment-1',
-        content: 'A new comment is awaiting moderation.',
-        inApp: true,
-      }),
-      select: { id: true },
-    });
+    expect(prisma.notification.create).not.toHaveBeenCalled();
+    expect(prisma.emailNotificationJob.create).not.toHaveBeenCalled();
   });
 
   it('selects comment fields and profile data without loading comment likes', async () => {

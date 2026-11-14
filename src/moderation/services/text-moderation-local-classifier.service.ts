@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { resolve } from 'node:path';
-import { parseHuggingFaceLabels } from './text-moderation-worker.utils';
+import { parseClassificationLabels } from './text-moderation-worker.utils';
 
 @Injectable()
 export class TextModerationLocalClassifierService {
@@ -12,9 +12,9 @@ export class TextModerationLocalClassifierService {
       throw error;
     }));
     const payload = await classifier(text, { top_k: 2 });
-    const labels = parseHuggingFaceLabels(payload);
+    const labels = parseClassificationLabels(payload);
     if (!labels.some(({ label }) => label === 'toxic')) {
-      throw new Error('Локальная модель не вернула категорию toxic с оценкой');
+      throw new Error('Локальная ONNX-модель не вернула категорию toxic с оценкой');
     }
     return labels;
   }

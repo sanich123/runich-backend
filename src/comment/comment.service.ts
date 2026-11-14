@@ -9,9 +9,6 @@ import { CommentLikeService } from './comment-like.service';
 import { encodeCommentCursor } from './comment.pagination';
 import type { CommentCursor } from './comment.pagination';
 import { COMMENT_PROFILE_SELECT } from './const';
-import { EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
-import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
-import { createNotificationEvent } from 'src/notification/notification-event';
 
 @Injectable()
 export class CommentService {
@@ -144,7 +141,7 @@ export class CommentService {
       const account = await this.accountService.getAccountByUserId(currentUserId ?? '');
       if (!account?.id) throw new NotFoundException('Профиль автора не найден: authorId');
       await this.prisma.$transaction(async (transaction) => {
-        const createdComment = await transaction.comment.create({
+        await transaction.comment.create({
           data: {
             profileId: account.id,
             activityId: id,
@@ -153,26 +150,6 @@ export class CommentService {
             moderationStatus: 'pending',
           },
         });
-        const activity = await transaction.activity.findUnique({ where: { id }, select: { userId: true } });
-        if (activity) {
-          await createNotificationEvent(transaction, {
-            recipientUserId: activity.userId,
-            actorUserId: currentUserId ?? null,
-            type: NOTIFICATION_TYPE.comment,
-            emailNotificationType: EMAIL_NOTIFICATION_TYPE.comment,
-            sourceId: createdComment.id,
-            targetType: 'activity',
-            targetId: id,
-            relatedId: createdComment.id,
-            actorName: account.name,
-            actorSurname: account.surname,
-            actorProfilePhoto: account.profilePhoto,
-            localizedContent: {
-              russian: 'Новый комментарий отправлен на проверку.',
-              english: 'A new comment is awaiting moderation.',
-            },
-          });
-        }
       });
     } catch (error) {
       handleServiceError(error);
