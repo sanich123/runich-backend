@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'efaff73a1d0c739fb5d6e31c4c1620ab73277ca4fcd6e71af28c24d8ede56750'>;
+  StorageHashBase<'b3ec3b8f7f02095e0fb6999f37255c8e096d93be799f93e7bbfe764ce6ad437e'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -1647,6 +1647,11 @@ type ContractBase = Omit<
               ];
               indexes: readonly [
                 {
+                  readonly name: 'Activity_text_moderation_status_updated_at_id_idx';
+                  readonly columns: readonly ['text_moderation_status', 'updatedAt', 'id'];
+                  readonly unique: false;
+                },
+                {
                   readonly name: 'Activity_user_id_date_id_idx';
                   readonly columns: readonly ['user_id', 'date', 'id'];
                   readonly unique: false;
@@ -2422,6 +2427,11 @@ type ContractBase = Omit<
                   readonly columns: readonly ['activityId', 'date', 'id'];
                   readonly unique: false;
                 },
+                {
+                  readonly name: 'Comment_moderation_status_date_id_idx';
+                  readonly columns: readonly ['moderation_status', 'date', 'id'];
+                  readonly unique: false;
+                },
               ];
               foreignKeys: readonly [
                 {
@@ -2685,6 +2695,11 @@ type ContractBase = Omit<
                   readonly name: 'ContentReport_comment_id_idx_fe121171';
                   readonly prefix: 'ContentReport_comment_id_idx';
                   readonly columns: readonly ['comment_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'ContentReport_comment_target_status_idx';
+                  readonly columns: readonly ['comment_id', 'target_type', 'status'];
                   readonly unique: false;
                 },
                 {
@@ -3540,6 +3555,11 @@ type ContractBase = Omit<
                   readonly name: 'GroupPost_group_id_idx_704354b6';
                   readonly prefix: 'GroupPost_group_id_idx';
                   readonly columns: readonly ['group_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'GroupPost_moderation_status_created_at_id_idx';
+                  readonly columns: readonly ['moderation_status', 'created_at', 'id'];
                   readonly unique: false;
                 },
               ];

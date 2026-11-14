@@ -15,6 +15,7 @@ model Comment {
   contentReports ContentReport[]    @relation("ContentReportComment")
 
   @@index([activityId, date, id], map: "Comment_activityId_idx")
+  @@index([moderationStatus, date, id], map: "Comment_moderation_status_date_id_idx")
   @@map("Comment")
 }
 

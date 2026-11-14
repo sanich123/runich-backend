@@ -36,6 +36,7 @@ model ContentReport {
   @@index([reporterId, createdAt], map: "ContentReport_reporter_createdAt_idx")
   @@index([subjectUserId, createdAt], map: "ContentReport_subject_createdAt_idx")
   @@index([targetType, targetId], map: "ContentReport_target_idx")
+  @@index([commentId, targetType, status], map: "ContentReport_comment_target_status_idx")
   @@index([mediaUploadId], map: "ContentReport_media_upload_id_idx")
   @@index([groupPostId], map: "ContentReport_group_post_id_idx")
   @@map("ContentReport")

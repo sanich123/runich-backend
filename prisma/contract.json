@@ -7397,6 +7397,15 @@
               "indexes": [
                 {
                   "columns": [
+                    "text_moderation_status",
+                    "updatedAt",
+                    "id"
+                  ],
+                  "name": "Activity_text_moderation_status_updated_at_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
                     "user_id",
                     "date",
                     "id"
@@ -8383,6 +8392,15 @@
                   ],
                   "name": "Comment_activityId_idx",
                   "unique": false
+                },
+                {
+                  "columns": [
+                    "moderation_status",
+                    "date",
+                    "id"
+                  ],
+                  "name": "Comment_moderation_status_date_id_idx",
+                  "unique": false
                 }
               ],
               "primaryKey": {
@@ -8876,6 +8894,15 @@
                   ],
                   "name": "ContentReport_comment_id_idx_fe121171",
                   "prefix": "ContentReport_comment_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "comment_id",
+                    "target_type",
+                    "status"
+                  ],
+                  "name": "ContentReport_comment_target_status_idx",
                   "unique": false
                 },
                 {
@@ -9954,6 +9981,15 @@
                   ],
                   "name": "GroupPost_group_id_idx_704354b6",
                   "prefix": "GroupPost_group_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "moderation_status",
+                    "created_at",
+                    "id"
+                  ],
+                  "name": "GroupPost_moderation_status_created_at_id_idx",
                   "unique": false
                 }
               ],
@@ -12711,7 +12747,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "efaff73a1d0c739fb5d6e31c4c1620ab73277ca4fcd6e71af28c24d8ede56750"
+    "storageHash": "b3ec3b8f7f02095e0fb6999f37255c8e096d93be799f93e7bbfe764ce6ad437e"
   },
   "capabilities": {
     "postgres": {

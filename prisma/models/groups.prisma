@@ -86,6 +86,7 @@ model GroupPost {
   contentReports  ContentReport[]       @relation("ContentReportGroupPost")
 
   @@index([groupId, createdAt], map: "GroupPost_group_id_created_at_idx")
+  @@index([moderationStatus, createdAt, id], map: "GroupPost_moderation_status_created_at_id_idx")
   @@map("GroupPost")
 }
 
