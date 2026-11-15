@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { asyncMock, transactionMock } from 'src/tests/helpers';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
@@ -13,6 +14,7 @@ function createPrismaMock() {
     comment: { findUnique: asyncMock(), update: asyncMock() },
     contentReport: {
       create: asyncMock(),
+      delete: asyncMock(),
       findFirst: asyncMock(),
       findMany: asyncMock(),
       findUnique: asyncMock(),
@@ -22,11 +24,13 @@ function createPrismaMock() {
     mediaModerationAsset: { findUnique: asyncMock() },
     moderationAction: {
       create: asyncMock().mockResolvedValue({ id: 'moderation-action-1' }),
+      deleteMany: asyncMock(),
       findFirst: asyncMock(),
       findMany: asyncMock(),
     },
     moderationAppeal: {
       create: asyncMock(),
+      deleteMany: asyncMock(),
       findFirst: asyncMock(),
       findMany: asyncMock(),
       findUnique: asyncMock(),
@@ -35,6 +39,8 @@ function createPrismaMock() {
     userBlock: { deleteMany: asyncMock(), findMany: asyncMock(), upsert: asyncMock() },
     friend: { deleteMany: asyncMock() },
     profile: { findMany: asyncMock(), findUnique: asyncMock() },
+    groupPost: { findUnique: asyncMock() },
+    group: { findUnique: asyncMock() },
     notification: { create: asyncMock().mockResolvedValue({ id: 'notification-1' }) },
     pushNotificationJob: { create: asyncMock() },
     emailNotificationJob: { create: asyncMock() },
@@ -182,7 +188,7 @@ describe('ModerationService', () => {
     const queue = [{ id: 'urgent-1', priority: 'urgent' }];
     prisma.contentReport.findMany.mockResolvedValue(queue);
 
-    await expect(service.getReportQueue(undefined, 5)).resolves.toBe(queue);
+    await expect(service.getReportQueue(undefined, 5)).resolves.toEqual([{ ...queue[0], contextPreview: null }]);
     expect(prisma.contentReport.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { status: { in: ['open', 'in_review', 'appealed'] } },
@@ -216,6 +222,8 @@ describe('ModerationService', () => {
 
     await expect(service.getReportDetails('report-1')).resolves.toEqual({
       report,
+      reporter: null,
+      contentAuthor: null,
       context: expect.objectContaining({
         url: 'signed-preview',
         userId: 'owner-1',
@@ -225,6 +233,167 @@ describe('ModerationService', () => {
     });
     expect(storage.getQuarantinePreviewUrl).toHaveBeenCalledWith('moderation-quarantine/owner-1/asset-1.jpg');
     await expect(service.getReportDetails('missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('returns the reporter and original content author with profile and email details', async () => {
+    const prisma = createPrismaMock();
+    const service = new ModerationService(prisma as never, {} as never);
+    prisma.contentReport.findUnique.mockResolvedValue({
+      id: 'report-1',
+      targetType: 'comment',
+      targetId: 'comment-1',
+      reporterId: 'reporter-1',
+      subjectUserId: 'author-1',
+    });
+    prisma.user.findUnique
+      .mockResolvedValueOnce({
+        email: 'reporter@example.test',
+        profile: { name: 'Riley', surname: 'Reporter', profilePhoto: 'reporter-photo' },
+      })
+      .mockResolvedValueOnce({
+        email: 'author@example.test',
+        profile: { name: 'Casey', surname: 'Author', profilePhoto: 'author-photo' },
+      });
+    prisma.comment.findUnique.mockResolvedValue({ comment: 'Reported comment' });
+    prisma.moderationAction.findMany.mockResolvedValue([]);
+
+    await expect(service.getReportDetails('report-1')).resolves.toMatchObject({
+      reporter: {
+        userId: 'reporter-1',
+        name: 'Riley',
+        surname: 'Reporter',
+        profilePhoto: 'reporter-photo',
+        email: 'reporter@example.test',
+      },
+      contentAuthor: {
+        userId: 'author-1',
+        name: 'Casey',
+        surname: 'Author',
+        profilePhoto: 'author-photo',
+        email: 'author@example.test',
+      },
+    });
+  });
+
+  it('returns null for a deleted reporter and keeps empty author profile fields nullable', async () => {
+    const prisma = createPrismaMock();
+    const service = new ModerationService(prisma as never, {} as never);
+    prisma.contentReport.findUnique.mockResolvedValue({
+      id: 'report-1',
+      targetType: 'comment',
+      targetId: 'comment-1',
+      reporterId: 'deleted-reporter',
+      subjectUserId: 'author-1',
+    });
+    prisma.user.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ email: 'author@example.test', profile: null });
+    prisma.comment.findUnique.mockResolvedValue({ comment: 'Reported comment' });
+    prisma.moderationAction.findMany.mockResolvedValue([]);
+
+    await expect(service.getReportDetails('report-1')).resolves.toMatchObject({
+      reporter: null,
+      contentAuthor: {
+        userId: 'author-1',
+        name: null,
+        surname: null,
+        profilePhoto: null,
+        email: 'author@example.test',
+      },
+    });
+  });
+
+  it('deletes a report and its related history in a transaction', async () => {
+    const prisma = createPrismaMock();
+    const service = new ModerationService(prisma as never, {} as never);
+    prisma.contentReport.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'report-1' });
+
+    await expect(service.deleteReport('missing')).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+
+    await expect(service.deleteReport('report-1')).resolves.toBeUndefined();
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.moderationAppeal.deleteMany).toHaveBeenCalledWith({ where: { reportId: 'report-1' } });
+    expect(prisma.moderationAction.deleteMany).toHaveBeenCalledWith({ where: { reportId: 'report-1' } });
+    expect(prisma.contentReport.delete).toHaveBeenCalledWith({ where: { id: 'report-1' } });
+  });
+
+  it('includes group-post text, media preview, and automatic moderation data in report context', async () => {
+    const prisma = createPrismaMock();
+    const storage = {
+      getPublicUrl: jest.fn((key: string) => `public:${key}`),
+      getQuarantinePreviewUrl: asyncMock().mockResolvedValue('quarantine-preview'),
+    };
+    const service = new ModerationService(prisma as never, storage as never);
+    prisma.contentReport.findUnique.mockResolvedValue({ id: 'report-1', targetType: 'group_post', targetId: 'post-1' });
+    prisma.groupPost.findUnique.mockResolvedValue({
+      text: 'Post text',
+      createdByUserId: 'author-1',
+      moderationStatus: 'visible',
+      photoAsset: {
+        quarantineKey: 'quarantine/post.jpg',
+        publishedKey: 'published/post.jpg',
+        status: 'approved',
+        contentType: 'image/jpeg',
+        scores: { Porn: 0.02 },
+        frameCount: 1,
+        modelVersion: 'nsfwjs-1',
+      },
+    });
+    prisma.moderationAction.findMany.mockResolvedValue([]);
+
+    await expect(service.getReportDetails('report-1')).resolves.toMatchObject({
+      context: {
+        comment: 'Post text',
+        authorId: 'author-1',
+        url: 'public:published/post.jpg',
+        mediaStatus: 'approved',
+        contentType: 'image/jpeg',
+        scores: { Porn: 0.02 },
+        frameCount: 1,
+        modelVersion: 'nsfwjs-1',
+      },
+    });
+  });
+
+  it('uses the quarantine preview for pending group-post media and handles deleted posts', async () => {
+    const prisma = createPrismaMock();
+    const storage = { getQuarantinePreviewUrl: asyncMock().mockResolvedValue('quarantine-preview') };
+    const service = new ModerationService(prisma as never, storage as never);
+    prisma.contentReport.findUnique
+      .mockResolvedValueOnce({ id: 'report-1', targetType: 'group_post', targetId: 'post-1' })
+      .mockResolvedValueOnce({ id: 'report-2', targetType: 'group_post', targetId: 'deleted-post' });
+    prisma.groupPost.findUnique
+      .mockResolvedValueOnce({
+        text: 'Pending post',
+        createdByUserId: 'author-1',
+        moderationStatus: 'pending',
+        photoAsset: {
+          quarantineKey: 'quarantine/post.jpg',
+          publishedKey: null,
+          status: 'review_required',
+          contentType: null,
+          scores: null,
+          frameCount: null,
+          modelVersion: null,
+        },
+      })
+      .mockResolvedValueOnce(null);
+    prisma.moderationAction.findMany.mockResolvedValue([]);
+
+    await expect(service.getReportDetails('report-1')).resolves.toMatchObject({
+      context: {
+        comment: 'Pending post',
+        url: 'quarantine-preview',
+        mediaStatus: 'review_required',
+        contentType: null,
+        scores: null,
+        frameCount: null,
+        modelVersion: null,
+      },
+    });
+    expect(storage.getQuarantinePreviewUrl).toHaveBeenCalledWith('quarantine/post.jpg');
+    await expect(service.getReportDetails('report-2')).resolves.toMatchObject({ context: null });
   });
 
   it('hides reported comments and records the moderator action in the same transaction', async () => {

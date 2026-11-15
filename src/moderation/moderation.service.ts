@@ -36,6 +36,10 @@ export class ModerationService {
     return this.reports.getReportQueue(status, take);
   }
 
+  async deleteReport(reportId: string) {
+    return this.reports.deleteReport(reportId);
+  }
+
   async getReportDetails(reportId: string) {
     return this.reports.getReportDetails(reportId);
   }

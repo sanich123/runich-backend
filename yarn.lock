@@ -152,9 +152,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/client-s3@npm:3.1168.0":
-  version: 3.1168.0
-  resolution: "@aws-sdk/client-s3@npm:3.1168.0"
+"@aws-sdk/client-s3@npm:3.1169.0":
+  version: 3.1169.0
+  resolution: "@aws-sdk/client-s3@npm:3.1169.0"
   dependencies:
     "@aws-sdk/checksums": "npm:^3.1002.5"
     "@aws-sdk/core": "npm:^3.981.0"
@@ -167,7 +167,7 @@ __metadata:
     "@smithy/node-http-handler": "npm:^4.14.2"
     "@smithy/types": "npm:^4.20.0"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/6ac306baa6af088ace2305b8fda21563989b80f9406b440d8d1515042e847ae4d9eed1546c3d7b73f7e45a72175b21fae32c32c42e39fcf5942c3acd6ca3b50d
+  checksum: 10c0/e2c4ac5c0e288d681aca87ae2153cf870cb1d10055fa19d6f5c90d44f77dfd103742392fc03c25dc723756cb1f6a5ad066395b1cc25d2e9675565d806ea8d26f
   languageName: node
   linkType: hard
 
@@ -341,9 +341,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/s3-request-presigner@npm:3.1168.0":
-  version: 3.1168.0
-  resolution: "@aws-sdk/s3-request-presigner@npm:3.1168.0"
+"@aws-sdk/s3-request-presigner@npm:3.1169.0":
+  version: 3.1169.0
+  resolution: "@aws-sdk/s3-request-presigner@npm:3.1169.0"
   dependencies:
     "@aws-sdk/core": "npm:^3.981.0"
     "@aws-sdk/signature-v4-multi-region": "npm:^3.996.52"
@@ -351,7 +351,7 @@ __metadata:
     "@smithy/core": "npm:^3.40.0"
     "@smithy/types": "npm:^4.20.0"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/c9ec91ac593521c1397b5b3d689c1b315e0b271ae0e510f4ffbc4fec52d8be9d1fda954757f214ff2b58c8e9032f5ec405e3aef85d42c2d4ecdd64d487694ad1
+  checksum: 10c0/69e2333480d9654e21383d56ae4c6ec2d4ca6d76096c13d0036568e5d15f0bb8625771471e171ad916d8ee47a53a019e7fc03dbdb94e2f8d0e4e7d385bbac5ab
   languageName: node
   linkType: hard
 
@@ -1313,14 +1313,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/config-array@npm:^0.23.5":
-  version: 0.23.5
-  resolution: "@eslint/config-array@npm:0.23.5"
+"@eslint/config-array@npm:^0.23.6":
+  version: 0.23.6
+  resolution: "@eslint/config-array@npm:0.23.6"
   dependencies:
     "@eslint/object-schema": "npm:^3.0.5"
     debug: "npm:^4.3.1"
-    minimatch: "npm:^10.2.4"
-  checksum: 10c0/b24833c4c76e78ee075d306cd3f095db46b2db0f90cc13a6ee6e4275f9889731c05bf5403ab5fefb79c756e07ac9184ed0e04570341382f9eccbccc80e6d1a0c
+    minimatch: "npm:^11.0.5"
+  checksum: 10c0/adf798a55b4f58e1db954347633ca2c07c51d413590f274f77d1d94d3413de3d321e3558e313f616a822cb76d90e9c378ec6dd2f49b3e51a2070e61f4405f2ae
   languageName: node
   linkType: hard
 
@@ -7780,13 +7780,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint@npm:^10.14.0":
-  version: 10.14.0
-  resolution: "eslint@npm:10.14.0"
+"eslint@npm:^10.15.0":
+  version: 10.15.0
+  resolution: "eslint@npm:10.15.0"
   dependencies:
     "@eslint-community/eslint-utils": "npm:^4.8.0"
     "@eslint-community/regexpp": "npm:^4.12.2"
-    "@eslint/config-array": "npm:^0.23.5"
+    "@eslint/config-array": "npm:^0.23.6"
     "@eslint/config-helpers": "npm:^0.7.0"
     "@eslint/core": "npm:^1.2.1"
     "@eslint/plugin-kit": "npm:^0.7.3"
@@ -7811,7 +7811,7 @@ __metadata:
     imurmurhash: "npm:^0.1.4"
     is-glob: "npm:^4.0.0"
     json-stable-stringify-without-jsonify: "npm:^1.0.1"
-    minimatch: "npm:^10.2.6"
+    minimatch: "npm:^11.0.5"
     natural-compare: "npm:^1.4.0"
     optionator: "npm:^0.9.3"
   peerDependencies:
@@ -7821,7 +7821,7 @@ __metadata:
       optional: true
   bin:
     eslint: bin/eslint.js
-  checksum: 10c0/738cdd0a1aa37b8bddefb5c89206f9f202540e8fce57f7ef82649b5bdf0acd67f7b9f2724f538b11149bd9bfdd14605125568cf73b319baec007866677af72dd
+  checksum: 10c0/81775d3bc273007b3b6f08d114f57b0c83527e8ebbb89674726bbd29b66883a6fef016a0271e05014a067d1c1079514c5523df96b86740fdfe65ef56abacb030
   languageName: node
   linkType: hard
 
@@ -10664,12 +10664,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimatch@npm:^10.2.2, minimatch@npm:^10.2.4, minimatch@npm:^10.2.6":
+"minimatch@npm:^10.2.2":
   version: 10.2.6
   resolution: "minimatch@npm:10.2.6"
   dependencies:
     brace-expansion: "npm:^5.0.8"
   checksum: 10c0/4559a836243b98bd4d17ea9f7edae698717c76399eea7be374f3737f33164e4907f19e9726891ddeb122f750a5a7fa80d2ac43e851d6e5984dc4ff42ec127d3a
+  languageName: node
+  linkType: hard
+
+"minimatch@npm:^11.0.5":
+  version: 11.0.8
+  resolution: "minimatch@npm:11.0.8"
+  dependencies:
+    "@isaacs/nonrecursive-glob-match": "npm:^1.1.0"
+    brace-expansion: "npm:^5.0.12"
+  checksum: 10c0/9f4cfaa792adbd78f3aed1fec74ff9af94bfed6832f31a4f5fa36cf9bb928b2f8fdacbeccc2ea6617e9ec09ce5f5d386eb3efb59b29915b43a1884fc689749c5
   languageName: node
   linkType: hard
 
@@ -12604,8 +12614,8 @@ __metadata:
   resolution: "runich-backend@workspace:."
   dependencies:
     "@ardentcode/sports-lib": "npm:^5.4.29"
-    "@aws-sdk/client-s3": "npm:3.1168.0"
-    "@aws-sdk/s3-request-presigner": "npm:3.1168.0"
+    "@aws-sdk/client-s3": "npm:3.1169.0"
+    "@aws-sdk/s3-request-presigner": "npm:3.1169.0"
     "@eslint/js": "npm:^10.0.1"
     "@huggingface/transformers": "npm:4.3.2"
     "@jest/globals": "npm:^30.5.2"
@@ -12650,7 +12660,7 @@ __metadata:
     csv-parse: "npm:^7.0.3"
     depcheck: "npm:^1.4.7"
     dotenv: "npm:^18.0.10"
-    eslint: "npm:^10.14.0"
+    eslint: "npm:^10.15.0"
     express: "npm:^5.3.0"
     globals: "npm:^17.14.0"
     husky: "npm:^9.1.7"
