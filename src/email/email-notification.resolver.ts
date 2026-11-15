@@ -1,5 +1,6 @@
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { EmailNotificationService } from './email-notification.service';
+import { StorageService } from 'src/storage/services/storage.service';
 import { EMAIL_NOTIFICATION_TYPE } from './email-notification.constants';
 import {
   resolveActivityLikeNotification,
@@ -18,6 +19,7 @@ export class EmailNotificationResolver {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: EmailNotificationService,
+    private readonly storage?: StorageService,
   ) {}
 
   async resolve(job: { notificationType: string; sourceId: string }) {
@@ -31,7 +33,7 @@ export class EmailNotificationResolver {
       case EMAIL_NOTIFICATION_TYPE.groupJoinRequest:
         return resolveGroupJoinRequestNotification(this.prisma, this.notifications, job.sourceId);
       case EMAIL_NOTIFICATION_TYPE.moderationReport:
-        return resolveModerationReportNotification(this.prisma, this.notifications, job.sourceId);
+        return resolveModerationReportNotification(this.prisma, this.notifications, job.sourceId, this.storage);
       case EMAIL_NOTIFICATION_TYPE.reporterReceipt:
         return resolveReporterReceiptNotification(this.prisma, this.notifications, job.sourceId);
       case EMAIL_NOTIFICATION_TYPE.reporterDecision:

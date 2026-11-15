@@ -3,9 +3,10 @@ import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { AdminModule } from 'src/admin/admin.module';
 import { EmailNotificationService } from './email-notification.service';
 import { EmailNotificationWorkerService } from './email-notification-worker.service';
+import { StorageModule } from 'src/storage/storage.module';
 
 @Module({
-  imports: [PrismaModule, AdminModule],
+  imports: [PrismaModule, StorageModule, AdminModule],
   providers: [EmailNotificationService, EmailNotificationWorkerService],
   exports: [EmailNotificationService, EmailNotificationWorkerService],
 })

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ACTIVITY_MIGRATION_CONFIG } from 'src/activity/shared/const';
@@ -6,6 +6,7 @@ import { EmailNotificationService } from './email-notification.service';
 import { MAX_ATTEMPTS, MAX_RETRY_DELAY_MS, STALE_JOB_AGE_MS } from './email-notification-worker.constants';
 import { EMAIL_NOTIFICATION_JOB_STATUS } from './email-notification.constants';
 import { EmailNotificationResolver } from './email-notification.resolver';
+import { StorageService } from 'src/storage/services/storage.service';
 
 @Injectable()
 export class EmailNotificationWorkerService {
@@ -17,8 +18,9 @@ export class EmailNotificationWorkerService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(EmailNotificationService) private readonly notifications: EmailNotificationService,
+    @Optional() @Inject(StorageService) private readonly storage?: StorageService,
   ) {
-    this.resolver = new EmailNotificationResolver(this.prisma, this.notifications);
+    this.resolver = new EmailNotificationResolver(this.prisma, this.notifications, this.storage);
   }
 
   requestStop() {

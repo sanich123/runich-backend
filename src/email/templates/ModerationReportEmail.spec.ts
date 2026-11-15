@@ -29,6 +29,10 @@ function renderEmail(props: ModerationReportEmailProps) {
   return ModerationReportEmail(props);
 }
 
+function collectRenderedText(html: string) {
+  return html.replace(/<!--.*?-->/g, '').replace(/<[^>]*>/g, ' ');
+}
+
 describe('ModerationReportEmail', () => {
   it('builds a report email with the moderator dashboard link and readable labels', () => {
     const email = renderEmail({
@@ -109,20 +113,23 @@ describe('ModerationReportEmail', () => {
         profilePhoto: 'https://cdn.example/profile.jpg',
       },
     });
-    const text = collectText(email);
     const html = await render(email);
+    const text = collectRenderedText(html);
 
     expect(text).toContain('Repeated unwanted messages');
-    expect(text).toContain('Кто пожаловался: Sam Reporter (ID: reporter-1)');
-    expect(text).toContain('ID контента: profile-1');
-    expect(text).toContain('Автор контента: Alex Runner (ID: reported-user-1)');
-    expect(text).toContain('Профиль, на который пожаловались');
+    expect(text).toContain('Кто пожаловался');
+    expect(text).toContain('Имя и фамилия: Sam Reporter');
+    expect(text).toContain('Email: не указан');
+    expect(text).toContain('Автор контента');
+    expect(text).toContain('Имя и фамилия: Alex Runner');
+    expect(text).not.toContain('ID контента:');
+    expect(text).not.toContain('ID:');
     expect(html).toContain('src="https://cdn.example/profile.jpg"');
     expect(text).toContain('Alex Runner');
     expect(text).toContain('Runner profile');
   });
 
-  it('identifies an automatic media review and falls back to the uploader email', () => {
+  it('identifies an automatic media review and falls back to the uploader email', async () => {
     const email = renderEmail({
       reportId: 'report-media-upload',
       requestType: 'report',
@@ -132,11 +139,13 @@ describe('ModerationReportEmail', () => {
       reporterDetails: 'Автоматическая проверка NSFWJS: Porn=0.99.',
       reportedUser: { id: 'owner-1', email: 'owner@example.com' },
     });
-    const text = collectText(email);
+    const text = collectRenderedText(await render(email));
 
-    expect(text).toContain('Источник: автоматическая проверка NSFWJS');
+    expect(text).toContain('Источник: автоматическая проверка медиа');
+    expect(text).toContain('Автоматическая проверка NSFWJS');
     expect(text).toContain('Тип контента: Фото или видео');
-    expect(text).toContain('Автор контента: owner@example.com (ID: owner-1)');
+    expect(text).toContain('Email: owner@example.com');
+    expect(text).not.toContain('ID:');
     expect(text).not.toContain('Кто пожаловался:');
   });
 
@@ -150,10 +159,10 @@ describe('ModerationReportEmail', () => {
         reportedProfile: { name: null, surname: null, bio: null, profilePhoto: null },
       }),
     );
+    const text = collectRenderedText(html);
 
-    expect(html).toContain('не указаны');
-    expect(html).toContain('Описание:');
-    expect(html).toContain('не указано');
+    expect(text).toContain('не указаны');
+    expect(text).toContain('Email: не указан');
     expect(html).not.toContain('<img alt="Фото профиля"');
   });
 });
