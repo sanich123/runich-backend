@@ -8,7 +8,7 @@ import { AccountModule } from 'src/account/account.module';
 import { CommentModule } from 'src/comment/comment.module';
 import { LikeModule } from 'src/like/like.module';
 import { StatisticModule } from 'src/statistic/statistic.module';
-import { EmailModule } from 'src/email/email.module';
+import { FeedbackModule } from 'src/feedback/feedback.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { HealthModule } from 'src/health/health.module';
 import LoggingService from 'src/common/logger/logger.middleware';
@@ -34,7 +34,7 @@ import { GroupsModule } from 'src/groups/groups.module';
     CommentModule,
     LikeModule,
     StatisticModule,
-    EmailModule,
+    FeedbackModule,
     NotificationModule,
     ModerationModule,
     AdminModule,

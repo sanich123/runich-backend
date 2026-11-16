@@ -65,6 +65,8 @@ model User {
   grantedAdminRoleAssignments AdminRoleAssignment[] @relation("AdminRoleAssignmentGrantor")
   adminAccessAuditAsActor AdminAccessAudit[] @relation("AdminAccessAuditActor")
   adminAccessAuditAsTarget AdminAccessAudit[] @relation("AdminAccessAuditTarget")
+  submittedFeedbackRequests FeedbackRequest[] @relation("FeedbackRequestSubmitter")
+  authoredFeedbackReplies  FeedbackReply[]   @relation("FeedbackReplyAuthor")
 
   @@unique([email], map: "Users_email_key")
   @@unique([phone], map: "Users_phone_key")

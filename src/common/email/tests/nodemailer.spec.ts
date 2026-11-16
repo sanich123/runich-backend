@@ -9,7 +9,7 @@ jest.unstable_mockModule('nodemailer', () => ({
 }));
 jest.unstable_mockModule('node:os', () => ({ networkInterfaces }));
 
-const { sendEmail } = await import('../nodemailer');
+const { sendEmail, sendSupportEmail } = await import('../nodemailer');
 
 describe('sendEmail through Yandex SMTP', () => {
   const originalEnvironment = { ...process.env };
@@ -93,5 +93,30 @@ describe('sendEmail through Yandex SMTP', () => {
     await expect(sendEmail('runner@example.com', 'Subject', '<p>Body</p>')).rejects.toThrow(
       'Не настроена обязательная переменная окружения: YANDEX_SMTP_PASSWORD',
     );
+  });
+
+  it('sends support mail through Yandex SMTP without requiring activity email configuration', async () => {
+    await sendSupportEmail('runner@example.com', 'Support', '<p>We received your request.</p>');
+
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: 'Runich <runich.app@yandex.ru>',
+        to: 'runner@example.com',
+        subject: 'Support',
+        html: '<p>We received your request.</p>',
+      }),
+    );
+  });
+
+  it('records support mail latency and rethrows SMTP errors', async () => {
+    const failure = new Error('Support mailbox unavailable');
+    const metrics = { observeExternal: jest.fn() };
+    sendMail.mockRejectedValueOnce(failure);
+
+    await expect(sendSupportEmail('runner@example.com', 'Support', '<p>Body</p>', metrics as never)).rejects.toBe(
+      failure,
+    );
+
+    expect(metrics.observeExternal).toHaveBeenCalledWith('smtp', 'send', expect.any(Number));
   });
 });

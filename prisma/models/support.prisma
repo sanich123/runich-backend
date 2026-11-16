@@ -1,0 +1,38 @@
+// use prisma-8
+
+model FeedbackRequest {
+  id                       Uuid                    @id(map: "FeedbackRequest_pkey") @default(sql`gen_random_uuid()`)
+  kind                     Varchar(32)
+  topic                    Varchar(32)?
+  email                    Varchar(255)
+  text                     Varchar(10000)
+  deviceInfo               Varchar(2000)           @map("device_info")
+  attachments              Jsonb?
+  status                   Varchar(32)             @default("open")
+  senderUserId             Uuid?                   @map("sender_user_id")
+  confirmationEmailSent    Boolean                 @default(false) @map("confirmation_email_sent")
+  adminNotificationSent    Boolean                 @default(false) @map("admin_notification_sent")
+  createdAt                TimestamptzString(6)    @default(now()) @map("created_at")
+  updatedAt                TimestamptzString(6)    @default(now()) @map("updated_at")
+  sender                   User?                   @relation("FeedbackRequestSubmitter", fields: [senderUserId], references: [id], onDelete: SetNull, map: "FeedbackRequest_sender_user_id_fkey")
+  replies                  FeedbackReply[]
+
+  @@index([status, createdAt], map: "FeedbackRequest_status_created_at_idx")
+  @@index([email, createdAt], map: "FeedbackRequest_email_created_at_idx")
+  @@map("FeedbackRequest")
+}
+
+model FeedbackReply {
+  id               Uuid                  @id(map: "FeedbackReply_pkey") @default(sql`gen_random_uuid()`)
+  requestId        Uuid                  @map("request_id")
+  adminUserId      Uuid?                 @map("admin_user_id")
+  adminEmail       Varchar(255)          @map("admin_email")
+  text             Varchar(10000)
+  deliveryStatus   Varchar(32)           @default("pending") @map("delivery_status")
+  createdAt        TimestamptzString(6)  @default(now()) @map("created_at")
+  request          FeedbackRequest       @relation(fields: [requestId], references: [id], onDelete: Cascade, map: "FeedbackReply_request_id_fkey")
+  admin            User?                 @relation("FeedbackReplyAuthor", fields: [adminUserId], references: [id], onDelete: SetNull, map: "FeedbackReply_admin_user_id_fkey")
+
+  @@index([requestId, createdAt], map: "FeedbackReply_request_id_created_at_idx")
+  @@map("FeedbackReply")
+}

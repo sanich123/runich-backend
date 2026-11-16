@@ -3,6 +3,7 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 export const RATE_LIMITS = {
   photoUpload: { limit: 30, ttl: 10 * 60_000 },
+  feedbackAttachmentUpload: { limit: 10, ttl: 10 * 60_000 },
   photoDelete: { limit: 60, ttl: 10 * 60_000 },
   mediaUploadStatus: { limit: 60, ttl: 60_000 },
   authAttempt: { limit: 5, ttl: 60_000 },
@@ -13,6 +14,7 @@ export const RATE_LIMITS = {
   contentReport: { limit: 5, ttl: 10 * 60_000 },
   userBlock: { limit: 20, ttl: 10 * 60_000 },
   adminAccess: { limit: 20, ttl: 60_000 },
+  adminFeedbackReply: { limit: 20, ttl: 60 * 60_000 },
 } as const;
 
 export function RateLimit(limit: number, ttl: number): MethodDecorator {

@@ -115,6 +115,93 @@ describe('StorageService', () => {
     expect(metrics.observeExternal).toHaveBeenCalledWith('s3', 'putObject', expect.any(Number));
   });
 
+  it('validates authenticated and guest feedback attachment paths', () => {
+    const service = new StorageService();
+    const userUrl = 'https://s3.twcstorage.ru/runich-test/user-1/feedback/2026-09-17/feedback-1/screen.jpg';
+    const guestUrl = 'https://s3.twcstorage.ru/runich-test/guest-feedback/2026-09-17/feedback-1/screen.jpg';
+
+    expect(service.getFeedbackAttachmentKey('user-1', 'feedback-1', userUrl)).toBe(
+      'user-1/feedback/2026-09-17/feedback-1/screen.jpg',
+    );
+    expect(service.getFeedbackAttachmentKey(null, 'feedback-1', guestUrl)).toBe(
+      'guest-feedback/2026-09-17/feedback-1/screen.jpg',
+    );
+    expect(() =>
+      service.getFeedbackAttachmentKey(
+        'user-1',
+        'feedback-1',
+        'https://s3.twcstorage.ru/runich-test/user-1/profile/2026-09-17/avatar.jpg',
+      ),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      service.getFeedbackAttachmentKey(
+        null,
+        'feedback-1',
+        'https://s3.twcstorage.ru/runich-test/guest-feedback/not-a-date/feedback-1/screen.jpg',
+      ),
+    ).toThrow(BadRequestException);
+    expect(() => service.getFeedbackAttachmentKey(null, 'other-id', guestUrl)).toThrow(BadRequestException);
+    expect(() =>
+      service.getFeedbackAttachmentKey(
+        'user-1',
+        'feedback-1',
+        'https://s3.twcstorage.ru/runich-test/user-1/feedback/2026-09-17/feedback-1',
+      ),
+    ).toThrow(BadRequestException);
+  });
+
+  it('deletes only a validated feedback attachment key', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const url = 'https://s3.twcstorage.ru/runich-test/guest-feedback/2026-09-17/feedback-1/screen.jpg';
+
+    await service.deleteFeedbackPhoto(null, 'feedback-1', url);
+
+    expect(s3Send.mock.calls[0]?.[0]).toBeInstanceOf(DeleteObjectCommand);
+    expect((s3Send.mock.calls[0]?.[0] as DeleteObjectCommand).input).toMatchObject({
+      Bucket: 'runich-test',
+      Key: 'guest-feedback/2026-09-17/feedback-1/screen.jpg',
+    });
+  });
+
+  it('uploads a guest support attachment and rejects anonymous non-feedback uploads', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const service = new StorageService();
+    const image = await createTestImage();
+    const manifest = JSON.stringify([makeActivityMediaFixture()]);
+
+    await expect(
+      service.uploadPhotos(
+        null,
+        [{ buffer: image, originalname: 'screen.jpg', mimetype: 'image/jpeg' }],
+        { scope: 'feedback', feedbackId: 'feedback-1' },
+        manifest,
+      ),
+    ).resolves.toMatchObject([
+      {
+        key: expect.stringMatching(/^guest-feedback\/\d{4}-\d{2}-\d{2}\/feedback-1\/.+\.webp$/),
+        contentType: 'image/webp',
+      },
+    ]);
+
+    await expect(service.uploadPhotos(null, [makePhotoUpload()], { scope: 'activity' })).rejects.toThrow(
+      'Гостям доступна загрузка вложений только для обращений в поддержку',
+    );
+  });
+
+  it('limits total guest support attachment bytes', async () => {
+    const service = new StorageService();
+
+    await expect(
+      service.uploadPhotos(
+        null,
+        [{ size: UPLOAD_LIMITS.feedbackMediaBatchBytes + 1, originalname: 'screen.jpg', mimetype: 'image/jpeg' }],
+        { scope: 'feedback', feedbackId: 'feedback-1' },
+        JSON.stringify([makeActivityMediaFixture()]),
+      ),
+    ).rejects.toThrow('Суммарный размер вложений обращения не должен превышать 100 МБ');
+  });
+
   it('uploads a manifest batch in input order and returns media metadata', async () => {
     s3Send.mockResolvedValue({} as never);
     const prisma = createModerationPrismaMock();

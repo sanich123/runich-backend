@@ -55,7 +55,9 @@ export type ModelName =
   | 'Group'
   | 'GroupMember'
   | 'GroupPost'
-  | 'GroupEvent';
+  | 'GroupEvent'
+  | 'FeedbackRequest'
+  | 'FeedbackReply';
 
 export const relationModels: Record<ModelName, Record<string, ModelName>> = {
   User: {
@@ -77,6 +79,8 @@ export const relationModels: Record<ModelName, Record<string, ModelName>> = {
     grantedAdminRoleAssignments: 'AdminRoleAssignment',
     adminAccessAuditAsActor: 'AdminAccessAudit',
     adminAccessAuditAsTarget: 'AdminAccessAudit',
+    submittedFeedbackRequests: 'FeedbackRequest',
+    authoredFeedbackReplies: 'FeedbackReply',
   },
   Profile: {
     activities: 'Activity',
@@ -137,6 +141,8 @@ export const relationModels: Record<ModelName, Record<string, ModelName>> = {
     contentReports: 'ContentReport',
   },
   GroupEvent: { group: 'Group', creator: 'User' },
+  FeedbackRequest: { sender: 'User', replies: 'FeedbackReply' },
+  FeedbackReply: { request: 'FeedbackRequest', admin: 'User' },
 };
 
 export const dateFields: Record<ModelName, ReadonlySet<string>> = {
@@ -183,4 +189,6 @@ export const dateFields: Record<ModelName, ReadonlySet<string>> = {
   GroupMember: new Set(['requestedAt', 'joinedAt']),
   GroupPost: new Set(['createdAt']),
   GroupEvent: new Set(['startsAt', 'createdAt']),
+  FeedbackRequest: new Set(['createdAt', 'updatedAt']),
+  FeedbackReply: new Set(['createdAt']),
 };

@@ -8,12 +8,13 @@ export const ADMIN_ROLES = [
 ] as const satisfies readonly AdminRole[];
 export const ADMIN_PERMISSIONS = [
   'moderation.manage',
+  'feedback.manage',
   'email.send',
   'admin.roles.manage',
 ] as const satisfies readonly AdminPermission[];
 
 export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
-  moderator: ['moderation.manage'],
+  moderator: ['moderation.manage', 'feedback.manage'],
   email_sender: ['email.send'],
   access_manager: ['admin.roles.manage'],
   superuser: ADMIN_PERMISSIONS,

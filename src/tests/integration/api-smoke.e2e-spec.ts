@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
@@ -33,6 +33,7 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
 
     prisma = app.get(PrismaService);
@@ -552,11 +553,11 @@ describeIntegration('PostgreSQL API smoke e2e', () => {
       });
   }, 60_000);
 
-  it('removes client-triggered email endpoints, protects feedback, and redirects OAuth errors safely', async () => {
+  it('removes client-triggered email endpoints, validates feedback, and redirects OAuth errors safely', async () => {
     await request(app.getHttpServer()).post('/email/like').send({}).expect(404);
     await request(app.getHttpServer()).post('/email/comment').send({}).expect(404);
     await request(app.getHttpServer()).post('/email/commentLike').send({}).expect(404);
-    await request(app.getHttpServer()).post('/email/feedback').send({}).expect(401);
+    await request(app.getHttpServer()).post('/email/feedback').send({}).expect(400);
 
     const yandexError = await request(app.getHttpServer())
       .get('/auth/yandex/callback')

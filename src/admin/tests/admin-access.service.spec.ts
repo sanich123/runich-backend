@@ -55,7 +55,7 @@ describe('AdminAccessService', () => {
 
     await expect(service.getAccess('user-1')).resolves.toEqual({
       roles: ['moderator', 'email_sender', 'superuser'],
-      permissions: ['moderation.manage', 'email.send', 'admin.roles.manage'],
+      permissions: ['moderation.manage', 'feedback.manage', 'email.send', 'admin.roles.manage'],
       isSuperuser: true,
     });
   });
