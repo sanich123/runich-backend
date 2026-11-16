@@ -111,7 +111,7 @@ describe('EmailService', () => {
       expect.objectContaining({
         to: 'ann@example.com',
         subject: expect.stringContaining('[Runich] Ответ по обращению от '),
-        html: expect.stringContaining('Дата и время обращения:'),
+        html: expect.stringContaining('Ответ на обращение от'),
       }),
     );
   });
