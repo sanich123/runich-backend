@@ -66,12 +66,7 @@ export function createGroupsServices(
     summary: groupSummaryService,
     members: new GroupsMembersService(prisma as never, moderationAccess as never, groupSummaryService),
     statistics: new GroupsStatisticsService(prisma as never, moderationAccess as never),
-    posts: new GroupsPostsService(
-      prisma as never,
-      moderationAccess as never,
-      storage as never,
-      groupNotificationsService,
-    ),
+    posts: new GroupsPostsService(prisma as never, moderationAccess as never, storage as never),
     events: new GroupsEventsService(prisma as never, moderationAccess as never, groupNotificationsService),
   };
 }

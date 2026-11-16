@@ -43,6 +43,8 @@ model Activity {
   minHeartRate        Int?                 @map("min_heart_rate")
   maxHeartRate        Int?                 @map("max_heart_rate")
   moderationStatus    ModerationContentStatus @default(visible) @map("moderation_status")
+  textModerationStatus ModerationContentStatus @default(visible) @map("text_moderation_status")
+  textModerationProcessingStartedAt TimestamptzString(6)? @map("text_moderation_processing_started_at")
   comments            Comment[]
   likes               Like[]
   media               ActivityMedia[]
@@ -54,6 +56,7 @@ model Activity {
   @@index([userId, date, id], map: "Activity_user_id_date_id_idx")
   @@index([userId, visibility, date, id], map: "Activity_user_id_visibility_date_id_idx")
   @@index([visibility, date, id], map: "Activity_visibility_date_id_idx")
+  @@index([textModerationStatus, updatedAt, id], map: "Activity_text_moderation_status_updated_at_id_idx")
   @@map("Activity")
 }
 

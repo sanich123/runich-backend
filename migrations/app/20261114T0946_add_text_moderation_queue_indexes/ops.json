@@ -1,0 +1,194 @@
+[
+  {
+    "id": "index.Activity.Activity_text_moderation_status_updated_at_id_idx",
+    "label": "Create index \"Activity_text_moderation_status_updated_at_id_idx\" on \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Activity_text_moderation_status_updated_at_id_idx",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Activity_text_moderation_status_updated_at_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_text_moderation_status_updated_at_id_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Activity_text_moderation_status_updated_at_id_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Activity_text_moderation_status_updated_at_id_idx\"",
+        "sql": "CREATE INDEX \"Activity_text_moderation_status_updated_at_id_idx\" ON \"public\".\"Activity\" (\"text_moderation_status\", \"updatedAt\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Activity_text_moderation_status_updated_at_id_idx\" exists on \"Activity\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_text_moderation_status_updated_at_id_idx\"",
+          "i",
+          "I",
+          "\"public\".\"Activity\"",
+          "btree",
+          "[\"text_moderation_status\",\"updatedAt\",\"id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Comment.Comment_moderation_status_date_id_idx",
+    "label": "Create index \"Comment_moderation_status_date_id_idx\" on \"Comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Comment_moderation_status_date_id_idx",
+        "table": "Comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Comment_moderation_status_date_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Comment_moderation_status_date_id_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Comment_moderation_status_date_id_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Comment_moderation_status_date_id_idx\"",
+        "sql": "CREATE INDEX \"Comment_moderation_status_date_id_idx\" ON \"public\".\"Comment\" (\"moderation_status\", \"date\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Comment_moderation_status_date_id_idx\" exists on \"Comment\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Comment_moderation_status_date_id_idx\"",
+          "i",
+          "I",
+          "\"public\".\"Comment\"",
+          "btree",
+          "[\"moderation_status\",\"date\",\"id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_comment_target_status_idx",
+    "label": "Create index \"ContentReport_comment_target_status_idx\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_comment_target_status_idx",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_comment_target_status_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_comment_target_status_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ContentReport_comment_target_status_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_comment_target_status_idx\"",
+        "sql": "CREATE INDEX \"ContentReport_comment_target_status_idx\" ON \"public\".\"ContentReport\" (\"comment_id\", \"target_type\", \"status\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_comment_target_status_idx\" exists on \"ContentReport\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_comment_target_status_idx\"",
+          "i",
+          "I",
+          "\"public\".\"ContentReport\"",
+          "btree",
+          "[\"comment_id\",\"target_type\",\"status\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GroupPost.GroupPost_moderation_status_created_at_id_idx",
+    "label": "Create index \"GroupPost_moderation_status_created_at_id_idx\" on \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GroupPost_moderation_status_created_at_id_idx",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GroupPost_moderation_status_created_at_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost_moderation_status_created_at_id_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GroupPost_moderation_status_created_at_id_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GroupPost_moderation_status_created_at_id_idx\"",
+        "sql": "CREATE INDEX \"GroupPost_moderation_status_created_at_id_idx\" ON \"public\".\"GroupPost\" (\"moderation_status\", \"created_at\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GroupPost_moderation_status_created_at_id_idx\" exists on \"GroupPost\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GroupPost_moderation_status_created_at_id_idx\"",
+          "i",
+          "I",
+          "\"public\".\"GroupPost\"",
+          "btree",
+          "[\"moderation_status\",\"created_at\",\"id\"]"
+        ]
+      }
+    ]
+  }
+]

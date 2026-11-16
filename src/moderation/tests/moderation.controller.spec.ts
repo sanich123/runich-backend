@@ -10,6 +10,7 @@ describe('ModerationController', () => {
     blockUser: asyncMock(),
     unblockUser: asyncMock(),
     getReportQueue: asyncMock(),
+    deleteReport: asyncMock(),
     getReportDetails: asyncMock(),
     applyAction: asyncMock(),
     submitAppeal: asyncMock(),
@@ -80,5 +81,12 @@ describe('ModerationController', () => {
 
     expect(service.applyAction).toHaveBeenCalledWith('report-1', 'moderator-1', { action: 'hide_content' });
     expect(service.decideAppeal).toHaveBeenCalledWith('appeal-1', 'moderator-1', { decision: 'upheld' });
+  });
+
+  it('deletes the selected report through the moderation service', async () => {
+    service.deleteReport.mockResolvedValue(undefined);
+
+    await expect(controller.deleteReport({ id: 'report-1' } as never)).resolves.toBeUndefined();
+    expect(service.deleteReport).toHaveBeenCalledWith('report-1');
   });
 });

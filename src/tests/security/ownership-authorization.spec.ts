@@ -56,7 +56,7 @@ describe('ownership authorization', () => {
 
     expect(prisma.comment.update).toHaveBeenCalledWith({
       where: { id: 'comment-1', authorId: 'owner-1' },
-      data: { comment: 'text' },
+      data: { comment: 'text', moderationStatus: 'pending', moderationProcessingStartedAt: null },
     });
     expect(prisma.comment.findUnique).toHaveBeenCalledWith({
       where: { id: 'comment-1' },

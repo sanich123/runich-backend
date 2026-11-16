@@ -45,6 +45,7 @@ export type MigratedActivity = ActivityDto & {
   averageHeartRate?: number | null;
   minHeartRate?: number | null;
   maxHeartRate?: number | null;
+  textModerationStatus?: 'pending' | 'visible';
 };
 
 export type MigrationProgress = Pick<MigrationJob, 'processedActivities' | 'importedActivities' | 'skippedActivities'>;
@@ -114,6 +115,8 @@ export type ActivityUpdateField =
   | 'speed'
   | 'sport'
   | 'title'
+  | 'textModerationStatus'
+  | 'textModerationProcessingStartedAt'
   | 'kilometresSplit'
   | 'heartRateStorageKey'
   | 'averageHeartRate'

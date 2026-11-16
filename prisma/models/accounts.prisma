@@ -34,6 +34,8 @@ model User {
   reauthenticationSentAt   TimestamptzString(6)?  @map("reauthentication_sent_at")
   deletedAt                TimestamptzString(6)?  @map("deleted_at")
   authProvider             Varchar(32)?           @map("auth_provider")
+  appleSubject             Varchar(255)?          @unique(map: "User_apple_subject_key") @map("apple_subject")
+  appleRefreshTokenEncrypted Varchar(4096)?        @map("apple_refresh_token_encrypted")
   activities               Activity[]
   activityMigrationJobs    ActivityMigrationJob[]
   authExchanges            AuthExchange[]

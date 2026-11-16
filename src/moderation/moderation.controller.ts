@@ -94,6 +94,15 @@ export class ModerationController {
     );
   }
 
+  @Delete('reports/:id')
+  @UseGuards(JwtAuthGuard, ModeratorGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a moderation report and its history' })
+  @ApiNoContentResponse({ description: 'Report deleted' })
+  async deleteReport(@Param() { id }: ParamsId) {
+    await this.moderationService.deleteReport(id);
+  }
+
   @Get('reports/:id')
   @UseGuards(JwtAuthGuard, ModeratorGuard)
   @ApiOperation({ summary: 'Get report context for a moderator' })

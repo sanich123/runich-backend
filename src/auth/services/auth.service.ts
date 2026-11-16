@@ -23,6 +23,7 @@ import { MediaCleanupService } from 'src/storage/services/media-cleanup.service'
 import { normalizeEmail } from '../utils/russian-email';
 import { CONFIRMATION_CODE_TTL_MS } from '../constants/auth.constants';
 import { SuperuserEmailBootstrapService } from './superuser-email-bootstrap.service';
+import { AppleAuthService } from './apple-auth.service';
 
 @Injectable()
 export class AuthService {
@@ -33,6 +34,7 @@ export class AuthService {
   private readonly vkAuthService: VkAuthService;
   private readonly mediaCleanupService?: MediaCleanupService;
   private readonly superuserEmailBootstrapService: SuperuserEmailBootstrapService;
+  private readonly appleAuthService: AppleAuthService;
 
   constructor(
     @Inject(PrismaService)
@@ -53,6 +55,8 @@ export class AuthService {
     mediaCleanupService?: MediaCleanupService,
     @Inject(SuperuserEmailBootstrapService)
     superuserEmailBootstrapService?: SuperuserEmailBootstrapService,
+    @Inject(AppleAuthService)
+    appleAuthService?: AppleAuthService,
   ) {
     this.tokenService = tokenService ?? new AuthTokenService(this.jwtService);
     this.superuserEmailBootstrapService =
@@ -60,6 +64,8 @@ export class AuthService {
     this.yandexAuthService =
       yandexAuthService ?? new YandexAuthService(this.prisma, this.tokenService, this.superuserEmailBootstrapService);
     this.authEmailService = authEmailService ?? new AuthEmailService(this.emailService);
+    this.appleAuthService =
+      appleAuthService ?? new AppleAuthService(this.prisma, this.tokenService, this.superuserEmailBootstrapService);
     this.vkAuthService =
       vkAuthService ??
       new VkAuthService(this.prisma, this.jwtService, this.tokenService, this.superuserEmailBootstrapService);
@@ -88,6 +94,24 @@ export class AuthService {
 
   loginWithYandexAccessToken(accessToken: string, metadata: SessionMetadata = {}) {
     return this.yandexAuthService.loginWithAccessToken(accessToken, metadata);
+  }
+
+  loginWithAppleIdentityToken(
+    identityToken: string,
+    authorizationCode: string,
+    nonce: string,
+    givenName: string | undefined,
+    familyName: string | undefined,
+    metadata: SessionMetadata = {},
+  ) {
+    return this.appleAuthService.loginWithIdentityToken(
+      identityToken,
+      authorizationCode,
+      nonce,
+      givenName,
+      familyName,
+      metadata,
+    );
   }
 
   async signUp(email: string, password: string) {
@@ -150,8 +174,11 @@ export class AuthService {
           `Такой email адрес не зарегистрирован ни на одного пользователя: ${normalizedEmail}`,
         );
       } else {
-        if (!user.encryptedPassword && (user.authProvider === 'YANDEX' || user.authProvider === 'VK')) {
-          const providerName = user.authProvider === 'VK' ? 'VK' : 'Яндекс';
+        if (
+          !user.encryptedPassword &&
+          (user.authProvider === 'YANDEX' || user.authProvider === 'VK' || user.authProvider === 'APPLE')
+        ) {
+          const providerName = user.authProvider === 'VK' ? 'VK' : user.authProvider === 'APPLE' ? 'Apple' : 'Яндекс';
           throw new UnauthorizedException(
             `Вы зарегистрированы без пароля с помощью ${providerName}. Авторизуйтесь через ${providerName}`,
           );
@@ -218,6 +245,7 @@ export class AuthService {
 
   async deleteUser(userId: string) {
     try {
+      await this.appleAuthService.revokeUserToken(userId);
       const deletedUser = await this.prisma.$transaction(
         async (transaction) => {
           if (this.mediaCleanupService) {

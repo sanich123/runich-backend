@@ -1,0 +1,1061 @@
+[
+  {
+    "id": "dropCheckConstraint.Activity.Activity_moderation_status_check_9e17caab",
+    "label": "Drop check constraint \"Activity_moderation_status_check_9e17caab\" on \"Activity\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Activity_moderation_status_check_9e17caab",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Activity_moderation_status_check_9e17caab\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Activity_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Activity\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "constraint \"Activity_moderation_status_check_9e17caab\" on \"Activity\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"Activity_moderation_status_check_9e17caab\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" DROP CONSTRAINT \"Activity_moderation_status_check_9e17caab\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Activity_moderation_status_check_9e17caab\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Activity_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Activity\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Activity_moderation_status_check_9e17caab\" on \"Activity\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "dropCheckConstraint.ActivityMedia.ActivityMedia_moderation_status_check_9e17caab",
+    "label": "Drop check constraint \"ActivityMedia_moderation_status_check_9e17caab\" on \"ActivityMedia\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ActivityMedia_moderation_status_check_9e17caab",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ActivityMedia_moderation_status_check_9e17caab\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "constraint \"ActivityMedia_moderation_status_check_9e17caab\" on \"ActivityMedia\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"ActivityMedia_moderation_status_check_9e17caab\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" DROP CONSTRAINT \"ActivityMedia_moderation_status_check_9e17caab\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ActivityMedia_moderation_status_check_9e17caab\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"ActivityMedia_moderation_status_check_9e17caab\" on \"ActivityMedia\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "dropCheckConstraint.Comment.Comment_moderation_status_check_9e17caab",
+    "label": "Drop check constraint \"Comment_moderation_status_check_9e17caab\" on \"Comment\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Comment_moderation_status_check_9e17caab",
+        "table": "Comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Comment_moderation_status_check_9e17caab\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Comment_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Comment\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "constraint \"Comment_moderation_status_check_9e17caab\" on \"Comment\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"Comment_moderation_status_check_9e17caab\"",
+        "sql": "ALTER TABLE \"public\".\"Comment\" DROP CONSTRAINT \"Comment_moderation_status_check_9e17caab\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Comment_moderation_status_check_9e17caab\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Comment_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Comment\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Comment_moderation_status_check_9e17caab\" on \"Comment\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "dropCheckConstraint.ContentReport.ContentReport_target_type_check_e609e753",
+    "label": "Drop check constraint \"ContentReport_target_type_check_e609e753\" on \"ContentReport\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ContentReport_target_type_check_e609e753",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ContentReport_target_type_check_e609e753\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_target_type_check_e609e753",
+          "public",
+          "\"public\".\"ContentReport\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "constraint \"ContentReport_target_type_check_e609e753\" on \"ContentReport\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"ContentReport_target_type_check_e609e753\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\" DROP CONSTRAINT \"ContentReport_target_type_check_e609e753\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"ContentReport_target_type_check_e609e753\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_target_type_check_e609e753",
+          "public",
+          "\"public\".\"ContentReport\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"ContentReport_target_type_check_e609e753\" on \"ContentReport\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "dropCheckConstraint.Group.Group_moderation_status_check_9e17caab",
+    "label": "Drop check constraint \"Group_moderation_status_check_9e17caab\" on \"Group\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Group_moderation_status_check_9e17caab",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Group_moderation_status_check_9e17caab\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Group_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Group\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "constraint \"Group_moderation_status_check_9e17caab\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"Group_moderation_status_check_9e17caab\"",
+        "sql": "ALTER TABLE \"public\".\"Group\" DROP CONSTRAINT \"Group_moderation_status_check_9e17caab\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Group_moderation_status_check_9e17caab\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Group_moderation_status_check_9e17caab",
+          "public",
+          "\"public\".\"Group\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Group_moderation_status_check_9e17caab\" on \"Group\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "column.public.Activity.text_moderation_processing_started_at",
+    "label": "Add column \"text_moderation_processing_started_at\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "text_moderation_processing_started_at",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"text_moderation_processing_started_at\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "text_moderation_processing_started_at"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"text_moderation_processing_started_at\" on \"Activity\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"text_moderation_processing_started_at\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"text_moderation_processing_started_at\" timestamptz(6)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"text_moderation_processing_started_at\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "text_moderation_processing_started_at"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"text_moderation_processing_started_at\" on \"Activity\""
+        }
+      },
+      {
+        "description": "verify column \"text_moderation_processing_started_at\" has type \"timestamp(6) with time zone\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "text_moderation_processing_started_at",
+          "timestamp(6) with time zone"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Activity.text_moderation_status",
+    "label": "Add column \"text_moderation_status\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "text_moderation_status",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"text_moderation_status\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "text_moderation_status"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"text_moderation_status\" on \"Activity\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"text_moderation_status\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"text_moderation_status\" text DEFAULT 'visible' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"text_moderation_status\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "text_moderation_status"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"text_moderation_status\" on \"Activity\""
+        }
+      },
+      {
+        "description": "verify column \"text_moderation_status\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "text_moderation_status",
+          "text"
+        ]
+      },
+      {
+        "description": "verify column \"text_moderation_status\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "text_moderation_status",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Comment.moderation_processing_started_at",
+    "label": "Add column \"moderation_processing_started_at\" to \"Comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "moderation_processing_started_at",
+        "table": "Comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"moderation_processing_started_at\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Comment",
+          "moderation_processing_started_at"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"moderation_processing_started_at\" on \"Comment\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"moderation_processing_started_at\"",
+        "sql": "ALTER TABLE \"public\".\"Comment\" ADD COLUMN \"moderation_processing_started_at\" timestamptz(6)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"moderation_processing_started_at\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Comment",
+          "moderation_processing_started_at"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"moderation_processing_started_at\" on \"Comment\""
+        }
+      },
+      {
+        "description": "verify column \"moderation_processing_started_at\" has type \"timestamp(6) with time zone\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Comment",
+          "moderation_processing_started_at",
+          "timestamp(6) with time zone"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.ContentReport.group_post_id",
+    "label": "Add column \"group_post_id\" to \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "group_post_id",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"group_post_id\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ContentReport",
+          "group_post_id"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"group_post_id\" on \"ContentReport\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"group_post_id\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\" ADD COLUMN \"group_post_id\" uuid"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"group_post_id\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "ContentReport",
+          "group_post_id"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"group_post_id\" on \"ContentReport\""
+        }
+      },
+      {
+        "description": "verify column \"group_post_id\" has type \"uuid\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "ContentReport",
+          "group_post_id",
+          "uuid"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.GroupPost.moderation_processing_started_at",
+    "label": "Add column \"moderation_processing_started_at\" to \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "moderation_processing_started_at",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"moderation_processing_started_at\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupPost",
+          "moderation_processing_started_at"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"moderation_processing_started_at\" on \"GroupPost\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"moderation_processing_started_at\"",
+        "sql": "ALTER TABLE \"public\".\"GroupPost\" ADD COLUMN \"moderation_processing_started_at\" timestamptz(6)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"moderation_processing_started_at\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupPost",
+          "moderation_processing_started_at"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"moderation_processing_started_at\" on \"GroupPost\""
+        }
+      },
+      {
+        "description": "verify column \"moderation_processing_started_at\" has type \"timestamp(6) with time zone\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "GroupPost",
+          "moderation_processing_started_at",
+          "timestamp(6) with time zone"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.GroupPost.moderation_status",
+    "label": "Add column \"moderation_status\" to \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "moderation_status",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"moderation_status\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupPost",
+          "moderation_status"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"moderation_status\" on \"GroupPost\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"moderation_status\"",
+        "sql": "ALTER TABLE \"public\".\"GroupPost\" ADD COLUMN \"moderation_status\" text DEFAULT 'visible' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"moderation_status\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupPost",
+          "moderation_status"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"moderation_status\" on \"GroupPost\""
+        }
+      },
+      {
+        "description": "verify column \"moderation_status\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "GroupPost",
+          "moderation_status",
+          "text"
+        ]
+      },
+      {
+        "description": "verify column \"moderation_status\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "GroupPost",
+          "moderation_status",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.Activity.Activity_moderation_status_check_364741d2",
+    "label": "Add check constraint \"Activity_moderation_status_check_364741d2\" on \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Activity_moderation_status_check_364741d2",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Activity_moderation_status_check_364741d2\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Activity_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"Activity\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Activity_moderation_status_check_364741d2\" on \"Activity\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"Activity_moderation_status_check_364741d2\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD CONSTRAINT \"Activity_moderation_status_check_364741d2\" CHECK (\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"Activity_moderation_status_check_364741d2\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "Activity_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"Activity\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.Activity.Activity_text_moderation_status_check_76966950",
+    "label": "Add check constraint \"Activity_text_moderation_status_check_76966950\" on \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Activity_text_moderation_status_check_76966950",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Activity_text_moderation_status_check_76966950\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Activity_text_moderation_status_check_76966950",
+          "public",
+          "\"public\".\"Activity\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Activity_text_moderation_status_check_76966950\" on \"Activity\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"Activity_text_moderation_status_check_76966950\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD CONSTRAINT \"Activity_text_moderation_status_check_76966950\" CHECK (\"text_moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"Activity_text_moderation_status_check_76966950\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "Activity_text_moderation_status_check_76966950",
+          "public",
+          "\"public\".\"Activity\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.ActivityMedia.ActivityMedia_moderation_status_check_364741d2",
+    "label": "Add check constraint \"ActivityMedia_moderation_status_check_364741d2\" on \"ActivityMedia\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ActivityMedia_moderation_status_check_364741d2",
+        "table": "ActivityMedia"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ActivityMedia_moderation_status_check_364741d2\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ActivityMedia_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"ActivityMedia\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"ActivityMedia_moderation_status_check_364741d2\" on \"ActivityMedia\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"ActivityMedia_moderation_status_check_364741d2\"",
+        "sql": "ALTER TABLE \"public\".\"ActivityMedia\" ADD CONSTRAINT \"ActivityMedia_moderation_status_check_364741d2\" CHECK (\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"ActivityMedia_moderation_status_check_364741d2\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "ActivityMedia_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"ActivityMedia\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.Comment.Comment_moderation_status_check_364741d2",
+    "label": "Add check constraint \"Comment_moderation_status_check_364741d2\" on \"Comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Comment_moderation_status_check_364741d2",
+        "table": "Comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Comment_moderation_status_check_364741d2\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Comment_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"Comment\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Comment_moderation_status_check_364741d2\" on \"Comment\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"Comment_moderation_status_check_364741d2\"",
+        "sql": "ALTER TABLE \"public\".\"Comment\" ADD CONSTRAINT \"Comment_moderation_status_check_364741d2\" CHECK (\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"Comment_moderation_status_check_364741d2\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "Comment_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"Comment\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.ContentReport.ContentReport_target_type_check_b3bc0520",
+    "label": "Add check constraint \"ContentReport_target_type_check_b3bc0520\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "ContentReport_target_type_check_b3bc0520",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"ContentReport_target_type_check_b3bc0520\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_target_type_check_b3bc0520",
+          "public",
+          "\"public\".\"ContentReport\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"ContentReport_target_type_check_b3bc0520\" on \"ContentReport\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"ContentReport_target_type_check_b3bc0520\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\" ADD CONSTRAINT \"ContentReport_target_type_check_b3bc0520\" CHECK (\"target_type\" IN ('activity', 'activity_text', 'comment', 'group_post', 'media', 'media_upload', 'user', 'group'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"ContentReport_target_type_check_b3bc0520\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "ContentReport_target_type_check_b3bc0520",
+          "public",
+          "\"public\".\"ContentReport\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.Group.Group_moderation_status_check_364741d2",
+    "label": "Add check constraint \"Group_moderation_status_check_364741d2\" on \"Group\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "Group_moderation_status_check_364741d2",
+        "table": "Group"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Group_moderation_status_check_364741d2\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Group_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"Group\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Group_moderation_status_check_364741d2\" on \"Group\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"Group_moderation_status_check_364741d2\"",
+        "sql": "ALTER TABLE \"public\".\"Group\" ADD CONSTRAINT \"Group_moderation_status_check_364741d2\" CHECK (\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"Group_moderation_status_check_364741d2\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "Group_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"Group\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.GroupPost.GroupPost_moderation_status_check_364741d2",
+    "label": "Add check constraint \"GroupPost_moderation_status_check_364741d2\" on \"GroupPost\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "GroupPost_moderation_status_check_364741d2",
+        "table": "GroupPost"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"GroupPost_moderation_status_check_364741d2\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GroupPost_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"GroupPost\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"GroupPost_moderation_status_check_364741d2\" on \"GroupPost\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"GroupPost_moderation_status_check_364741d2\"",
+        "sql": "ALTER TABLE \"public\".\"GroupPost\" ADD CONSTRAINT \"GroupPost_moderation_status_check_364741d2\" CHECK (\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"GroupPost_moderation_status_check_364741d2\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "GroupPost_moderation_status_check_364741d2",
+          "public",
+          "\"public\".\"GroupPost\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ContentReport.ContentReport_group_post_id_idx",
+    "label": "Create index \"ContentReport_group_post_id_idx\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ContentReport_group_post_id_idx",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ContentReport_group_post_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_group_post_id_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ContentReport_group_post_id_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ContentReport_group_post_id_idx\"",
+        "sql": "CREATE INDEX \"ContentReport_group_post_id_idx\" ON \"public\".\"ContentReport\" (\"group_post_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ContentReport_group_post_id_idx\" exists on \"ContentReport\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ContentReport_group_post_id_idx\"",
+          "i",
+          "I",
+          "\"public\".\"ContentReport\"",
+          "btree",
+          "[\"group_post_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ContentReport.ContentReport_group_post_id_fkey",
+    "label": "Add foreign key \"ContentReport_group_post_id_fkey\" on \"ContentReport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ContentReport_group_post_id_fkey",
+        "table": "ContentReport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ContentReport_group_post_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ContentReport_group_post_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"ContentReport_group_post_id_fkey\" on \"ContentReport\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ContentReport_group_post_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ContentReport\"\nADD CONSTRAINT \"ContentReport_group_post_id_fkey\"\nFOREIGN KEY (\"group_post_id\")\nREFERENCES \"public\".\"GroupPost\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ContentReport_group_post_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "ContentReport_group_post_id_fkey",
+          "public",
+          "\"public\".\"ContentReport\"",
+          "f",
+          "[\"group_post_id\"]",
+          "\"public\".\"GroupPost\"",
+          "[\"id\"]",
+          "n",
+          "a"
+        ]
+      }
+    ]
+  }
+]

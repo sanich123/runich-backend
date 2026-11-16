@@ -65,9 +65,7 @@ export class ActivityService {
         this.prisma,
         this.accountService,
         persistence,
-        this.storageService,
         this.mediaCleanupService,
-        this.staticMapService,
         this.writeService,
         this.mediaService,
       );

@@ -25,6 +25,7 @@ import {
   EmailLoginLinkDto,
   GetEmailCodeForPasswordDto,
   NativeVkAuthCodeDto,
+  NativeAppleAuthDto,
   PasswordChangeCodeDto,
   ProviderAccessTokenDto,
   RefreshTokenDto,
@@ -56,7 +57,7 @@ export class AuthController {
   @Get('config')
   @ApiOkResponse({ type: AppConfigResponseDto })
   getConfig() {
-    return { appVersion: '1.3.0' };
+    return { appVersion: '1.5.0' };
   }
 
   @Get('yandex')
@@ -111,6 +112,25 @@ export class AuthController {
     );
   }
 
+  @HttpCode(HttpStatus.OK)
+  @Post('apple/native')
+  @RateLimit(RATE_LIMITS.authAttempt.limit, RATE_LIMITS.authAttempt.ttl)
+  @ApiBody({ type: NativeAppleAuthDto })
+  @ApiOkResponse({ type: LoginResponseDto })
+  async loginWithAppleNative(
+    @Body() { identityToken, authorizationCode, nonce, givenName, familyName }: NativeAppleAuthDto,
+    @Req() request?: Request,
+  ) {
+    return this.authService.loginWithAppleIdentityToken(
+      identityToken,
+      authorizationCode,
+      nonce,
+      givenName,
+      familyName,
+      request ? this.getSessionMetadata(request) : undefined,
+    );
+  }
+
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
   @RateLimit(RATE_LIMITS.authAttempt.limit, RATE_LIMITS.authAttempt.ttl)
@@ -128,8 +148,8 @@ export class AuthController {
       select: { emailConfirmedAt: true, authProvider: true },
     });
     if (user?.emailConfirmedAt) {
-      if (user.authProvider === 'YANDEX' || user.authProvider === 'VK') {
-        const providerName = user.authProvider === 'VK' ? 'VK' : 'Яндекс';
+      if (user.authProvider === 'YANDEX' || user.authProvider === 'VK' || user.authProvider === 'APPLE') {
+        const providerName = user.authProvider === 'VK' ? 'VK' : user.authProvider === 'APPLE' ? 'Apple' : 'Яндекс';
         throw new ConflictException(`Пользователь зарегистрирован с помощью провайдера ${providerName}`);
       }
       throw new ConflictException('Под этим адресом почты уже зарегистрирован пользователь');

@@ -81,7 +81,7 @@ services:
       options:
         max-size: 10m
         max-file: '3'
-    cpus: 1.0
+    cpus: 0.5
     env_file:
       - .env
     command: ['xvfb-run', '--auto-servernum', '--server-args', '-screen 0 1280x1024x24', 'yarn', 'worker:prod']

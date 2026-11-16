@@ -137,6 +137,10 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | YANDEX_CLIENT_ID             | Yandex ID application client ID                                                          |
 | YANDEX_CLIENT_SECRET         | Yandex ID application secret, server-side only                                           |
 | YANDEX_REDIRECT_URI          | Registered Yandex OAuth callback URL                                                     |
+| APPLE_TEAM_ID                | Apple Developer team identifier for Sign in with Apple                                  |
+| APPLE_KEY_ID                 | Key identifier for a Sign in with Apple private key                                     |
+| APPLE_PRIVATE_KEY_BASE64     | Base64-encoded .p8 Sign in with Apple private key; server-side only                     |
+| APPLE_TOKEN_ENCRYPTION_KEY   | Base64-encoded 32-byte key for encrypting stored Apple refresh tokens; server-side only |
 | AUTH_FRONTEND_REDIRECT_URI   | Frontend URL for OAuth and email login credentials                                       |
 | VK_CLIENT_ID                 | VK ID application client ID                                                              |
 | VK_REDIRECT_URI              | Registered VK OAuth callback URL                                                         |

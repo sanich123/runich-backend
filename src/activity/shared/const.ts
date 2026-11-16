@@ -44,6 +44,7 @@ const ACTIVITY_FEED_PROFILE_SELECT = {
 
 export const ACTIVITY_CARD_SELECT = {
   title: true,
+  textModerationStatus: true,
   date: true,
   timeZone: true,
   sport: true,
@@ -141,6 +142,8 @@ export const ACTIVITY_UPDATE_FIELDS: ActivityUpdateField[] = [
   'speed',
   'sport',
   'title',
+  'textModerationStatus',
+  'textModerationProcessingStartedAt',
   'kilometresSplit',
   'heartRateStorageKey',
   'averageHeartRate',

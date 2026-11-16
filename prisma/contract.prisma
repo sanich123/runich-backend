@@ -9,6 +9,8 @@ enum ActivityVisibility {
 }
 
 enum ModerationContentStatus {
+  pending
+  processing
   visible
   hidden
   removed
@@ -16,7 +18,9 @@ enum ModerationContentStatus {
 
 enum ContentReportTargetType {
   activity
+  activity_text
   comment
+  group_post
   media
   media_upload
   user

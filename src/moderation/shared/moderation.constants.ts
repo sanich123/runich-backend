@@ -8,7 +8,9 @@ import type {
 
 export const CONTENT_REPORT_TARGET_TYPES = [
   'activity',
+  'activity_text',
   'comment',
+  'group_post',
   'media',
   'user',
   'group',
@@ -51,12 +53,22 @@ export const MAX_BLOCKED_USERS = 500;
 export const REPORT_TARGET_LABELS: Record<ReportLanguage, Record<string, string>> = {
   russian: {
     activity: 'тренировка',
+    activity_text: 'текст тренировки',
     comment: 'комментарий',
+    group_post: 'публикацию группы',
     media: 'фото или видео',
     user: 'профиль',
     group: 'группу',
   },
-  english: { activity: 'activity', comment: 'comment', media: 'photo or video', user: 'profile', group: 'group' },
+  english: {
+    activity: 'activity',
+    activity_text: 'activity text',
+    comment: 'comment',
+    group_post: 'group post',
+    media: 'photo or video',
+    user: 'profile',
+    group: 'group',
+  },
 };
 
 export const REPORT_REASON_LABELS: Record<ReportLanguage, Record<string, string>> = {

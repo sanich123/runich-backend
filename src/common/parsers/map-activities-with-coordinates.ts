@@ -1,5 +1,5 @@
 import { extname, join } from 'path';
-import { parseCoordinatesFromFile } from './parse-coordinates-from-file';
+import { parseCoordinatesFromFile, parseFitActivityFromMigrationFile } from './parse-coordinates-from-file';
 import { ungzipFile } from './ungzip';
 import { getMapBoxImage } from './get-mapbox-image';
 import { getSpeedInMinsInKm } from './get-speed';
@@ -87,25 +87,25 @@ export async function mapActivitiesWithCoordinates({
 
             let rawLocations: LocationObject[] = [];
             let fileName = String(activity['Filename'] ?? '').trim();
+            let heartRateData: ParsedHeartRate = { samples: [] };
 
             if (extname(fileName).toLowerCase() === Extensions.gz) {
               await ungzipFile(fileName, migrationDirectory);
               fileName = fileName.slice(0, -3);
             }
 
-            if (
-              extname(fileName).toLowerCase() === Extensions.gpx ||
-              extname(fileName).toLowerCase() === Extensions.tcx ||
-              extname(fileName).toLowerCase() === Extensions.fit
-            ) {
-              rawLocations = await parseCoordinatesFromFile(fileName, migrationDirectory);
-            }
             const fileExtension = extname(fileName).toLowerCase();
-            const heartRateData: ParsedHeartRate =
-              fileExtension === Extensions.gpx || fileExtension === Extensions.tcx || fileExtension === Extensions.fit
-                ? await getHeartRateFromFile(fileName, migrationDirectory ?? join(process.cwd(), 'dist', 'migration'))
-                : { samples: [] };
-            logger.debug(`Processing activity ${i + 1}`);
+            if (fileExtension === Extensions.fit) {
+              const parsedFit = await parseFitActivityFromMigrationFile(fileName, migrationDirectory);
+              rawLocations = parsedFit.locations;
+              heartRateData = parsedFit.heartRateData;
+            } else if (fileExtension === Extensions.gpx || fileExtension === Extensions.tcx) {
+              rawLocations = await parseCoordinatesFromFile(fileName, migrationDirectory);
+              heartRateData = await getHeartRateFromFile(
+                fileName,
+                migrationDirectory ?? join(process.cwd(), 'dist', 'migration'),
+              );
+            }
 
             const movingTime = Number(activity['Moving Time']);
             const elapsedTime = Number(activity['Elapsed Time']);
@@ -129,6 +129,7 @@ export async function mapActivitiesWithCoordinates({
             const csvCaloriesActive = parseCaloriesValue(activity.Calories);
             const csvAverageHeartRate = parseHeartRateValue(activity['Average Heart Rate']);
             const csvMaxHeartRate = parseHeartRateValue(activity['Max Heart Rate']);
+            logger.debug(`Processing activity ${i + 1}`);
             const mapPhotoUrl =
               rawLocations.length > 1 && process.env.MAPBOX_ACCESS_TOKEN
                 ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS))

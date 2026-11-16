@@ -3,6 +3,7 @@ import {
   getElevationGainFromLocations,
   createActivityChartLocations,
   hidePendingActivityMediaForViewer,
+  hidePendingActivityTextForViewer,
   normalizeActivityCard,
   normalizeActivityCardForViewer,
   normalizeActivityDetails,
@@ -146,6 +147,31 @@ describe('activity utilities', () => {
     ]);
     const withoutMedia = { ...activity, media: undefined };
     expect(hidePendingActivityMediaForViewer(withoutMedia)).toBe(withoutMedia);
+  });
+
+  it('hides pending and moderated activity text from viewers but keeps it for the owner', () => {
+    const pendingActivity = {
+      id: 'activity-1',
+      userId: 'owner-1',
+      title: 'Private title',
+      description: 'Private description',
+      textModerationStatus: 'pending',
+    };
+
+    expect(hidePendingActivityTextForViewer(pendingActivity, 'viewer-1')).toEqual({
+      ...pendingActivity,
+      title: null,
+      description: null,
+    });
+    expect(hidePendingActivityTextForViewer(pendingActivity, 'owner-1')).toBe(pendingActivity);
+    expect(
+      hidePendingActivityTextForViewer({ ...pendingActivity, textModerationStatus: 'visible' }, 'viewer-1'),
+    ).toMatchObject({ title: 'Private title', description: 'Private description' });
+    expect(
+      hidePendingActivityTextForViewer({ ...pendingActivity, textModerationStatus: 'hidden' }, 'viewer-1'),
+    ).toMatchObject({ title: null, description: null });
+    const legacyActivity = { ...pendingActivity, textModerationStatus: null };
+    expect(hidePendingActivityTextForViewer(legacyActivity, 'viewer-1')).toBe(legacyActivity);
   });
 
   it('creates privacy-filtered chart samples without exposing route coordinates', () => {

@@ -10,6 +10,7 @@ import { AuthTokenService } from './services/auth-token.service';
 import { YandexAuthService } from './services/yandex-auth.service';
 import { AuthEmailService } from './services/auth-email.service';
 import { VkAuthService } from './services/vk-auth.service';
+import { AppleAuthService } from './services/apple-auth.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { accessTokenExpiresIn } from './constants/jwt.constants';
 import { StorageModule } from 'src/storage/storage.module';
@@ -35,6 +36,7 @@ import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
     AuthEmailService,
     YandexAuthService,
     VkAuthService,
+    AppleAuthService,
     JwtStrategy,
     ThrottlerGuard,
     ThrottlerReflector,

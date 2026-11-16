@@ -77,12 +77,16 @@ model GroupPost {
   createdByUserId Uuid                  @map("created_by_user_id")
   text            Varchar(2000)
   photoAssetId    Uuid?                 @unique @map("photo_asset_id")
+  moderationStatus ModerationContentStatus @default(visible) @map("moderation_status")
+  moderationProcessingStartedAt TimestamptzString(6)? @map("moderation_processing_started_at")
   createdAt       TimestamptzString(6)  @default(now()) @map("created_at")
   group           Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
   author          User                  @relation("GroupPostAuthor", fields: [createdByUserId], references: [id], onDelete: Cascade)
   photoAsset      MediaModerationAsset? @relation("GroupPostPhotoAsset", fields: [photoAssetId], references: [id], onDelete: SetNull)
+  contentReports  ContentReport[]       @relation("ContentReportGroupPost")
 
   @@index([groupId, createdAt], map: "GroupPost_group_id_created_at_idx")
+  @@index([moderationStatus, createdAt, id], map: "GroupPost_moderation_status_created_at_id_idx")
   @@map("GroupPost")
 }
 

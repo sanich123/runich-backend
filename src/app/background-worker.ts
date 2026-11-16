@@ -13,6 +13,7 @@ import { observeInstrument } from 'src/common/observe/observe.config';
 import { EmailNotificationWorkerService } from 'src/email/email-notification-worker.service';
 import { PushNotificationWorkerService } from 'src/notification/push-notification-worker.service';
 import { MediaModerationWorkerService } from 'src/storage/services/media-moderation-worker.service';
+import { TextModerationWorkerService } from 'src/moderation/services/text-moderation-worker.service';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(BackgroundWorkerModule, {
@@ -27,6 +28,7 @@ async function bootstrap() {
   const emailNotificationWorkerService = app.get(EmailNotificationWorkerService);
   const pushNotificationWorkerService = app.get(PushNotificationWorkerService);
   const mediaModerationWorkerService = app.get(MediaModerationWorkerService);
+  const textModerationWorkerService = app.get(TextModerationWorkerService);
   const stopWorker = () => {
     migrationService.requestStop();
     mediaProcessingService.requestStop();
@@ -36,6 +38,7 @@ async function bootstrap() {
     emailNotificationWorkerService.requestStop();
     pushNotificationWorkerService.requestStop();
     mediaModerationWorkerService.requestStop();
+    textModerationWorkerService.requestStop();
   };
 
   process.once('SIGINT', stopWorker);
@@ -51,6 +54,7 @@ async function bootstrap() {
       emailNotificationWorkerService.runWorker(),
       pushNotificationWorkerService.runWorker(),
       mediaModerationWorkerService.runWorker(),
+      textModerationWorkerService.runWorker(),
     ]);
   } finally {
     process.off('SIGINT', stopWorker);

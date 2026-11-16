@@ -201,6 +201,68 @@ describe('AuthService', () => {
     await expect(service.login('user@yandex.ru', 'secret123')).resolves.toMatchObject({ userId: 'user-1' });
   });
 
+  it.each([
+    ['YANDEX', 'Яндекс'],
+    ['VK', 'VK'],
+    ['APPLE', 'Apple'],
+  ])('directs a passwordless %s account to its provider', async (provider, providerName) => {
+    const dependencies = createDependencies();
+    dependencies.prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      email: 'user@example.com',
+      encryptedPassword: null,
+      authProvider: provider,
+    });
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+    );
+
+    await expect(service.login('user@example.com', 'secret123')).rejects.toThrow(
+      `Вы зарегистрированы без пароля с помощью ${providerName}. Авторизуйтесь через ${providerName}`,
+    );
+  });
+
+  it('delegates Apple identity login with names and session metadata', async () => {
+    const dependencies = createDependencies();
+    const appleAuth = { loginWithIdentityToken: asyncMock() };
+    appleAuth.loginWithIdentityToken.mockResolvedValue(makeSessionTokens());
+    const service = new AuthService(
+      dependencies.prisma as unknown as PrismaService,
+      dependencies.jwt as unknown as JwtService,
+      dependencies.email as unknown as EmailService,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      appleAuth as never,
+    );
+    const metadata = { deviceId: 'device-1', deviceName: 'Phone', platform: 'ios' as const };
+
+    await expect(
+      service.loginWithAppleIdentityToken(
+        'signed-token',
+        'one-time-authorization-code',
+        'one-time-nonce',
+        'Alex',
+        'Runner',
+        metadata,
+      ),
+    ).resolves.toEqual(makeSessionTokens());
+
+    expect(appleAuth.loginWithIdentityToken).toHaveBeenCalledWith(
+      'signed-token',
+      'one-time-authorization-code',
+      'one-time-nonce',
+      'Alex',
+      'Runner',
+      metadata,
+    );
+  });
+
   it('revokes the current session on logout', async () => {
     const dependencies = createDependencies();
     const tokenService = { revokeSession: asyncMock() };

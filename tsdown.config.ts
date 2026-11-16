@@ -21,6 +21,7 @@ export default defineConfig({
     neverBundle: [
       '@ardentcode/sports-lib',
       '@aws-sdk/client-s3',
+      '@huggingface/transformers',
       '@mapbox/polyline',
       '@maplibre/maplibre-gl-native',
       '@nestjs/common',

@@ -7,7 +7,6 @@ import type { CreateGroupPostDto } from '../dto/groups-content.dto';
 import type { GroupPostListItem, GroupPostQueryRow, Membership } from '../shared/groups.types';
 import { createGroupPage, encodeGroupDateCursor } from '../shared/groups.pagination';
 import type { GroupDateCursor, GroupPage } from '../shared/groups.pagination';
-import { GroupsNotificationsService } from './groups-notifications.service';
 import { getGroupPhotoReviewStatus } from '../shared/groups.utils';
 
 @Injectable()
@@ -16,7 +15,6 @@ export class GroupsPostsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ModerationAccessService) private readonly moderationAccess: ModerationAccessService,
     @Inject(StorageService) private readonly storage: StorageService | undefined,
-    @Inject(GroupsNotificationsService) private readonly groupNotificationsService: GroupsNotificationsService,
   ) {}
   getPosts(userId: string, groupId: string): Promise<GroupPostListItem[]>;
   getPosts(
@@ -54,8 +52,14 @@ export class GroupsPostsService {
       }
 
       const blockedIds = await this.moderationAccess.blockedUserIds(userId);
+      const postFilters: Record<string, unknown>[] = [
+        {
+          OR: [{ moderationStatus: { in: ['visible', 'pending', 'processing'] } }, { createdByUserId: userId }],
+        },
+      ];
       const where: Record<string, unknown> = {
         groupId,
+        AND: postFilters,
         ...(blockedIds.length ? { createdByUserId: { notIn: blockedIds } } : {}),
       };
       if (membership?.status === 'active' && membership.feedPreference === 'admins') {
@@ -72,11 +76,9 @@ export class GroupsPostsService {
         where.createdByUserId = { in: adminIds };
       }
       if (paginationRequested && cursor) {
-        where.AND = [
-          {
-            OR: [{ createdAt: { lt: cursor.date } }, { createdAt: cursor.date, id: { lt: cursor.id } }],
-          },
-        ];
+        postFilters.push({
+          OR: [{ createdAt: { lt: cursor.date } }, { createdAt: cursor.date, id: { lt: cursor.id } }],
+        });
       }
 
       const posts: GroupPostQueryRow[] = await this.prisma.groupPost.findMany({
@@ -115,11 +117,13 @@ export class GroupsPostsService {
           : {};
       const items = pagePosts.map((post) => {
         const photoReviewStatus = getGroupPhotoReviewStatus(post.photoAsset);
+        const canViewPostContent = post.moderationStatus === 'visible' || post.createdByUserId === userId;
         return {
           id: post.id,
-          text: post.text,
+          text: canViewPostContent ? post.text : '',
+          moderationStatus: post.moderationStatus,
           createdAt: post.createdAt,
-          ...(post.photoAssetId
+          ...(post.photoAssetId && canViewPostContent
             ? {
                 hasPhoto: true,
                 photoPending: photoReviewStatus !== null,
@@ -136,7 +140,7 @@ export class GroupsPostsService {
               }
             : null,
           photoUrl:
-            post.photoAsset?.status === 'approved' && post.photoAsset.publishedKey && this.storage
+            canViewPostContent && post.photoAsset?.status === 'approved' && post.photoAsset.publishedKey && this.storage
               ? this.storage.getPublicUrl(post.photoAsset.publishedKey)
               : null,
         };
@@ -150,9 +154,9 @@ export class GroupsPostsService {
 
   async createPost(userId: string, groupId: string, body: CreateGroupPostDto) {
     try {
-      const group: { name: string; createdByUserId: string } | null = await this.prisma.group.findUnique({
+      const group: { createdByUserId: string } | null = await this.prisma.group.findUnique({
         where: { id: groupId },
-        select: { name: true, createdByUserId: true },
+        select: { createdByUserId: true },
       });
       if (!group) throw new NotFoundException('Group not found');
       const membership: Membership | null = await this.prisma.groupMember.findUnique({
@@ -175,17 +179,13 @@ export class GroupsPostsService {
       }
       return await this.prisma.$transaction(async (transaction) => {
         const post = await transaction.groupPost.create({
-          data: { groupId, createdByUserId: userId, text, photoAssetId: body.photoAssetId ?? null },
-        });
-        await this.groupNotificationsService.notifyGroupMembers(transaction, {
-          groupId,
-          groupName: group.name,
-          sourceId: post.id,
-          actorUserId: userId,
-          isAnnouncement:
-            group.createdByUserId === userId || membership?.role === 'admin' || membership?.role === 'owner',
-          kind: 'post',
-          content: text,
+          data: {
+            groupId,
+            createdByUserId: userId,
+            text,
+            moderationStatus: 'pending',
+            photoAssetId: body.photoAssetId ?? null,
+          },
         });
         return post;
       });

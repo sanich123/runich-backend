@@ -324,19 +324,26 @@ describe('EmailNotificationWorkerService', () => {
       reportId: 'report-1',
       requestType: 'report',
       targetType: 'user',
-      targetId: 'reported-user',
       reason: 'harassment',
       reporterDetails: 'Repeated unwanted messages',
-      reporter: { id: 'reporter-1', email: 'sam@example.com', name: 'Sam', surname: 'Reporter' },
-      reportedUser: { id: 'reported-user', email: 'alex@example.com', name: 'Alex', surname: 'Runner' },
-      reportedContent: 'Runner profile',
-      reportedMediaUrl: null,
-      reportedProfile: makeProfileSummary({
+      reporter: {
+        email: 'sam@example.com',
+        name: 'Sam',
+        surname: 'Reporter',
+        profilePhoto: null,
+      },
+      reportedUser: {
+        email: 'alex@example.com',
         name: 'Alex',
         surname: 'Runner',
-        bio: 'Runner profile',
         profilePhoto: 'profile.jpg',
-      }),
+      },
+      reportedContent: 'Runner profile',
+      reportedMediaUrls: [],
+      reportedVideoUrls: [],
+      reportedActivity: null,
+      reportedGroup: null,
+      reportedProfile: { bio: 'Runner profile' },
     });
   });
 
@@ -375,13 +382,20 @@ describe('EmailNotificationWorkerService', () => {
       reportId: 'report-media-upload',
       requestType: 'report',
       targetType: 'media_upload',
-      targetId: 'asset-1',
       reason: 'sexual_content',
       reporterDetails: 'Автоматическая проверка NSFWJS: Porn=0.99. Кадров проверено: 18.',
       reporter: null,
-      reportedUser: { id: 'owner-1', email: 'owner@example.com', name: 'Alex', surname: 'Runner' },
+      reportedUser: {
+        email: 'owner@example.com',
+        name: 'Alex',
+        surname: 'Runner',
+        profilePhoto: null,
+      },
       reportedContent: null,
-      reportedMediaUrl: null,
+      reportedMediaUrls: [],
+      reportedVideoUrls: [],
+      reportedActivity: null,
+      reportedGroup: null,
       reportedProfile: null,
     });
   });

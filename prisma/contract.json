@@ -212,8 +212,16 @@
                 "value": "activity"
               },
               {
+                "name": "activity_text",
+                "value": "activity_text"
+              },
+              {
                 "name": "comment",
                 "value": "comment"
+              },
+              {
+                "name": "group_post",
+                "value": "group_post"
               },
               {
                 "name": "media",
@@ -412,6 +420,14 @@
           "ModerationContentStatus": {
             "codecId": "pg/text@1",
             "members": [
+              {
+                "name": "pending",
+                "value": "pending"
+              },
+              {
+                "name": "processing",
+                "value": "processing"
+              },
               {
                 "name": "visible",
                 "value": "visible"
@@ -722,6 +738,29 @@
                   "kind": "scalar"
                 }
               },
+              "textModerationProcessingStartedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "textModerationStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationContentStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "timeZone": {
                 "nullable": true,
                 "type": {
@@ -988,6 +1027,12 @@
                 },
                 "steps": {
                   "column": "steps"
+                },
+                "textModerationProcessingStartedAt": {
+                  "column": "text_moderation_processing_started_at"
+                },
+                "textModerationStatus": {
+                  "column": "text_moderation_status"
                 },
                 "timeZone": {
                   "column": "time_zone"
@@ -1878,6 +1923,16 @@
                   "kind": "scalar"
                 }
               },
+              "moderationProcessingStartedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
               "moderationStatus": {
                 "nullable": false,
                 "type": {
@@ -1979,6 +2034,9 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "moderationProcessingStartedAt": {
+                  "column": "moderation_processing_started_at"
                 },
                 "moderationStatus": {
                   "column": "moderation_status"
@@ -2129,6 +2187,13 @@
                   "typeParams": {
                     "length": 1000
                   }
+                }
+              },
+              "groupPostId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
                 }
               },
               "id": {
@@ -2322,6 +2387,22 @@
                   "namespace": "public"
                 }
               },
+              "groupPost": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "groupPostId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "GroupPost",
+                  "namespace": "public"
+                }
+              },
               "media": {
                 "cardinality": "N:1",
                 "nullable": true,
@@ -2419,6 +2500,9 @@
                 },
                 "details": {
                   "column": "details"
+                },
+                "groupPostId": {
+                  "column": "group_post_id"
                 },
                 "id": {
                   "column": "id"
@@ -3332,6 +3416,29 @@
                   "kind": "scalar"
                 }
               },
+              "moderationProcessingStartedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "moderationStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ModerationContentStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "photoAssetId": {
                 "nullable": true,
                 "type": {
@@ -3364,6 +3471,21 @@
                 },
                 "to": {
                   "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "contentReports": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "groupPostId"
+                  ]
+                },
+                "to": {
+                  "model": "ContentReport",
                   "namespace": "public"
                 }
               },
@@ -3413,6 +3535,12 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "moderationProcessingStartedAt": {
+                  "column": "moderation_processing_started_at"
+                },
+                "moderationStatus": {
+                  "column": "moderation_status"
                 },
                 "photoAssetId": {
                   "column": "photo_asset_id"
@@ -5632,6 +5760,26 @@
           },
           "User": {
             "fields": {
+              "appleRefreshTokenEncrypted": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 4096
+                  }
+                }
+              },
+              "appleSubject": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 255
+                  }
+                }
+              },
               "aud": {
                 "nullable": true,
                 "type": {
@@ -6379,6 +6527,12 @@
             },
             "storage": {
               "fields": {
+                "appleRefreshTokenEncrypted": {
+                  "column": "apple_refresh_token_encrypted"
+                },
+                "appleSubject": {
+                  "column": "apple_subject"
+                },
                 "aud": {
                   "column": "aud"
                 },
@@ -6871,9 +7025,14 @@
             "Activity": {
               "checks": [
                 {
-                  "expression": "\"moderation_status\" IN ('visible', 'hidden', 'removed')",
-                  "name": "Activity_moderation_status_check_9e17caab",
+                  "expression": "\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed')",
+                  "name": "Activity_moderation_status_check_364741d2",
                   "prefix": "Activity_moderation_status_check"
+                },
+                {
+                  "expression": "\"text_moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed')",
+                  "name": "Activity_text_moderation_status_check_76966950",
+                  "prefix": "Activity_text_moderation_status_check"
                 },
                 {
                   "expression": "\"visibility\" IN ('public', 'followers', 'private')",
@@ -7117,6 +7276,29 @@
                   "dataType": "pg/int4",
                   "nullable": true
                 },
+                "text_moderation_processing_started_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "text_moderation_status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "visible"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationContentStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
                 "time_zone": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
@@ -7215,6 +7397,15 @@
               "indexes": [
                 {
                   "columns": [
+                    "text_moderation_status",
+                    "updatedAt",
+                    "id"
+                  ],
+                  "name": "Activity_text_moderation_status_updated_at_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
                     "user_id",
                     "date",
                     "id"
@@ -7267,8 +7458,8 @@
                   "prefix": "ActivityMedia_media_review_status_check"
                 },
                 {
-                  "expression": "\"moderation_status\" IN ('visible', 'hidden', 'removed')",
-                  "name": "ActivityMedia_moderation_status_check_9e17caab",
+                  "expression": "\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed')",
+                  "name": "ActivityMedia_moderation_status_check_364741d2",
                   "prefix": "ActivityMedia_moderation_status_check"
                 }
               ],
@@ -8083,8 +8274,8 @@
             "Comment": {
               "checks": [
                 {
-                  "expression": "\"moderation_status\" IN ('visible', 'hidden', 'removed')",
-                  "name": "Comment_moderation_status_check_9e17caab",
+                  "expression": "\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed')",
+                  "name": "Comment_moderation_status_check_364741d2",
                   "prefix": "Comment_moderation_status_check"
                 }
               ],
@@ -8124,6 +8315,14 @@
                     "kind": "function"
                   },
                   "nullable": false
+                },
+                "moderation_processing_started_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
                 },
                 "moderation_status": {
                   "codecId": "pg/text@1",
@@ -8192,6 +8391,15 @@
                     "id"
                   ],
                   "name": "Comment_activityId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "moderation_status",
+                    "date",
+                    "id"
+                  ],
+                  "name": "Comment_moderation_status_date_id_idx",
                   "unique": false
                 }
               ],
@@ -8326,8 +8534,8 @@
                   "prefix": "ContentReport_status_check"
                 },
                 {
-                  "expression": "\"target_type\" IN ('activity', 'comment', 'media', 'media_upload', 'user', 'group')",
-                  "name": "ContentReport_target_type_check_e609e753",
+                  "expression": "\"target_type\" IN ('activity', 'activity_text', 'comment', 'group_post', 'media', 'media_upload', 'user', 'group')",
+                  "name": "ContentReport_target_type_check_b3bc0520",
                   "prefix": "ContentReport_target_type_check"
                 }
               ],
@@ -8366,6 +8574,11 @@
                   "typeParams": {
                     "length": 1000
                   }
+                },
+                "group_post_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
                 },
                 "id": {
                   "codecId": "pg/uuid@1",
@@ -8627,6 +8840,26 @@
                     "namespaceId": "public",
                     "tableName": "MediaModerationAsset"
                   }
+                },
+                {
+                  "index": {
+                    "name": "ContentReport_group_post_id_idx"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "group_post_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ContentReport"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "GroupPost"
+                  }
                 }
               ],
               "indexes": [
@@ -8661,6 +8894,22 @@
                   ],
                   "name": "ContentReport_comment_id_idx_fe121171",
                   "prefix": "ContentReport_comment_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "comment_id",
+                    "target_type",
+                    "status"
+                  ],
+                  "name": "ContentReport_comment_target_status_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "group_post_id"
+                  ],
+                  "name": "ContentReport_group_post_id_idx",
                   "unique": false
                 },
                 {
@@ -9008,8 +9257,8 @@
                   "prefix": "Group_category_tags_elem_not_null"
                 },
                 {
-                  "expression": "\"moderation_status\" IN ('visible', 'hidden', 'removed')",
-                  "name": "Group_moderation_status_check_9e17caab",
+                  "expression": "\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed')",
+                  "name": "Group_moderation_status_check_364741d2",
                   "prefix": "Group_moderation_status_check"
                 },
                 {
@@ -9569,6 +9818,13 @@
               ]
             },
             "GroupPost": {
+              "checks": [
+                {
+                  "expression": "\"moderation_status\" IN ('pending', 'processing', 'visible', 'hidden', 'removed')",
+                  "name": "GroupPost_moderation_status_check_364741d2",
+                  "prefix": "GroupPost_moderation_status_check"
+                }
+              ],
               "columns": {
                 "created_at": {
                   "codecId": "pg/timestamptz-string@1",
@@ -9600,6 +9856,29 @@
                     "kind": "function"
                   },
                   "nullable": false
+                },
+                "moderation_processing_started_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "moderation_status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "visible"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ModerationContentStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
                 },
                 "photo_asset_id": {
                   "codecId": "pg/uuid@1",
@@ -9702,6 +9981,15 @@
                   ],
                   "name": "GroupPost_group_id_idx_704354b6",
                   "prefix": "GroupPost_group_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "moderation_status",
+                    "created_at",
+                    "id"
+                  ],
+                  "name": "GroupPost_moderation_status_created_at_id_idx",
                   "unique": false
                 }
               ],
@@ -11997,6 +12285,22 @@
             },
             "Users": {
               "columns": {
+                "apple_refresh_token_encrypted": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 4096
+                  }
+                },
+                "apple_subject": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 255
+                  }
+                },
                 "aud": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
@@ -12281,6 +12585,12 @@
               "uniques": [
                 {
                   "columns": [
+                    "apple_subject"
+                  ],
+                  "name": "User_apple_subject_key"
+                },
+                {
+                  "columns": [
                     "email"
                   ],
                   "name": "Users_email_key"
@@ -12329,7 +12639,9 @@
               "kind": "valueSet",
               "values": [
                 "activity",
+                "activity_text",
                 "comment",
+                "group_post",
                 "media",
                 "media_upload",
                 "user",
@@ -12413,6 +12725,8 @@
             "ModerationContentStatus": {
               "kind": "valueSet",
               "values": [
+                "pending",
+                "processing",
                 "visible",
                 "hidden",
                 "removed"
@@ -12433,7 +12747,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "6fdd1da2fcba0e6b71e090968b49587a573d2945052031afb803048e508f5d8f"
+    "storageHash": "b3ec3b8f7f02095e0fb6999f37255c8e096d93be799f93e7bbfe764ce6ad437e"
   },
   "capabilities": {
     "postgres": {

@@ -5999,10 +5999,8 @@ NestJS service files must contain imports and the decorated service class only. 
 - Keep untyped or external values as `unknown` and narrow them with runtime checks or a schema. Do not assert database query results or internal values to silence weak repository typings; annotate the receiving variable or improve the repository API.
 - Use a narrow `as` assertion only at a documented boundary where no typed alternative is available, and add a short adjacent comment explaining the reason. `as const` is allowed when preserving literal tuple types. Test-only assertions may be used narrowly for invalid runtime inputs or incomplete mocks when a typed fixture is impractical.
 
-## Runich client/API compatibility
+## Runich release versioning
 
-- Keep the client/backend compatibility ledger in `API_COMPATIBILITY.md` in both the Runich client and Runich Backend repositories current. Update both copies in the same task whenever client releases, backend releases, API requests/responses, or compatibility evidence change; retain previous entries as history.
-- For each entry, record the client version, compatible backend version(s), Swagger `info.version`, status, evidence, and verification date. Matching version numbers alone do not count as compatibility-test evidence; distinguish repository metadata from deployed Stage/Production versions.
-- Keep the Swagger `DocumentBuilder.setVersion()` value equal to the Runich Backend `package.json` version and update the ledger with it. The client may remain on an older supported version; record that compatibility pair explicitly.
-- Keep the minimum client version returned by backend `GET /auth/config` and its entry in `API_COMPATIBILITY.md` aligned. Raising it makes older app versions redirect to the update screen when they load the home page.
+- Keep the Swagger `DocumentBuilder.setVersion()` value equal to the Runich Backend `package.json` version.
+- Raising the minimum client version returned by backend `GET /auth/config` redirects older app versions to the update screen when they load the home page; account for that when planning a release.
 - These Runich client/backend instructions are project-specific. Do not copy them into Clean Car.

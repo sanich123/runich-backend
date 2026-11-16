@@ -2,15 +2,7 @@ import { getAppEnvironment } from 'src/common/config/environment';
 import type { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { MEDIA_MODERATION_GOOGLE_VISION_MONTHLY_LIMIT } from '../shared/const';
 import type { VisionResponse } from '../shared/types';
-
-const LIKELIHOOD_SCORE: Record<string, number> = {
-  UNKNOWN: 0,
-  VERY_UNLIKELY: 0,
-  UNLIKELY: 0.1,
-  POSSIBLE: 0.4,
-  LIKELY: 0.75,
-  VERY_LIKELY: 0.95,
-};
+import { LIKELIHOOD_SCORE } from '../shared/google-cloud-vision.constants';
 
 export class GoogleCloudVisionSafeSearch {
   constructor(private readonly prisma: PrismaService) {}

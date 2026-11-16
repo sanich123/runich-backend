@@ -35,6 +35,7 @@ describe('GroupsPostsService', () => {
         id: 'post-1',
         createdByUserId: 'admin-1',
         text: 'Sunday run',
+        moderationStatus: 'visible',
         createdAt: '2026-10-29T10:00:00.000Z',
         photoAssetId: null,
         author: {
@@ -48,13 +49,25 @@ describe('GroupsPostsService', () => {
     const result = await service.getPosts('member-1', 'group-1');
 
     expect(prisma.groupPost.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { groupId: 'group-1', createdByUserId: { in: ['admin-1'] } }, take: 50 }),
+      expect.objectContaining({
+        where: {
+          groupId: 'group-1',
+          createdByUserId: { in: ['admin-1'] },
+          AND: [
+            {
+              OR: [{ moderationStatus: { in: ['visible', 'pending', 'processing'] } }, { createdByUserId: 'member-1' }],
+            },
+          ],
+        },
+        take: 50,
+      }),
     );
     expect(result).toEqual([
       {
         id: 'post-1',
         text: 'Sunday run',
         createdAt: '2026-10-29T10:00:00.000Z',
+        moderationStatus: 'visible',
         author: { userId: 'admin-1', name: 'Alex Runner', profilePhoto: 'photo-url' },
         photoUrl: null,
       },
@@ -83,6 +96,7 @@ describe('GroupsPostsService', () => {
         id: 'post-2',
         createdByUserId: 'author-1',
         text: 'Club update',
+        moderationStatus: 'visible',
         createdAt: '2026-10-29T10:00:00.000Z',
         photoAssetId: 'approved-post-photo',
         author: { id: 'author-1', profile: null },
@@ -109,6 +123,7 @@ describe('GroupsPostsService', () => {
         id: 'pending-post',
         createdByUserId: 'post-author',
         text: 'Pending photo',
+        moderationStatus: 'visible',
         createdAt: '2026-10-29T10:00:00.000Z',
         photoAssetId: 'pending-photo',
         author: null,
@@ -118,6 +133,7 @@ describe('GroupsPostsService', () => {
         id: 'rejected-post',
         createdByUserId: 'post-author',
         text: 'Rejected photo',
+        moderationStatus: 'visible',
         createdAt: '2026-10-29T10:00:00.000Z',
         photoAssetId: 'rejected-photo',
         author: null,
@@ -127,6 +143,7 @@ describe('GroupsPostsService', () => {
         id: 'text-post',
         createdByUserId: 'post-author',
         text: 'Text only',
+        moderationStatus: 'visible',
         createdAt: '2026-10-29T10:00:00.000Z',
         photoAssetId: null,
         author: null,
@@ -151,6 +168,41 @@ describe('GroupsPostsService', () => {
     expect(getOwnerModerationPreviewUrls).toHaveBeenCalledTimes(1);
   });
 
+  it('returns pending group post text only to its author', async () => {
+    prisma.group.findUnique.mockResolvedValue({ privacy: 'open', createdByUserId: 'group-owner', members: [] });
+    prisma.groupPost.findMany.mockResolvedValue([
+      {
+        id: 'pending-post',
+        createdByUserId: 'post-author',
+        text: 'Private post text',
+        moderationStatus: 'pending',
+        createdAt: '2026-10-29T10:00:00.000Z',
+        photoAssetId: null,
+        author: null,
+        photoAsset: null,
+      },
+      {
+        id: 'visible-post',
+        createdByUserId: 'other-author',
+        text: 'Public post text',
+        moderationStatus: 'visible',
+        createdAt: '2026-10-29T11:00:00.000Z',
+        photoAssetId: null,
+        author: null,
+        photoAsset: null,
+      },
+    ]);
+
+    await expect(service.getPosts('reader-1', 'group-1')).resolves.toMatchObject([
+      { id: 'pending-post', text: '', moderationStatus: 'pending' },
+      { id: 'visible-post', text: 'Public post text', moderationStatus: 'visible' },
+    ]);
+    await expect(service.getPosts('post-author', 'group-1')).resolves.toMatchObject([
+      { id: 'pending-post', text: 'Private post text', moderationStatus: 'pending' },
+      { id: 'visible-post', text: 'Public post text', moderationStatus: 'visible' },
+    ]);
+  });
+
   it('omits an unavailable private post-photo preview', async () => {
     const getOwnerModerationPreviewUrls = asyncMock().mockRejectedValue(new Error('Preview unavailable'));
     service = createGroupsService(prisma, moderationAccess, { getOwnerModerationPreviewUrls });
@@ -160,6 +212,7 @@ describe('GroupsPostsService', () => {
         id: 'post-3',
         createdByUserId: 'owner-1',
         text: 'Waiting for moderation',
+        moderationStatus: 'visible',
         createdAt: '2026-10-29T10:00:00.000Z',
         photoAssetId: 'pending-photo',
         author: null,
@@ -190,7 +243,13 @@ describe('GroupsPostsService', () => {
     await service.createPost('member-1', 'group-1', { text: ' Hello group ' });
 
     expect(prisma.groupPost.create).toHaveBeenCalledWith({
-      data: { groupId: 'group-1', createdByUserId: 'member-1', text: 'Hello group', photoAssetId: null },
+      data: {
+        groupId: 'group-1',
+        createdByUserId: 'member-1',
+        text: 'Hello group',
+        moderationStatus: 'pending',
+        photoAssetId: null,
+      },
     });
   });
 
@@ -203,6 +262,7 @@ describe('GroupsPostsService', () => {
         id: 'post-1',
         createdByUserId: 'author-1',
         text: 'First post',
+        moderationStatus: 'visible',
         createdAt: firstPostDate,
         photoAssetId: null,
         author: null,
@@ -212,6 +272,7 @@ describe('GroupsPostsService', () => {
         id: 'post-2',
         createdByUserId: 'author-2',
         text: 'Second post',
+        moderationStatus: 'visible',
         createdAt: new Date('2026-10-29T11:00:00.000Z'),
         photoAssetId: null,
         author: null,
@@ -225,7 +286,12 @@ describe('GroupsPostsService', () => {
       expect.objectContaining({
         where: {
           groupId: 'group-1',
-          AND: [{ OR: [{ createdAt: { lt: cursor.date } }, { createdAt: cursor.date, id: { lt: cursor.id } }] }],
+          AND: [
+            {
+              OR: [{ moderationStatus: { in: ['visible', 'pending', 'processing'] } }, { createdByUserId: 'reader-1' }],
+            },
+            { OR: [{ createdAt: { lt: cursor.date } }, { createdAt: cursor.date, id: { lt: cursor.id } }] },
+          ],
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: 2,
@@ -264,44 +330,26 @@ describe('GroupsPostsService', () => {
     );
   });
 
-  it('notifies post readers according to announcement and per-group preferences', async () => {
+  it('does not notify group members while a post is pending moderation', async () => {
     prisma.group.findUnique.mockResolvedValue({ name: 'Morning runners', createdByUserId: 'owner-1' });
     prisma.groupMember.findUnique.mockResolvedValue({ role: 'member', status: 'active' });
     prisma.groupPost.create.mockResolvedValue({ id: 'post-notify-1' });
-    prisma.transaction.groupMember.findMany.mockResolvedValue([
-      { userId: 'all-reader', notificationPreference: 'all' },
-      { userId: 'announcement-reader', notificationPreference: 'announcements' },
-      { userId: 'muted-reader', notificationPreference: 'off' },
-    ]);
-    prisma.transaction.profile.findUnique
-      .mockResolvedValueOnce({ name: 'Alex', surname: 'Runner', profilePhoto: 'private.webp', hideProfilePhotos: true })
-      .mockResolvedValue({
-        emailNotifications: false,
-        inAppNotifications: true,
-        pushNotifications: false,
-        groupPostsNotifications: true,
-        groupEventsNotifications: true,
-        language: 'russian',
-      });
-    prisma.transaction.notification.create.mockResolvedValue({ id: 'notification-1' });
 
     await service.createPost('member-1', 'group-1', { text: '  Sunday run  ' });
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(prisma.transaction.groupPost.create).toHaveBeenCalledWith({
-      data: { groupId: 'group-1', createdByUserId: 'member-1', text: 'Sunday run', photoAssetId: null },
+      data: {
+        groupId: 'group-1',
+        createdByUserId: 'member-1',
+        text: 'Sunday run',
+        moderationStatus: 'pending',
+        photoAssetId: null,
+      },
     });
-    expect(prisma.transaction.notification.create).toHaveBeenCalledTimes(1);
-    expect(prisma.transaction.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        recipientUserId: 'all-reader',
-        type: 'group-post',
-        targetType: 'group-post',
-        actorProfilePhoto: null,
-        content: 'Новая запись в группе «Morning runners»: Sunday run',
-      }),
-      select: { id: true },
-    });
+    expect(prisma.transaction.groupMember.findMany).not.toHaveBeenCalled();
+    expect(prisma.transaction.notification.create).not.toHaveBeenCalled();
+    expect(prisma.transaction.pushNotificationJob.create).not.toHaveBeenCalled();
   });
 
   it('returns not found for missing group posts', async () => {

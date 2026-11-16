@@ -10,6 +10,7 @@ import { observeImports } from 'src/common/observe/observe.config';
 import { EmailNotificationModule } from 'src/email/email-notification.module';
 import { NotificationModule } from 'src/notification/notification.module';
 import { MediaModerationWorkerService } from 'src/storage/services/media-moderation-worker.service';
+import { ModerationModule } from 'src/moderation/moderation.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { MediaModerationWorkerService } from 'src/storage/services/media-moderat
     LoadTestModule,
     EmailNotificationModule,
     NotificationModule,
+    ModerationModule,
   ],
   providers: [ActivityMediaProcessingService, ActivityEnrichmentService, MediaModerationWorkerService],
 })

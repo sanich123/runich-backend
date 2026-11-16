@@ -1,4 +1,4 @@
-import { getCoordinatesFromFitFile } from './get-coordinates-from-fit';
+import { getCoordinatesFromFitFile, parseFitActivityFromFile } from './get-coordinates-from-fit';
 import { getCoordinatesFromTcxFile } from './get-coordinates-from-tcx';
 import { getCoordinatesFromGpxFile } from './get-coordinates-from-gpx';
 import { existsSync } from 'node:fs';
@@ -33,6 +33,22 @@ export async function parseCoordinatesFromFile(
       `Не удалось обработать файл с координатами ${filePath}`,
       error instanceof Error ? error.stack : String(error),
     );
+    throw error;
+  }
+}
+
+export async function parseFitActivityFromMigrationFile(
+  filePath: string,
+  migrationDirectory = join(process.cwd(), 'dist', 'migration'),
+) {
+  try {
+    const inputFilePath = resolveMigrationPath(migrationDirectory, filePath);
+    if (!existsSync(inputFilePath)) {
+      throw new Error(`Файл с координатами не найден: ${filePath}`);
+    }
+    return await parseFitActivityFromFile(inputFilePath);
+  } catch (error) {
+    logger.error(`Не удалось обработать FIT-файл ${filePath}`, error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

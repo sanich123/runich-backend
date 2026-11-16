@@ -8,12 +8,14 @@ model Comment {
   activityId   Uuid
   profileId    Uuid
   moderationStatus ModerationContentStatus @default(visible) @map("moderation_status")
+  moderationProcessingStartedAt TimestamptzString(6)? @map("moderation_processing_started_at")
   commentLikes CommentLike[]
   activity     Activity             @relation(fields:[activityId], references:[id], onDelete: Cascade, map: "Comment_activityId_fkey", index: false)
   profile      Profile              @relation(fields:[profileId], references:[id], onDelete: Cascade, map: "Comment_profileId_fkey", index: false)
   contentReports ContentReport[]    @relation("ContentReportComment")
 
   @@index([activityId, date, id], map: "Comment_activityId_idx")
+  @@index([moderationStatus, date, id], map: "Comment_moderation_status_date_id_idx")
   @@map("Comment")
 }
 

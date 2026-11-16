@@ -48,7 +48,7 @@ async function bootstrap() {
     const config = new DocumentBuilder()
       .setTitle('Runich')
       .setDescription('Runich API')
-      .setVersion('1.3.2')
+      .setVersion('1.5.0')
       .addBearerAuth(undefined, 'bearerAuth')
       .addTag('runich')
       .build();

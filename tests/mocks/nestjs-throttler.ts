@@ -17,7 +17,11 @@ const THROTTLER_TRACKER = 'THROTTLER:TRACKER';
 const THROTTLER_KEY_GENERATOR = 'THROTTLER:KEY_GENERATOR';
 const THROTTLER_SKIP = 'THROTTLER:SKIP';
 
-export class ThrottlerGuard {}
+export class ThrottlerGuard {
+  canActivate(): boolean {
+    return true;
+  }
+}
 
 @Global()
 @Module({})

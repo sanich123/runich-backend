@@ -128,6 +128,7 @@ export class ActivityWriteService {
       delete activityFields.heartRateStorageKey;
       activityFields.visibility = activityDto.visibility ?? ACTIVITY_VISIBILITY.public;
       const description = activityDto.description?.trim() || null;
+      const hasTextToModerate = Boolean(activityDto.title?.trim() || description);
 
       const data = {
         ...(activityId ? { id: activityId } : {}),
@@ -141,6 +142,7 @@ export class ActivityWriteService {
         ...(migratedActivity.minHeartRate !== undefined ? { minHeartRate: migratedActivity.minHeartRate } : {}),
         ...(migratedActivity.maxHeartRate !== undefined ? { maxHeartRate: migratedActivity.maxHeartRate } : {}),
         description,
+        textModerationStatus: hasTextToModerate ? 'pending' : 'visible',
         elevationGain: activityDto.locations?.length
           ? getElevationGainFromLocations(activityDto.locations)
           : getElevationGainFromKilometreSplits(activityDto.kilometresSplit),
@@ -232,6 +234,10 @@ export class ActivityWriteService {
             duration,
           }),
       };
+      if (title !== undefined || description !== undefined) {
+        data.textModerationStatus = title?.trim() || description?.trim() ? 'pending' : 'visible';
+        data.textModerationProcessingStartedAt = null;
+      }
 
       if (hideMap !== undefined) {
         if (!existingActivity) throw new NotFoundException('Активность не найдена');

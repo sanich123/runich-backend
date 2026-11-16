@@ -1,8 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { StorageService } from 'src/storage/services/storage.service';
 import { ModerationTargetsService } from './moderation-targets.service';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
 import { createNotificationEvent } from 'src/notification/notification-event';
@@ -10,6 +9,7 @@ import { ContentReportReason, ContentReportStatus, ModerationActionType } from '
 import { ModerationActionDto, SubmitContentReportDto } from '../dto/moderation.dto';
 import { ACTIVE_QUEUE_STATUSES, OPEN_REPORT_STATUSES } from '../shared/moderation.constants';
 import { createReportDecisionCopy, createReportReceiptCopy } from '../shared/moderation.utils';
+import type { ReportQueueRow } from './moderation-reports.types';
 
 @Injectable()
 export class ModerationReportsService {
@@ -43,6 +43,7 @@ export class ModerationReportsService {
           targetId: request.targetId,
           ...(target.activityId ? { activityId: target.activityId } : {}),
           ...(target.commentId ? { commentId: target.commentId } : {}),
+          ...(target.groupPostId ? { groupPostId: target.groupPostId } : {}),
           ...(target.mediaId ? { mediaId: target.mediaId } : {}),
           ...(target.targetUserId ? { targetUserId: target.targetUserId } : {}),
           subjectUserId: target.subjectUserId,
@@ -95,14 +96,30 @@ export class ModerationReportsService {
         assignedModeratorId: true,
         createdAt: true,
         reviewedAt: true,
+        activity: { select: { title: true, description: true } },
+        comment: { select: { comment: true } },
+        groupPost: { select: { text: true } },
       },
     });
-    return reports;
+    return reports.map(({ activity, comment, groupPost, ...report }: ReportQueueRow) => ({
+      ...report,
+      contextPreview:
+        comment?.comment ??
+        groupPost?.text ??
+        (activity
+          ? [activity.title, activity.description].filter((part): part is string => Boolean(part)).join('\n\n')
+          : null),
+    }));
   }
 
   async getReportDetails(reportId: string) {
     const report = await this.prisma.contentReport.findUnique({ where: { id: reportId } });
     if (!report) throw new NotFoundException('Жалоба не найдена');
+
+    const [reporter, contentAuthor] = await Promise.all([
+      this.getUserSummary(report.reporterId),
+      this.getUserSummary(report.subjectUserId),
+    ]);
 
     let context: Record<string, unknown> | null;
     if (report.targetType === 'activity') {
@@ -124,11 +141,93 @@ export class ModerationReportsService {
         where: { id: report.targetId },
         select: { comment: true, authorId: true, activityId: true, moderationStatus: true },
       });
-    } else if (report.targetType === 'media') {
-      context = await this.prisma.activityMedia.findUnique({
+    } else if (report.targetType === 'activity_text') {
+      const activity = await this.prisma.activity.findUnique({
         where: { id: report.targetId },
-        select: { url: true, thumbnail: true, userId: true, activityId: true, moderationStatus: true },
+        select: { title: true, description: true, userId: true, textModerationStatus: true },
       });
+      context = activity ? { ...activity, moderationStatus: activity.textModerationStatus } : null;
+    } else if (report.targetType === 'group_post') {
+      const post = await this.prisma.groupPost.findUnique({
+        where: { id: report.targetId },
+        select: {
+          text: true,
+          createdByUserId: true,
+          moderationStatus: true,
+          photoAsset: {
+            select: {
+              quarantineKey: true,
+              publishedKey: true,
+              status: true,
+              contentType: true,
+              scores: true,
+              frameCount: true,
+              modelVersion: true,
+            },
+          },
+        },
+      });
+      const photoAsset = post?.photoAsset;
+      const mediaUrl = photoAsset
+        ? photoAsset.status === 'approved' && photoAsset.publishedKey
+          ? this.storage.getPublicUrl(photoAsset.publishedKey)
+          : await this.storage.getQuarantinePreviewUrl(photoAsset.quarantineKey)
+        : null;
+      context = post
+        ? {
+            comment: post.text,
+            authorId: post.createdByUserId,
+            moderationStatus: post.moderationStatus,
+            url: mediaUrl,
+            mediaStatus: photoAsset?.status ?? null,
+            contentType: photoAsset?.contentType ?? null,
+            scores: photoAsset?.scores ?? null,
+            frameCount: photoAsset?.frameCount ?? null,
+            modelVersion: photoAsset?.modelVersion ?? null,
+          }
+        : null;
+    } else if (report.targetType === 'media') {
+      const media = await this.prisma.activityMedia.findUnique({
+        where: { id: report.targetId },
+        select: {
+          url: true,
+          thumbnail: true,
+          userId: true,
+          activityId: true,
+          moderationStatus: true,
+          mediaReviewStatus: true,
+          mediaModerationAsset: {
+            select: {
+              quarantineKey: true,
+              publishedKey: true,
+              status: true,
+              contentType: true,
+              scores: true,
+              frameCount: true,
+              modelVersion: true,
+            },
+          },
+        },
+      });
+      const mediaAsset = media?.mediaModerationAsset;
+      const mediaUrl =
+        media?.url ??
+        (mediaAsset
+          ? mediaAsset.status === 'approved' && mediaAsset.publishedKey
+            ? this.storage.getPublicUrl(mediaAsset.publishedKey)
+            : await this.storage.getQuarantinePreviewUrl(mediaAsset.quarantineKey)
+          : null);
+      context = media
+        ? {
+            ...media,
+            url: mediaUrl,
+            mediaStatus: mediaAsset?.status ?? media.mediaReviewStatus ?? null,
+            contentType: mediaAsset?.contentType ?? null,
+            scores: mediaAsset?.scores ?? null,
+            frameCount: mediaAsset?.frameCount ?? null,
+            modelVersion: mediaAsset?.modelVersion ?? null,
+          }
+        : null;
     } else if (report.targetType === 'group') {
       const group = await this.prisma.group.findUnique({
         where: { id: report.targetId },
@@ -169,14 +268,43 @@ export class ModerationReportsService {
     } else {
       context = await this.prisma.profile.findUnique({
         where: { userId: report.targetId },
-        select: { name: true, surname: true, profilePhoto: true, userId: true },
+        select: { name: true, surname: true, profilePhoto: true, userId: true, bio: true },
       });
     }
     const actions = await this.prisma.moderationAction.findMany({
       where: { reportId },
       orderBy: { createdAt: 'asc' },
     });
-    return { report, context, actions };
+    return { report, reporter, contentAuthor, context, actions };
+  }
+
+  async deleteReport(reportId: string) {
+    const report = await this.prisma.contentReport.findUnique({ where: { id: reportId }, select: { id: true } });
+    if (!report) throw new NotFoundException('Жалоба не найдена');
+
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.moderationAppeal.deleteMany({ where: { reportId } });
+      await transaction.moderationAction.deleteMany({ where: { reportId } });
+      await transaction.contentReport.delete({ where: { id: reportId } });
+    });
+  }
+
+  private async getUserSummary(userId: string | null) {
+    if (!userId) return null;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, profile: { select: { name: true, surname: true, profilePhoto: true } } },
+    });
+    if (!user) return null;
+
+    return {
+      userId,
+      name: user.profile?.name ?? null,
+      surname: user.profile?.surname ?? null,
+      profilePhoto: user.profile?.profilePhoto ?? null,
+      email: user.email,
+    };
   }
 
   async applyAction(reportId: string, moderatorId: string, request: ModerationActionDto) {
@@ -230,16 +358,18 @@ export class ModerationReportsService {
         },
       });
       if (updatedReport.count !== 1) throw new ConflictException('Жалоба уже рассмотрена');
-      await createNotificationEvent(transaction, {
-        recipientUserId: report.reporterId ?? '',
-        type: NOTIFICATION_TYPE.moderationReportDecision,
-        emailNotificationType: EMAIL_NOTIFICATION_TYPE.reporterDecision,
-        sourceId: moderationAction.id,
-        targetType: 'moderation-report',
-        targetId: report.id,
-        localizedContent: createReportDecisionCopy(report, action),
-        mandatory: true,
-      });
+      if (report.reporterId) {
+        await createNotificationEvent(transaction, {
+          recipientUserId: report.reporterId,
+          type: NOTIFICATION_TYPE.moderationReportDecision,
+          emailNotificationType: EMAIL_NOTIFICATION_TYPE.reporterDecision,
+          sourceId: moderationAction.id,
+          targetType: 'moderation-report',
+          targetId: report.id,
+          localizedContent: createReportDecisionCopy(report, action),
+          mandatory: true,
+        });
+      }
     });
 
     return await this.prisma.contentReport.findUnique({ where: { id: reportId } });

@@ -1,0 +1,110 @@
+[
+  {
+    "id": "column.public.Users.apple_subject",
+    "label": "Add column \"apple_subject\" to \"Users\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "apple_subject",
+        "table": "Users"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"apple_subject\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Users",
+          "apple_subject"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"apple_subject\" on \"Users\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"apple_subject\"",
+        "sql": "ALTER TABLE \"public\".\"Users\" ADD COLUMN \"apple_subject\" character varying(255)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"apple_subject\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Users",
+          "apple_subject"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"apple_subject\" on \"Users\""
+        }
+      },
+      {
+        "description": "verify column \"apple_subject\" has type \"character varying(255)\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Users",
+          "apple_subject",
+          "character varying(255)"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Users.User_apple_subject_key",
+    "label": "Add unique constraint on \"Users\" (apple_subject)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "User_apple_subject_key",
+        "table": "Users"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"User_apple_subject_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "User_apple_subject_key",
+          "public",
+          "\"public\".\"Users\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"User_apple_subject_key\" on \"Users\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"User_apple_subject_key\"",
+        "sql": "ALTER TABLE \"public\".\"Users\" ADD CONSTRAINT \"User_apple_subject_key\" UNIQUE (\"apple_subject\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify unique constraint \"User_apple_subject_key\" exists on (apple_subject)",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb)) AS \"result\"",
+        "params": [
+          "User_apple_subject_key",
+          "public",
+          "\"public\".\"Users\"",
+          "u",
+          "[\"apple_subject\"]"
+        ]
+      }
+    ]
+  }
+]

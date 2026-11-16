@@ -10,6 +10,7 @@ import { encodeActivityMediaCursor, type ActivityMediaCursor } from '../shared/a
 import {
   createActivityChartLocations,
   hidePendingActivityMediaForViewer,
+  hidePendingActivityTextForViewer,
   hideActivityMapForViewer,
   normalizeActivityDetails,
   reduceActivityChartHeartRateSamples,
@@ -117,7 +118,10 @@ export class ActivityContentReadService {
       )
         return null;
       const activityWithOwnerPreviews = await this.resolveActivityMediaForViewer({ ...activity }, currentUserId);
-      const activityForResponse = hidePendingActivityMediaForViewer(activityWithOwnerPreviews, currentUserId);
+      const activityForResponse = hidePendingActivityTextForViewer(
+        hidePendingActivityMediaForViewer(activityWithOwnerPreviews, currentUserId),
+        currentUserId,
+      );
       delete activityForResponse.moderationStatus;
       const normalizedActivity = hideActivityMapForViewer(
         normalizeActivityDetails(activityForResponse as Record<string, unknown>),

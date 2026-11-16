@@ -1,11 +1,20 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Optional } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { BadRequestException } from '@nestjs/common';
 import { ContentReportTargetType, ModerationTarget } from '../shared/moderation.types';
+import { ModerationContentNotificationsService } from './moderation-content-notifications.service';
 
 @Injectable()
 export class ModerationTargetsService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  private readonly contentNotifications: ModerationContentNotificationsService;
+
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(ModerationContentNotificationsService)
+    contentNotifications?: ModerationContentNotificationsService,
+  ) {
+    this.contentNotifications = contentNotifications ?? new ModerationContentNotificationsService();
+  }
 
   async resolveReportTarget(targetType: ContentReportTargetType, targetId: string): Promise<ModerationTarget | null> {
     if (targetType === 'media_upload') return null;
@@ -22,8 +31,24 @@ export class ModerationTargetsService {
         where: { id: targetId },
         select: { authorId: true, moderationStatus: true },
       });
-      if (!comment || comment.moderationStatus !== 'visible') return null;
+      if (!comment || !['visible', 'pending', 'processing'].includes(comment.moderationStatus)) return null;
       return { targetType, targetId, subjectUserId: comment.authorId, commentId: targetId };
+    }
+    if (targetType === 'activity_text') {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: targetId },
+        select: { id: true, userId: true, textModerationStatus: true },
+      });
+      if (!activity || !['visible', 'pending', 'processing'].includes(activity.textModerationStatus)) return null;
+      return { targetType, targetId, subjectUserId: activity.userId, activityId: targetId };
+    }
+    if (targetType === 'group_post') {
+      const post = await this.prisma.groupPost.findUnique({
+        where: { id: targetId },
+        select: { id: true, createdByUserId: true, moderationStatus: true },
+      });
+      if (!post || !['visible', 'pending', 'processing'].includes(post.moderationStatus)) return null;
+      return { targetType, targetId, subjectUserId: post.createdByUserId, groupPostId: targetId };
     }
     if (targetType === 'media') {
       const media = await this.prisma.activityMedia.findUnique({
@@ -62,7 +87,40 @@ export class ModerationTargetsService {
     if (targetType === 'activity') {
       await transaction.activity.update({ where: { id: targetId }, data: { moderationStatus: status } });
     } else if (targetType === 'comment') {
-      await transaction.comment.update({ where: { id: targetId }, data: { moderationStatus: status } });
+      const data = { moderationStatus: status, moderationProcessingStartedAt: null };
+      if (status === 'visible') {
+        const update = await transaction.comment.updateMany({
+          where: { id: targetId, moderationStatus: { not: 'visible' } },
+          data,
+        });
+        if (update.count === 1) {
+          await this.contentNotifications.notifyPublishedComment(transaction, targetId);
+        } else {
+          await transaction.comment.update({ where: { id: targetId }, data });
+        }
+      } else {
+        await transaction.comment.update({ where: { id: targetId }, data });
+      }
+    } else if (targetType === 'activity_text') {
+      await transaction.activity.update({
+        where: { id: targetId },
+        data: { textModerationStatus: status, textModerationProcessingStartedAt: null },
+      });
+    } else if (targetType === 'group_post') {
+      const data = { moderationStatus: status, moderationProcessingStartedAt: null };
+      if (status === 'visible') {
+        const update = await transaction.groupPost.updateMany({
+          where: { id: targetId, moderationStatus: { not: 'visible' } },
+          data,
+        });
+        if (update.count === 1) {
+          await this.contentNotifications.notifyPublishedGroupPost(transaction, targetId);
+        } else {
+          await transaction.groupPost.update({ where: { id: targetId }, data });
+        }
+      } else {
+        await transaction.groupPost.update({ where: { id: targetId }, data });
+      }
     } else if (targetType === 'media') {
       await transaction.activityMedia.update({ where: { id: targetId }, data: { moderationStatus: status } });
     } else if (targetType === 'group') {

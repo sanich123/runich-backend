@@ -3,12 +3,16 @@ import { asyncMock, syncMock } from 'src/tests/helpers';
 import type { LocationObject } from 'src/activity/dto/activity.dto';
 
 const parseCoordinatesFromFile = asyncMock();
+const parseFitActivityFromMigrationFile = asyncMock();
 const ungzipFile = asyncMock();
 const getMapBoxImage = syncMock();
 const getSpeedInMinsInKm = syncMock();
 const uuid = syncMock();
 
-jest.unstable_mockModule('../parse-coordinates-from-file', () => ({ parseCoordinatesFromFile }));
+jest.unstable_mockModule('../parse-coordinates-from-file', () => ({
+  parseCoordinatesFromFile,
+  parseFitActivityFromMigrationFile,
+}));
 jest.unstable_mockModule('../ungzip', () => ({ ungzipFile }));
 jest.unstable_mockModule('../get-mapbox-image', () => ({ getMapBoxImage }));
 jest.unstable_mockModule('../get-speed', () => ({ getSpeedInMinsInKm }));
@@ -37,6 +41,7 @@ describe('mapActivitiesWithCoordinates', () => {
     jest.clearAllMocks();
     process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
     parseCoordinatesFromFile.mockResolvedValue(createRoute());
+    parseFitActivityFromMigrationFile.mockResolvedValue({ locations: createRoute(), heartRateData: { samples: [] } });
     getMapBoxImage.mockReturnValue('https://map.example/route');
     getSpeedInMinsInKm.mockReturnValue({ paceAsNumber: 6 });
     uuid.mockReturnValue('activity-1');
@@ -103,7 +108,7 @@ describe('mapActivitiesWithCoordinates', () => {
         timestamp: index * 60_000,
       },
     }));
-    parseCoordinatesFromFile.mockResolvedValueOnce(route);
+    parseFitActivityFromMigrationFile.mockResolvedValueOnce({ locations: route, heartRateData: { samples: [] } });
 
     const [activity] = await mapActivitiesWithCoordinates({
       userId: 'user-1',
@@ -246,7 +251,10 @@ describe('mapActivitiesWithCoordinates', () => {
   });
 
   it('parses FIT routes but skips the map when the route has one point', async () => {
-    parseCoordinatesFromFile.mockResolvedValueOnce([createRoute()[0]]);
+    parseFitActivityFromMigrationFile.mockResolvedValueOnce({
+      locations: [createRoute()[0]],
+      heartRateData: { samples: [] },
+    });
 
     const [activity] = await mapActivitiesWithCoordinates({
       userId: 'user-1',
@@ -268,7 +276,7 @@ describe('mapActivitiesWithCoordinates', () => {
 
     expect(activity.locations).toHaveLength(1);
     expect(activity.mapPhotoUrl).toBe('');
-    expect(parseCoordinatesFromFile).toHaveBeenCalledWith('activities/run.fit', '/tmp/migration-job-3');
+    expect(parseFitActivityFromMigrationFile).toHaveBeenCalledWith('activities/run.fit', '/tmp/migration-job-3');
     expect(getMapBoxImage).not.toHaveBeenCalled();
   });
 
