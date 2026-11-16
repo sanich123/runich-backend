@@ -4,11 +4,15 @@ import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import {
   ArrayMaxSize,
   IsArray,
+  IsEmail,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   IsUrl,
+  Matches,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -29,19 +33,32 @@ export class FeedbackDto {
   @IsUUID()
   feedbackId: string;
 
-  @ApiProperty({ type: String })
-  @IsString()
-  @IsNotEmpty()
-  kind: string;
+  @ApiProperty({ type: String, enum: ['bug', 'feature', 'question'] })
+  @IsIn(['bug', 'feature', 'question'])
+  kind: 'bug' | 'feature' | 'question';
 
-  @ApiProperty({ type: String })
+  @ApiPropertyOptional({ type: String, maxLength: 32 })
+  @IsOptional()
+  @IsIn(['account', 'workout', 'sync', 'maps', 'groups', 'other'])
+  topic?: 'account' | 'workout' | 'sync' | 'maps' | 'groups' | 'other';
+
+  @ApiPropertyOptional({ type: String, format: 'email', maxLength: 255 })
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(255)
+  email?: string;
+
+  @ApiProperty({ type: String, maxLength: 10000 })
   @IsString()
   @IsNotEmpty()
+  @Matches(/\S/)
+  @MaxLength(10000)
   text: string;
 
-  @ApiProperty({ type: String })
+  @ApiProperty({ type: String, maxLength: 2000 })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(2000)
   deviceInfo: string;
 
   @ApiPropertyOptional({ type: [FeedbackAttachmentDto], maxItems: UPLOAD_LIMITS.mediaBatchFiles })

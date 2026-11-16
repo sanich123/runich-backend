@@ -217,6 +217,8 @@ export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics
     groupMember: new ModelRepository(client, 'GroupMember', latencyMetrics),
     groupPost: new ModelRepository(client, 'GroupPost', latencyMetrics),
     groupEvent: new ModelRepository(client, 'GroupEvent', latencyMetrics),
+    feedbackRequest: new ModelRepository(client, 'FeedbackRequest', latencyMetrics),
+    feedbackReply: new ModelRepository(client, 'FeedbackReply', latencyMetrics),
   };
 }
 

@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Inject,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Req,
@@ -31,7 +32,8 @@ import { extname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
+import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
+import type { AuthenticatedRequest, OptionalAuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { ParamsId } from 'src/common/dto/params-validation';
@@ -47,13 +49,13 @@ import {
 import { StorageService } from './services/storage.service';
 
 @ApiTags('photo')
-@ApiBearerAuth('bearerAuth')
 @Controller('photo')
-@UseGuards(JwtAuthGuard)
 export class StorageController {
   constructor(@Inject(StorageService) private readonly storageService: StorageService) {}
 
   @Get('status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
   @RateLimit(RATE_LIMITS.mediaUploadStatus.limit, RATE_LIMITS.mediaUploadStatus.ttl)
   @ApiOperation({ summary: 'Get the current user moderation status for uploaded media' })
   async getUploadStatus(@Query('ids') ids: string | undefined, @Req() request: AuthenticatedRequest) {
@@ -69,6 +71,8 @@ export class StorageController {
   }
 
   @Post(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
   @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)
   @ApiOperation({ summary: 'Publish media explicitly approved by a moderator' })
   async publishApprovedUpload(@Param() { id }: ParamsId, @Req() request: AuthenticatedRequest) {
@@ -76,7 +80,8 @@ export class StorageController {
   }
 
   @Post('batch')
-  @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)
+  @UseGuards(OptionalJwtAuthGuard)
+  @RateLimit(RATE_LIMITS.feedbackAttachmentUpload.limit, RATE_LIMITS.feedbackAttachmentUpload.ttl)
   @ApiOperation({ summary: 'Upload up to 10 photos or videos with a media manifest' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -119,16 +124,18 @@ export class StorageController {
   @HttpCode(HttpStatus.CREATED)
   async uploadPhotos(
     @UploadedFiles() files: Express.Multer.File[] | undefined,
-    @Req() request: AuthenticatedRequest,
+    @Req() request: OptionalAuthenticatedRequest,
     @Body() body: PhotoUploadBatchDto,
   ) {
     if (!files?.length) throw new BadRequestException('Не указаны файлы: files');
     const { manifest, ...options } = body;
-    const userId = getAuthenticatedUserId(request);
+    const userId = request.user ? (request.user.userId ?? request.user.id) : null;
     return await this.storageService.uploadPhotos(userId, files, options, manifest);
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
   @RateLimit(RATE_LIMITS.photoUpload.limit, RATE_LIMITS.photoUpload.ttl)
   @ApiOperation({ summary: 'Upload a photo or video to the current user storage' })
   @ApiConsumes('multipart/form-data')
@@ -174,6 +181,8 @@ export class StorageController {
   }
 
   @Delete()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
   @RateLimit(RATE_LIMITS.photoDelete.limit, RATE_LIMITS.photoDelete.ttl)
   @ApiOperation({ summary: 'Delete one photo or video owned by the current user' })
   @ApiBody({ type: DeletePhotoDto })
@@ -183,7 +192,28 @@ export class StorageController {
     await this.storageService.deletePhoto(getAuthenticatedUserId(request), url);
   }
 
+  @Delete('feedback/:feedbackId')
+  @UseGuards(OptionalJwtAuthGuard)
+  @RateLimit(RATE_LIMITS.photoDelete.limit, RATE_LIMITS.photoDelete.ttl)
+  @ApiOperation({ summary: 'Delete an attachment from a support request' })
+  @ApiBody({ type: DeletePhotoDto })
+  @ApiNoContentResponse({ description: 'Feedback attachment deleted' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteFeedbackPhoto(
+    @Param('feedbackId', new ParseUUIDPipe()) feedbackId: string,
+    @Body() { url }: DeletePhotoDto,
+    @Req() request: OptionalAuthenticatedRequest,
+  ) {
+    await this.storageService.deleteFeedbackPhoto(
+      request.user ? (request.user.userId ?? request.user.id) : null,
+      feedbackId,
+      url,
+    );
+  }
+
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
   @RateLimit(RATE_LIMITS.photoDelete.limit, RATE_LIMITS.photoDelete.ttl)
   @ApiOperation({ summary: 'Delete a user-owned moderation upload that is not attached to an activity' })
   @ApiNoContentResponse({ description: 'Pending upload deleted' })

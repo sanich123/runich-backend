@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import { join } from 'node:path';
 import nodemailer from 'nodemailer';
+import { Logger } from '@nestjs/common';
 
 import { RUNICH_LOGO_CID } from './constants';
 import { getAppEnvironment } from 'src/common/config/environment';
@@ -24,6 +25,7 @@ const TRANSIENT_SMTP_ERROR_CODES = new Set([
   'ESOCKET',
   'ETIMEDOUT',
 ]);
+const supportEmailLogger = new Logger('SupportEmail');
 
 type SmtpProvider = {
   senderEmail: string;
@@ -182,6 +184,26 @@ export const sendEmail = async (
         });
       }
     }
+  } finally {
+    latencyMetrics?.observeExternal('smtp', 'send', performance.now() - startedAt);
+  }
+};
+
+export const sendSupportEmail = async (
+  email: string,
+  subject: string,
+  html: string,
+  latencyMetrics?: LatencyMetricsService,
+) => {
+  const startedAt = performance.now();
+  try {
+    const yandex = getYandexProvider();
+    await yandex.transporter.sendMail(emailMessage('runich.app@yandex.ru', email, subject, html));
+    supportEmailLogger.log('Yandex SMTP accepted support message');
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : 'UnknownError';
+    supportEmailLogger.error(`Failed to send support email via Yandex SMTP (${errorName})`);
+    throw error;
   } finally {
     latencyMetrics?.observeExternal('smtp', 'send', performance.now() - startedAt);
   }

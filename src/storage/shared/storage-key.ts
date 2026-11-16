@@ -25,6 +25,10 @@ export function getFeedbackPhotoKey(userId: string, feedbackId: string, extensio
   return `${userId}/feedback/${getDateFolder(createdAt)}/${feedbackId}/${randomUUID()}.${extension}`;
 }
 
+export function getGuestFeedbackPhotoKey(feedbackId: string, extension: string, createdAt = new Date()) {
+  return `guest-feedback/${getDateFolder(createdAt)}/${feedbackId}/${randomUUID()}.${extension}`;
+}
+
 export function getMigrationArchiveKey(userId: string, migrationId: string) {
   return `${userId}/migrations/${migrationId}/archive.zip`;
 }

@@ -4,3 +4,6 @@ export { ModerationReportEmail } from './ModerationReportEmail';
 export { ReporterModerationEmail } from './ReporterModerationEmail';
 export { NotificationEmail } from './NotificationEmail';
 export { PasswordChangeCode } from './PasswordChangeCode';
+export { FeedbackReceiptEmail } from './FeedbackReceiptEmail';
+export { FeedbackReplyEmail } from './FeedbackReplyEmail';
+export { NewFeedbackEmail } from './NewFeedbackEmail';

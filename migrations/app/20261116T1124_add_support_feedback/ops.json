@@ -1,0 +1,544 @@
+[
+  {
+    "id": "table.FeedbackReply",
+    "label": "Create table \"FeedbackReply\"",
+    "summary": "Creates table \"FeedbackReply\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "FeedbackReply"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"FeedbackReply\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackReply\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"FeedbackReply\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"FeedbackReply\"",
+        "sql": "CREATE TABLE \"public\".\"FeedbackReply\" (\n  \"admin_email\" character varying(255) NOT NULL,\n  \"admin_user_id\" uuid,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"delivery_status\" character varying(32) DEFAULT 'pending' NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"request_id\" uuid NOT NULL,\n  \"text\" character varying(10000) NOT NULL,\n  CONSTRAINT \"FeedbackReply_pkey\" PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"FeedbackReply\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackReply\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"FeedbackReply\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.FeedbackRequest",
+    "label": "Create table \"FeedbackRequest\"",
+    "summary": "Creates table \"FeedbackRequest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "FeedbackRequest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"FeedbackRequest\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackRequest\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"FeedbackRequest\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"FeedbackRequest\"",
+        "sql": "CREATE TABLE \"public\".\"FeedbackRequest\" (\n  \"admin_notification_sent\" bool DEFAULT false NOT NULL,\n  \"attachments\" jsonb,\n  \"confirmation_email_sent\" bool DEFAULT false NOT NULL,\n  \"created_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  \"device_info\" character varying(2000) NOT NULL,\n  \"email\" character varying(255) NOT NULL,\n  \"id\" uuid DEFAULT (gen_random_uuid()) NOT NULL,\n  \"kind\" character varying(32) NOT NULL,\n  \"sender_user_id\" uuid,\n  \"status\" character varying(32) DEFAULT 'open' NOT NULL,\n  \"text\" character varying(10000) NOT NULL,\n  \"topic\" character varying(32),\n  \"updated_at\" timestamptz(6) DEFAULT (now()) NOT NULL,\n  CONSTRAINT \"FeedbackRequest_pkey\" PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"FeedbackRequest\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackRequest\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"FeedbackRequest\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "index.FeedbackReply.FeedbackReply_admin_user_id_idx_b23cda86",
+    "label": "Create index \"FeedbackReply_admin_user_id_idx_b23cda86\" on \"FeedbackReply\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "FeedbackReply_admin_user_id_idx_b23cda86",
+        "table": "FeedbackReply"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"FeedbackReply_admin_user_id_idx_b23cda86\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackReply_admin_user_id_idx_b23cda86\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"FeedbackReply_admin_user_id_idx_b23cda86\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"FeedbackReply_admin_user_id_idx_b23cda86\"",
+        "sql": "CREATE INDEX \"FeedbackReply_admin_user_id_idx_b23cda86\" ON \"public\".\"FeedbackReply\" (\"admin_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"FeedbackReply_admin_user_id_idx_b23cda86\" exists on \"FeedbackReply\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackReply_admin_user_id_idx_b23cda86\"",
+          "i",
+          "I",
+          "\"public\".\"FeedbackReply\"",
+          "btree",
+          "[\"admin_user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.FeedbackReply.FeedbackReply_request_id_created_at_idx",
+    "label": "Create index \"FeedbackReply_request_id_created_at_idx\" on \"FeedbackReply\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "FeedbackReply_request_id_created_at_idx",
+        "table": "FeedbackReply"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"FeedbackReply_request_id_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackReply_request_id_created_at_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"FeedbackReply_request_id_created_at_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"FeedbackReply_request_id_created_at_idx\"",
+        "sql": "CREATE INDEX \"FeedbackReply_request_id_created_at_idx\" ON \"public\".\"FeedbackReply\" (\"request_id\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"FeedbackReply_request_id_created_at_idx\" exists on \"FeedbackReply\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackReply_request_id_created_at_idx\"",
+          "i",
+          "I",
+          "\"public\".\"FeedbackReply\"",
+          "btree",
+          "[\"request_id\",\"created_at\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.FeedbackReply.FeedbackReply_request_id_idx_0aa129e0",
+    "label": "Create index \"FeedbackReply_request_id_idx_0aa129e0\" on \"FeedbackReply\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "FeedbackReply_request_id_idx_0aa129e0",
+        "table": "FeedbackReply"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"FeedbackReply_request_id_idx_0aa129e0\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackReply_request_id_idx_0aa129e0\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"FeedbackReply_request_id_idx_0aa129e0\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"FeedbackReply_request_id_idx_0aa129e0\"",
+        "sql": "CREATE INDEX \"FeedbackReply_request_id_idx_0aa129e0\" ON \"public\".\"FeedbackReply\" (\"request_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"FeedbackReply_request_id_idx_0aa129e0\" exists on \"FeedbackReply\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackReply_request_id_idx_0aa129e0\"",
+          "i",
+          "I",
+          "\"public\".\"FeedbackReply\"",
+          "btree",
+          "[\"request_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.FeedbackRequest.FeedbackRequest_email_created_at_idx",
+    "label": "Create index \"FeedbackRequest_email_created_at_idx\" on \"FeedbackRequest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "FeedbackRequest_email_created_at_idx",
+        "table": "FeedbackRequest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"FeedbackRequest_email_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackRequest_email_created_at_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"FeedbackRequest_email_created_at_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"FeedbackRequest_email_created_at_idx\"",
+        "sql": "CREATE INDEX \"FeedbackRequest_email_created_at_idx\" ON \"public\".\"FeedbackRequest\" (\"email\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"FeedbackRequest_email_created_at_idx\" exists on \"FeedbackRequest\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackRequest_email_created_at_idx\"",
+          "i",
+          "I",
+          "\"public\".\"FeedbackRequest\"",
+          "btree",
+          "[\"email\",\"created_at\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.FeedbackRequest.FeedbackRequest_sender_user_id_idx_c381833a",
+    "label": "Create index \"FeedbackRequest_sender_user_id_idx_c381833a\" on \"FeedbackRequest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "FeedbackRequest_sender_user_id_idx_c381833a",
+        "table": "FeedbackRequest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"FeedbackRequest_sender_user_id_idx_c381833a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackRequest_sender_user_id_idx_c381833a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"FeedbackRequest_sender_user_id_idx_c381833a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"FeedbackRequest_sender_user_id_idx_c381833a\"",
+        "sql": "CREATE INDEX \"FeedbackRequest_sender_user_id_idx_c381833a\" ON \"public\".\"FeedbackRequest\" (\"sender_user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"FeedbackRequest_sender_user_id_idx_c381833a\" exists on \"FeedbackRequest\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackRequest_sender_user_id_idx_c381833a\"",
+          "i",
+          "I",
+          "\"public\".\"FeedbackRequest\"",
+          "btree",
+          "[\"sender_user_id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.FeedbackRequest.FeedbackRequest_status_created_at_idx",
+    "label": "Create index \"FeedbackRequest_status_created_at_idx\" on \"FeedbackRequest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "FeedbackRequest_status_created_at_idx",
+        "table": "FeedbackRequest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"FeedbackRequest_status_created_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackRequest_status_created_at_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"FeedbackRequest_status_created_at_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"FeedbackRequest_status_created_at_idx\"",
+        "sql": "CREATE INDEX \"FeedbackRequest_status_created_at_idx\" ON \"public\".\"FeedbackRequest\" (\"status\", \"created_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"FeedbackRequest_status_created_at_idx\" exists on \"FeedbackRequest\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"FeedbackRequest_status_created_at_idx\"",
+          "i",
+          "I",
+          "\"public\".\"FeedbackRequest\"",
+          "btree",
+          "[\"status\",\"created_at\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.FeedbackReply.FeedbackReply_request_id_fkey",
+    "label": "Add foreign key \"FeedbackReply_request_id_fkey\" on \"FeedbackReply\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "FeedbackReply_request_id_fkey",
+        "table": "FeedbackReply"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"FeedbackReply_request_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "FeedbackReply_request_id_fkey",
+          "public",
+          "\"public\".\"FeedbackReply\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"FeedbackReply_request_id_fkey\" on \"FeedbackReply\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"FeedbackReply_request_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"FeedbackReply\"\nADD CONSTRAINT \"FeedbackReply_request_id_fkey\"\nFOREIGN KEY (\"request_id\")\nREFERENCES \"public\".\"FeedbackRequest\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"FeedbackReply_request_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "FeedbackReply_request_id_fkey",
+          "public",
+          "\"public\".\"FeedbackReply\"",
+          "f",
+          "[\"request_id\"]",
+          "\"public\".\"FeedbackRequest\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.FeedbackReply.FeedbackReply_admin_user_id_fkey",
+    "label": "Add foreign key \"FeedbackReply_admin_user_id_fkey\" on \"FeedbackReply\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "FeedbackReply_admin_user_id_fkey",
+        "table": "FeedbackReply"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"FeedbackReply_admin_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "FeedbackReply_admin_user_id_fkey",
+          "public",
+          "\"public\".\"FeedbackReply\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"FeedbackReply_admin_user_id_fkey\" on \"FeedbackReply\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"FeedbackReply_admin_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"FeedbackReply\"\nADD CONSTRAINT \"FeedbackReply_admin_user_id_fkey\"\nFOREIGN KEY (\"admin_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"FeedbackReply_admin_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "FeedbackReply_admin_user_id_fkey",
+          "public",
+          "\"public\".\"FeedbackReply\"",
+          "f",
+          "[\"admin_user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "n",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.FeedbackRequest.FeedbackRequest_sender_user_id_fkey",
+    "label": "Add foreign key \"FeedbackRequest_sender_user_id_fkey\" on \"FeedbackRequest\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "FeedbackRequest_sender_user_id_fkey",
+        "table": "FeedbackRequest"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"FeedbackRequest_sender_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "FeedbackRequest_sender_user_id_fkey",
+          "public",
+          "\"public\".\"FeedbackRequest\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"FeedbackRequest_sender_user_id_fkey\" on \"FeedbackRequest\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"FeedbackRequest_sender_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"FeedbackRequest\"\nADD CONSTRAINT \"FeedbackRequest_sender_user_id_fkey\"\nFOREIGN KEY (\"sender_user_id\")\nREFERENCES \"public\".\"Users\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"FeedbackRequest_sender_user_id_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "FeedbackRequest_sender_user_id_fkey",
+          "public",
+          "\"public\".\"FeedbackRequest\"",
+          "f",
+          "[\"sender_user_id\"]",
+          "\"public\".\"Users\"",
+          "[\"id\"]",
+          "n",
+          "a"
+        ]
+      }
+    ]
+  }
+]

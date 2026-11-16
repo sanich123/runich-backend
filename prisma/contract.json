@@ -44,6 +44,14 @@
       "model": "EmailNotificationJob",
       "namespace": "public"
     },
+    "FeedbackReply": {
+      "model": "FeedbackReply",
+      "namespace": "public"
+    },
+    "FeedbackRequest": {
+      "model": "FeedbackRequest",
+      "namespace": "public"
+    },
     "Friend": {
       "model": "Friend",
       "namespace": "public"
@@ -2672,6 +2680,329 @@
               },
               "namespaceId": "public",
               "table": "EmailNotificationJob"
+            }
+          },
+          "FeedbackReply": {
+            "fields": {
+              "adminEmail": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 255
+                  }
+                }
+              },
+              "adminUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "deliveryStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 32
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "requestId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "text": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 10000
+                  }
+                }
+              }
+            },
+            "relations": {
+              "admin": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "adminUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "request": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "requestId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "FeedbackRequest",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "adminEmail": {
+                  "column": "admin_email"
+                },
+                "adminUserId": {
+                  "column": "admin_user_id"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "deliveryStatus": {
+                  "column": "delivery_status"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "requestId": {
+                  "column": "request_id"
+                },
+                "text": {
+                  "column": "text"
+                }
+              },
+              "namespaceId": "public",
+              "table": "FeedbackReply"
+            }
+          },
+          "FeedbackRequest": {
+            "fields": {
+              "adminNotificationSent": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "attachments": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/jsonb@1",
+                  "kind": "scalar"
+                }
+              },
+              "confirmationEmailSent": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "deviceInfo": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 2000
+                  }
+                }
+              },
+              "email": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 255
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "kind": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 32
+                  }
+                }
+              },
+              "senderUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 32
+                  }
+                }
+              },
+              "text": {
+                "nullable": false,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 10000
+                  }
+                }
+              },
+              "topic": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 32
+                  }
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              }
+            },
+            "relations": {
+              "replies": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "requestId"
+                  ]
+                },
+                "to": {
+                  "model": "FeedbackReply",
+                  "namespace": "public"
+                }
+              },
+              "sender": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "senderUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "adminNotificationSent": {
+                  "column": "admin_notification_sent"
+                },
+                "attachments": {
+                  "column": "attachments"
+                },
+                "confirmationEmailSent": {
+                  "column": "confirmation_email_sent"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "deviceInfo": {
+                  "column": "device_info"
+                },
+                "email": {
+                  "column": "email"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "kind": {
+                  "column": "kind"
+                },
+                "senderUserId": {
+                  "column": "sender_user_id"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "text": {
+                  "column": "text"
+                },
+                "topic": {
+                  "column": "topic"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                }
+              },
+              "namespaceId": "public",
+              "table": "FeedbackRequest"
             }
           },
           "Friend": {
@@ -6193,6 +6524,21 @@
                   "namespace": "public"
                 }
               },
+              "authoredFeedbackReplies": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "adminUserId"
+                  ]
+                },
+                "to": {
+                  "model": "FeedbackReply",
+                  "namespace": "public"
+                }
+              },
               "blocksCreated": {
                 "cardinality": "1:N",
                 "on": {
@@ -6491,6 +6837,21 @@
                 },
                 "to": {
                   "model": "ContentReport",
+                  "namespace": "public"
+                }
+              },
+              "submittedFeedbackRequests": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "senderUserId"
+                  ]
+                },
+                "to": {
+                  "model": "FeedbackRequest",
                   "namespace": "public"
                 }
               },
@@ -9109,6 +9470,319 @@
                   "name": "EmailNotificationJob_notification_type_source_id_key"
                 }
               ]
+            },
+            "FeedbackReply": {
+              "columns": {
+                "admin_email": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 255
+                  }
+                },
+                "admin_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "delivery_status": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "default": {
+                    "kind": "literal",
+                    "value": "pending"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 32
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "request_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "text": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 10000
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "FeedbackReply_request_id_idx_0aa129e0"
+                  },
+                  "name": "FeedbackReply_request_id_fkey",
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "request_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "FeedbackReply"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "FeedbackRequest"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "FeedbackReply_admin_user_id_idx_b23cda86"
+                  },
+                  "name": "FeedbackReply_admin_user_id_fkey",
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "admin_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "FeedbackReply"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "admin_user_id"
+                  ],
+                  "name": "FeedbackReply_admin_user_id_idx_b23cda86",
+                  "prefix": "FeedbackReply_admin_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "request_id",
+                    "created_at"
+                  ],
+                  "name": "FeedbackReply_request_id_created_at_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "request_id"
+                  ],
+                  "name": "FeedbackReply_request_id_idx_0aa129e0",
+                  "prefix": "FeedbackReply_request_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ],
+                "name": "FeedbackReply_pkey"
+              },
+              "uniques": []
+            },
+            "FeedbackRequest": {
+              "columns": {
+                "admin_notification_sent": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
+                "attachments": {
+                  "codecId": "pg/jsonb@1",
+                  "dataType": "pg/jsonb",
+                  "nullable": true
+                },
+                "confirmation_email_sent": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                },
+                "device_info": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 2000
+                  }
+                },
+                "email": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 255
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "default": {
+                    "expression": "gen_random_uuid()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "kind": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 32
+                  }
+                },
+                "sender_user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                },
+                "status": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "default": {
+                    "kind": "literal",
+                    "value": "open"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 32
+                  }
+                },
+                "text": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": false,
+                  "typeParams": {
+                    "length": 10000
+                  }
+                },
+                "topic": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 32
+                  }
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 6
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "FeedbackRequest_sender_user_id_idx_c381833a"
+                  },
+                  "name": "FeedbackRequest_sender_user_id_fkey",
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "sender_user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "FeedbackRequest"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "email",
+                    "created_at"
+                  ],
+                  "name": "FeedbackRequest_email_created_at_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "sender_user_id"
+                  ],
+                  "name": "FeedbackRequest_sender_user_id_idx_c381833a",
+                  "prefix": "FeedbackRequest_sender_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status",
+                    "created_at"
+                  ],
+                  "name": "FeedbackRequest_status_created_at_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ],
+                "name": "FeedbackRequest_pkey"
+              },
+              "uniques": []
             },
             "Friend": {
               "columns": {
@@ -12747,7 +13421,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "b3ec3b8f7f02095e0fb6999f37255c8e096d93be799f93e7bbfe764ce6ad437e"
+    "storageHash": "4ca174a4e9755d2980eaf6c7ad810e7a78f5ac98dbf442243ff07ba7faa7c49e"
   },
   "capabilities": {
     "postgres": {

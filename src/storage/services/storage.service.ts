@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Optional } from '@nestjs/common';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import type { PhotoUploadOptions, StorageFile, MediaUploadManifestEntry, UploadedPhotoBatch } from '../shared/types';
@@ -83,12 +83,37 @@ export class StorageService {
   }
 
   async uploadPhotos(
-    userId: string,
+    userId: string | null,
     files: StorageFile[],
     options: PhotoUploadOptions = {},
     rawManifest = '',
   ): Promise<UploadedPhotoBatch[]> {
     return this.uploads.uploadPhotos(userId, files, options, rawManifest);
+  }
+
+  async deleteFeedbackPhoto(userId: string | null, feedbackId: string, publicUrl: string) {
+    await this.core.deleteObjectByKey(this.getFeedbackAttachmentKey(userId, feedbackId, publicUrl));
+  }
+
+  getFeedbackAttachmentKey(userId: string | null, feedbackId: string, publicUrl: string) {
+    const owner = userId ?? 'guest-feedback';
+    const key = this.core.getOwnedKey(owner, publicUrl);
+    const relativeKey = key.slice(`${owner}/`.length);
+    const parts = relativeKey.split('/');
+    const dateFolder = userId ? parts[1] : parts[0];
+    const attachmentFeedbackId = userId ? parts[2] : parts[1];
+    const fileName = userId ? parts[3] : parts[2];
+    const isFeedbackPath = !userId || parts[0] === 'feedback';
+    if (
+      !isFeedbackPath ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(dateFolder ?? '') ||
+      attachmentFeedbackId !== feedbackId ||
+      !fileName ||
+      parts.length !== (userId ? 4 : 3)
+    ) {
+      throw new BadRequestException('Вложение feedback имеет некорректный S3-путь');
+    }
+    return key;
   }
 
   async deleteUnattachedModerationAsset(ownerId: string, assetId: string) {

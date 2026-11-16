@@ -1,4 +1,4 @@
-import type { FeedbackDto } from '../email.dto';
+import type { FeedbackDto } from '../feedback.dto';
 
 type FeedbackAttachmentFixture = NonNullable<FeedbackDto['attachments']>[number];
 

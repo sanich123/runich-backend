@@ -12,6 +12,7 @@ import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { isSupportedVideoUpload, MEDIA_BATCH_CONCURRENCY } from '../shared/const';
 import { MEDIA_UPLOAD_ROLES } from '../shared/types';
 import { MediaUploadManifestEntry, PhotoUploadOptions, StorageFile, UploadedPhotoBatch } from '../shared/types';
+import { getGuestFeedbackPhotoKey } from '../shared/storage-key';
 
 @Injectable()
 export class StorageUploadService {
@@ -22,7 +23,7 @@ export class StorageUploadService {
   ) {}
 
   async uploadPhoto(
-    userId: string,
+    userId: string | null,
     file: StorageFile,
     options: PhotoUploadOptions = {},
     manifestEntry?: MediaUploadManifestEntry,
@@ -30,6 +31,10 @@ export class StorageUploadService {
     let stream: ReturnType<typeof createReadStream> | undefined;
     try {
       this.core.assertConfigured();
+      const scope = options.scope ?? 'activity';
+      if (!userId && scope !== 'feedback') {
+        throw new ForbiddenException('Для загрузки медиа требуется авторизация');
+      }
       const isVideo = file.mimetype.startsWith('video/');
       const maximumFileSize = isVideo ? UPLOAD_LIMITS.videoBytes : UPLOAD_LIMITS.photoBytes;
       const fileSize = file.size ?? file.buffer?.byteLength ?? 0;
@@ -51,9 +56,9 @@ export class StorageUploadService {
       const extension = normalizedImage ? 'webp' : this.core.getExtension(file.originalname, file.mimetype);
       const mediaId = manifestEntry?.mediaId ?? randomUUID();
       const role = manifestEntry?.role ?? 'media';
-      const scope = options.scope ?? 'activity';
       if (scope === 'group' && isVideo) throw new BadRequestException('Фото группы должно быть изображением');
       if (scope === 'group' && options.groupId) {
+        if (!userId) throw new ForbiddenException('Только администратор группы может загрузить её фото');
         const membership = await this.prisma?.groupMember.findUnique({
           where: { groupId_userId: { groupId: options.groupId, userId } },
           select: { role: true, status: true },
@@ -63,6 +68,7 @@ export class StorageUploadService {
         }
       }
       if (scope !== 'feedback') {
+        if (!userId) throw new ForbiddenException('Для загрузки медиа требуется авторизация');
         return await this.moderation.uploadForModeration({
           userId,
           mediaId,
@@ -76,7 +82,10 @@ export class StorageUploadService {
         });
       }
 
-      const key = this.core.getPhotoKey(userId, extension, options);
+      if (!options.feedbackId) throw new BadRequestException('Для feedback-загрузки нужен feedbackId');
+      const key = userId
+        ? this.core.getPhotoKey(userId, extension, options)
+        : getGuestFeedbackPhotoKey(options.feedbackId, extension);
       const body = normalizedImage ?? (file.path ? (stream = createReadStream(file.path)) : file.buffer);
       const contentType = normalizedImage ? 'image/webp' : file.mimetype;
       const contentLength = normalizedImage?.length ?? file.size;
@@ -110,7 +119,7 @@ export class StorageUploadService {
   }
 
   async uploadPhotos(
-    userId: string,
+    userId: string | null,
     files: StorageFile[],
     options: PhotoUploadOptions = {},
     rawManifest = '',
@@ -122,6 +131,12 @@ export class StorageUploadService {
     const totalBytes = files.reduce((total, file) => total + (file.size ?? file.buffer?.byteLength ?? 0), 0);
     if (totalBytes > UPLOAD_LIMITS.mediaBatchBytes) {
       throw new BadRequestException('Суммарный размер файлов не должен превышать 250 МБ');
+    }
+    if (!userId && options.scope !== 'feedback') {
+      throw new ForbiddenException('Гостям доступна загрузка вложений только для обращений в поддержку');
+    }
+    if (!userId && totalBytes > UPLOAD_LIMITS.feedbackMediaBatchBytes) {
+      throw new BadRequestException('Суммарный размер вложений обращения не должен превышать 100 МБ');
     }
 
     const manifest = this.parseUploadManifest(rawManifest, files.length);
@@ -151,7 +166,7 @@ export class StorageUploadService {
           .filter((result): result is UploadedPhotoBatch => Boolean(result))
           .map(async (result) => {
             if (result.key) await this.core.deleteObjectByKey(result.key);
-            if (result.assetId) await this.moderation.deleteQuarantineAsset(result.assetId, userId);
+            if (result.assetId && userId) await this.moderation.deleteQuarantineAsset(result.assetId, userId);
           }),
       );
       throw errors[0];

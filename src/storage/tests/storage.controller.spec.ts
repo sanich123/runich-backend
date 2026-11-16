@@ -12,6 +12,7 @@ describe('StorageController', () => {
     uploadPhoto: asyncMock(),
     uploadPhotos: asyncMock(),
     deletePhoto: asyncMock(),
+    deleteFeedbackPhoto: asyncMock(),
   };
   const controller = new StorageController(storageService as unknown as StorageService);
   const request = { user: { id: 'user-1' } } as AuthenticatedRequest;
@@ -62,6 +63,38 @@ describe('StorageController', () => {
     expect(storageService.uploadPhotos).toHaveBeenCalledWith('user-1', files, { scope: 'activity' }, body.manifest);
   });
 
+  it('passes guest support uploads and the authenticated user identity to storage', async () => {
+    const files = [makePhotoUpload() as Express.Multer.File];
+    const body = { scope: 'feedback' as const, feedbackId: 'feedback-1', manifest: '[]' };
+    const guestRequest = {} as AuthenticatedRequest;
+    const userIdRequest = { user: { id: 'user-1', userId: 'session-user-1' } } as AuthenticatedRequest;
+    storageService.uploadPhotos.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    await controller.uploadPhotos(files, guestRequest, body);
+    await controller.uploadPhotos(files, userIdRequest, body);
+
+    expect(storageService.uploadPhotos).toHaveBeenNthCalledWith(
+      1,
+      null,
+      files,
+      {
+        scope: 'feedback',
+        feedbackId: 'feedback-1',
+      },
+      '[]',
+    );
+    expect(storageService.uploadPhotos).toHaveBeenNthCalledWith(
+      2,
+      'session-user-1',
+      files,
+      {
+        scope: 'feedback',
+        feedbackId: 'feedback-1',
+      },
+      '[]',
+    );
+  });
+
   it('rejects a batch without files', async () => {
     await expect(controller.uploadPhotos([], request, { manifest: '[]' })).rejects.toBeInstanceOf(BadRequestException);
     expect(storageService.uploadPhotos).not.toHaveBeenCalled();
@@ -104,6 +137,22 @@ describe('StorageController', () => {
     expect(storageService.deletePhoto).toHaveBeenCalledWith(
       'user-1',
       'https://s3.twcstorage.ru/runich-test/user-1/photo.jpg',
+    );
+  });
+
+  it('deletes a guest feedback attachment using its request id', async () => {
+    await expect(
+      controller.deleteFeedbackPhoto(
+        'feedback-1',
+        { url: 'https://cdn.example/feedback.jpg' },
+        {} as AuthenticatedRequest,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(storageService.deleteFeedbackPhoto).toHaveBeenCalledWith(
+      null,
+      'feedback-1',
+      'https://cdn.example/feedback.jpg',
     );
   });
 });

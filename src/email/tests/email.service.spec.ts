@@ -9,9 +9,6 @@ jest.unstable_mockModule('nodemailer', () => ({
 }));
 
 const { EmailService } = await import('../email.service');
-const { makeFeedbackAttachment, makeFeedbackInput } = await import('./fixtures');
-const { makeProfileName } = await import('src/tests/fixtures/profile.fixtures');
-
 const originalEnvironment = { ...process.env };
 
 function mockEmailDelivery(error?: Error) {
@@ -23,22 +20,11 @@ function mockEmailDelivery(error?: Error) {
 }
 
 describe('EmailService', () => {
-  type FeedbackUser = {
-    email: string;
-    profile: { name: string | null; surname: string | null } | null;
-  };
-  const findUnique = jest.fn<() => Promise<FeedbackUser | null>>();
-  const prisma = { user: { findUnique } };
-
   beforeEach(() => {
     process.env.YANDEX_SMTP_USER = 'Runich.app@ya.ru';
     process.env.YANDEX_SMTP_PASSWORD = 'application-password';
     sendMail.mockReset().mockResolvedValue({ messageId: 'message-id' });
     createTransport.mockClear();
-    findUnique.mockReset().mockResolvedValue({
-      email: 'ann@example.com',
-      profile: makeProfileName(),
-    });
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
@@ -56,7 +42,7 @@ describe('EmailService', () => {
     expect(confirmationHtml.indexOf('login-from-url?code=credential')).toBeLessThan(confirmationHtml.indexOf('1234'));
   });
 
-  it('adds spam delivery guidance to authentication emails', async () => {
+  it('adds delivery guidance to authentication emails', async () => {
     const service = new EmailService();
     const senders = [
       () => service.sendConfirmationCode('bob@example.com', 1234, 'credential'),
@@ -72,21 +58,15 @@ describe('EmailService', () => {
     }
   });
 
-  it('propagates Yandex SMTP failures from authentication email types', async () => {
+  it('propagates SMTP failures from authentication email types', async () => {
     const service = new EmailService();
     const smtpError = new Error('Yandex SMTP rejected message');
     mockEmailDelivery(smtpError);
-    await expect(service.sendConfirmationCode('bob@example.com', 1234, 'token')).rejects.toThrow(
-      'Yandex SMTP rejected message',
-    );
+    await expect(service.sendConfirmationCode('bob@example.com', 1234, 'token')).rejects.toThrow(smtpError);
     mockEmailDelivery(smtpError);
-    await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).rejects.toThrow(
-      'Yandex SMTP rejected message',
-    );
+    await expect(service.sendPasswordChangeCode('bob@example.com', 123456)).rejects.toThrow(smtpError);
     mockEmailDelivery(smtpError);
-    await expect(service.sendLoginLink('bob@example.com', 'access-token')).rejects.toThrow(
-      'Yandex SMTP rejected message',
-    );
+    await expect(service.sendLoginLink('bob@example.com', 'access-token')).rejects.toThrow(smtpError);
   });
 
   it('reports missing email configuration as an error', async () => {
@@ -98,116 +78,35 @@ describe('EmailService', () => {
     );
   });
 
-  it('looks up the feedback author and sends links to S3 media', async () => {
-    const storage = {
-      getOwnedKey: jest.fn().mockReturnValue('user-1/feedback/2026-09-17/feedback-1/screen.jpg'),
-      deleteObjectByKey: jest.fn(),
-    };
-    const service = new EmailService(prisma as never, undefined, storage as never);
-    const feedback = makeFeedbackInput({
-      text: 'Something <wrong>',
-      deviceInfo: 'Android\nPixel',
-      attachments: [{ url: 'https://cdn.example/user-1/feedback/2026-09-17/feedback-1/screen.jpg', thumbnail: null }],
-    });
-
-    await service.sendFeedback(feedback, 'user-1');
-
-    expect(findUnique).toHaveBeenCalledWith({
-      where: { id: 'user-1' },
-      select: { email: true, profile: { select: { name: true, surname: true } } },
-    });
-    expect(sendMail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: 'aovoronin.piano@gmail.com',
-        subject: '[Runich] Поведать о баге от Ann Runner <ann@example.com>',
-        html: expect.stringContaining('Пользователь:</b> Ann Runner'),
-      }),
-    );
-    const sentMessage = sendMail.mock.calls.at(-1) as unknown as [{ html: string }];
-    expect(sentMessage[0].html).toContain('Something &lt;wrong&gt;');
-    expect(sentMessage[0].html).toContain('Вложение 1');
-    expect(sentMessage[0].html).not.toContain('userId');
-  });
-
-  it('keeps validated feedback media when SMTP delivery fails', async () => {
-    const storage = {
-      getOwnedKey: jest.fn().mockReturnValue('user-1/feedback/2026-09-17/feedback-1/screen.jpg'),
-      deleteObjectByKey: jest.fn(),
-    };
-    const service = new EmailService(prisma as never, undefined, storage as never);
-    sendMail.mockRejectedValueOnce(new Error('SMTP failed'));
-
-    await expect(
-      service.sendFeedback(makeFeedbackInput({ attachments: [makeFeedbackAttachment({ thumbnail: null })] }), 'user-1'),
-    ).rejects.toThrow('SMTP failed');
-    expect(storage.deleteObjectByKey).not.toHaveBeenCalled();
-  });
-
-  it('rejects feedback attachments when S3 storage is not configured', async () => {
-    const service = new EmailService(prisma as never);
-
-    await expect(
-      service.sendFeedback(makeFeedbackInput({ attachments: [makeFeedbackAttachment()] }), 'user-1'),
-    ).rejects.toThrow('S3-хранилище не настроено для вложений feedback');
-    expect(sendMail).not.toHaveBeenCalled();
-  });
-
-  it('fails closed if feedback attachment validation has no storage service', () => {
-    const service = new EmailService(prisma as never);
-    const validateFeedbackAttachment = (
-      service as unknown as {
-        validateFeedbackAttachment: (userId: string, feedbackId: string, url: string) => string;
-      }
-    ).validateFeedbackAttachment.bind(service);
-
-    expect(() => validateFeedbackAttachment('user-1', 'feedback-1', 'https://cdn.example/file.jpg')).toThrow(
-      'S3-хранилище не настроено',
-    );
-  });
-
-  it('rejects feedback attachments from another feedback folder', async () => {
-    const storage = {
-      getOwnedKey: jest.fn().mockReturnValue('user-1/feedback/2026-09-17/another-feedback/screen.jpg'),
-      deleteObjectByKey: jest.fn(),
-    };
-    const service = new EmailService(prisma as never, undefined, storage as never);
-
-    await expect(
-      service.sendFeedback(makeFeedbackInput({ attachments: [makeFeedbackAttachment()] }), 'user-1'),
-    ).rejects.toThrow('Вложение feedback имеет некорректный S3-путь');
-    expect(sendMail).not.toHaveBeenCalled();
-  });
-
-  it('rejects feedback when the authenticated user no longer exists', async () => {
-    findUnique.mockResolvedValue(null);
-    const service = new EmailService(prisma as never);
-
-    await expect(
-      service.sendFeedback(makeFeedbackInput({ kind: 'thanks', text: 'Thanks', deviceInfo: 'iOS' }), 'missing-user'),
-    ).rejects.toThrow('Пользователь для feedback не найден');
-    expect(sendMail).not.toHaveBeenCalled();
-  });
-
-  it('rejects feedback when Prisma is not configured', async () => {
+  it('sends branded support notification, receipt, and reply emails', async () => {
     const service = new EmailService();
+    await service.sendNewFeedbackNotification({
+      id: 'feedback-1',
+      kind: 'bug',
+      topic: null,
+      email: 'ann@example.com',
+      text: 'Broken',
+      deviceInfo: 'Android',
+      attachments: [],
+    });
+    await service.sendFeedbackReceipt('ann@example.com', 'feedback-1');
+    await service.sendFeedbackReply('ann@example.com', 'feedback-1', 'We fixed it');
 
-    await expect(service.sendFeedback(makeFeedbackInput(), 'user-1')).rejects.toThrow(
-      'PrismaService не настроен для отправки feedback',
-    );
-    expect(sendMail).not.toHaveBeenCalled();
-  });
-
-  it('uses a fallback author name when the feedback profile is empty', async () => {
-    findUnique.mockResolvedValue({ email: 'ann@example.com', profile: null });
-    const service = new EmailService(prisma as never);
-
-    await service.sendFeedback(makeFeedbackInput({ kind: 'unknown', text: 'Thanks', deviceInfo: 'iOS' }), 'user-1');
-
-    expect(sendMail).toHaveBeenCalledWith(
+    expect(sendMail).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
-        subject: '[Runich] Обратная связь от Имя не указано <ann@example.com>',
-        html: expect.stringContaining('Пользователь:</b> Имя не указано'),
+        to: 'runich.app@yandex.ru',
+        subject: '[Runich] Новое обращение: bug',
+        html: expect.stringContaining('feedbackId=feedback-1'),
       }),
+    );
+    expect(sendMail).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ to: 'ann@example.com', subject: '[Runich] Обращение принято' }),
+    );
+    expect(sendMail).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ to: 'ann@example.com', subject: '[Runich] Ответ по обращению feedback-1' }),
     );
   });
 });

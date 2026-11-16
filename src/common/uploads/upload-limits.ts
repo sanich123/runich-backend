@@ -6,6 +6,7 @@ export const UPLOAD_LIMITS = {
   activityMediaFiles: 5,
   mediaBatchFiles: 10,
   mediaBatchBytes: 250 * 1024 * 1024,
+  feedbackMediaBatchBytes: 100 * 1024 * 1024,
   migrationArchiveBytes: 150 * 1024 * 1024,
   migrationArchiveEntries: 5_000,
   migrationArchiveUncompressedBytes: 500 * 1024 * 1024,

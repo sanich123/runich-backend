@@ -81,7 +81,20 @@ const securityNoteBase: CSSProperties = {
   textAlign: 'left',
 };
 
-export const emailStyles = {
+export const emailStyles: Record<
+  | 'title'
+  | 'paragraph'
+  | 'eyebrow'
+  | 'securityNote'
+  | 'securityNoteFlush'
+  | 'securityNoteCompact'
+  | 'codeLabel'
+  | 'code'
+  | 'button'
+  | 'buttonSection'
+  | 'notificationButtonSection',
+  CSSProperties
+> = {
   title: {
     color: emailColors.text,
     fontFamily: emailFontFamily,

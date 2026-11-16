@@ -11,6 +11,7 @@ import { StorageUploadService } from './services/storage-upload.service';
 import { StorageActivityService } from './services/storage-activity.service';
 import { StorageProfileService } from './services/storage-profile.service';
 import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
+import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 
 @Module({
   imports: [PrismaModule, PassportModule.register({ defaultStrategy: 'jwt' })],
@@ -25,6 +26,7 @@ import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
     MediaCleanupService,
     ThrottlerGuard,
     ThrottlerReflector,
+    OptionalJwtAuthGuard,
   ],
   exports: [StorageService, MediaCleanupService],
 })
