@@ -10,9 +10,9 @@
     "node": ">=26 <27"
   },
   "scripts": {
-    "dev": "yarn db:generate && yarn db:sync && tsx watch src/main.ts",
-    "start": "yarn db:sync && nest start",
-    "start:debug": "yarn db:generate && yarn db:sync && node --inspect --import tsx src/main.ts",
+    "dev": "yarn db:generate && yarn db:sync && NODE_OPTIONS='--import tsx' nest start --watch",
+    "start": "yarn db:sync && NODE_OPTIONS='--import tsx' nest start",
+    "start:debug": "yarn db:generate && yarn db:sync && NODE_OPTIONS='--import tsx' nest start --debug",
     "start:prod": "node dist/main.js",
     "worker:dev": "yarn db:generate && yarn db:sync && tsx src/app/background-worker.ts",
     "worker:prod": "node --import dotenv/config dist/background-worker.js",
