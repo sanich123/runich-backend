@@ -2,9 +2,10 @@ import { Heading, Link, Section, Text } from '@react-email/components';
 import { EmailButton } from './EmailButton';
 import { EmailLayout } from './EmailLayout';
 import { emailStyles } from './const';
+import { formatFeedbackDateTime } from '../format-feedback-date-time';
 
 export interface NewFeedbackEmailProps {
-  requestId: string;
+  createdAt: Date | string;
   kind: string;
   topic?: string | null;
   email: string;
@@ -21,7 +22,7 @@ const kindLabels: Record<string, string> = {
 };
 
 export function NewFeedbackEmail({
-  requestId,
+  createdAt,
   kind,
   topic,
   email,
@@ -35,7 +36,7 @@ export function NewFeedbackEmail({
       <Heading as="h1" style={emailStyles.title}>
         {kindLabels[kind] ?? kind}
       </Heading>
-      <Text style={emailStyles.paragraph}>Номер: {requestId}</Text>
+      <Text style={emailStyles.paragraph}>Дата и время обращения: {formatFeedbackDateTime(createdAt)}</Text>
       <Text style={emailStyles.paragraph}>
         Отправитель: <Link href={`mailto:${email}`}>{email}</Link>
       </Text>

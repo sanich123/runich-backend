@@ -1,5 +1,6 @@
 export type NewFeedbackEmailData = {
   id: string;
+  createdAt: Date | string;
   kind: string;
   topic: string | null;
   email: string;

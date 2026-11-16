@@ -34,6 +34,7 @@ describe('FeedbackService', () => {
     topic: null,
     text: 'Broken',
     deviceInfo: 'Android',
+    createdAt: new Date('2026-09-17T12:00:00.000Z'),
   };
 
   beforeEach(() => {
@@ -66,9 +67,14 @@ describe('FeedbackService', () => {
       }),
     });
     expect(emailService.sendNewFeedbackNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'feedback-1', email: 'ann@example.com', text: 'Broken' }),
+      expect.objectContaining({
+        id: 'feedback-1',
+        createdAt: createdRequest.createdAt,
+        email: 'ann@example.com',
+        text: 'Broken',
+      }),
     );
-    expect(emailService.sendFeedbackReceipt).toHaveBeenCalledWith('ann@example.com', 'feedback-1');
+    expect(emailService.sendFeedbackReceipt).toHaveBeenCalledWith('ann@example.com', createdRequest.createdAt);
   });
 
   it('accepts and normalizes a guest email', async () => {

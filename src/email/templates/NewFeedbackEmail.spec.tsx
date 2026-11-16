@@ -9,7 +9,7 @@ describe('NewFeedbackEmail', () => {
   it('shows a known kind, topic, and attachment link', async () => {
     const html = await render(
       NewFeedbackEmail({
-        requestId: 'feedback-1',
+        createdAt: '2026-09-17T12:00:00.000Z',
         kind: 'bug',
         topic: 'maps',
         email: 'runner@example.com',
@@ -23,6 +23,8 @@ describe('NewFeedbackEmail', () => {
 
     expect(text).toContain('Сообщение об ошибке');
     expect(text).toContain('Тема: maps');
+    expect(text).toContain('Дата и время обращения:');
+    expect(text).not.toContain('feedback-1');
     expect(text).toContain('Вложение 1');
     expect(html).toContain('href="https://cdn.example/screen.jpg"');
     expect(html).toContain('href="https://runich.app/admin?feedbackId=feedback-1"');
@@ -31,7 +33,7 @@ describe('NewFeedbackEmail', () => {
   it('falls back to an unknown kind and omits absent topic and attachments', async () => {
     const html = await render(
       NewFeedbackEmail({
-        requestId: 'feedback-2',
+        createdAt: '2026-09-17T12:00:00.000Z',
         kind: 'legacy-kind',
         email: 'runner@example.com',
         text: 'A question.',

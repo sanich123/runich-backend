@@ -104,7 +104,7 @@ export class AdminFeedbackService {
       },
     });
     try {
-      await this.emailService.sendFeedbackReply(request.email, request.id, text);
+      await this.emailService.sendFeedbackReply(request.email, text, request.createdAt);
     } catch (error) {
       await this.prisma.feedbackReply.update({ where: { id: reply.id }, data: { deliveryStatus: 'failed' } });
       this.logger.error(

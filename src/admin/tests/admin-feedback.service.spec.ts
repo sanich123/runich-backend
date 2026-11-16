@@ -114,7 +114,7 @@ describe('AdminFeedbackService', () => {
         deliveryStatus: 'pending',
       },
     });
-    expect(sendFeedbackReply).toHaveBeenCalledWith('ann@example.com', 'feedback-1', 'We fixed it');
+    expect(sendFeedbackReply).toHaveBeenCalledWith('ann@example.com', 'We fixed it', request.createdAt);
     expect(updateReply).toHaveBeenCalledWith({ where: { id: 'reply-1' }, data: { deliveryStatus: 'sent' } });
     expect(updateRequest).toHaveBeenCalledWith({ where: { id: 'feedback-1' }, data: { status: 'in_progress' } });
   });

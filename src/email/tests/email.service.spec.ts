@@ -82,6 +82,7 @@ describe('EmailService', () => {
     const service = new EmailService();
     await service.sendNewFeedbackNotification({
       id: 'feedback-1',
+      createdAt: new Date('2026-09-17T12:00:00.000Z'),
       kind: 'bug',
       topic: null,
       email: 'ann@example.com',
@@ -89,8 +90,9 @@ describe('EmailService', () => {
       deviceInfo: 'Android',
       attachments: [],
     });
-    await service.sendFeedbackReceipt('ann@example.com', 'feedback-1');
-    await service.sendFeedbackReply('ann@example.com', 'feedback-1', 'We fixed it');
+    const createdAt = new Date('2026-09-17T12:00:00.000Z');
+    await service.sendFeedbackReceipt('ann@example.com', createdAt);
+    await service.sendFeedbackReply('ann@example.com', 'We fixed it', createdAt);
 
     expect(sendMail).toHaveBeenNthCalledWith(
       1,
@@ -106,7 +108,11 @@ describe('EmailService', () => {
     );
     expect(sendMail).toHaveBeenNthCalledWith(
       3,
-      expect.objectContaining({ to: 'ann@example.com', subject: '[Runich] Ответ по обращению feedback-1' }),
+      expect.objectContaining({
+        to: 'ann@example.com',
+        subject: expect.stringContaining('[Runich] Ответ по обращению от '),
+        html: expect.stringContaining('Дата и время обращения:'),
+      }),
     );
   });
 });

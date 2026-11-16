@@ -57,6 +57,7 @@ export class FeedbackService {
     try {
       await this.emailService.sendNewFeedbackNotification({
         id: request.id,
+        createdAt: request.createdAt,
         kind: request.kind,
         topic: request.topic,
         email: request.email,
@@ -74,7 +75,7 @@ export class FeedbackService {
 
     let confirmationEmailSent = false;
     try {
-      await this.emailService.sendFeedbackReceipt(email, request.id);
+      await this.emailService.sendFeedbackReceipt(email, request.createdAt);
       confirmationEmailSent = true;
     } catch (error) {
       this.logger.error(

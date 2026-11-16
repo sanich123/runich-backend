@@ -13,6 +13,7 @@ import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.servic
 import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { MODERATION_EMAIL_RECIPIENT } from './email-notification.constants';
 import type { NewFeedbackEmailData } from './email.types';
+import { formatFeedbackDateTime } from './format-feedback-date-time';
 
 @Injectable()
 export class EmailService {
@@ -67,7 +68,7 @@ export class EmailService {
     adminUrl.searchParams.set('feedbackId', request.id);
     const html = await render(
       NewFeedbackEmail({
-        requestId: request.id,
+        createdAt: request.createdAt,
         kind: request.kind,
         topic: request.topic,
         email: request.email,
@@ -85,13 +86,14 @@ export class EmailService {
     );
   }
 
-  async sendFeedbackReceipt(email: string, requestId: string) {
-    const html = await render(FeedbackReceiptEmail({ requestId }));
+  async sendFeedbackReceipt(email: string, createdAt: Date | string) {
+    const html = await render(FeedbackReceiptEmail({ createdAt }));
     await sendSupportEmail(email, '[Runich] Обращение принято', html, this.latencyMetrics);
   }
 
-  async sendFeedbackReply(email: string, requestId: string, text: string) {
-    const html = await render(FeedbackReplyEmail({ requestId, text }));
-    await sendSupportEmail(email, `[Runich] Ответ по обращению ${requestId}`, html, this.latencyMetrics);
+  async sendFeedbackReply(email: string, text: string, createdAt: Date | string) {
+    const html = await render(FeedbackReplyEmail({ createdAt, text }));
+    const requestDate = formatFeedbackDateTime(createdAt);
+    await sendSupportEmail(email, '[Runich] Ответ по обращению от ' + requestDate, html, this.latencyMetrics);
   }
 }
