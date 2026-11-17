@@ -126,7 +126,11 @@ export class ActivityWriteService {
       delete activityFields.media;
       delete activityFields.heartRateSamples;
       delete activityFields.heartRateStorageKey;
-      activityFields.visibility = activityDto.visibility ?? ACTIVITY_VISIBILITY.public;
+      activityFields.visibility =
+        activityDto.visibility ??
+        (activityDto.source === 'health-connect' || activityDto.source === 'healthkit'
+          ? ACTIVITY_VISIBILITY.followers
+          : ACTIVITY_VISIBILITY.public);
       const description = activityDto.description?.trim() || null;
       const hasTextToModerate = Boolean(activityDto.title?.trim() || description);
 
