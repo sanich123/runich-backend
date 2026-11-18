@@ -738,6 +738,118 @@ describe('ActivityService', () => {
     expect(prisma.activity.updateMany).not.toHaveBeenCalled();
   });
 
+  it('returns only new watch workouts or those with missing non-empty provenance', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    const newWorkout = { source: 'health-connect' as const, sourceActivityId: 'new' };
+    const completeWorkout = {
+      source: 'health-connect' as const,
+      sourceActivityId: 'complete',
+      sourceAppName: 'Health Connect',
+      recordingDeviceManufacturer: 'Garmin',
+      recordingDeviceModel: 'Forerunner',
+    };
+    const appNameWorkout = {
+      source: 'health-connect' as const,
+      sourceActivityId: 'missing-app',
+      sourceAppName: '  Suunto App  ',
+    };
+    const manufacturerWorkout = {
+      source: 'health-connect' as const,
+      sourceActivityId: 'missing-manufacturer',
+      recordingDeviceManufacturer: 'Suunto',
+    };
+    const modelWorkout = {
+      source: 'health-connect' as const,
+      sourceActivityId: 'missing-model',
+      recordingDeviceModel: 'Suunto 9 Peak',
+    };
+    const blankProvenanceWorkout = {
+      source: 'health-connect' as const,
+      sourceActivityId: 'blank-provenance',
+      sourceAppName: '  ',
+      recordingDeviceManufacturer: '\t',
+      recordingDeviceModel: '',
+    };
+    prisma.activity.findMany.mockResolvedValue([
+      {
+        source: 'health-connect',
+        sourceActivityId: 'complete',
+        sourceAppName: 'Health Connect',
+        recordingDeviceManufacturer: 'Garmin',
+        recordingDeviceModel: 'Forerunner',
+      },
+      {
+        source: 'health-connect',
+        sourceActivityId: 'missing-app',
+        sourceAppName: null,
+        recordingDeviceManufacturer: 'Suunto',
+        recordingDeviceModel: '9 Peak',
+      },
+      {
+        source: 'health-connect',
+        sourceActivityId: 'missing-manufacturer',
+        sourceAppName: 'Health Connect',
+        recordingDeviceManufacturer: null,
+        recordingDeviceModel: '9 Peak',
+      },
+      {
+        source: 'health-connect',
+        sourceActivityId: 'missing-model',
+        sourceAppName: 'Health Connect',
+        recordingDeviceManufacturer: 'Suunto',
+        recordingDeviceModel: null,
+      },
+      {
+        source: 'health-connect',
+        sourceActivityId: 'blank-provenance',
+        sourceAppName: null,
+        recordingDeviceManufacturer: null,
+        recordingDeviceModel: null,
+      },
+    ]);
+
+    await expect(
+      service.getWatchWorkoutSyncCandidates(
+        [
+          newWorkout,
+          newWorkout,
+          completeWorkout,
+          appNameWorkout,
+          manufacturerWorkout,
+          modelWorkout,
+          blankProvenanceWorkout,
+        ],
+        'user-1',
+      ),
+    ).resolves.toEqual({
+      workoutsToSync: [newWorkout, appNameWorkout, manufacturerWorkout, modelWorkout],
+    });
+    expect(prisma.activity.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'user-1',
+          OR: [
+            { source: 'health-connect', sourceActivityId: 'new' },
+            { source: 'health-connect', sourceActivityId: 'complete' },
+            { source: 'health-connect', sourceActivityId: 'missing-app' },
+            { source: 'health-connect', sourceActivityId: 'missing-manufacturer' },
+            { source: 'health-connect', sourceActivityId: 'missing-model' },
+            { source: 'health-connect', sourceActivityId: 'blank-provenance' },
+          ],
+        },
+      }),
+    );
+  });
+
+  it('returns no sync candidates without querying activities for an empty batch', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+
+    await expect(service.getWatchWorkoutSyncCandidates([], 'user-1')).resolves.toEqual({ workoutsToSync: [] });
+    expect(prisma.activity.findMany).not.toHaveBeenCalled();
+  });
+
   it('backfills missing provenance for an already imported watch workout without replacing saved values', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityService(prisma as never, {} as never);

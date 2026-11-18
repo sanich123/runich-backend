@@ -442,3 +442,43 @@ export class WatchWorkoutBatchImportDto {
   @Type(() => WatchWorkoutImportDto)
   workouts: WatchWorkoutImportDto[];
 }
+
+export class WatchWorkoutImportIdentityDto {
+  @ApiProperty({ enum: ['health-connect', 'healthkit'] })
+  @IsIn(['health-connect', 'healthkit'])
+  source: 'health-connect' | 'healthkit';
+
+  @ApiProperty({ type: String, maxLength: 128 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  sourceActivityId: string;
+
+  @ApiPropertyOptional({ type: String, maxLength: 128 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  sourceAppName?: string;
+
+  @ApiPropertyOptional({ type: String, maxLength: 128 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  recordingDeviceManufacturer?: string;
+
+  @ApiPropertyOptional({ type: String, maxLength: 128 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  recordingDeviceModel?: string;
+}
+
+export class WatchWorkoutSyncCandidatesRequestDto {
+  @ApiProperty({ type: [WatchWorkoutImportIdentityDto], minItems: 1, maxItems: 50 })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => WatchWorkoutImportIdentityDto)
+  workouts: WatchWorkoutImportIdentityDto[];
+}

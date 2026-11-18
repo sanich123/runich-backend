@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import { MAX_ACTIVITY_HEART_RATE_SAMPLES } from 'src/common/constants';
 import type { ProfilePhotoReviewStatus } from 'src/account/account.types';
 import { IsBoolean, IsInt, IsNotEmpty, IsUUID, Min } from 'class-validator';
-import { ActivityDto, ActivityHeartRateSampleDto } from './activity-input.dto';
+import { ActivityDto, ActivityHeartRateSampleDto, WatchWorkoutImportIdentityDto } from './activity-input.dto';
 import type { ActivityHeartRateSampleObject } from './activity-input.dto';
 import { ACTIVITY_VISIBILITY, type ActivityVisibility } from '../shared/activity-visibility';
 
@@ -313,6 +313,11 @@ export class WatchWorkoutBatchImportResponseDto {
 
   @ApiProperty({ type: [ActivityResponseDto] })
   activities: ActivityResponseDto[];
+}
+
+export class WatchWorkoutSyncCandidatesResponseDto {
+  @ApiProperty({ type: [WatchWorkoutImportIdentityDto] })
+  workoutsToSync: WatchWorkoutImportIdentityDto[];
 }
 
 export class SetActivityFavoriteDto {

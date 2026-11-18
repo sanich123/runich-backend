@@ -8,6 +8,7 @@ import {
   ActivityDto,
   type ActivityMediaObject,
   type WatchWorkoutImportDto,
+  type WatchWorkoutImportIdentityDto,
   type LocationObject,
 } from '../dto/activity.dto';
 import { DEFAULT_ACTIVITY_PAGE_SIZE } from '../shared/const';
@@ -170,6 +171,10 @@ export class ActivityService {
 
   async importWatchWorkouts(workouts: WatchWorkoutImportDto[], userId: string) {
     return await this.importService.importWatchWorkouts(workouts, userId);
+  }
+
+  async getWatchWorkoutSyncCandidates(workouts: WatchWorkoutImportIdentityDto[], userId: string) {
+    return await this.importService.getWatchWorkoutSyncCandidates(workouts, userId);
   }
 
   async createActivitiesFromMigrationArchive(

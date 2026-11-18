@@ -6,7 +6,7 @@ import { ActivityMediaService } from './activity-media.service';
 import { ActivityWriteService } from './activity-write.service';
 import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
 import { randomUUID } from 'node:crypto';
-import { type WatchWorkoutImportDto } from '../dto/activity.dto';
+import { type WatchWorkoutImportDto, type WatchWorkoutImportIdentityDto } from '../dto/activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { chunkArray } from 'src/common/parsers/chunk-array';
 import { calculateActiveCalories, generateActivityTitle } from '../shared/utils';
@@ -25,6 +25,49 @@ export class ActivityImportService {
     @Inject(ActivityWriteService) private readonly writeService: ActivityWriteService,
     @Inject(ActivityMediaService) private readonly mediaService: ActivityMediaService,
   ) {}
+
+  async getWatchWorkoutSyncCandidates(workouts: WatchWorkoutImportIdentityDto[], userId: string) {
+    const uniqueWorkouts = workouts.filter(
+      (workout, index, all) =>
+        all.findIndex(
+          (candidate) => candidate.source === workout.source && candidate.sourceActivityId === workout.sourceActivityId,
+        ) === index,
+    );
+    const existingActivities: Array<{
+      source: string | null;
+      sourceActivityId: string | null;
+      sourceAppName: string | null;
+      recordingDeviceManufacturer: string | null;
+      recordingDeviceModel: string | null;
+    }> = uniqueWorkouts.length
+      ? await this.prisma.activity.findMany({
+          where: {
+            userId,
+            OR: uniqueWorkouts.map(({ source, sourceActivityId }) => ({ source, sourceActivityId })),
+          },
+          select: {
+            source: true,
+            sourceActivityId: true,
+            sourceAppName: true,
+            recordingDeviceManufacturer: true,
+            recordingDeviceModel: true,
+          },
+        })
+      : [];
+    const existingBySourceKey = new Map(
+      existingActivities.map((activity) => [`${activity.source}\u0000${activity.sourceActivityId}`, activity]),
+    );
+    const workoutsToSync = uniqueWorkouts.filter((workout) => {
+      const existing = existingBySourceKey.get(`${workout.source}\u0000${workout.sourceActivityId}`);
+      return (
+        !existing ||
+        (existing.sourceAppName == null && Boolean(workout.sourceAppName?.trim())) ||
+        (existing.recordingDeviceManufacturer == null && Boolean(workout.recordingDeviceManufacturer?.trim())) ||
+        (existing.recordingDeviceModel == null && Boolean(workout.recordingDeviceModel?.trim()))
+      );
+    });
+    return { workoutsToSync };
+  }
 
   async importWatchWorkouts(workouts: WatchWorkoutImportDto[], userId: string) {
     const uniqueWorkouts = workouts.filter((workout, index, all) => {
