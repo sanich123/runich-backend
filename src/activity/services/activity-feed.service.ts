@@ -299,6 +299,7 @@ export class ActivityFeedService {
             a."title",
             a."date",
             a."sport",
+            a."source_app_name" AS "sourceAppName",
             a."emotion",
             a."id",
             a."user_id" AS "userId",
