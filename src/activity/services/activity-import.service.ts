@@ -35,23 +35,62 @@ export class ActivityImportService {
       );
     });
 
-    const existingActivities: Array<{ source: string | null; sourceActivityId: string | null }> = uniqueWorkouts.length
+    const existingActivities: Array<{
+      id: string;
+      source: string | null;
+      sourceActivityId: string | null;
+      sourceAppName: string | null;
+      recordingDeviceManufacturer: string | null;
+      recordingDeviceModel: string | null;
+    }> = uniqueWorkouts.length
       ? await this.prisma.activity.findMany({
           where: {
             userId,
             OR: uniqueWorkouts.map(({ source, sourceActivityId }) => ({ source, sourceActivityId })),
           },
-          select: { source: true, sourceActivityId: true },
+          select: {
+            id: true,
+            source: true,
+            sourceActivityId: true,
+            sourceAppName: true,
+            recordingDeviceManufacturer: true,
+            recordingDeviceModel: true,
+          },
         })
       : [];
-    const existingSourceKeys = new Set(
-      existingActivities.map(({ source, sourceActivityId }) => `${source}\u0000${sourceActivityId}`),
+    const existingActivitiesBySourceKey = new Map(
+      existingActivities.map((activity) => [`${activity.source}\u0000${activity.sourceActivityId}`, activity]),
     );
     const activities: unknown[] = [];
 
     for (const workout of uniqueWorkouts) {
       const key = `${workout.source}\u0000${workout.sourceActivityId}`;
-      if (existingSourceKeys.has(key)) continue;
+      const existingActivity = existingActivitiesBySourceKey.get(key);
+      if (existingActivity) {
+        const provenance = {
+          ...(existingActivity.sourceAppName == null && workout.sourceAppName?.trim()
+            ? { sourceAppName: workout.sourceAppName.trim() }
+            : {}),
+          ...(existingActivity.recordingDeviceManufacturer == null && workout.recordingDeviceManufacturer?.trim()
+            ? { recordingDeviceManufacturer: workout.recordingDeviceManufacturer.trim() }
+            : {}),
+          ...(existingActivity.recordingDeviceModel == null && workout.recordingDeviceModel?.trim()
+            ? { recordingDeviceModel: workout.recordingDeviceModel.trim() }
+            : {}),
+        };
+        if (Object.keys(provenance).length) {
+          await this.prisma.activity.updateMany({
+            where: {
+              id: existingActivity.id,
+              ...(provenance.sourceAppName ? { sourceAppName: null } : {}),
+              ...(provenance.recordingDeviceManufacturer ? { recordingDeviceManufacturer: null } : {}),
+              ...(provenance.recordingDeviceModel ? { recordingDeviceModel: null } : {}),
+            },
+            data: provenance,
+          });
+        }
+        continue;
+      }
       activities.push(await this.writeService.createActivity(workout, userId));
     }
 

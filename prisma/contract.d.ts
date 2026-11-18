@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'4ca174a4e9755d2980eaf6c7ad810e7a78f5ac98dbf442243ff07ba7faa7c49e'>;
+  StorageHashBase<'ffe39931e9232f247c4263bd97e46e55ca027b4cd9e17a03d74fdfa7235c2bf3'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -650,6 +650,8 @@ export namespace Models {
     minHeartRate: FieldOutputTypes['public']['Activity']['minHeartRate'];
     moderationStatus: FieldOutputTypes['public']['Activity']['moderationStatus'];
     profileId: FieldOutputTypes['public']['Activity']['profileId'];
+    recordingDeviceManufacturer: FieldOutputTypes['public']['Activity']['recordingDeviceManufacturer'];
+    recordingDeviceModel: FieldOutputTypes['public']['Activity']['recordingDeviceModel'];
     routeChecksum: FieldOutputTypes['public']['Activity']['routeChecksum'];
     routeFormatVersion: FieldOutputTypes['public']['Activity']['routeFormatVersion'];
     routeOnlyMapPhotoUrl: FieldOutputTypes['public']['Activity']['routeOnlyMapPhotoUrl'];
@@ -658,6 +660,7 @@ export namespace Models {
     routeStorageKey: FieldOutputTypes['public']['Activity']['routeStorageKey'];
     source: FieldOutputTypes['public']['Activity']['source'];
     sourceActivityId: FieldOutputTypes['public']['Activity']['sourceActivityId'];
+    sourceAppName: FieldOutputTypes['public']['Activity']['sourceAppName'];
     speed: FieldOutputTypes['public']['Activity']['speed'];
     sport: FieldOutputTypes['public']['Activity']['sport'];
     steps: FieldOutputTypes['public']['Activity']['steps'];
@@ -1532,6 +1535,20 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly many: false;
                 };
+                readonly recording_device_manufacturer: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 128 };
+                  readonly many: false;
+                };
+                readonly recording_device_model: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 128 };
+                  readonly many: false;
+                };
                 readonly route_checksum: {
                   readonly dataType: 'pg/varchar';
                   readonly codecId: 'sql/varchar@1';
@@ -1578,6 +1595,13 @@ type ContractBase = Omit<
                   readonly many: false;
                 };
                 readonly sourceActivityId: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 128 };
+                  readonly many: false;
+                };
+                readonly source_app_name: {
                   readonly dataType: 'pg/varchar';
                   readonly codecId: 'sql/varchar@1';
                   readonly nullable: true;
@@ -6415,6 +6439,22 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
+              readonly recordingDeviceManufacturer: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 128 };
+                };
+              };
+              readonly recordingDeviceModel: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 128 };
+                };
+              };
               readonly routeChecksum: {
                 readonly nullable: true;
                 readonly type: {
@@ -6456,6 +6496,14 @@ type ContractBase = Omit<
                 };
               };
               readonly sourceActivityId: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly typeParams: { readonly length: 128 };
+                };
+              };
+              readonly sourceAppName: {
                 readonly nullable: true;
                 readonly type: {
                   readonly kind: 'scalar';
@@ -6621,6 +6669,10 @@ type ContractBase = Omit<
                 readonly minHeartRate: { readonly column: 'min_heart_rate' };
                 readonly moderationStatus: { readonly column: 'moderation_status' };
                 readonly profileId: { readonly column: 'profileId' };
+                readonly recordingDeviceManufacturer: {
+                  readonly column: 'recording_device_manufacturer';
+                };
+                readonly recordingDeviceModel: { readonly column: 'recording_device_model' };
                 readonly routeChecksum: { readonly column: 'route_checksum' };
                 readonly routeFormatVersion: { readonly column: 'route_format_version' };
                 readonly routeOnlyMapPhotoUrl: { readonly column: 'route_only_map_photo_url' };
@@ -6629,6 +6681,7 @@ type ContractBase = Omit<
                 readonly routeStorageKey: { readonly column: 'route_storage_key' };
                 readonly source: { readonly column: 'source' };
                 readonly sourceActivityId: { readonly column: 'sourceActivityId' };
+                readonly sourceAppName: { readonly column: 'source_app_name' };
                 readonly speed: { readonly column: 'speed' };
                 readonly sport: { readonly column: 'sport' };
                 readonly steps: { readonly column: 'steps' };

@@ -38,6 +38,9 @@ model Activity {
   profileId           Uuid
   source              Varchar(32)?
   sourceActivityId    Varchar(128)?
+  sourceAppName                  Varchar(128)? @map("source_app_name")
+  recordingDeviceManufacturer    Varchar(128)? @map("recording_device_manufacturer")
+  recordingDeviceModel           Varchar(128)? @map("recording_device_model")
   steps               Int?
   averageHeartRate    Int?                 @map("average_heart_rate")
   minHeartRate        Int?                 @map("min_heart_rate")
