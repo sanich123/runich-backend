@@ -230,6 +230,32 @@ export class ActivityDto {
   @IsOptional()
   sourceActivityId?: string | null;
 
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: 128,
+    description: 'Application that wrote the workout to the health store',
+  })
+  @IsString()
+  @MaxLength(128)
+  @IsOptional()
+  sourceAppName?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: 128,
+    description: 'Manufacturer of the device that recorded the workout',
+  })
+  @IsString()
+  @MaxLength(128)
+  @IsOptional()
+  recordingDeviceManufacturer?: string | null;
+
+  @ApiPropertyOptional({ type: String, maxLength: 128, description: 'Model of the device that recorded the workout' })
+  @IsString()
+  @MaxLength(128)
+  @IsOptional()
+  recordingDeviceModel?: string | null;
+
   @ApiProperty({ type: String, description: 'Sport value' })
   @IsString()
   @IsNotEmpty()

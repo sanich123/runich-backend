@@ -293,6 +293,15 @@ export class ActivityResponseDto extends ActivityDto {
 
   @ApiPropertyOptional({ type: String, nullable: true })
   sourceActivityId?: string | null = undefined;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  sourceAppName?: string | null = undefined;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  recordingDeviceManufacturer?: string | null = undefined;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  recordingDeviceModel?: string | null = undefined;
 }
 
 export class WatchWorkoutBatchImportResponseDto {
@@ -324,6 +333,18 @@ export class ActivityCardResponseDto {
 
   @ApiProperty({ type: String })
   sport: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  source?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  sourceAppName?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  recordingDeviceManufacturer?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  recordingDeviceModel?: string | null;
 
   @ApiProperty({ type: String, format: 'uuid' })
   id: string;

@@ -1,0 +1,182 @@
+[
+  {
+    "id": "column.public.Activity.recording_device_manufacturer",
+    "label": "Add column \"recording_device_manufacturer\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "recording_device_manufacturer",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"recording_device_manufacturer\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "recording_device_manufacturer"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"recording_device_manufacturer\" on \"Activity\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"recording_device_manufacturer\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"recording_device_manufacturer\" character varying(128)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"recording_device_manufacturer\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "recording_device_manufacturer"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"recording_device_manufacturer\" on \"Activity\""
+        }
+      },
+      {
+        "description": "verify column \"recording_device_manufacturer\" has type \"character varying(128)\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "recording_device_manufacturer",
+          "character varying(128)"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Activity.recording_device_model",
+    "label": "Add column \"recording_device_model\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "recording_device_model",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"recording_device_model\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "recording_device_model"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"recording_device_model\" on \"Activity\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"recording_device_model\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"recording_device_model\" character varying(128)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"recording_device_model\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "recording_device_model"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"recording_device_model\" on \"Activity\""
+        }
+      },
+      {
+        "description": "verify column \"recording_device_model\" has type \"character varying(128)\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "recording_device_model",
+          "character varying(128)"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Activity.source_app_name",
+    "label": "Add column \"source_app_name\" to \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "source_app_name",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"source_app_name\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "source_app_name"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"source_app_name\" on \"Activity\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"source_app_name\"",
+        "sql": "ALTER TABLE \"public\".\"Activity\" ADD COLUMN \"source_app_name\" character varying(128)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"source_app_name\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "source_app_name"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"source_app_name\" on \"Activity\""
+        }
+      },
+      {
+        "description": "verify column \"source_app_name\" has type \"character varying(128)\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "Activity",
+          "source_app_name",
+          "character varying(128)"
+        ]
+      }
+    ]
+  }
+]

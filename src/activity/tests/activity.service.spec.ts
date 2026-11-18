@@ -29,6 +29,7 @@ function createPrismaMock() {
       findUnique: asyncMock(),
       findFirst: asyncMock(),
       findMany: asyncMock(),
+      updateMany: asyncMock(),
       delete: asyncMock(),
     },
     activityMedia: {
@@ -734,6 +735,74 @@ describe('ActivityService', () => {
     });
     expect(prisma.activity.create).toHaveBeenCalledTimes(1);
     expect(prisma.activity.update).not.toHaveBeenCalled();
+    expect(prisma.activity.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('backfills missing provenance for an already imported watch workout without replacing saved values', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityService(prisma as never, {} as never);
+    prisma.activity.findMany.mockResolvedValue([
+      {
+        id: 'activity-empty-provenance',
+        source: 'health-connect',
+        sourceActivityId: 'existing-empty',
+        sourceAppName: null,
+        recordingDeviceManufacturer: null,
+        recordingDeviceModel: null,
+      },
+      {
+        id: 'activity-partial-provenance',
+        source: 'health-connect',
+        sourceActivityId: 'existing-partial',
+        sourceAppName: 'Suunto',
+        recordingDeviceManufacturer: null,
+        recordingDeviceModel: null,
+      },
+    ]);
+    const emptyProvenanceWorkout = {
+      ...makeActivityDto(),
+      source: 'health-connect' as const,
+      sourceActivityId: 'existing-empty',
+      sourceAppName: 'Health Sync',
+      recordingDeviceManufacturer: 'Suunto',
+      recordingDeviceModel: 'Suunto 9 Peak',
+      locations: [],
+    };
+    const partialProvenanceWorkout = {
+      ...emptyProvenanceWorkout,
+      sourceActivityId: 'existing-partial',
+      sourceAppName: 'New app name',
+    };
+
+    await expect(
+      service.importWatchWorkouts([emptyProvenanceWorkout, partialProvenanceWorkout], 'user-1'),
+    ).resolves.toEqual({ imported: 0, skipped: 2, activities: [] });
+
+    expect(prisma.activity.updateMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        id: 'activity-empty-provenance',
+        sourceAppName: null,
+        recordingDeviceManufacturer: null,
+        recordingDeviceModel: null,
+      },
+      data: {
+        sourceAppName: 'Health Sync',
+        recordingDeviceManufacturer: 'Suunto',
+        recordingDeviceModel: 'Suunto 9 Peak',
+      },
+    });
+    expect(prisma.activity.updateMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        id: 'activity-partial-provenance',
+        recordingDeviceManufacturer: null,
+        recordingDeviceModel: null,
+      },
+      data: {
+        recordingDeviceManufacturer: 'Suunto',
+        recordingDeviceModel: 'Suunto 9 Peak',
+      },
+    });
+    expect(prisma.activity.create).not.toHaveBeenCalled();
   });
 
   it('uses Strava elevation gain from the migration CSV for imported routes', async () => {

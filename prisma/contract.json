@@ -657,6 +657,26 @@
                   "kind": "scalar"
                 }
               },
+              "recordingDeviceManufacturer": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 128
+                  }
+                }
+              },
+              "recordingDeviceModel": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 128
+                  }
+                }
+              },
               "routeChecksum": {
                 "nullable": true,
                 "type": {
@@ -716,6 +736,16 @@
                 }
               },
               "sourceActivityId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "length": 128
+                  }
+                }
+              },
+              "sourceAppName": {
                 "nullable": true,
                 "type": {
                   "codecId": "sql/varchar@1",
@@ -1003,6 +1033,12 @@
                 "profileId": {
                   "column": "profileId"
                 },
+                "recordingDeviceManufacturer": {
+                  "column": "recording_device_manufacturer"
+                },
+                "recordingDeviceModel": {
+                  "column": "recording_device_model"
+                },
                 "routeChecksum": {
                   "column": "route_checksum"
                 },
@@ -1026,6 +1062,9 @@
                 },
                 "sourceActivityId": {
                   "column": "sourceActivityId"
+                },
+                "sourceAppName": {
+                  "column": "source_app_name"
                 },
                 "speed": {
                   "column": "speed"
@@ -7570,6 +7609,22 @@
                   "dataType": "pg/uuid",
                   "nullable": false
                 },
+                "recording_device_manufacturer": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 128
+                  }
+                },
+                "recording_device_model": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 128
+                  }
+                },
                 "route_checksum": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
@@ -7615,6 +7670,14 @@
                   }
                 },
                 "sourceActivityId": {
+                  "codecId": "sql/varchar@1",
+                  "dataType": "pg/varchar",
+                  "nullable": true,
+                  "typeParams": {
+                    "length": 128
+                  }
+                },
+                "source_app_name": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
                   "nullable": true,
@@ -13421,7 +13484,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "4ca174a4e9755d2980eaf6c7ad810e7a78f5ac98dbf442243ff07ba7faa7c49e"
+    "storageHash": "ffe39931e9232f247c4263bd97e46e55ca027b4cd9e17a03d74fdfa7235c2bf3"
   },
   "capabilities": {
     "postgres": {
