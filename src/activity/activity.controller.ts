@@ -24,6 +24,8 @@ import {
   SetActivityFavoriteDto,
   WatchWorkoutBatchImportDto,
   WatchWorkoutBatchImportResponseDto,
+  WatchWorkoutSyncCandidatesRequestDto,
+  WatchWorkoutSyncCandidatesResponseDto,
 } from './dto/activity.dto';
 import {
   ActivityCardResponseDto,
@@ -116,6 +118,24 @@ export class ActivityController {
     const currentUserId = request?.user.userId ?? request?.user.id ?? id;
     if (currentUserId !== id) throw new ForbiddenException('Недостаточно прав');
     return await this.activityService.importWatchWorkouts(body.workouts, currentUserId);
+  }
+
+  @Post(id + '/watch-import/check')
+  @ApiOkResponse({ type: WatchWorkoutSyncCandidatesResponseDto })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Find watch workouts that are not already synchronized' })
+  @ApiParam({ name: 'id', description: 'User identifier' })
+  @ApiBody({ type: WatchWorkoutSyncCandidatesRequestDto })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
+  @HttpCode(HttpStatus.OK)
+  async getWatchWorkoutSyncCandidates(
+    @Body() body: WatchWorkoutSyncCandidatesRequestDto,
+    @Param() { id }: ParamsId,
+    @Req() request?: RequestWithUser,
+  ) {
+    const currentUserId = request?.user.userId ?? request?.user.id ?? id;
+    if (currentUserId !== id) throw new ForbiddenException('Недостаточно прав');
+    return await this.activityService.getWatchWorkoutSyncCandidates(body.workouts, currentUserId);
   }
 
   @Post(id)
