@@ -7,6 +7,7 @@ import { ModerationReportsService } from './services/moderation-reports.service'
 import { ModerationAppealsService } from './services/moderation-appeals.service';
 import { ModerationTargetsService } from './services/moderation-targets.service';
 import type { ModerationEmailAction } from './moderation-email-actions.types';
+import type { ContentReportStatus } from './shared/moderation.types';
 
 @Injectable()
 export class ModerationService {
@@ -33,7 +34,7 @@ export class ModerationService {
     return this.reports.submitReport(reporterId, request);
   }
 
-  async getReportQueue(status?: string, take = 50) {
+  async getReportQueue(status?: ContentReportStatus, take = 50) {
     return this.reports.getReportQueue(status, take);
   }
 

@@ -6,6 +6,8 @@ import { ModerationAccessService } from './services/moderation-access.service';
 import { ModerationController } from './moderation.controller';
 import { ModerationService } from './moderation.service';
 import { ModerationReportsService } from './services/moderation-reports.service';
+import { ModerationReportsQueryService } from './services/moderation-reports-query.service';
+import { ModerationEmailActionValidationService } from './services/moderation-email-action-validation.service';
 import { ModerationAppealsService } from './services/moderation-appeals.service';
 import { ModerationTargetsService } from './services/moderation-targets.service';
 import { UserBlocksService } from './services/user-blocks.service';
@@ -24,6 +26,8 @@ import { ModerationContentNotificationsService } from './services/moderation-con
     ModerationAccessService,
     ModerationService,
     ModerationReportsService,
+    ModerationReportsQueryService,
+    ModerationEmailActionValidationService,
     ModerationAppealsService,
     ModerationTargetsService,
     UserBlocksService,

@@ -131,7 +131,7 @@ export class ActivityMediaService {
         const storageKeys = this.getMediaStorageKeys(userId, media);
         await Promise.all(
           storageKeys.map((storageKey) =>
-            this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey, transaction as never),
+            this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey, transaction),
           ),
         );
         await transaction.activityMedia.delete({ where: { id: mediaId } });
