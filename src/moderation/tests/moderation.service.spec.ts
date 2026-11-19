@@ -723,6 +723,7 @@ describe('ModerationService', () => {
     };
     prisma.contentReport.findUnique.mockResolvedValue(mediaReport);
     prisma.contentReport.updateMany.mockResolvedValue({ count: 1 });
+    prisma.mediaModerationAsset.findUnique.mockResolvedValue({ status: 'review_required' });
 
     await expect(service.applyAction('report-media', 'moderator-1', { action: 'hide_content' })).rejects.toBeInstanceOf(
       BadRequestException,
@@ -748,6 +749,88 @@ describe('ModerationService', () => {
     await expect(service.applyAction('report-user', 'moderator-1', { action: 'hide_content' })).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+
+  it('validates email actions using only the current report and target status', async () => {
+    const cases = [
+      { model: 'activity', targetType: 'activity', action: 'hide_content', target: { moderationStatus: 'visible' } },
+      {
+        model: 'activity',
+        targetType: 'activity_text',
+        action: 'restore_content',
+        target: { textModerationStatus: 'hidden' },
+      },
+      { model: 'comment', targetType: 'comment', action: 'remove_content', target: { moderationStatus: 'visible' } },
+      { model: 'groupPost', targetType: 'group_post', action: 'warn_user', target: { moderationStatus: 'visible' } },
+      { model: 'activityMedia', targetType: 'media', action: 'hide_content', target: { moderationStatus: 'visible' } },
+      {
+        model: 'mediaModerationAsset',
+        targetType: 'media_upload',
+        action: 'approve_media',
+        target: { status: 'review_required' },
+      },
+      { model: 'group', targetType: 'group', action: 'restore_content', target: { moderationStatus: 'hidden' } },
+      { model: 'user', targetType: 'user', action: 'warn_user', target: { id: 'target-1' } },
+    ] as const;
+
+    for (const scenario of cases) {
+      const prisma = createPrismaMock();
+      const service = new ModerationService(prisma as never, {} as never);
+      prisma.contentReport.findUnique.mockResolvedValue({
+        id: 'report-1',
+        targetType: scenario.targetType,
+        targetId: 'target-1',
+        status: 'open',
+      });
+      const targetModels = {
+        activity: prisma.activity.findUnique,
+        comment: prisma.comment.findUnique,
+        groupPost: prisma.groupPost.findUnique,
+        activityMedia: prisma.activityMedia.findUnique,
+        mediaModerationAsset: prisma.mediaModerationAsset.findUnique,
+        group: prisma.group.findUnique,
+        user: prisma.user.findUnique,
+      };
+      targetModels[scenario.model].mockResolvedValue(scenario.target);
+
+      await expect(service.validateEmailModerationAction('report-1', scenario.action)).resolves.toBe(
+        scenario.targetType,
+      );
+      expect(targetModels[scenario.model]).toHaveBeenCalledWith({
+        where: { id: 'target-1' },
+        select:
+          scenario.model === 'activity' && scenario.targetType === 'activity'
+            ? { moderationStatus: true }
+            : scenario.model === 'activity' && scenario.targetType === 'activity_text'
+              ? { textModerationStatus: true }
+              : scenario.model === 'mediaModerationAsset'
+                ? { status: true }
+                : scenario.model === 'user'
+                  ? { id: true }
+                  : { moderationStatus: true },
+      });
+      expect(prisma.moderationAction.findMany).not.toHaveBeenCalled();
+    }
+  });
+
+  it('rejects missing targets and closed reports for email actions', async () => {
+    const prisma = createPrismaMock();
+    const service = new ModerationService(prisma as never, {} as never);
+    prisma.contentReport.findUnique.mockResolvedValueOnce(null);
+    await expect(service.validateEmailModerationAction('missing', 'hide_content')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    prisma.contentReport.findUnique.mockResolvedValueOnce({
+      id: 'report-1',
+      targetType: 'comment',
+      targetId: 'comment-1',
+      status: 'resolved',
+    });
+    await expect(service.validateEmailModerationAction('report-1', 'hide_content')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(prisma.comment.findUnique).not.toHaveBeenCalled();
   });
 
   it('rejects reports for deleted comment, media, and user targets', async () => {

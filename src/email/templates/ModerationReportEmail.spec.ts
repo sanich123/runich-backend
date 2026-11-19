@@ -25,6 +25,13 @@ function findModeratorDashboardLink(node: React.ReactNode): { href: string } | u
   return findModeratorDashboardLink((node.props as { children?: React.ReactNode }).children);
 }
 
+function collectEmailButtons(node: React.ReactNode): Array<{ href: string }> {
+  if (Array.isArray(node)) return node.flatMap(collectEmailButtons);
+  if (!React.isValidElement(node)) return [];
+  if (node.type === EmailButton) return [node.props as { href: string }];
+  return collectEmailButtons((node.props as { children?: React.ReactNode }).children);
+}
+
 function renderEmail(props: ModerationReportEmailProps) {
   return ModerationReportEmail(props);
 }
@@ -147,6 +154,46 @@ describe('ModerationReportEmail', () => {
     expect(text).toContain('Email: owner@example.com');
     expect(text).not.toContain('ID:');
     expect(text).not.toContain('Кто пожаловался:');
+  });
+
+  it('renders action buttons that open confirmation pages and shows both people with avatars', async () => {
+    const email = renderEmail({
+      reportId: 'report-actions',
+      requestType: 'report',
+      targetType: 'comment',
+      reason: 'spam',
+      reporter: {
+        id: 'reporter-1',
+        name: 'Sam',
+        surname: 'Reporter',
+        email: 'sam@example.com',
+        profilePhoto: 'https://cdn.example/reporter.jpg',
+      },
+      reportedUser: {
+        id: 'author-1',
+        name: 'Alex',
+        surname: 'Runner',
+        email: 'alex@example.com',
+        profilePhoto: 'https://cdn.example/author.jpg',
+      },
+      moderationActions: [
+        { label: 'Скрыть контент', href: 'https://api.example.test/moderation/email-actions/signed-token' },
+        { label: 'Предупредить автора', href: 'https://api.example.test/moderation/email-actions/another-token' },
+      ],
+    });
+    const html = await render(email);
+    const text = collectRenderedText(html).replace(/\s+/g, ' ');
+    const actionLinks = collectEmailButtons(email).filter(({ href }) => href.includes('/moderation/email-actions/'));
+
+    expect(actionLinks).toHaveLength(2);
+    expect(html).toContain('https://api.example.test/moderation/email-actions/signed-token');
+    expect(html).toContain('сначала откроет страницу подтверждения');
+    expect(text).toContain('Имя и фамилия: Sam Reporter');
+    expect(text).toContain('Email: sam@example.com');
+    expect(html).toContain('Аватар: Sam Reporter');
+    expect(text).toContain('Имя и фамилия: Alex Runner');
+    expect(text).toContain('Email: alex@example.com');
+    expect(html).toContain('Аватар: Alex Runner');
   });
 
   it('uses fallbacks when the reported profile has no public details', async () => {

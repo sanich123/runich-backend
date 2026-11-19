@@ -227,7 +227,7 @@ export class StorageModerationService {
       data: {
         status: 'approved',
         publishedKey: destinationKey,
-        reviewedAt: reviewerId ? new Date() : asset.reviewedAt,
+        reviewedAt: reviewerId || reviewNote ? new Date() : asset.reviewedAt,
         reviewerId: reviewerId ?? asset.reviewerId,
         reviewNote: reviewNote?.trim() || asset.reviewNote,
       },
@@ -271,7 +271,7 @@ export class StorageModerationService {
     }
   }
 
-  async rejectModerationAsset(assetId: string, reviewerId: string, reviewNote?: string) {
+  async rejectModerationAsset(assetId: string, reviewerId?: string, reviewNote?: string) {
     if (!this.prisma) throw new ServiceUnavailableException('Хранилище статусов загрузки недоступно');
     const asset = await this.prisma.mediaModerationAsset.findUnique({ where: { id: assetId } });
     if (!asset) throw new BadRequestException('Загруженный файл не найден');
@@ -292,7 +292,7 @@ export class StorageModerationService {
       data: {
         status: 'rejected',
         publishedKey: null,
-        reviewerId,
+        reviewerId: reviewerId ?? null,
         reviewedAt: new Date(),
         reviewNote: reviewNote?.trim() || null,
       },

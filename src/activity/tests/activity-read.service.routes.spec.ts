@@ -141,6 +141,17 @@ describe('ActivityReadService route list', () => {
     );
   });
 
+  it('uses a canonical zone name in PostgreSQL date filters for legacy aliases', async () => {
+    const prisma = createPrismaMock();
+    const service = new ActivityReadService(prisma as never, {} as never, {} as never);
+    prisma.$queryRaw.mockResolvedValue([]);
+    prisma.activity.findMany.mockResolvedValue([]);
+
+    await service.getActivitiesWithRoutes('user-1', undefined, undefined, { timeZone: 'US/Pacific' });
+
+    expect(prisma.$queryRaw.mock.calls[0]?.slice(1)).toContain('America/Los_Angeles');
+  });
+
   it('maps an empty page after a zero-sized slice to a null cursor even when more rows exist', async () => {
     const prisma = createPrismaMock();
     const service = new ActivityReadService(prisma as never, {} as never, {} as never);

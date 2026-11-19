@@ -41,6 +41,18 @@ describe('StatisticService', () => {
     );
   });
 
+  it('canonicalizes legacy time zone aliases before using PostgreSQL date extraction', async () => {
+    const prisma = createPrismaMock();
+    const service = new StatisticService(prisma as never);
+    prisma.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(service.getYearsAndTypesOfActivities('u1', 'US/Pacific')).resolves.toEqual([]);
+
+    expect(getQueryParameters(prisma.$queryRaw.mock.calls[0])).toEqual(
+      expect.arrayContaining(['u1', 'America/Los_Angeles']),
+    );
+  });
+
   it('calculates monthly statistics grouped by sport', async () => {
     const prisma = createPrismaMock();
     const service = new StatisticService(prisma as never);

@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { StorageService } from 'src/storage/services/storage.service';
-import { getLocalDateTimeParts, isValidIanaTimeZone } from 'src/common/utils/time-zone';
+import { canonicalizeIanaTimeZone, getLocalDateTimeParts, isValidIanaTimeZone } from 'src/common/utils/time-zone';
 import type { LocationObject } from '../dto/activity.dto';
 import { ACTIVITY_ENRICHMENT_CONFIG, ACTIVITY_ENRICHMENT_STATUS } from '../shared/const';
 import type { ActivityEnrichmentRecord, Coordinate, WeatherResponse } from '../shared/types';
@@ -166,7 +166,8 @@ export class ActivityEnrichmentService {
   }
 
   private async getWeather(coordinate: Coordinate, date: Date, activityTimeZone: string | null) {
-    const timeZone = activityTimeZone && isValidIanaTimeZone(activityTimeZone) ? activityTimeZone : 'UTC';
+    const timeZone =
+      activityTimeZone && isValidIanaTimeZone(activityTimeZone) ? canonicalizeIanaTimeZone(activityTimeZone) : 'UTC';
     const localDateTime = getLocalDateTimeParts(date, timeZone);
     const dateString = `${localDateTime.year}-${String(localDateTime.month).padStart(2, '0')}-${String(localDateTime.day).padStart(2, '0')}`;
     const targetTime = `${dateString}T${String(localDateTime.hour).padStart(2, '0')}:00`;

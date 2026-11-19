@@ -1,12 +1,15 @@
 import {
   BadRequestException,
+  ConflictException,
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   HttpStatus,
+  Header,
   Inject,
+  NotFoundException,
   Param,
   Post,
   Put,
@@ -37,12 +40,77 @@ import {
 } from './dto/moderation.dto';
 import { ModerationService } from './moderation.service';
 import { ModeratorGuard } from './moderator.guard';
+import { renderModerationEmailActionPage } from './moderation-email-action-page.utils';
+import { verifyModerationEmailActionToken } from './moderation-email-action-token.utils';
 
 @ApiTags('moderation')
 @ApiBearerAuth('bearerAuth')
 @Controller('moderation')
 export class ModerationController {
   constructor(@Inject(ModerationService) private readonly moderationService: ModerationService) {}
+
+  @Get('email-actions/:token')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @Header('Cache-Control', 'no-store, max-age=0')
+  @Header('X-Content-Type-Options', 'nosniff')
+  @Header('Referrer-Policy', 'no-referrer')
+  @Header(
+    'Content-Security-Policy',
+    "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+  )
+  @RateLimit(RATE_LIMITS.moderationEmailAction.limit, RATE_LIMITS.moderationEmailAction.ttl)
+  async confirmEmailAction(@Param('token') token: string) {
+    const actionToken = verifyModerationEmailActionToken(token);
+    if (!actionToken) return renderModerationEmailActionPage({ state: 'expired' });
+
+    try {
+      const targetType = await this.moderationService.validateEmailModerationAction(
+        actionToken.reportId,
+        actionToken.action,
+      );
+      return renderModerationEmailActionPage({
+        state: 'confirm',
+        action: actionToken.action,
+        targetType,
+        token,
+      });
+    } catch (error) {
+      if (error instanceof ConflictException || error instanceof NotFoundException) {
+        return renderModerationEmailActionPage({ state: 'unavailable' });
+      }
+      throw error;
+    }
+  }
+
+  @Post('email-actions/:token')
+  @HttpCode(HttpStatus.OK)
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @Header('Cache-Control', 'no-store, max-age=0')
+  @Header('X-Content-Type-Options', 'nosniff')
+  @Header('Referrer-Policy', 'no-referrer')
+  @Header(
+    'Content-Security-Policy',
+    "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+  )
+  @RateLimit(RATE_LIMITS.moderationEmailAction.limit, RATE_LIMITS.moderationEmailAction.ttl)
+  async applyEmailAction(@Param('token') token: string) {
+    const actionToken = verifyModerationEmailActionToken(token);
+    if (!actionToken) return renderModerationEmailActionPage({ state: 'expired' });
+
+    try {
+      await this.moderationService.applyEmailModerationAction(actionToken.reportId, actionToken.action);
+      return renderModerationEmailActionPage({ state: 'success', action: actionToken.action });
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
+        return renderModerationEmailActionPage({ state: 'unavailable' });
+      }
+      throw error;
+    }
+  }
 
   @Post('reports')
   @UseGuards(JwtAuthGuard)

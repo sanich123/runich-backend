@@ -5,6 +5,7 @@ import {
   getLocalMonthRange,
   getLocalWeekRange,
   getLocalYearRange,
+  canonicalizeIanaTimeZone,
   isValidIanaTimeZone,
   localDateToUtc,
   startOfLocalWeek,
@@ -50,6 +51,11 @@ describe('time zone calendar calculations', () => {
     expect(isValidIanaTimeZone('X'.repeat(101))).toBe(false);
     expect(isValidIanaTimeZone(42)).toBe(false);
     expect(isValidIanaTimeZone('Invalid/Zone')).toBe(false);
+  });
+
+  it('canonicalizes legacy IANA aliases to the runtime canonical name', () => {
+    expect(canonicalizeIanaTimeZone('US/Pacific')).toBe('America/Los_Angeles');
+    expect(canonicalizeIanaTimeZone('Europe/Moscow')).toBe('Europe/Moscow');
   });
 
   it('returns local date parts with and without an explicit time zone', () => {

@@ -1,6 +1,11 @@
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { StorageService } from 'src/storage/services/storage.service';
 import { EmailNotificationService } from './email-notification.service';
+import {
+  getAvailableModerationEmailActions,
+  getModerationEmailActionLabel,
+} from 'src/moderation/moderation-email-actions.policy';
+import { getModerationEmailActionUrl } from 'src/moderation/moderation-email-action-token.utils';
 
 export async function resolveModerationReportNotification(
   prisma: PrismaService,
@@ -9,6 +14,9 @@ export async function resolveModerationReportNotification(
   storage?: StorageService,
 ) {
   const activitySelect = {
+    userId: true,
+    moderationStatus: true,
+    textModerationStatus: true,
     title: true,
     description: true,
     sport: true,
@@ -37,6 +45,9 @@ export async function resolveModerationReportNotification(
     where: { id: sourceId },
     select: {
       id: true,
+      reporterId: true,
+      subjectUserId: true,
+      status: true,
       targetId: true,
       targetType: true,
       reason: true,
@@ -71,10 +82,14 @@ export async function resolveModerationReportNotification(
         },
       },
       activity: { select: activitySelect },
-      comment: { select: { comment: true, activity: { select: activitySelect } } },
+      comment: {
+        select: { comment: true, authorId: true, moderationStatus: true, activity: { select: activitySelect } },
+      },
       groupPost: {
         select: {
           text: true,
+          createdByUserId: true,
+          moderationStatus: true,
           group: { select: { name: true } },
           photoAsset: { select: { id: true, ownerId: true } },
         },
@@ -84,6 +99,7 @@ export async function resolveModerationReportNotification(
           url: true,
           thumbnail: true,
           userId: true,
+          moderationStatus: true,
           mediaReviewStatus: true,
           mediaModerationAssetId: true,
           thumbnailModerationAssetId: true,
@@ -126,6 +142,8 @@ export async function resolveModerationReportNotification(
             name: true,
             description: true,
             locationName: true,
+            createdByUserId: true,
+            moderationStatus: true,
             photoAsset: { select: { id: true, ownerId: true } },
           },
         })
@@ -148,6 +166,7 @@ export async function resolveModerationReportNotification(
             surname: string | null;
             profilePhoto: string | null;
             profilePhotoPendingAssetId: string | null;
+            bio?: string | null;
           } | null;
         }
       | null
@@ -155,6 +174,7 @@ export async function resolveModerationReportNotification(
   ) => {
     if (!user) return null;
     return {
+      id: user.id,
       email: user.email,
       name: user.profile?.name,
       surname: user.profile?.surname,
@@ -165,6 +185,53 @@ export async function resolveModerationReportNotification(
     };
   };
   const activity = report.activity ?? report.comment?.activity ?? report.media?.activity ?? null;
+  const authorId =
+    report.subjectUserId ??
+    report.activity?.userId ??
+    report.comment?.authorId ??
+    report.groupPost?.createdByUserId ??
+    report.media?.userId ??
+    report.mediaUpload?.ownerId ??
+    group?.createdByUserId ??
+    (report.targetType === 'user' ? report.targetId : null);
+  const [fallbackReporter, fallbackAuthor] = await Promise.all([
+    !report.reporter && report.reporterId
+      ? prisma.user.findUnique({
+          where: { id: report.reporterId },
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                name: true,
+                surname: true,
+                bio: true,
+                profilePhoto: true,
+                profilePhotoPendingAssetId: true,
+              },
+            },
+          },
+        })
+      : null,
+    !report.subjectUser && !report.mediaUpload?.owner && authorId
+      ? prisma.user.findUnique({
+          where: { id: authorId },
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                name: true,
+                surname: true,
+                bio: true,
+                profilePhoto: true,
+                profilePhotoPendingAssetId: true,
+              },
+            },
+          },
+        })
+      : null,
+  ]);
   const activityMedia = activity?.media ?? [];
   const reportedMediaUrls: string[] = [];
   const reportedVideoUrls: string[] = [];
@@ -208,6 +275,7 @@ export async function resolveModerationReportNotification(
       if (!destination.includes(originalPreview)) destination.push(originalPreview);
     }
   }
+  const contentAuthor = report.subjectUser ?? report.mediaUpload?.owner ?? fallbackAuthor;
   const reportedContent =
     report.targetType === 'activity' || report.targetType === 'activity_text'
       ? (report.activity?.description ?? null)
@@ -216,13 +284,35 @@ export async function resolveModerationReportNotification(
         : report.targetType === 'group_post'
           ? (report.groupPost?.text ?? null)
           : report.targetType === 'user'
-            ? (report.subjectUser?.profile?.bio ?? null)
+            ? (contentAuthor?.profile?.bio ?? null)
             : report.targetType === 'group'
               ? (group?.description ?? null)
               : null;
-  const contentAuthor = report.subjectUser ?? report.mediaUpload?.owner;
-  const reporter = report.reporter ? await mapPerson(report.reporter) : null;
+  const reporterUser = report.reporter ?? fallbackReporter;
+  const reporter = reporterUser ? await mapPerson(reporterUser) : null;
   const reportedUser = await mapPerson(contentAuthor);
+  const moderationStatus =
+    report.targetType === 'media_upload'
+      ? report.mediaUpload?.status
+      : report.targetType === 'activity'
+        ? report.activity?.moderationStatus
+        : report.targetType === 'activity_text'
+          ? report.activity?.textModerationStatus
+          : report.targetType === 'comment'
+            ? report.comment?.moderationStatus
+            : report.targetType === 'group_post'
+              ? report.groupPost?.moderationStatus
+              : report.targetType === 'media'
+                ? report.media?.moderationStatus
+                : report.targetType === 'group'
+                  ? group?.moderationStatus
+                  : null;
+  const moderationActions = getAvailableModerationEmailActions(report.targetType, report.status, moderationStatus).map(
+    (action) => ({
+      label: getModerationEmailActionLabel(action),
+      href: getModerationEmailActionUrl(report.id, action),
+    }),
+  );
   const payload = {
     reportId: report.id,
     requestType: 'report' as const,
@@ -250,7 +340,16 @@ export async function resolveModerationReportNotification(
       : report.groupPost?.group
         ? { name: report.groupPost.group.name, locationName: null }
         : null,
-    reportedProfile: report.targetType === 'user' ? { bio: report.subjectUser?.profile?.bio ?? null } : null,
+    reportedProfile:
+      report.targetType === 'user'
+        ? {
+            name: contentAuthor?.profile?.name ?? null,
+            surname: contentAuthor?.profile?.surname ?? null,
+            bio: contentAuthor?.profile?.bio ?? null,
+            profilePhoto: reportedUser?.profilePhoto ?? null,
+          }
+        : null,
+    moderationActions,
   };
   return { send: () => notifications.sendModerationUpdate(payload) };
 }

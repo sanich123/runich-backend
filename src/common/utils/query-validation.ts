@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { isValidIanaTimeZone } from './time-zone';
+import { canonicalizeIanaTimeZone, isValidIanaTimeZone } from './time-zone';
 
 export function validateOptionalIntegerQuery(
   value: unknown,
@@ -34,5 +34,5 @@ export function validateOptionalIanaTimeZoneQuery(value: unknown, field: string)
     throw new BadRequestException(`Некорректный часовой пояс в свойстве: ${field}`);
   }
 
-  return value;
+  return canonicalizeIanaTimeZone(value);
 }

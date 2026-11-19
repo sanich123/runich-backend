@@ -160,7 +160,7 @@ export class StorageService {
     return this.moderation.refreshLinkedActivityMedia(assetIds);
   }
 
-  async rejectModerationAsset(assetId: string, reviewerId: string, reviewNote?: string) {
+  async rejectModerationAsset(assetId: string, reviewerId?: string, reviewNote?: string) {
     return this.moderation.rejectModerationAsset(assetId, reviewerId, reviewNote);
   }
 

@@ -13,6 +13,7 @@ describe('resolveModerationReportNotification', () => {
     group: { findUnique: asyncUnknownMock() },
     moderationAction: { findUnique: asyncUnknownMock() },
     moderationAppeal: { findUnique: asyncUnknownMock() },
+    user: { findUnique: asyncUnknownMock() },
   };
   const notifications = {
     sendModerationUpdate: jest.fn<(...args: unknown[]) => Promise<void>>(),
@@ -22,6 +23,7 @@ describe('resolveModerationReportNotification', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prisma.group.findUnique.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue(null);
     notifications.sendModerationUpdate.mockResolvedValue(undefined);
     notifications.sendReporterModerationUpdate.mockResolvedValue(undefined);
   });
@@ -180,6 +182,38 @@ describe('resolveModerationReportNotification', () => {
     expect(preview).toHaveBeenCalledWith('reporter-1', 'reporter-avatar');
     expect(preview).toHaveBeenCalledWith('author-1', 'comment-photo');
     expect(JSON.stringify(payload)).not.toContain('rejected.jpg');
+  });
+
+  it('adds only status-appropriate direct moderation action links to an open report email', async () => {
+    const originalJwtSecret = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = 'test-moderation-email-action-secret';
+    try {
+      const payload = await resolve(
+        makeReport({
+          status: 'open',
+          targetType: 'comment',
+          reporter: { id: 'reporter-1', email: 'reporter@example.com', profile: null },
+          subjectUser: { id: 'author-1', email: 'author@example.com', profile: null },
+          comment: { comment: 'Reported text', moderationStatus: 'visible' },
+        }),
+      );
+
+      expect(payload).toMatchObject({
+        moderationActions: expect.arrayContaining([
+          expect.objectContaining({ label: 'Скрыть контент' }),
+          expect.objectContaining({ label: 'Удалить контент' }),
+          expect.objectContaining({ label: 'Предупредить автора' }),
+        ]),
+      });
+      const actionLinks = (payload as { moderationActions: Array<{ href: string }> }).moderationActions;
+      expect(actionLinks).toHaveLength(6);
+      expect(actionLinks.every(({ href }) => href.startsWith('http://localhost:3000/moderation/email-actions/'))).toBe(
+        true,
+      );
+    } finally {
+      if (originalJwtSecret === undefined) delete process.env.JWT_SECRET;
+      else process.env.JWT_SECRET = originalJwtSecret;
+    }
   });
 
   it('uses automatic-text context for activity text and keeps its content without a reporter', async () => {

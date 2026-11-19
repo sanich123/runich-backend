@@ -324,15 +324,18 @@ describe('EmailNotificationWorkerService', () => {
       reportId: 'report-1',
       requestType: 'report',
       targetType: 'user',
+      moderationActions: [],
       reason: 'harassment',
       reporterDetails: 'Repeated unwanted messages',
       reporter: {
+        id: 'reporter-1',
         email: 'sam@example.com',
         name: 'Sam',
         surname: 'Reporter',
         profilePhoto: null,
       },
       reportedUser: {
+        id: 'reported-user',
         email: 'alex@example.com',
         name: 'Alex',
         surname: 'Runner',
@@ -343,7 +346,12 @@ describe('EmailNotificationWorkerService', () => {
       reportedVideoUrls: [],
       reportedActivity: null,
       reportedGroup: null,
-      reportedProfile: { bio: 'Runner profile' },
+      reportedProfile: {
+        name: 'Alex',
+        surname: 'Runner',
+        bio: 'Runner profile',
+        profilePhoto: 'profile.jpg',
+      },
     });
   });
 
@@ -382,10 +390,12 @@ describe('EmailNotificationWorkerService', () => {
       reportId: 'report-media-upload',
       requestType: 'report',
       targetType: 'media_upload',
+      moderationActions: [],
       reason: 'sexual_content',
       reporterDetails: 'Автоматическая проверка NSFWJS: Porn=0.99. Кадров проверено: 18.',
       reporter: null,
       reportedUser: {
+        id: 'owner-1',
         email: 'owner@example.com',
         name: 'Alex',
         surname: 'Runner',

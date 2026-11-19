@@ -39,6 +39,7 @@ describe('query validation', () => {
     expect(validateOptionalIanaTimeZoneQuery(undefined, 'timeZone')).toBeUndefined();
     expect(validateOptionalIanaTimeZoneQuery('Europe/Moscow', 'timeZone')).toBe('Europe/Moscow');
     expect(validateOptionalIanaTimeZoneQuery('America/New_York', 'timeZone')).toBe('America/New_York');
+    expect(validateOptionalIanaTimeZoneQuery('US/Pacific', 'timeZone')).toBe('America/Los_Angeles');
     expect(() => validateOptionalIanaTimeZoneQuery('Mars/Olympus', 'timeZone')).toThrow(BadRequestException);
   });
 });

@@ -53,6 +53,10 @@ export function isValidIanaTimeZone(value: unknown): value is string {
   }
 }
 
+export function canonicalizeIanaTimeZone(value: string) {
+  return getFormatter(value).resolvedOptions().timeZone || value;
+}
+
 function getNumericParts(date: Date, timeZone: string): Record<string, number> {
   if (Number.isNaN(date.getTime())) throw new RangeError('Invalid date');
 
