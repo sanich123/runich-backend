@@ -10,6 +10,8 @@ import { ModerationActionDto, SubmitContentReportDto } from '../dto/moderation.d
 import { ACTIVE_QUEUE_STATUSES, OPEN_REPORT_STATUSES } from '../shared/moderation.constants';
 import { createReportDecisionCopy, createReportReceiptCopy } from '../shared/moderation.utils';
 import type { ReportQueueRow } from './moderation-reports.types';
+import { getAvailableModerationEmailActions } from '../moderation-email-actions.policy';
+import type { ModerationEmailAction } from '../moderation-email-actions.types';
 
 @Injectable()
 export class ModerationReportsService {
@@ -278,6 +280,84 @@ export class ModerationReportsService {
     return { report, reporter, contentAuthor, context, actions };
   }
 
+  async validateEmailModerationAction(reportId: string, action: ModerationEmailAction) {
+    const report = await this.prisma.contentReport.findUnique({
+      where: { id: reportId },
+      select: { targetType: true, targetId: true, status: true },
+    });
+    if (!report) throw new NotFoundException('Жалоба не найдена');
+    if (report.status !== 'open' && report.status !== 'in_review') {
+      throw new ConflictException('Это действие уже недоступно');
+    }
+
+    const moderationStatus = await this.getEmailActionTargetStatus(report.targetType, report.targetId);
+    if (moderationStatus === null) {
+      throw new ConflictException('Это действие уже недоступно');
+    }
+    const availableActions = getAvailableModerationEmailActions(report.targetType, report.status, moderationStatus);
+    if (!availableActions.includes(action)) {
+      throw new ConflictException('Это действие уже недоступно');
+    }
+    return report.targetType;
+  }
+
+  private async getEmailActionTargetStatus(targetType: string, targetId: string): Promise<string | null> {
+    if (targetType === 'activity') {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: targetId },
+        select: { moderationStatus: true },
+      });
+      return activity?.moderationStatus ?? null;
+    }
+    if (targetType === 'activity_text') {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: targetId },
+        select: { textModerationStatus: true },
+      });
+      return activity?.textModerationStatus ?? null;
+    }
+    if (targetType === 'comment') {
+      const comment = await this.prisma.comment.findUnique({
+        where: { id: targetId },
+        select: { moderationStatus: true },
+      });
+      return comment?.moderationStatus ?? null;
+    }
+    if (targetType === 'group_post') {
+      const post = await this.prisma.groupPost.findUnique({
+        where: { id: targetId },
+        select: { moderationStatus: true },
+      });
+      return post?.moderationStatus ?? null;
+    }
+    if (targetType === 'media') {
+      const media = await this.prisma.activityMedia.findUnique({
+        where: { id: targetId },
+        select: { moderationStatus: true },
+      });
+      return media?.moderationStatus ?? null;
+    }
+    if (targetType === 'media_upload') {
+      const asset = await this.prisma.mediaModerationAsset.findUnique({
+        where: { id: targetId },
+        select: { status: true },
+      });
+      return asset?.status ?? null;
+    }
+    if (targetType === 'group') {
+      const group = await this.prisma.group.findUnique({
+        where: { id: targetId },
+        select: { moderationStatus: true },
+      });
+      return group?.moderationStatus ?? null;
+    }
+    if (targetType === 'user') {
+      const user = await this.prisma.user.findUnique({ where: { id: targetId }, select: { id: true } });
+      return user ? 'active' : null;
+    }
+    return null;
+  }
+
   async deleteReport(reportId: string) {
     const report = await this.prisma.contentReport.findUnique({ where: { id: reportId }, select: { id: true } });
     if (!report) throw new NotFoundException('Жалоба не найдена');
@@ -307,7 +387,7 @@ export class ModerationReportsService {
     };
   }
 
-  async applyAction(reportId: string, moderatorId: string, request: ModerationActionDto) {
+  async applyAction(reportId: string, moderatorId: string | null, request: ModerationActionDto) {
     const report = await this.prisma.contentReport.findUnique({ where: { id: reportId } });
     if (!report) throw new NotFoundException('Жалоба не найдена');
     if (!OPEN_REPORT_STATUSES.includes(report.status as ContentReportStatus)) {
@@ -328,11 +408,20 @@ export class ModerationReportsService {
 
     const reviewedAt = new Date();
     const action = request.action as ModerationActionType;
+    if (action === 'approve_media' || action === 'reject_media') {
+      const asset = await this.prisma.mediaModerationAsset.findUnique({
+        where: { id: report.targetId },
+        select: { status: true },
+      });
+      if (asset?.status !== 'review_required') {
+        throw new BadRequestException('Этот файл больше не ожидает решения модератора');
+      }
+    }
     if (action === 'approve_media') {
-      await this.storage.approveModerationAsset(report.targetId, moderatorId, request.note);
+      await this.storage.approveModerationAsset(report.targetId, moderatorId ?? undefined, request.note);
     }
     if (action === 'reject_media') {
-      await this.storage.rejectModerationAsset(report.targetId, moderatorId, request.note);
+      await this.storage.rejectModerationAsset(report.targetId, moderatorId ?? undefined, request.note);
     }
     await this.prisma.$transaction(async (transaction) => {
       if (action === 'hide_content' || action === 'remove_content' || action === 'restore_content') {

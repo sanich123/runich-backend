@@ -113,4 +113,28 @@ describe('AllExceptionsFilter', () => {
     expect(loggerWarn).toHaveBeenCalledWith(expect.stringContaining('Ошибка создания активности'));
     loggerWarn.mockRestore();
   });
+
+  it('redacts email action tokens from exception responses and application logs', async () => {
+    const loggerWarn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const context = createContext({
+      method: 'GET',
+      originalUrl: '/moderation/email-actions/private-action-token?preview=1',
+      url: '/moderation/email-actions/private-action-token',
+      params: { token: 'private-action-token' },
+    });
+
+    await new AllExceptionsFilter(context.httpAdapterHost as never).catch(
+      new BadRequestException(),
+      context.host as never,
+    );
+
+    expect(context.reply).toHaveBeenCalledWith(
+      context.response,
+      expect.objectContaining({ path: '/moderation/email-actions/[redacted]' }),
+      400,
+    );
+    expect(loggerWarn).toHaveBeenCalledWith('400 /moderation/email-actions/[redacted]: "Некорректный запрос"');
+    expect(JSON.stringify(writeLogs.mock.calls)).not.toContain('private-action-token');
+    loggerWarn.mockRestore();
+  });
 });

@@ -9,7 +9,12 @@ import type {
   YearCategoryDailyActivities,
   YearCategoryMetricAggregateRow,
 } from './type';
-import { DEFAULT_TIME_ZONE, getLocalDateParts, getLocalWeekRange } from 'src/common/utils/time-zone';
+import {
+  canonicalizeIanaTimeZone,
+  DEFAULT_TIME_ZONE,
+  getLocalDateParts,
+  getLocalWeekRange,
+} from 'src/common/utils/time-zone';
 
 @Injectable()
 export class StatisticService {
@@ -67,9 +72,10 @@ export class StatisticService {
 
   async getYearsAndTypesOfActivities(id: string, timeZone = DEFAULT_TIME_ZONE) {
     try {
+      const canonicalTimeZone = canonicalizeIanaTimeZone(timeZone);
       const rows = await this.prisma.$queryRaw<{ year: number; sport: string }[]>`
         SELECT
-          EXTRACT(YEAR FROM ("date" AT TIME ZONE ${timeZone}))::int AS "year",
+          EXTRACT(YEAR FROM ("date" AT TIME ZONE ${canonicalTimeZone}))::int AS "year",
           "sport"
         FROM "Activity"
         WHERE "user_id" = ${id}::uuid
@@ -163,11 +169,12 @@ export class StatisticService {
 
   async getStatisticByYearAndCategory(userId: string, timeZone = DEFAULT_TIME_ZONE) {
     try {
+      const canonicalTimeZone = canonicalizeIanaTimeZone(timeZone);
       const [rows, activities] = await Promise.all([
         this.prisma.$queryRaw<YearCategoryMetricAggregateRow[]>`
           SELECT
-            EXTRACT(YEAR FROM ("date" AT TIME ZONE ${timeZone}))::int AS "year",
-            (EXTRACT(MONTH FROM ("date" AT TIME ZONE ${timeZone})) - 1)::int AS "month",
+            EXTRACT(YEAR FROM ("date" AT TIME ZONE ${canonicalTimeZone}))::int AS "year",
+            (EXTRACT(MONTH FROM ("date" AT TIME ZONE ${canonicalTimeZone})) - 1)::int AS "month",
             "sport",
             COALESCE(SUM("duration"), 0)::double precision / 3600000 AS "totalDuration",
             COALESCE(SUM("distance"), 0)::double precision / 1000 AS "totalDistance",
@@ -188,7 +195,7 @@ export class StatisticService {
       if (!rows.length) {
         return { isUserHasActivities: false };
       }
-      const dailyActivitiesByYear = this.groupDailyActivities(activities ?? [], timeZone);
+      const dailyActivitiesByYear = this.groupDailyActivities(activities ?? [], canonicalTimeZone);
       const yearlyStatistics = buildYearCategoryStatistics(
         rows.map((row) => ({
           year: row.year,

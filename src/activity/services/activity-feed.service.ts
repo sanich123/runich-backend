@@ -10,6 +10,7 @@ import { ACTIVITY_VISIBILITY } from '../shared/activity-visibility';
 import { normalizeActivityCardForViewer } from '../shared/utils';
 import type { ActivityFeedSqlRow, ActivityRouteWorkoutFilters } from '../shared/types';
 import { ActivityContentReadService } from './activity-content-read.service';
+import { canonicalizeIanaTimeZone } from 'src/common/utils/time-zone';
 
 @Injectable()
 export class ActivityFeedService {
@@ -71,12 +72,13 @@ export class ActivityFeedService {
     filters: ActivityRouteWorkoutFilters,
   ) {
     try {
+      const timeZone = canonicalizeIanaTimeZone(filters.timeZone);
       const pageSize = Number(take);
       const routeDateRows = await this.prisma.$queryRaw<Array<{ year: number; month: number; day: number }>>`
           SELECT DISTINCT
-            EXTRACT(YEAR FROM ("date" AT TIME ZONE ${filters.timeZone}))::int AS "year",
-            EXTRACT(MONTH FROM ("date" AT TIME ZONE ${filters.timeZone}))::int AS "month",
-            EXTRACT(DAY FROM ("date" AT TIME ZONE ${filters.timeZone}))::int AS "day"
+            EXTRACT(YEAR FROM ("date" AT TIME ZONE ${timeZone}))::int AS "year",
+            EXTRACT(MONTH FROM ("date" AT TIME ZONE ${timeZone}))::int AS "month",
+            EXTRACT(DAY FROM ("date" AT TIME ZONE ${timeZone}))::int AS "day"
           FROM "Activity"
           WHERE "user_id" = ${currentUserId}::uuid
             AND "moderation_status" = 'visible'
@@ -128,9 +130,9 @@ export class ActivityFeedService {
                 AND "moderation_status" = 'visible'
                 AND "route_storage_key" IS NOT NULL
                 AND "route_point_count" > 1
-                AND (${filters.year === undefined} OR EXTRACT(YEAR FROM ("date" AT TIME ZONE ${filters.timeZone})) = ${filters.year ?? 0})
-                AND (${filters.month === undefined} OR EXTRACT(MONTH FROM ("date" AT TIME ZONE ${filters.timeZone})) = ${filters.month ?? 0})
-                AND (${filters.day === undefined} OR EXTRACT(DAY FROM ("date" AT TIME ZONE ${filters.timeZone})) = ${filters.day ?? 0})
+                AND (${filters.year === undefined} OR EXTRACT(YEAR FROM ("date" AT TIME ZONE ${timeZone})) = ${filters.year ?? 0})
+                AND (${filters.month === undefined} OR EXTRACT(MONTH FROM ("date" AT TIME ZONE ${timeZone})) = ${filters.month ?? 0})
+                AND (${filters.day === undefined} OR EXTRACT(DAY FROM ("date" AT TIME ZONE ${timeZone})) = ${filters.day ?? 0})
             `
           : undefined;
       const activitiesWithExtraItem = await this.prisma.activity.findMany({

@@ -130,6 +130,21 @@ describe('ActivityEnrichmentService', () => {
     });
   });
 
+  it('canonicalizes stored time zone aliases before requesting weather data', async () => {
+    const prisma = createPrismaMock();
+    const storage = createStorageMock();
+    const service = new ActivityEnrichmentService(prisma as never, storage as never);
+    prisma.activity.findMany.mockResolvedValue([createActivity({ timeZone: 'US/Pacific' })]);
+    prisma.activity.updateMany.mockResolvedValue({ count: 1 });
+    storage.readActivityRoute.mockResolvedValue([{ coords: makeMoscowCoordinate() }]);
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce(jsonResponse({ hourly: { time: [] } }));
+
+    await expect(service.processNextBatch()).resolves.toBe(true);
+
+    const weatherUrl = new URL(String(jest.mocked(global.fetch).mock.calls[0]?.[0]));
+    expect(weatherUrl.searchParams.get('timezone')).toBe('America/Los_Angeles');
+  });
+
   it('completes without weather when kilometre splits are missing', async () => {
     const prisma = createPrismaMock();
     const storage = createStorageMock();

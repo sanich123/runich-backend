@@ -12,6 +12,7 @@ export const RATE_LIMITS = {
   stravaImport: { limit: 2, ttl: 10 * 60_000 },
   feedbackUpload: { limit: 5, ttl: 10 * 60_000 },
   contentReport: { limit: 5, ttl: 10 * 60_000 },
+  moderationEmailAction: { limit: 10, ttl: 60_000 },
   userBlock: { limit: 20, ttl: 10 * 60_000 },
   adminAccess: { limit: 20, ttl: 60_000 },
   adminFeedbackReply: { limit: 20, ttl: 60 * 60_000 },

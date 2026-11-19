@@ -6,6 +6,7 @@ import { UserBlocksService } from './services/user-blocks.service';
 import { ModerationReportsService } from './services/moderation-reports.service';
 import { ModerationAppealsService } from './services/moderation-appeals.service';
 import { ModerationTargetsService } from './services/moderation-targets.service';
+import type { ModerationEmailAction } from './moderation-email-actions.types';
 
 @Injectable()
 export class ModerationService {
@@ -46,6 +47,19 @@ export class ModerationService {
 
   async applyAction(reportId: string, moderatorId: string, request: ModerationActionDto) {
     return this.reports.applyAction(reportId, moderatorId, request);
+  }
+
+  async validateEmailModerationAction(reportId: string, action: ModerationEmailAction) {
+    return this.reports.validateEmailModerationAction(reportId, action);
+  }
+
+  async applyEmailModerationAction(reportId: string, action: ModerationEmailAction) {
+    await this.reports.validateEmailModerationAction(reportId, action);
+    return this.reports.applyAction(reportId, null, {
+      action,
+      note: 'Подтверждено по ссылке из письма модерации',
+      ...(action === 'temporary_suspend' ? { suspensionDays: 7 } : {}),
+    });
   }
 
   async blockUser(blockerId: string, blockedId: string) {

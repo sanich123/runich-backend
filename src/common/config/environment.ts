@@ -71,6 +71,24 @@ export function getAuthFrontendRedirectUri() {
   return process.env.AUTH_FRONTEND_REDIRECT_URI?.trim() || DEFAULT_AUTH_FRONTEND_REDIRECT_URIS[getAppEnvironment()];
 }
 
+export function getApiBaseUrl() {
+  const configuredUrl = process.env.API_PUBLIC_URL?.trim();
+  if (configuredUrl) {
+    const url = new URL(configuredUrl);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('API_PUBLIC_URL должен использовать HTTP или HTTPS');
+    }
+    return url.origin;
+  }
+
+  const defaultUrls: Record<AppEnvironment, string> = {
+    local: 'http://localhost:3000',
+    stage: 'https://stage.runich-app.ru',
+    production: 'https://api.runich-app.ru',
+  };
+  return defaultUrls[getAppEnvironment()];
+}
+
 export function isSwaggerEnabled() {
   return getAppEnvironment() !== 'production';
 }

@@ -23,6 +23,7 @@ export interface ModerationReportEmailProps {
   reporterDetails?: string | null;
   reporter?: ModerationEmailPerson | null;
   reportedUser?: ModerationEmailPerson | null;
+  moderationActions?: Array<{ label: string; href: string }>;
   reportedContent?: string | null;
   reportedMediaUrl?: string | null;
   reportedMediaUrls?: string[];
@@ -60,23 +61,45 @@ function formatActivityDuration(milliseconds?: number | null) {
   return hours > 0 ? `${hours} ч ${remainingMinutes} мин` : `${remainingMinutes} мин`;
 }
 
-function PersonDetails({ label, person }: { label: string; person: ModerationEmailPerson }) {
-  const name = [person.name, person.surname].filter(Boolean).join(' ') || 'не указаны';
+function PersonDetails({ label, person }: { label: string; person?: ModerationEmailPerson | null }) {
+  const safePerson = person ?? {};
+  const fullName = [safePerson.name, safePerson.surname].filter(Boolean).join(' ');
+  const name = fullName || 'не указаны';
+  const initials =
+    [safePerson.name, safePerson.surname]
+      .filter(Boolean)
+      .map((part) => Array.from(part ?? '')[0]?.toLocaleUpperCase('ru-RU'))
+      .join('') || '•';
 
   return (
     <Section style={{ margin: '0 0 22px', padding: '16px', backgroundColor: '#FAFAF7', borderRadius: '12px' }}>
-      {person.profilePhoto ? (
+      <Text style={{ ...emailStyles.paragraph, fontWeight: 700, margin: '0 0 10px' }}>{label}</Text>
+      {safePerson.profilePhoto ? (
         <Img
-          src={person.profilePhoto}
+          src={safePerson.profilePhoto}
           alt={`Аватар: ${name}`}
           width="64"
           height="64"
           style={{ borderRadius: '32px', objectFit: 'cover', margin: '0 0 10px' }}
         />
-      ) : null}
-      <Text style={{ ...emailStyles.paragraph, fontWeight: 700, margin: '0 0 6px' }}>{label}</Text>
+      ) : (
+        <Text
+          style={{
+            width: '64px',
+            height: '64px',
+            lineHeight: '64px',
+            borderRadius: '32px',
+            backgroundColor: '#E9E9E6',
+            color: '#555555',
+            fontSize: '24px',
+            textAlign: 'center',
+            margin: '0 0 10px',
+          }}>
+          {initials}
+        </Text>
+      )}
       <Text style={{ ...emailStyles.paragraph, margin: '0 0 4px' }}>Имя и фамилия: {name}</Text>
-      <Text style={{ ...emailStyles.paragraph, margin: 0 }}>Email: {person.email || 'не указан'}</Text>
+      <Text style={{ ...emailStyles.paragraph, margin: 0 }}>Email: {safePerson.email || 'не указан'}</Text>
     </Section>
   );
 }
@@ -90,6 +113,7 @@ export function ModerationReportEmail({
   reporterDetails,
   reporter,
   reportedUser,
+  moderationActions,
   reportedContent,
   reportedMediaUrl,
   reportedMediaUrls,
@@ -175,17 +199,13 @@ export function ModerationReportEmail({
           ) : isAutomaticTextReview ? (
             <Text style={emailStyles.paragraph}>Источник: автоматическая проверка текста</Text>
           ) : (
-            <Text style={emailStyles.paragraph}>Кто пожаловался: не указано</Text>
+            <PersonDetails label="Кто пожаловался" person={null} />
           )}
           <Text style={emailStyles.paragraph}>Тип контента: {targetLabels[targetType] ?? targetType}</Text>
-          {reportedProfilePerson ? (
-            <PersonDetails
-              label="Автор контента"
-              person={{ ...reportedProfilePerson, profilePhoto: reportedProfilePhoto }}
-            />
-          ) : (
-            <Text style={emailStyles.paragraph}>Автор контента: не указан</Text>
-          )}
+          <PersonDetails
+            label="Автор контента"
+            person={reportedProfilePerson ? { ...reportedProfilePerson, profilePhoto: reportedProfilePhoto } : null}
+          />
           {reportedGroup ? (
             <Text style={emailStyles.paragraph}>
               Группа: {[reportedGroup.name, reportedGroup.locationName].filter(Boolean).join(' · ') || 'не указана'}
@@ -261,6 +281,19 @@ export function ModerationReportEmail({
       ) : (
         <Text style={emailStyles.paragraph}>Поступила апелляция по жалобе {reportId}.</Text>
       )}
+      {requestType === 'report' && moderationActions?.length ? (
+        <>
+          <Text style={{ ...emailStyles.paragraph, fontWeight: 700 }}>Действия модерации:</Text>
+          <Text style={emailStyles.paragraph}>
+            Каждая кнопка сначала откроет страницу подтверждения. Открытие ссылки само по себе не меняет статус.
+          </Text>
+          {moderationActions.map(({ label, href }) => (
+            <EmailButton key={href} href={href}>
+              {label}
+            </EmailButton>
+          ))}
+        </>
+      ) : null}
       <EmailButton href={moderationUrl.toString()}>Открыть очередь модерации</EmailButton>
     </EmailLayout>
   );

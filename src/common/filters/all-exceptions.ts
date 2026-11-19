@@ -84,7 +84,11 @@ function isCreateActivityRequest(request: Request) {
 }
 
 function getRequestPath(requestUrl: string) {
-  return requestUrl.split('?')[0];
+  const path = requestUrl.split('?')[0];
+  if (/^\/moderation\/email-actions\/[^/]+\/?$/.test(path)) {
+    return path.replace(/\/[^/]+\/?$/, '/[redacted]');
+  }
+  return path;
 }
 
 @Catch()
