@@ -31,6 +31,10 @@ export const CONTENT_REPORT_STATUSES = [
   'rejected',
   'appealed',
 ] as const satisfies readonly ContentReportStatus[];
+
+export function isContentReportStatus(value: unknown): value is ContentReportStatus {
+  return CONTENT_REPORT_STATUSES.some((status) => status === value);
+}
 export const MODERATION_ACTION_TYPES = [
   'hide_content',
   'remove_content',

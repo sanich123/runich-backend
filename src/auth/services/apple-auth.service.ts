@@ -14,19 +14,14 @@ import { isPrismaUniqueConstraintError, verifyAppleIdentityToken } from '../util
 import {
   APPLE_APP_BUNDLE_IDS,
   APPLE_ID_TOKEN_ISSUER,
+  APPLE_TOKEN_ENCRYPTION_VERSION,
+  APPLE_TOKEN_REQUEST_TIMEOUT_MS,
   APPLE_TOKEN_REVOCATION_URL,
   APPLE_TOKEN_URL,
 } from '../constants/apple-auth.constants';
+import type { EncryptedAppleGrant } from '../types/apple-auth.types';
 import { AuthTokenService } from './auth-token.service';
 import { SuperuserEmailBootstrapService } from './superuser-email-bootstrap.service';
-
-interface EncryptedAppleGrant {
-  clientId: string;
-  refreshToken: string;
-}
-
-const APPLE_TOKEN_ENCRYPTION_VERSION = 'v1';
-const APPLE_TOKEN_REQUEST_TIMEOUT_MS = 5000;
 
 @Injectable()
 export class AppleAuthService {

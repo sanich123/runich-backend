@@ -31,7 +31,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
-import { CONTENT_REPORT_STATUSES } from './shared/moderation.constants';
+import { isContentReportStatus } from './shared/moderation.constants';
 import {
   ModerationActionDto,
   ModerationAppealDecisionDto,
@@ -153,7 +153,7 @@ export class ModerationController {
   @ApiOperation({ summary: 'Get the moderation report queue' })
   @ApiOkResponse({ description: 'Moderation queue' })
   async getReportQueue(@Query('status') status?: string, @Query('take') take?: string) {
-    if (status && !CONTENT_REPORT_STATUSES.includes(status as (typeof CONTENT_REPORT_STATUSES)[number])) {
+    if (status !== undefined && !isContentReportStatus(status)) {
       throw new BadRequestException('Недопустимый статус жалобы');
     }
     return await this.moderationService.getReportQueue(

@@ -372,7 +372,7 @@ export class ActivityWriteService {
         const storageKeys = this.mediaService.getActivityStorageKeys(userId, activity);
         await Promise.all(
           storageKeys.map((storageKey) =>
-            this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey, transaction as never),
+            this.mediaCleanupService!.enqueueObjectCleanup(userId, storageKey, transaction),
           ),
         );
         const deletedActivity = await transaction.activity.delete({ where: { id, userId } });

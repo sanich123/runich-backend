@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Prisma ORM runtime contract is dynamic. */
 import type { PostgresClient } from '@prisma/orm-postgres/runtime';
+import type { Contract } from '../../../../prisma/contract';
 
 export type AnyRecord = Record<string, any>;
-export type RuntimeClient = PostgresClient<any>;
+export type RuntimeClient = PostgresClient<Contract>;
 export type RawSqlBuilder = (strings: TemplateStringsArray, ...values: unknown[]) => AnyRecord;
 
 export const SQL_CASTS: Record<string, string> = {
