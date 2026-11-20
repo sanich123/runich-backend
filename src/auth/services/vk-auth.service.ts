@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, createHash } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -33,14 +33,11 @@ export class VkAuthService {
     }
 
     const isIos = metadata.platform?.toLowerCase() === 'ios';
-    const clientId = isIos
-      ? process.env.VK_NATIVE_IOS_CLIENT_ID || '54910906'
-      : process.env.VK_NATIVE_ANDROID_CLIENT_ID || process.env.VK_NATIVE_CLIENT_ID || '54878048';
-    const redirectUri = isIos
-      ? process.env.VK_NATIVE_IOS_REDIRECT_URI || 'https://runich-app.ru/vk_id_redirect'
-      : process.env.VK_NATIVE_ANDROID_REDIRECT_URI ||
-        process.env.VK_NATIVE_REDIRECT_URI ||
-        `vk${clientId}://vk.ru/blank.html`;
+    const clientId = isIos ? process.env.VK_NATIVE_IOS_CLIENT_ID : process.env.VK_NATIVE_ANDROID_CLIENT_ID;
+    const redirectUri = isIos ? process.env.VK_NATIVE_IOS_REDIRECT_URI : process.env.VK_NATIVE_ANDROID_REDIRECT_URI;
+    if (!clientId || !redirectUri) {
+      throw new InternalServerErrorException('Авторизация через VK не настроена на сервере');
+    }
     const tokenResponse = await fetch(VK_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

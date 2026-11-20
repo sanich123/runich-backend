@@ -28,12 +28,12 @@ describe('VkAuthService', () => {
     jest.clearAllMocks();
     process.env.VK_CLIENT_ID = '123';
     process.env.VK_REDIRECT_URI = 'https://runich.example/auth/vk/callback';
-    process.env.VK_NATIVE_CLIENT_ID = 'native-client-id';
-    process.env.VK_NATIVE_REDIRECT_URI = 'runich://vk/callback';
-    delete process.env.VK_NATIVE_ANDROID_CLIENT_ID;
-    delete process.env.VK_NATIVE_ANDROID_REDIRECT_URI;
-    delete process.env.VK_NATIVE_IOS_CLIENT_ID;
-    delete process.env.VK_NATIVE_IOS_REDIRECT_URI;
+    process.env.VK_NATIVE_ANDROID_CLIENT_ID = 'android-native-client-id';
+    process.env.VK_NATIVE_ANDROID_REDIRECT_URI = 'vkandroid-native-client-id://vk.ru/blank.html';
+    process.env.VK_NATIVE_IOS_CLIENT_ID = 'ios-native-client-id';
+    process.env.VK_NATIVE_IOS_REDIRECT_URI = 'https://runich.example/vk_id_redirect';
+    delete process.env.VK_NATIVE_CLIENT_ID;
+    delete process.env.VK_NATIVE_REDIRECT_URI;
     process.env.JWT_SECRET = 'secret';
     service = new VkAuthService(
       prismaMock as unknown as ConstructorParameters<typeof VkAuthService>[0],
@@ -117,9 +117,9 @@ describe('VkAuthService', () => {
 
     const result = await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43));
 
-    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('client_id=native-client-id');
+    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('client_id=android-native-client-id');
     expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain(
-      'redirect_uri=runich%3A%2F%2Fvk%2Fcallback',
+      'redirect_uri=vkandroid-native-client-id%3A%2F%2Fvk.ru%2Fblank.html',
     );
     expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('code_verifier=' + 'v'.repeat(43));
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.com/oauth2/user_info', expect.any(Object));
@@ -228,31 +228,33 @@ describe('VkAuthService', () => {
   });
 
   it.each([
-    { platform: 'android' as const, clientId: '54878048', redirectUri: 'vk54878048://vk.ru/blank.html' },
-    { platform: 'ios' as const, clientId: '54910906', redirectUri: 'https://runich-app.ru/vk_id_redirect' },
+    {
+      platform: 'android' as const,
+      clientIdKey: 'VK_NATIVE_ANDROID_CLIENT_ID',
+      redirectUriKey: 'VK_NATIVE_ANDROID_REDIRECT_URI',
+    },
+    {
+      platform: 'ios' as const,
+      clientIdKey: 'VK_NATIVE_IOS_CLIENT_ID',
+      redirectUriKey: 'VK_NATIVE_IOS_REDIRECT_URI',
+    },
   ])(
-    'uses the default VK native client and redirect values on $platform',
-    async ({ platform, clientId, redirectUri }) => {
-      delete process.env.VK_NATIVE_CLIENT_ID;
-      delete process.env.VK_NATIVE_REDIRECT_URI;
-      delete process.env.VK_NATIVE_ANDROID_CLIENT_ID;
-      delete process.env.VK_NATIVE_ANDROID_REDIRECT_URI;
-      delete process.env.VK_NATIVE_IOS_CLIENT_ID;
-      delete process.env.VK_NATIVE_IOS_REDIRECT_URI;
-      const fetchMock = jest
-        .spyOn(globalThis, 'fetch')
-        .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42 })))
-        .mockResolvedValueOnce(new Response(JSON.stringify({ user: {} })));
-      (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
-      (prismaMock.user.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
-        makeConfirmedAuthUser(),
-      );
+    'fails before contacting VK when $platform credentials are missing',
+    async ({ platform, clientIdKey, redirectUriKey }) => {
+      const fetchMock = jest.spyOn(globalThis, 'fetch');
+      delete process.env[clientIdKey];
 
-      await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), { platform });
+      await expect(
+        service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), { platform }),
+      ).rejects.toThrow('Авторизация через VK не настроена на сервере');
+      process.env[clientIdKey] = 'configured-client-id';
 
-      const tokenRequest = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
-      expect(tokenRequest.get('client_id')).toBe(clientId);
-      expect(tokenRequest.get('redirect_uri')).toBe(redirectUri);
+      delete process.env[redirectUriKey];
+      await expect(
+        service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), { platform }),
+      ).rejects.toThrow('Авторизация через VK не настроена на сервере');
+
+      expect(fetchMock).not.toHaveBeenCalled();
     },
   );
 
