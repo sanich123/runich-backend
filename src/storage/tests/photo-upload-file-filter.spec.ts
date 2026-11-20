@@ -7,6 +7,7 @@ describe('photoUploadFileFilter', () => {
 
   it.each([
     ['avatar.jpg', 'image/jpeg'],
+    ['thumbnail.webp', 'image/webp'],
     ['run.mp4', 'video/mp4'],
     ['run.mov', 'video/quicktime'],
     ['run.webm', 'video/webm'],
