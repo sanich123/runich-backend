@@ -8,6 +8,7 @@ type RedirectResponse = { redirect: jest.Mock };
 
 describe('VkAuthService', () => {
   const prismaMock = { user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() } };
+  const nativeAndroidMetadata: SessionMetadata = { platform: 'android' };
   const jwt = {
     sign: jest.fn(() => 'signed-state'),
     verify: jest.fn(() => ({ codeVerifier: 'verifier' })),
@@ -70,9 +71,9 @@ describe('VkAuthService', () => {
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify(tokenResponse.payload), { status: tokenResponse.status }));
 
-    await expect(service.loginWithNativeCode('code', 'device-1', 'v'.repeat(43))).rejects.toThrow(
-      'Не удалось проверить авторизацию VK',
-    );
+    await expect(
+      service.loginWithNativeCode('code', 'device-1', 'v'.repeat(43), nativeAndroidMetadata),
+    ).rejects.toThrow('Не удалось проверить авторизацию VK');
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -86,9 +87,9 @@ describe('VkAuthService', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: '42' })))
       .mockResolvedValueOnce(new Response(JSON.stringify(profileResponse.payload), { status: profileResponse.status }));
 
-    await expect(service.loginWithNativeCode('code', 'device-1', 'v'.repeat(43))).rejects.toThrow(
-      'Не удалось получить профиль VK',
-    );
+    await expect(
+      service.loginWithNativeCode('code', 'device-1', 'v'.repeat(43), nativeAndroidMetadata),
+    ).rejects.toThrow('Не удалось получить профиль VK');
   });
 
   it('creates a VK user from the native profile and uses the configured redirect URI', async () => {
@@ -115,7 +116,7 @@ describe('VkAuthService', () => {
       makeConfirmedAuthUser(),
     );
 
-    const result = await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43));
+    const result = await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), nativeAndroidMetadata);
 
     expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('client_id=android-native-client-id');
     expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain(
@@ -138,7 +139,7 @@ describe('VkAuthService', () => {
         },
       }),
     });
-    expect(tokenService.createSessionTokens).toHaveBeenCalledWith('user-1', {});
+    expect(tokenService.createSessionTokens).toHaveBeenCalledWith('user-1', nativeAndroidMetadata);
     expect(result).toEqual({ userId: 'user-1', accessToken: 'access-token', refreshToken: 'refresh-token' });
   });
 
@@ -184,7 +185,7 @@ describe('VkAuthService', () => {
       makeConfirmedAuthUser(),
     );
 
-    await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43));
+    await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), nativeAndroidMetadata);
 
     expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { email: 'vk_42@vk.local' } }),
@@ -225,6 +226,36 @@ describe('VkAuthService', () => {
     const tokenRequest = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
     expect(tokenRequest.get('client_id')).toBe(clientId);
     expect(tokenRequest.get('redirect_uri')).toBe(redirectUri);
+  });
+
+  it('uses the device OS name when the native client reports its platform as mobile', async () => {
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42 })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ user: {} })));
+    (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
+    (prismaMock.user.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+      makeConfirmedAuthUser(),
+    );
+
+    await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), {
+      platform: 'mobile',
+      osName: 'iOS',
+    });
+
+    const tokenRequest = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
+    expect(tokenRequest.get('client_id')).toBe('ios-native-client-id');
+    expect(tokenRequest.get('redirect_uri')).toBe('https://runich.example/vk_id_redirect');
+  });
+
+  it('rejects native VK login when the platform cannot be determined', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch');
+
+    await expect(service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43))).rejects.toThrow(
+      'Не удалось определить платформу авторизации VK',
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it.each([

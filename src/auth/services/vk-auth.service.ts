@@ -1,4 +1,10 @@
-import { Inject, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, createHash } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -32,7 +38,13 @@ export class VkAuthService {
       throw new UnauthorizedException('Недействительные параметры авторизации VK');
     }
 
-    const isIos = metadata.platform?.toLowerCase() === 'ios';
+    // Native clients send "mobile" as platform; osName carries the provider platform.
+    const clientPlatform = [metadata.platform, metadata.osName]
+      .map((value) => value?.trim().toLowerCase())
+      .find((value) => value === 'ios' || value === 'android');
+    if (!clientPlatform) throw new BadRequestException('Не удалось определить платформу авторизации VK');
+
+    const isIos = clientPlatform === 'ios';
     const clientId = isIos ? process.env.VK_NATIVE_IOS_CLIENT_ID : process.env.VK_NATIVE_ANDROID_CLIENT_ID;
     const redirectUri = isIos ? process.env.VK_NATIVE_IOS_REDIRECT_URI : process.env.VK_NATIVE_ANDROID_REDIRECT_URI;
     if (!clientId || !redirectUri) {
