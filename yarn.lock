@@ -2743,9 +2743,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/cli@npm:12.0.14":
-  version: 12.0.14
-  resolution: "@nestjs/cli@npm:12.0.14"
+"@nestjs/cli@npm:12.0.15":
+  version: 12.0.15
+  resolution: "@nestjs/cli@npm:12.0.15"
   dependencies:
     "@angular-devkit/core": "npm:22.2.7"
     "@angular-devkit/schematics": "npm:22.2.7"
@@ -2790,13 +2790,13 @@ __metadata:
       optional: true
   bin:
     nest: bin/nest.js
-  checksum: 10c0/02f0aaebeb68d924a472808b016ec8c04a35fa85e45ceddb718e4af48d99c8db972fa31d5e4c5788e8e4381193fd0c1682ea50cd69659eaa7b37a5fb134ff9bd
+  checksum: 10c0/4868db3c8ff82ff890df6628587f80ab963a75cbf1e5a533e50589de3a0ce049386832be600b8369f3484da94af753012e78e2b4e1dd3c50e73b3b93dad1f59d
   languageName: node
   linkType: hard
 
-"@nestjs/common@npm:12.5.1":
-  version: 12.5.1
-  resolution: "@nestjs/common@npm:12.5.1"
+"@nestjs/common@npm:12.6.0":
+  version: 12.6.0
+  resolution: "@nestjs/common@npm:12.6.0"
   dependencies:
     "@standard-schema/spec": "npm:1.1.0"
     file-type: "npm:22.3.0"
@@ -2814,13 +2814,13 @@ __metadata:
       optional: true
     class-validator:
       optional: true
-  checksum: 10c0/c7822caa48e9be0716fd5e647c8dd80b25a2d209542e0710c75a3775833e52ea53ba4f77160ad960f5647fa271d8701bdf83bd8b8622cb16b879810369148b07
+  checksum: 10c0/7cede093e6d88b089366f94248c01c98bc5457fe30f2e4b56d64c4ab108d1ef918967bc70470393ad5e732cded4669292be54bf72586153ee7e26eafc28e71ad
   languageName: node
   linkType: hard
 
-"@nestjs/core@npm:12.5.1":
-  version: 12.5.1
-  resolution: "@nestjs/core@npm:12.5.1"
+"@nestjs/core@npm:12.6.0":
+  version: 12.6.0
+  resolution: "@nestjs/core@npm:12.6.0"
   dependencies:
     fast-safe-stringify: "npm:2.1.1"
     iterare: "npm:1.2.1"
@@ -2841,7 +2841,7 @@ __metadata:
       optional: true
     "@nestjs/websockets":
       optional: true
-  checksum: 10c0/7ce18a8f4cc365e23bae6650379e78712adc73b89392c38cfa5431dbd4b8bcf57ead2050345b315e3d5b1b18457490c0f550bd7d4a83d4de98d9f953eba10634
+  checksum: 10c0/f0a45a02723aaf5572f4568005add90debb380e048c8c397194ad73460d15ff8d73174c4f6df369dd804f33e6e2091dbc8d3959277529aa8e5fcdec9ce16e67a
   languageName: node
   linkType: hard
 
@@ -2931,9 +2931,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/platform-express@npm:12.5.1":
-  version: 12.5.1
-  resolution: "@nestjs/platform-express@npm:12.5.1"
+"@nestjs/platform-express@npm:12.6.0":
+  version: 12.6.0
+  resolution: "@nestjs/platform-express@npm:12.6.0"
   dependencies:
     cors: "npm:2.8.6"
     express: "npm:5.3.0"
@@ -2944,13 +2944,13 @@ __metadata:
     "@nestjs/common": ^12.0.0
     "@nestjs/core": ^12.0.0
     rxjs: ^7.1.0
-  checksum: 10c0/5dd2c03315f259ffe4bff3c67d4d5b2450e9942514d7591fb14d30db9a01cf12f15e455c0beb844263fe34e71a0a484756ca59c2724ad065542049ad2bfb4076
+  checksum: 10c0/d68ab63ee390dfe905b47619711da114e71e3f6ddf8d2357e3b62c18d9b9e91c22fa479589e471b6a359e6016b86e885f40b692b7385b8008a8fe3dc40a5c02c
   languageName: node
   linkType: hard
 
-"@nestjs/schematics@npm:12.0.14":
-  version: 12.0.14
-  resolution: "@nestjs/schematics@npm:12.0.14"
+"@nestjs/schematics@npm:12.0.16":
+  version: 12.0.16
+  resolution: "@nestjs/schematics@npm:12.0.16"
   dependencies:
     "@angular-devkit/core": "npm:22.2.7"
     "@angular-devkit/schematics": "npm:22.2.7"
@@ -2963,7 +2963,7 @@ __metadata:
   peerDependenciesMeta:
     prettier:
       optional: true
-  checksum: 10c0/f4e12cb6ea583c427333ba728eb6ced3fabff6dbae78e3658a415d10ed85c0e38dfbe2ec5faa7dc81b85faaa49a72e30e6c9c52726e55b91f5ea4dee6ace0bb8
+  checksum: 10c0/8f6ce583847158efa291d0a635a9814d11e9c2cd4378b311e3cebad9af7d1ecb009b8998c9ca1c664ed6a7bd588d418453731a2de691ecdff29aa27aa59ad60e
   languageName: node
   linkType: hard
 
@@ -3018,9 +3018,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/testing@npm:12.5.1":
-  version: 12.5.1
-  resolution: "@nestjs/testing@npm:12.5.1"
+"@nestjs/testing@npm:12.6.0":
+  version: 12.6.0
+  resolution: "@nestjs/testing@npm:12.6.0"
   dependencies:
     tslib: "npm:2.9.1"
   peerDependencies:
@@ -3033,7 +3033,7 @@ __metadata:
       optional: true
     "@nestjs/platform-express":
       optional: true
-  checksum: 10c0/9c8e2ffd0c9c497468730c1840baee88d6ebe9df59fc9611fb93c7c0f6e76ed54e7ec60c0494c11c8217eadba092f34272c907f934a7ffd686fb47a8a119dcb5
+  checksum: 10c0/7d590bb9a263548be835352973e0d00102fd54c13470e74bf93f6cb23dfae2f6be9dd1542bafc1200b5855086e305ec17300e330323b4d1de6d77c66bcece44e
   languageName: node
   linkType: hard
 
@@ -3344,12 +3344,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prisma/management-api-sdk@npm:^1.99.0":
-  version: 1.99.0
-  resolution: "@prisma/management-api-sdk@npm:1.99.0"
+"@prisma/management-api-sdk@npm:^1.100.0":
+  version: 1.100.0
+  resolution: "@prisma/management-api-sdk@npm:1.100.0"
   dependencies:
     openapi-fetch: "npm:0.14.0"
-  checksum: 10c0/fdd7ae8e9d7b7288bb9f1ebc3c8f2b3707feb3a4abfc6a7d9f42624509b790031b11a381043c435e0ac97f688e4c9f3df4f4b53df9bdb976e9f94397d7071ca0
+  checksum: 10c0/c6904b8766b16600e4424b09b28937b7a343957bc9b894a6f41b46c9a870bc2f0281ff36748d6f646afac77ae1db5560130a5b305079e6d20bd47e7b2e057818
   languageName: node
   linkType: hard
 
@@ -12673,19 +12673,19 @@ __metadata:
     "@jest/globals": "npm:^30.5.2"
     "@mapbox/polyline": "npm:^1.2.1"
     "@maplibre/maplibre-gl-native": "npm:6.5.0-pre.1"
-    "@nestjs/cli": "npm:12.0.14"
-    "@nestjs/common": "npm:12.5.1"
-    "@nestjs/core": "npm:12.5.1"
+    "@nestjs/cli": "npm:12.0.15"
+    "@nestjs/common": "npm:12.6.0"
+    "@nestjs/core": "npm:12.6.0"
     "@nestjs/jwt": "npm:12.0.5"
     "@nestjs/observe": "npm:0.3.27"
     "@nestjs/passport": "npm:12.0.2"
-    "@nestjs/platform-express": "npm:12.5.1"
-    "@nestjs/schematics": "npm:12.0.14"
+    "@nestjs/platform-express": "npm:12.6.0"
+    "@nestjs/schematics": "npm:12.0.16"
     "@nestjs/swagger": "npm:12.1.2"
-    "@nestjs/testing": "npm:12.5.1"
+    "@nestjs/testing": "npm:12.6.0"
     "@nestjs/throttler": "npm:6.8.0"
     "@prisma/cli-engine": "npm:0.10.0"
-    "@prisma/management-api-sdk": "npm:^1.99.0"
+    "@prisma/management-api-sdk": "npm:^1.100.0"
     "@prisma/orm-postgres": "npm:8.0.0-rc.24"
     "@react-email/components": "npm:^1.0.12"
     "@swc/core": "npm:^1.16.22"

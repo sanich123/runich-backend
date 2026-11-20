@@ -30,6 +30,10 @@ describe('VkAuthService', () => {
     process.env.VK_REDIRECT_URI = 'https://runich.example/auth/vk/callback';
     process.env.VK_NATIVE_CLIENT_ID = 'native-client-id';
     process.env.VK_NATIVE_REDIRECT_URI = 'runich://vk/callback';
+    delete process.env.VK_NATIVE_ANDROID_CLIENT_ID;
+    delete process.env.VK_NATIVE_ANDROID_REDIRECT_URI;
+    delete process.env.VK_NATIVE_IOS_CLIENT_ID;
+    delete process.env.VK_NATIVE_IOS_REDIRECT_URI;
     process.env.JWT_SECRET = 'secret';
     service = new VkAuthService(
       prismaMock as unknown as ConstructorParameters<typeof VkAuthService>[0],
@@ -190,9 +194,23 @@ describe('VkAuthService', () => {
     );
   });
 
-  it('uses the default VK native client and redirect values when no overrides are configured', async () => {
-    delete process.env.VK_NATIVE_CLIENT_ID;
-    delete process.env.VK_NATIVE_REDIRECT_URI;
+  it.each([
+    {
+      platform: 'android' as const,
+      clientId: 'android-client-id',
+      redirectUri: 'vkandroid-client-id://vk.ru/blank.html',
+    },
+    {
+      platform: 'ios' as const,
+      clientId: 'ios-client-id',
+      redirectUri: 'https://runich.example/vk_id_redirect',
+    },
+  ])('uses the platform-specific VK native credentials on $platform', async ({ platform, clientId, redirectUri }) => {
+    process.env.VK_NATIVE_ANDROID_CLIENT_ID = 'android-client-id';
+    process.env.VK_NATIVE_ANDROID_REDIRECT_URI = 'vkandroid-client-id://vk.ru/blank.html';
+    process.env.VK_NATIVE_IOS_CLIENT_ID = 'ios-client-id';
+    process.env.VK_NATIVE_IOS_REDIRECT_URI = 'https://runich.example/vk_id_redirect';
+
     const fetchMock = jest
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42 })))
@@ -202,12 +220,41 @@ describe('VkAuthService', () => {
       makeConfirmedAuthUser(),
     );
 
-    await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43));
+    await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), { platform });
 
-    const tokenRequest = String((fetchMock.mock.calls[0][1] as RequestInit).body);
-    expect(tokenRequest).toContain('client_id=54878048');
-    expect(tokenRequest).toContain('redirect_uri=vk54878048%3A%2F%2Fvk.ru%2Fblank.html');
+    const tokenRequest = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
+    expect(tokenRequest.get('client_id')).toBe(clientId);
+    expect(tokenRequest.get('redirect_uri')).toBe(redirectUri);
   });
+
+  it.each([
+    { platform: 'android' as const, clientId: '54878048', redirectUri: 'vk54878048://vk.ru/blank.html' },
+    { platform: 'ios' as const, clientId: '54910906', redirectUri: 'https://runich-app.ru/vk_id_redirect' },
+  ])(
+    'uses the default VK native client and redirect values on $platform',
+    async ({ platform, clientId, redirectUri }) => {
+      delete process.env.VK_NATIVE_CLIENT_ID;
+      delete process.env.VK_NATIVE_REDIRECT_URI;
+      delete process.env.VK_NATIVE_ANDROID_CLIENT_ID;
+      delete process.env.VK_NATIVE_ANDROID_REDIRECT_URI;
+      delete process.env.VK_NATIVE_IOS_CLIENT_ID;
+      delete process.env.VK_NATIVE_IOS_REDIRECT_URI;
+      const fetchMock = jest
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'vk-token', user_id: 42 })))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ user: {} })));
+      (prismaMock.user.findUnique as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(null);
+      (prismaMock.user.create as unknown as { mockResolvedValue(value: unknown): void }).mockResolvedValue(
+        makeConfirmedAuthUser(),
+      );
+
+      await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), { platform });
+
+      const tokenRequest = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
+      expect(tokenRequest.get('client_id')).toBe(clientId);
+      expect(tokenRequest.get('redirect_uri')).toBe(redirectUri);
+    },
+  );
 
   it('builds a VK ID authorization URL with S256 PKCE', () => {
     const response = { redirect: jest.fn() } as RedirectResponse;
