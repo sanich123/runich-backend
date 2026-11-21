@@ -49,3 +49,29 @@ loki.write "grafana_cloud" {
     }
   }
 }
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_METRICS_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_METRICS_USERNAME")
+      password = sys.env("GRAFANA_METRICS_TOKEN")
+    }
+  }
+}
+
+prometheus.scrape "runich_backend" {
+  targets = [
+    {
+      "__address__" = "nestjs_app:3000",
+      "environment" = sys.env("RUNICH_ENV"),
+      "job"         = "runich/backend",
+      "service"     = "nestjs_app",
+    },
+  ]
+
+  metrics_path    = "/metrics"
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}

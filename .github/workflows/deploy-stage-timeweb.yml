@@ -71,6 +71,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           GRAFANA_LOKI_TOKEN: ${{ secrets.GRAFANA_LOKI_TOKEN }}
+          GRAFANA_METRICS_TOKEN: ${{ secrets.GRAFANA_METRICS_TOKEN }}
+          GRAFANA_METRICS_URL: ${{ vars.GRAFANA_METRICS_URL }}
+          GRAFANA_METRICS_USERNAME: ${{ vars.GRAFANA_METRICS_USERNAME }}
         run: |
           set -euo pipefail
 
@@ -80,6 +83,9 @@ jobs:
           : "${STAGE_DEPLOY_KNOWN_HOSTS:?GitHub Actions secret STAGE_DEPLOY_KNOWN_HOSTS is required}"
           : "${GITHUB_TOKEN:?GitHub token is required to pull the private Stage image}"
           : "${GRAFANA_LOKI_TOKEN:?GitHub Actions secret GRAFANA_LOKI_TOKEN is required}"
+          : "${GRAFANA_METRICS_TOKEN:?GitHub Actions secret GRAFANA_METRICS_TOKEN is required}"
+          : "${GRAFANA_METRICS_URL:?GitHub Actions variable GRAFANA_METRICS_URL is required}"
+          : "${GRAFANA_METRICS_USERNAME:?GitHub Actions variable GRAFANA_METRICS_USERNAME is required}"
 
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$STAGE_DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
@@ -98,6 +104,12 @@ jobs:
           printf '%s\n' "$GRAFANA_LOKI_TOKEN" |
             "${SSH[@]}" "$TARGET" 'set -eu; cd /opt/runich-stage; umask 077; IFS= read -r token; tmp="$(mktemp .env.XXXXXX)"; sed "/^GRAFANA_LOKI_TOKEN=/d" .env > "$tmp"; printf "GRAFANA_LOKI_TOKEN=%s\\n" "$token" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token'
           unset GRAFANA_LOKI_TOKEN
+
+          # Metrics credentials arrive over SSH stdin; the token is never passed in process arguments or logs.
+          printf '%s\n%s\n%s\n' "$GRAFANA_METRICS_TOKEN" "$GRAFANA_METRICS_USERNAME" "$GRAFANA_METRICS_URL" |
+            "${SSH[@]}" "$TARGET" \
+              'set -euo pipefail; cd /opt/runich-stage; umask 077; IFS= read -r token; IFS= read -r username; IFS= read -r url; tmp="$(mktemp .env.XXXXXX)"; awk -F= '\''$1 != "GRAFANA_METRICS_TOKEN" && $1 != "GRAFANA_METRICS_USERNAME" && $1 != "GRAFANA_METRICS_URL" { print }'\'' .env > "$tmp"; printf "GRAFANA_METRICS_TOKEN=%s\\nGRAFANA_METRICS_USERNAME=%s\\nGRAFANA_METRICS_URL=%s\\n" "$token" "$username" "$url" >> "$tmp"; chmod --reference=.env "$tmp"; chown --reference=.env "$tmp"; mv "$tmp" .env; unset token username url; grep -q "^GRAFANA_METRICS_TOKEN=..*" .env; grep -q "^GRAFANA_METRICS_USERNAME=..*" .env; grep -q "^GRAFANA_METRICS_URL=..*" .env'
+          unset GRAFANA_METRICS_TOKEN GRAFANA_METRICS_USERNAME GRAFANA_METRICS_URL
 
           # Stage имеет ограниченный диск. Сохраняем неиспользуемые образы и кеш за 48 часов,
           # удаляя неиспользуемые Docker-объекты старше 48 часов. Тома не затрагиваются.

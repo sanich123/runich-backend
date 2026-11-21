@@ -35,11 +35,22 @@ sum(rate(runich_http_requests_total{job="runich/backend", environment="productio
 sum(rate(runich_http_requests_total{job="runich/backend", environment="production"}[5m]))
 ```
 
-The `LatencyMetricsService` currently feeds application observations into this
-endpoint. Grafana Alloy must scrape `/metrics` and forward the samples to the
-Grafana Cloud Prometheus remote-write endpoint before these queries return data.
-Remote-write URL, instance username, and token belong in the deployment secret
-store and runtime environment, never in this file or source control.
+The `LatencyMetricsService` feeds application observations into this endpoint.
+Grafana Alloy scrapes `/metrics` every 30 seconds and forwards samples to Grafana
+Cloud through Prometheus remote write.
+
+To enable remote write, open the Grafana Cloud stack's Prometheus details and
+copy the remote-write URL and instance ID. Create a Cloud Access Policy token
+with only the `metrics:write` scope. In the GitHub repository, under **Settings
+→ Secrets and variables → Actions**, set these repository values:
+
+- Variable `GRAFANA_METRICS_URL`: the Prometheus remote-write URL.
+- Variable `GRAFANA_METRICS_USERNAME`: the metrics instance ID.
+- Secret `GRAFANA_METRICS_TOKEN`: the Cloud Access Policy token.
+
+The deployment workflows copy the values into the Timeweb `.env` files and pass
+them to Alloy. Never store the token in a variable, commit it, or paste it into
+chat.
 
 ## Logs
 

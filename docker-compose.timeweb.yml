@@ -106,6 +106,9 @@ services:
     environment:
       RUNICH_ENV: production
       GRAFANA_LOKI_TOKEN: ${GRAFANA_LOKI_TOKEN:?GRAFANA_LOKI_TOKEN must be set in .env}
+      GRAFANA_METRICS_URL: ${GRAFANA_METRICS_URL:?GRAFANA_METRICS_URL must be set in .env}
+      GRAFANA_METRICS_USERNAME: ${GRAFANA_METRICS_USERNAME:?GRAFANA_METRICS_USERNAME must be set in .env}
+      GRAFANA_METRICS_TOKEN: ${GRAFANA_METRICS_TOKEN:?GRAFANA_METRICS_TOKEN must be set in .env}
     logging:
       driver: json-file
       options:
