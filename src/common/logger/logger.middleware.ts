@@ -19,6 +19,7 @@ export default class LoggingService implements NestMiddleware {
       const durationMs = performance.now() - startedAt;
       this.latencyMetrics?.observeHttp(`${method} ${endpoint}`, durationMs);
 
+      if (response.locals?.exceptionLogged) return;
       if (durationMs <= SLOW_REQUEST_THRESHOLD_MS && statusCode < 400) return;
 
       const message = `${method} ${endpoint} ${params.id ?? 'no params'} ${statusMessage} ${durationMs.toFixed(1)}ms`;

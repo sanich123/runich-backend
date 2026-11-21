@@ -1,6 +1,6 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Inject, Logger } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { writeLogs } from 'src/common/utils/logs';
 
 type ExceptionResponse = string | { message?: unknown };
@@ -102,6 +102,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<Request>();
+    const response = ctx.getResponse<Response>();
+    response.locals ??= {};
+    response.locals.exceptionLogged = true;
     let message: string | string[], statusCode: number;
 
     if (exception instanceof HttpException) {
@@ -131,6 +134,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
     await writeLogs(JSON.stringify({ ...responseBody, error: errorDetails }));
 
-    httpAdapter.reply(ctx.getResponse(), responseBody, statusCode);
+    httpAdapter.reply(response, responseBody, statusCode);
   }
 }

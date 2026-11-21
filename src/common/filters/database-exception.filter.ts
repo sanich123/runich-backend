@@ -1,4 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus, Logger } from '@nestjs/common';
+import type { Response } from 'express';
 import { getDatabaseErrorCode } from '../utils/database-errors';
 import { getDatabaseMessage } from './database-exceptions';
 
@@ -11,7 +12,9 @@ export class DatabaseExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const code = getDatabaseErrorCode(exception);
     if (!code) throw exception;
-    const response = host.switchToHttp().getResponse();
+    const response = host.switchToHttp().getResponse<Response>();
+    response.locals ??= {};
+    response.locals.exceptionLogged = true;
     const status = this.errorMap[code] ?? HttpStatus.INTERNAL_SERVER_ERROR;
 
     this.logger.error(
