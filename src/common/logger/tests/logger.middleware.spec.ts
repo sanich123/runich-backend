@@ -35,7 +35,7 @@ describe('LoggingService', () => {
     response.emit('finish');
 
     expect(now).toHaveBeenCalledTimes(2);
-    expect(metrics.observeHttp).toHaveBeenCalledWith('GET /activities/:id', 301);
+    expect(metrics.observeHttp).toHaveBeenCalledWith('GET /activities/:id', 301, 200);
     expect(log).toHaveBeenCalledWith(expect.stringContaining('301.0ms'));
   });
 

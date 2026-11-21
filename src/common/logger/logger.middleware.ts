@@ -17,12 +17,15 @@ export default class LoggingService implements NestMiddleware {
       const { statusCode, statusMessage } = response;
       const endpoint = request.route?.path ?? request.path;
       const durationMs = performance.now() - startedAt;
-      this.latencyMetrics?.observeHttp(`${method} ${endpoint}`, durationMs);
+      const metricsRoute = typeof request.route?.path === 'string' ? request.route.path : 'unmatched';
+      if (request.path !== '/metrics') {
+        this.latencyMetrics?.observeHttp(`${method} ${metricsRoute}`, durationMs, statusCode);
+      }
 
       if (response.locals?.exceptionLogged) return;
       if (durationMs <= SLOW_REQUEST_THRESHOLD_MS && statusCode < 400) return;
 
-      const message = `${method} ${endpoint} ${params.id ?? 'no params'} ${statusMessage} ${durationMs.toFixed(1)}ms`;
+      const message = `${method} ${endpoint} ${params.id ?? 'no params'} ${statusCode} ${statusMessage} ${durationMs.toFixed(1)}ms`;
 
       if (statusCode >= 500) {
         return this.logger.error(message);
