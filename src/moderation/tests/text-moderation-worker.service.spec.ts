@@ -329,6 +329,35 @@ describe('TextModerationWorkerService', () => {
     expect(prisma.transaction.contentReport.create).not.toHaveBeenCalled();
   });
 
+  it('skips content with an active report when its optional relation foreign key is missing', async () => {
+    const comment = {
+      id: 'comment-with-unlinked-report',
+      comment: 'Already reported comment',
+      authorId: 'author-with-unlinked-report',
+    };
+    prisma.comment.findFirst.mockResolvedValueOnce(comment).mockResolvedValueOnce(null);
+    prisma.contentReport.findFirst.mockResolvedValueOnce({ id: 'active-report' });
+    prisma.groupPost.findFirst.mockResolvedValue(null);
+    prisma.activity.findFirst.mockResolvedValue(null);
+
+    await expect(service.processNextText()).resolves.toBe(false);
+
+    expect(prisma.contentReport.findFirst).toHaveBeenCalledWith({
+      where: {
+        targetType: 'comment',
+        targetId: comment.id,
+        status: { in: ['open', 'in_review', 'appealed'] },
+      },
+      select: { id: true },
+    });
+    expect(prisma.comment.findFirst).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ where: expect.objectContaining({ id: { notIn: [comment.id] } }) }),
+    );
+    expect(localClassifier.classify).not.toHaveBeenCalled();
+    expect(prisma.comment.updateMany).not.toHaveBeenCalled();
+  });
+
   it('avoids creating duplicate moderator reports for content already under review', async () => {
     prisma.comment.findFirst.mockResolvedValue({
       id: 'comment-5',
