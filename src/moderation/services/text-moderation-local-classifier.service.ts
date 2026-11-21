@@ -29,6 +29,12 @@ export class TextModerationLocalClassifierService {
     return pipeline('text-classification', modelPath, {
       dtype: 'q8',
       local_files_only: true,
+      // The moderation loop shares the CPU-capped background worker with other jobs.
+      session_options: {
+        intraOpNumThreads: 1,
+        interOpNumThreads: 1,
+        executionMode: 'sequential',
+      },
     });
   }
 }

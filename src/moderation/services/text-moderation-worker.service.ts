@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { performance } from 'node:perf_hooks';
 import { setTimeout as delay } from 'node:timers/promises';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
@@ -7,6 +8,7 @@ import { TextModerationLocalClassifierService } from './text-moderation-local-cl
 import {
   ACTIVE_REPORT_STATUSES,
   DEFAULT_TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD,
+  TEXT_MODERATION_INFERENCE_METRICS_INTERVAL_MS,
   LOCAL_TEXT_MODERATION_MODEL_VERSION,
   TEXT_MODERATION_POLL_INTERVAL_MS,
   TEXT_MODERATION_STALE_PROCESSING_MS,
@@ -21,6 +23,11 @@ export class TextModerationWorkerService {
   private readonly logger = new Logger(TextModerationWorkerService.name);
   private stopRequested = false;
   private targetCursor = 0;
+  private inferenceMetricsWindowStartedAt = performance.now();
+  private inferenceCount = 0;
+  private inferenceFailureCount = 0;
+  private inferenceDurationMs = 0;
+  private maxInferenceDurationMs = 0;
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
@@ -35,6 +42,7 @@ export class TextModerationWorkerService {
   }
 
   async processNextText() {
+    this.logInferenceMetricsIfDue();
     const targets: TextTargetType[] = ['comment', 'group_post', 'activity_text'];
     for (let offset = 0; offset < targets.length; offset += 1) {
       const targetType = targets[(this.targetCursor + offset) % targets.length];
@@ -169,7 +177,17 @@ export class TextModerationWorkerService {
   }
 
   private async classifyLocally(text: string): Promise<ClassificationResult> {
-    const labels = await this.localClassifier.classify(text);
+    const inferenceStartedAt = performance.now();
+    const labels = await this.localClassifier.classify(text).then(
+      (result) => {
+        this.recordInference(performance.now() - inferenceStartedAt, false);
+        return result;
+      },
+      (error: unknown) => {
+        this.recordInference(performance.now() - inferenceStartedAt, true);
+        throw error;
+      },
+    );
     const toxic = labels.find(({ label }) => label === 'toxic');
     if (!toxic) throw new Error('Локальная ONNX-модель не вернула оценку toxic');
     const threshold = getTextModerationThreshold(
@@ -182,6 +200,31 @@ export class TextModerationWorkerService {
       modelVersion: LOCAL_TEXT_MODERATION_MODEL_VERSION,
       reason: `Локальная ONNX оценка toxic=${toxic.score.toFixed(3)}, порог=${threshold.toFixed(3)}.`,
     };
+  }
+
+  private recordInference(durationMs: number, failed: boolean) {
+    const roundedDurationMs = Math.max(0, Math.round(durationMs));
+    this.inferenceCount += 1;
+    if (failed) this.inferenceFailureCount += 1;
+    this.inferenceDurationMs += roundedDurationMs;
+    this.maxInferenceDurationMs = Math.max(this.maxInferenceDurationMs, roundedDurationMs);
+  }
+
+  private logInferenceMetricsIfDue() {
+    const now = performance.now();
+    const windowDurationMs = now - this.inferenceMetricsWindowStartedAt;
+    if (windowDurationMs < TEXT_MODERATION_INFERENCE_METRICS_INTERVAL_MS) return;
+
+    const averageDurationMs =
+      this.inferenceCount === 0 ? 0 : Math.round(this.inferenceDurationMs / this.inferenceCount);
+    this.logger.log(
+      `ONNX text moderation inference: window_ms=${Math.round(windowDurationMs)}, runs=${this.inferenceCount}, failures=${this.inferenceFailureCount}, average_ms=${averageDurationMs}, max_ms=${this.maxInferenceDurationMs}`,
+    );
+    this.inferenceMetricsWindowStartedAt = now;
+    this.inferenceCount = 0;
+    this.inferenceFailureCount = 0;
+    this.inferenceDurationMs = 0;
+    this.maxInferenceDurationMs = 0;
   }
 
   private async setStatus(item: TextModerationItem, status: 'visible' | 'pending') {
