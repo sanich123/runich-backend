@@ -118,12 +118,17 @@ describe('VkAuthService', () => {
 
     const result = await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), nativeAndroidMetadata);
 
-    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('client_id=android-native-client-id');
-    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain(
-      'redirect_uri=vkandroid-native-client-id%3A%2F%2Fvk.ru%2Fblank.html',
-    );
-    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('code_verifier=' + 'v'.repeat(43));
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.ru/oauth2/user_info', expect.any(Object));
+    const tokenRequestUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    const tokenRequestBody = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
+    const profileRequestUrl = new URL(String(fetchMock.mock.calls[1][0]));
+    const profileRequestBody = new URLSearchParams(String((fetchMock.mock.calls[1][1] as RequestInit).body));
+    expect(tokenRequestUrl.searchParams.get('client_id')).toBe('android-native-client-id');
+    expect(tokenRequestUrl.searchParams.get('redirect_uri')).toBe('vkandroid-native-client-id://vk.ru/blank.html');
+    expect(tokenRequestUrl.searchParams.get('code_verifier')).toBe('v'.repeat(43));
+    expect(tokenRequestBody.get('code')).toBe('native-code');
+    expect(profileRequestUrl.origin + profileRequestUrl.pathname).toBe('https://id.vk.ru/oauth2/user_info');
+    expect(profileRequestUrl.searchParams.get('client_id')).toBe('android-native-client-id');
+    expect(profileRequestBody.get('access_token')).toBe('vk-token');
     expect(prismaMock.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         email: 'runner@example.com',
@@ -223,9 +228,19 @@ describe('VkAuthService', () => {
 
     await service.loginWithNativeCode('native-code', 'device-1', 'v'.repeat(43), { platform });
 
-    const tokenRequest = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
-    expect(tokenRequest.get('client_id')).toBe(clientId);
-    expect(tokenRequest.get('redirect_uri')).toBe(redirectUri);
+    const tokenRequestUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    const tokenRequestBody = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
+    const profileRequestUrl = new URL(String(fetchMock.mock.calls[1][0]));
+    const profileRequestBody = new URLSearchParams(String((fetchMock.mock.calls[1][1] as RequestInit).body));
+    expect(tokenRequestUrl.searchParams.get('client_id')).toBe(clientId);
+    expect(tokenRequestUrl.searchParams.get('redirect_uri')).toBe(redirectUri);
+    expect(tokenRequestUrl.searchParams.get('grant_type')).toBe('authorization_code');
+    expect(tokenRequestUrl.searchParams.get('device_id')).toBe('device-1');
+    expect(tokenRequestUrl.searchParams.get('code_verifier')).toBe('v'.repeat(43));
+    expect(tokenRequestBody.get('code')).toBe('native-code');
+    expect(profileRequestUrl.origin + profileRequestUrl.pathname).toBe('https://id.vk.ru/oauth2/user_info');
+    expect(profileRequestUrl.searchParams.get('client_id')).toBe(clientId);
+    expect(profileRequestBody.get('access_token')).toBe('vk-token');
   });
 
   it('uses the device OS name when the native client reports its platform as mobile', async () => {
@@ -243,9 +258,11 @@ describe('VkAuthService', () => {
       osName: 'iOS',
     });
 
-    const tokenRequest = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
-    expect(tokenRequest.get('client_id')).toBe('ios-native-client-id');
-    expect(tokenRequest.get('redirect_uri')).toBe('https://runich.example/vk_id_redirect');
+    const tokenRequestUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    const tokenRequestBody = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
+    expect(tokenRequestUrl.searchParams.get('client_id')).toBe('ios-native-client-id');
+    expect(tokenRequestUrl.searchParams.get('redirect_uri')).toBe('https://runich.example/vk_id_redirect');
+    expect(tokenRequestBody.get('code')).toBe('native-code');
   });
 
   it('rejects native VK login when the platform cannot be determined', async () => {
@@ -499,16 +516,21 @@ describe('VkAuthService', () => {
       'device-1',
     );
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      'https://id.vk.ru/oauth2/auth',
-      expect.objectContaining({ method: 'POST' }),
-    );
-    const tokenRequest = fetchMock.mock.calls[0][1] as RequestInit;
-    expect(String(tokenRequest.body)).toContain('grant_type=authorization_code');
-    expect(String(tokenRequest.body)).toContain('device_id=device-1');
-    expect(String(tokenRequest.body)).toContain('code_verifier=verifier');
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.ru/oauth2/user_info', expect.any(Object));
+    const tokenRequestUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    const tokenRequestBody = new URLSearchParams(String((fetchMock.mock.calls[0][1] as RequestInit).body));
+    const tokenRequestOptions = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(tokenRequestUrl.origin + tokenRequestUrl.pathname).toBe('https://id.vk.ru/oauth2/auth');
+    expect(tokenRequestOptions.method).toBe('POST');
+    expect(tokenRequestUrl.searchParams.get('grant_type')).toBe('authorization_code');
+    expect(tokenRequestUrl.searchParams.get('device_id')).toBe('device-1');
+    expect(tokenRequestUrl.searchParams.get('code_verifier')).toBe('verifier');
+    expect(tokenRequestUrl.searchParams.get('state')).toBe('state');
+    expect(tokenRequestBody.get('code')).toBe('code');
+    const profileRequestUrl = new URL(String(fetchMock.mock.calls[1][0]));
+    const profileRequestBody = new URLSearchParams(String((fetchMock.mock.calls[1][1] as RequestInit).body));
+    expect(profileRequestUrl.origin + profileRequestUrl.pathname).toBe('https://id.vk.ru/oauth2/user_info');
+    expect(profileRequestUrl.searchParams.get('client_id')).toBe('123');
+    expect(profileRequestBody.get('access_token')).toBe('vk-token');
     expect(prismaMock.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ email: 'vk_42@vk.local', authProvider: 'VK' }),
