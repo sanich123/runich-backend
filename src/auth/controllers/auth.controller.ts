@@ -103,11 +103,16 @@ export class AuthController {
   @RateLimit(RATE_LIMITS.authAttempt.limit, RATE_LIMITS.authAttempt.ttl)
   @ApiBody({ type: NativeVkAuthCodeDto })
   @ApiOkResponse({ type: LoginResponseDto })
-  async loginWithVkNative(@Body() { code, deviceId, codeVerifier }: NativeVkAuthCodeDto, @Req() request?: Request) {
+  async loginWithVkNative(
+    @Body() { code, deviceId, codeVerifier, state, redirectUri }: NativeVkAuthCodeDto,
+    @Req() request?: Request,
+  ) {
     return this.authService.loginWithVkNativeCode(
       code,
       deviceId,
       codeVerifier,
+      state,
+      redirectUri,
       request ? this.getSessionMetadata(request) : undefined,
     );
   }

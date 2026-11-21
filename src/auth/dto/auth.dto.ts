@@ -41,13 +41,13 @@ export class ProviderAccessTokenDto {
 }
 
 export class NativeVkAuthCodeDto {
-  @ApiProperty({ type: String, description: 'Authorization code returned by VK ID Android SDK' })
+  @ApiProperty({ type: String, description: 'Authorization code returned by the native VK ID SDK' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(4096)
   code: string;
 
-  @ApiProperty({ type: String, description: 'Device identifier returned by VK ID Android SDK' })
+  @ApiProperty({ type: String, description: 'Device identifier returned by the native VK ID SDK' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(256)
@@ -57,6 +57,23 @@ export class NativeVkAuthCodeDto {
   @IsString()
   @Matches(/^[A-Za-z0-9._~-]{43,128}$/)
   codeVerifier: string;
+
+  @ApiProperty({ type: String, description: 'OAuth state returned by VK ID for this authorization attempt' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4096)
+  state: string;
+
+  @ApiProperty({
+    type: String,
+    required: false,
+    description: 'Redirect URI used by the native VK ID SDK, when the SDK provides it',
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2048)
+  redirectUri?: string;
 }
 
 export class NativeAppleAuthDto {

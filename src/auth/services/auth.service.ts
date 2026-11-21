@@ -80,8 +80,15 @@ export class AuthService {
     return this.vkAuthService.callback(code, state, error, response, deviceId);
   }
 
-  loginWithVkNativeCode(code: string, deviceId: string, codeVerifier: string, metadata: SessionMetadata = {}) {
-    return this.vkAuthService.loginWithNativeCode(code, deviceId, codeVerifier, metadata);
+  loginWithVkNativeCode(
+    code: string,
+    deviceId: string,
+    codeVerifier: string,
+    state: string,
+    redirectUri?: string,
+    metadata: SessionMetadata = {},
+  ) {
+    return this.vkAuthService.loginWithNativeCode(code, deviceId, codeVerifier, state, redirectUri, metadata);
   }
 
   startYandexAuth(response: Response) {
