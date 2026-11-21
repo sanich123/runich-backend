@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -17,8 +18,20 @@ import { normalizeEmail } from '../utils/russian-email';
 import { SuperuserEmailBootstrapService } from './superuser-email-bootstrap.service';
 import type { SessionMetadata } from '../types/auth.types';
 
+function getVkRequestUrl(endpoint: string, parameters: Record<string, string>) {
+  const url = new URL(endpoint);
+  Object.entries(parameters).forEach(([name, value]) => url.searchParams.set(name, value));
+  return url;
+}
+
+function getSafeVkErrorCode(error: unknown) {
+  return typeof error === 'string' && /^[A-Za-z0-9._-]{1,64}$/.test(error) ? error : 'unknown';
+}
+
 @Injectable()
 export class VkAuthService {
+  private readonly logger = new Logger(VkAuthService.name);
+
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(JwtService) private readonly jwtService: JwtService,
@@ -50,18 +63,20 @@ export class VkAuthService {
     if (!clientId || !redirectUri) {
       throw new InternalServerErrorException('Авторизация через VK не настроена на сервере');
     }
-    const tokenResponse = await fetch(VK_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
+    const tokenResponse = await fetch(
+      getVkRequestUrl(VK_TOKEN_URL, {
         client_id: clientId,
         grant_type: 'authorization_code',
         device_id: deviceId,
         redirect_uri: redirectUri,
-        code,
         code_verifier: codeVerifier,
       }),
-    });
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ code }),
+      },
+    );
     const tokenPayload = (await tokenResponse.json()) as {
       access_token?: string;
       user_id?: string | number;
@@ -69,13 +84,16 @@ export class VkAuthService {
       error?: string;
     };
     if (!tokenResponse.ok || !tokenPayload.access_token || !tokenPayload.user_id) {
+      this.logger.warn(
+        `VK native token exchange failed: status=${tokenResponse.status}, error=${getSafeVkErrorCode(tokenPayload.error)}, accessToken=${Boolean(tokenPayload.access_token)}, userId=${Boolean(tokenPayload.user_id)}`,
+      );
       throw new UnauthorizedException('Не удалось проверить авторизацию VK');
     }
 
-    const profileResponse = await fetch(VK_USER_INFO_URL, {
+    const profileResponse = await fetch(getVkRequestUrl(VK_USER_INFO_URL, { client_id: clientId }), {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ access_token: tokenPayload.access_token, client_id: clientId }),
+      body: new URLSearchParams({ access_token: tokenPayload.access_token }),
     });
     const profilePayload = (await profileResponse.json()) as {
       user?: {
@@ -86,8 +104,12 @@ export class VkAuthService {
         city?: string;
         email?: string;
       };
+      error?: string;
     };
     if (!profileResponse.ok || !profilePayload.user) {
+      this.logger.warn(
+        `VK native profile request failed: status=${profileResponse.status}, error=${getSafeVkErrorCode(profilePayload.error)}, user=${Boolean(profilePayload.user)}`,
+      );
       throw new UnauthorizedException('Не удалось получить профиль VK');
     }
 
@@ -166,18 +188,21 @@ export class VkAuthService {
     const redirectUri = process.env.VK_REDIRECT_URI!;
 
     try {
-      const tokenResponse = await fetch(VK_TOKEN_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
+      const tokenResponse = await fetch(
+        getVkRequestUrl(VK_TOKEN_URL, {
           client_id: clientId,
           grant_type: 'authorization_code',
           device_id: deviceId,
           redirect_uri: redirectUri,
-          code,
           code_verifier: statePayload.codeVerifier,
+          state,
         }),
-      });
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ code }),
+        },
+      );
       const tokenPayload = (await tokenResponse.json()) as {
         access_token?: string;
         user_id?: string | number;
@@ -198,10 +223,10 @@ export class VkAuthService {
       }
       const accessToken = tokenPayload.access_token;
 
-      const profileResponse = await fetch(VK_USER_INFO_URL, {
+      const profileResponse = await fetch(getVkRequestUrl(VK_USER_INFO_URL, { client_id: clientId }), {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ access_token: accessToken, client_id: clientId }),
+        body: new URLSearchParams({ access_token: accessToken }),
       });
       const profilePayload = (await profileResponse.json()) as {
         user?: { user_id?: string; first_name?: string; last_name?: string; avatar?: string; city?: string };
