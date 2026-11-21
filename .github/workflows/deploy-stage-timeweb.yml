@@ -161,6 +161,12 @@ jobs:
             exit 1
           fi
 
+          # Проверяем локальные модели текста и медиа в точном Stage-образе до миграций и переключения сервисов.
+          "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps \
+            --entrypoint node nestjs_app scripts/text-moderation-onnx-smoke.mjs
+          "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps \
+            --entrypoint node nestjs_app scripts/media-moderation-nsfwjs-smoke.mjs
+
           "${COMPOSE[@]}" up -d --wait db
           "${COMPOSE[@]}" up --force-recreate --abort-on-container-exit \
             --exit-code-from db_migrate db_migrate

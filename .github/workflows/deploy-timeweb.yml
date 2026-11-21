@@ -175,6 +175,12 @@ jobs:
             fi
             "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps nginx nginx -t
 
+            # Проверяем локальные модели текста и медиа в точном Production-образе до миграций и переключения сервисов.
+            "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps \
+              --entrypoint node nestjs_app scripts/text-moderation-onnx-smoke.mjs
+            "${COMPOSE[@]}" run --rm -T --interactive=false --no-deps \
+              --entrypoint node nestjs_app scripts/media-moderation-nsfwjs-smoke.mjs
+
             # Запускаем ту же задачу миграции, что и на Stage, до замены любого из процессов.
             BACKEND_IMAGE="$DEPLOY_IMAGE" "${COMPOSE[@]}" \
               up --no-build --force-recreate \
