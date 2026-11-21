@@ -46,6 +46,11 @@ describe('TextModerationLocalClassifierService', () => {
     expect(mockPipeline).toHaveBeenCalledWith('text-classification', '/tmp/runich-local-toxicity-model', {
       dtype: 'q8',
       local_files_only: true,
+      session_options: {
+        intraOpNumThreads: 1,
+        interOpNumThreads: 1,
+        executionMode: 'sequential',
+      },
     });
     expect(mockClassifier).toHaveBeenNthCalledWith(1, 'First comment', { top_k: 2 });
     expect(mockClassifier).toHaveBeenNthCalledWith(2, 'Second comment', { top_k: 2 });
