@@ -40,12 +40,22 @@ export class VkAuthService {
     private readonly superuserEmailBootstrapService = new SuperuserEmailBootstrapService(prisma),
   ) {}
 
-  async loginWithNativeCode(code: string, deviceId: string, codeVerifier: string, metadata: SessionMetadata = {}) {
+  async loginWithNativeCode(
+    code: string,
+    deviceId: string,
+    codeVerifier: string,
+    state: string,
+    nativeRedirectUri?: string,
+    metadata: SessionMetadata = {},
+  ) {
     if (
       !code ||
       code.length > 4096 ||
       !deviceId ||
       deviceId.length > 256 ||
+      !state ||
+      state.length > 4096 ||
+      (nativeRedirectUri !== undefined && (!nativeRedirectUri || nativeRedirectUri.length > 2048)) ||
       !/^[A-Za-z0-9._~-]{43,128}$/.test(codeVerifier)
     ) {
       throw new UnauthorizedException('Недействительные параметры авторизации VK');
@@ -59,7 +69,10 @@ export class VkAuthService {
 
     const isIos = clientPlatform === 'ios';
     const clientId = isIos ? process.env.VK_NATIVE_IOS_CLIENT_ID : process.env.VK_NATIVE_ANDROID_CLIENT_ID;
-    const redirectUri = isIos ? process.env.VK_NATIVE_IOS_REDIRECT_URI : process.env.VK_NATIVE_ANDROID_REDIRECT_URI;
+    const configuredRedirectUri = isIos
+      ? process.env.VK_NATIVE_IOS_REDIRECT_URI
+      : process.env.VK_NATIVE_ANDROID_REDIRECT_URI;
+    const redirectUri = (isIos && nativeRedirectUri) || configuredRedirectUri;
     if (!clientId || !redirectUri) {
       throw new InternalServerErrorException('Авторизация через VK не настроена на сервере');
     }
@@ -70,6 +83,7 @@ export class VkAuthService {
         device_id: deviceId,
         redirect_uri: redirectUri,
         code_verifier: codeVerifier,
+        state,
       }),
       {
         method: 'POST',
