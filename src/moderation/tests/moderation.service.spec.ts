@@ -182,7 +182,7 @@ describe('ModerationService', () => {
     });
   });
 
-  it('queries the queue by priority before applying the page limit', async () => {
+  it('queries the queue from newest to oldest before applying the page limit', async () => {
     const prisma = createPrismaMock();
     const service = new ModerationService(prisma as never, {} as never);
     const queue = [{ id: 'urgent-1', priority: 'urgent' }];
@@ -192,7 +192,7 @@ describe('ModerationService', () => {
     expect(prisma.contentReport.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { status: { in: ['open', 'in_review', 'appealed'] } },
-        orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+        orderBy: { createdAt: 'desc' },
         take: 5,
       }),
     );

@@ -91,11 +91,34 @@ export class TextModerationWorkerService {
   }
 
   private async findPendingItem(targetType: TextTargetType): Promise<TextModerationItem | null> {
+    const excludedIds: string[] = [];
+    while (true) {
+      const item = await this.findPendingCandidate(targetType, excludedIds);
+      if (!item) return null;
+      if (await this.hasActiveReport(targetType, item.id)) {
+        excludedIds.push(item.id);
+        continue;
+      }
+      if (targetType === 'activity_text' && !item.text) {
+        await this.prisma.activity.update({
+          where: { id: item.id },
+          data: { textModerationStatus: 'visible', textModerationProcessingStartedAt: null },
+        });
+        return null;
+      }
+      return item;
+    }
+  }
+
+  private async findPendingCandidate(targetType: TextTargetType, excludedIds: string[]) {
+    const excluded = excludedIds.length ? { id: { notIn: excludedIds } } : {};
+
     if (targetType === 'comment') {
       const comment = await this.prisma.comment.findFirst({
         where: {
           moderationStatus: 'pending',
-          contentReports: { none: { targetType: 'comment', status: { in: [...ACTIVE_REPORT_STATUSES] } } },
+          ...excluded,
+          contentReports: { none: { targetType, status: { in: [...ACTIVE_REPORT_STATUSES] } } },
         },
         orderBy: [{ date: 'asc' }, { id: 'asc' }],
         select: { id: true, comment: true, authorId: true },
@@ -107,7 +130,8 @@ export class TextModerationWorkerService {
       const post = await this.prisma.groupPost.findFirst({
         where: {
           moderationStatus: 'pending',
-          contentReports: { none: { targetType: 'group_post', status: { in: [...ACTIVE_REPORT_STATUSES] } } },
+          ...excluded,
+          contentReports: { none: { targetType, status: { in: [...ACTIVE_REPORT_STATUSES] } } },
         },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         select: { id: true, text: true, createdByUserId: true },
@@ -118,7 +142,8 @@ export class TextModerationWorkerService {
     const activity = await this.prisma.activity.findFirst({
       where: {
         textModerationStatus: 'pending',
-        contentReports: { none: { targetType: 'activity_text', status: { in: [...ACTIVE_REPORT_STATUSES] } } },
+        ...excluded,
+        contentReports: { none: { targetType, status: { in: [...ACTIVE_REPORT_STATUSES] } } },
       },
       orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
       select: { id: true, title: true, description: true, userId: true },
@@ -127,14 +152,15 @@ export class TextModerationWorkerService {
     const text = [activity.title, activity.description]
       .filter((value): value is string => Boolean(value?.trim()))
       .join('\n');
-    if (!text) {
-      await this.prisma.activity.update({
-        where: { id: activity.id },
-        data: { textModerationStatus: 'visible', textModerationProcessingStartedAt: null },
-      });
-      return null;
-    }
     return { id: activity.id, text, ownerId: activity.userId, targetType };
+  }
+
+  private async hasActiveReport(targetType: TextTargetType, targetId: string) {
+    const report = await this.prisma.contentReport.findFirst({
+      where: { targetType, targetId, status: { in: [...ACTIVE_REPORT_STATUSES] } },
+      select: { id: true },
+    });
+    return Boolean(report);
   }
 
   private async claim(item: TextModerationItem) {

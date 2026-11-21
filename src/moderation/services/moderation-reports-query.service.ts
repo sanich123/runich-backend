@@ -15,7 +15,7 @@ export class ModerationReportsQueryService {
   async getReportQueue(status?: ContentReportStatus, take = 50) {
     const reports = await this.prisma.contentReport.findMany({
       where: { status: status ?? { in: ACTIVE_QUEUE_STATUSES } },
-      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+      orderBy: { createdAt: 'desc' },
       take,
       select: {
         id: true,
