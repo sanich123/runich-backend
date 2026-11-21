@@ -123,7 +123,7 @@ describe('VkAuthService', () => {
       'redirect_uri=vkandroid-native-client-id%3A%2F%2Fvk.ru%2Fblank.html',
     );
     expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('code_verifier=' + 'v'.repeat(43));
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.com/oauth2/user_info', expect.any(Object));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.ru/oauth2/user_info', expect.any(Object));
     expect(prismaMock.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         email: 'runner@example.com',
@@ -295,7 +295,7 @@ describe('VkAuthService', () => {
     service.start(response as unknown as Parameters<typeof service.start>[0]);
 
     const url = new URL(String(response.redirect.mock.calls[0][0]));
-    expect(url.origin + url.pathname).toBe('https://id.vk.com/authorize');
+    expect(url.origin + url.pathname).toBe('https://id.vk.ru/authorize');
     expect(url.searchParams.get('client_id')).toBe('123');
     expect(url.searchParams.get('scope')).toBe('vkid.personal_info email');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
@@ -501,14 +501,14 @@ describe('VkAuthService', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      'https://id.vk.com/oauth2/auth',
+      'https://id.vk.ru/oauth2/auth',
       expect.objectContaining({ method: 'POST' }),
     );
     const tokenRequest = fetchMock.mock.calls[0][1] as RequestInit;
     expect(String(tokenRequest.body)).toContain('grant_type=authorization_code');
     expect(String(tokenRequest.body)).toContain('device_id=device-1');
     expect(String(tokenRequest.body)).toContain('code_verifier=verifier');
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.com/oauth2/user_info', expect.any(Object));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://id.vk.ru/oauth2/user_info', expect.any(Object));
     expect(prismaMock.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ email: 'vk_42@vk.local', authProvider: 'VK' }),

@@ -15,6 +15,6 @@ export const SESSION_METADATA_LIMITS = {
 
 export const CONFIRMATION_CODE_TTL_MS = 5 * 60_000;
 
-export const VK_AUTHORIZE_URL = 'https://id.vk.com/authorize';
-export const VK_TOKEN_URL = 'https://id.vk.com/oauth2/auth';
-export const VK_USER_INFO_URL = 'https://id.vk.com/oauth2/user_info';
+export const VK_AUTHORIZE_URL = 'https://id.vk.ru/authorize';
+export const VK_TOKEN_URL = 'https://id.vk.ru/oauth2/auth';
+export const VK_USER_INFO_URL = 'https://id.vk.ru/oauth2/user_info';
