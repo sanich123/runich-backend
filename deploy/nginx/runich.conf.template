@@ -3,6 +3,11 @@ map $http_upgrade $connection_upgrade {
     ''      '';
 }
 
+map $status $log_5xx {
+    ~^5 1;
+    default 0;
+}
+
 log_format runich_edge '$time_iso8601 host=$server_name method=$request_method uri=$uri status=$status '
                        'protocol=$server_protocol h3=$http3 request_time=$request_time '
                        'upstream_time=$upstream_response_time bytes=$body_bytes_sent';
@@ -41,12 +46,16 @@ server {
     ssl_certificate /etc/letsencrypt/live/${API_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${API_DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
-    access_log /var/log/nginx/access.log runich_edge;
+    access_log /var/log/nginx/access.log runich_edge if=$log_5xx;
 
     client_max_body_size 160M;
     client_body_timeout 300s;
 
     # Compress only the large activity route and chart JSON responses.
+    location = /metrics {
+        return 404;
+    }
+
     location ~ ^/activity/[^/]+/(?:locations|chart-data)$ {
         brotli on;
         brotli_min_length 1024;
@@ -127,7 +136,7 @@ server {
     ssl_certificate /etc/letsencrypt/live/${WEB_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${WEB_DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
-    access_log /var/log/nginx/access.log runich_edge;
+    access_log /var/log/nginx/access.log runich_edge if=$log_5xx;
 
     root ${WEB_ROOT}/current;
     index index.html;

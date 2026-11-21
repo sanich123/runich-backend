@@ -82,6 +82,8 @@ COPY --from=builder /usr/src/app/assets ./assets
 COPY --from=builder /usr/src/app/models ./models
 COPY --from=builder /usr/src/app/scripts/send-deployment-success-email.mjs ./scripts/send-deployment-success-email.mjs
 COPY --from=builder /usr/src/app/scripts/send-daily-metrics-email.mjs ./scripts/send-daily-metrics-email.mjs
+COPY --from=builder /usr/src/app/scripts/media-moderation-nsfwjs-smoke.mjs ./scripts/media-moderation-nsfwjs-smoke.mjs
+COPY --from=builder /usr/src/app/scripts/text-moderation-onnx-smoke.mjs ./scripts/text-moderation-onnx-smoke.mjs
 COPY --from=builder /usr/src/app/scripts/validate-deployment-env.mjs ./scripts/validate-deployment-env.mjs
 COPY --from=builder /usr/src/app/scripts/summarize-deployment-env.mjs ./scripts/summarize-deployment-env.mjs
 

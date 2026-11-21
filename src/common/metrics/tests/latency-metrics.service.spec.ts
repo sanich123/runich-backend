@@ -43,6 +43,28 @@ describe('LatencyMetricsService', () => {
     expect(service.getSnapshot('http', 'GET /invalid')).toBeNull();
   });
 
+  it('exports HTTP request metrics only for valid status codes', async () => {
+    const service = new LatencyMetricsService();
+
+    service.observeHttp('POST /moderation', 42, 201);
+    service.observeHttp('/unmatched', 18, 500);
+    service.observeHttp('GET /undefined-status', 12);
+    service.observeHttp('GET /fractional-status', 12, 200.5);
+    service.observeHttp('GET /low-status', 12, 99);
+    service.observeHttp('GET /high-status', 12, 600);
+
+    const metrics = await service.getPrometheusMetrics();
+
+    expect(metrics).toContain('runich_http_requests_total{method="POST",route="/moderation",status_class="2xx"} 1');
+    expect(metrics).toContain(
+      'runich_http_request_duration_seconds_count{method="POST",route="/moderation",status_class="2xx"} 1',
+    );
+    expect(metrics).toContain('runich_http_requests_total{method="UNKNOWN",route="/unmatched",status_class="5xx"} 1');
+    expect(metrics).not.toContain('fractional-status');
+    expect(metrics).not.toContain('low-status');
+    expect(metrics).not.toContain('high-status');
+  });
+
   it('keeps only the most recent thousand samples', () => {
     const service = new LatencyMetricsService();
 

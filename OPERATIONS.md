@@ -73,8 +73,11 @@ Observe остаётся необязательным и включается т
 `S3_QUARANTINE_PREFIX`, `YANDEX_SMTP_USER`, `YANDEX_SMTP_PASSWORD`,
 `YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`, `YANDEX_REDIRECT_URI`,
 `VK_CLIENT_ID`, `VK_REDIRECT_URI`, `MAPBOX_ACCESS_TOKEN` и
-`GRAFANA_LOKI_TOKEN`. Stage дополнительно требует `POSTGRES_USER`,
-`POSTGRES_PASSWORD` и `POSTGRES_DB`. Mail.ru SMTP fallback требует оба ключа:
+`GRAFANA_LOKI_TOKEN`, `GRAFANA_METRICS_URL`,
+`GRAFANA_METRICS_USERNAME` и `GRAFANA_METRICS_TOKEN`. URL и username задаются
+как GitHub Actions variables, token — как secret с `metrics:write`. Все три
+значения обязательны для Stage и Production deploy. Stage дополнительно требует
+`POSTGRES_USER`, `POSTGRES_PASSWORD` и `POSTGRES_DB`. Mail.ru SMTP fallback требует оба ключа:
 `MAILRU_SMTP_USER` и `MAILRU_SMTP_PASSWORD`. Пара Observe должна быть либо
 полностью задана, либо полностью отсутствовать. `NSFWJS_MODEL_URL` и ключ
 mock-seed остаются опциональными; без `NSFWJS_MODEL_URL` worker использует

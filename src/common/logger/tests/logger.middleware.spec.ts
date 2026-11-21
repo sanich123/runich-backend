@@ -35,7 +35,7 @@ describe('LoggingService', () => {
     response.emit('finish');
 
     expect(now).toHaveBeenCalledTimes(2);
-    expect(metrics.observeHttp).toHaveBeenCalledWith('GET /activities/:id', 301);
+    expect(metrics.observeHttp).toHaveBeenCalledWith('GET /activities/:id', 301, 200);
     expect(log).toHaveBeenCalledWith(expect.stringContaining('301.0ms'));
   });
 
@@ -62,7 +62,8 @@ describe('LoggingService', () => {
   });
 
   it('uses warning and error levels for slow client and server responses', () => {
-    const service = new LoggingService();
+    const metrics = { observeHttp: jest.fn() };
+    const service = new LoggingService(metrics as never);
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     jest
@@ -81,6 +82,44 @@ describe('LoggingService', () => {
     serverErrorResponse.emit('finish');
 
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('no params'));
-    expect(error).toHaveBeenCalledWith(expect.stringContaining('Internal Server Error'));
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('500 Internal Server Error'));
+    expect(metrics.observeHttp).toHaveBeenNthCalledWith(1, 'GET /activities/:id', 301, 404);
+    expect(metrics.observeHttp).toHaveBeenNthCalledWith(2, 'GET /activities/:id', 301, 500);
+  });
+
+  it('does not include Prometheus scrape requests in application request metrics', () => {
+    const metrics = { observeHttp: jest.fn() };
+    const service = new LoggingService(metrics as never);
+    jest.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValueOnce(20);
+
+    const request = {
+      ...createRequest(),
+      path: '/metrics',
+      params: {},
+      route: { path: '/metrics' },
+    } as Request;
+    const response = createResponse(200, 'OK');
+
+    service.use(request, response, jest.fn());
+    response.emit('finish');
+
+    expect(metrics.observeHttp).not.toHaveBeenCalled();
+  });
+
+  it('uses fallback route labels and skips errors already logged by the exception filter', () => {
+    const metrics = { observeHttp: jest.fn() };
+    const service = new LoggingService(metrics as never);
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const now = jest.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValueOnce(301);
+    const request = { ...createRequest(), path: '/unmatched', route: undefined } as Request;
+    const response = createResponse(500, 'Internal Server Error');
+    response.locals = { exceptionLogged: true } as Response['locals'];
+
+    service.use(request, response, jest.fn());
+    response.emit('finish');
+
+    expect(now).toHaveBeenCalledTimes(2);
+    expect(metrics.observeHttp).toHaveBeenCalledWith('GET unmatched', 301, 500);
+    expect(error).not.toHaveBeenCalled();
   });
 });
