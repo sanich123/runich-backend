@@ -8,9 +8,13 @@ export class AuthEmailService {
 
   constructor(@Inject(EmailService) private readonly emailService: EmailService) {}
 
-  async sendConfirmationCode(email: string, code: number, accessToken: string) {
+  async sendConfirmationCode(email: string, code: number, accessToken: string, showLoginLink = true) {
     try {
-      await this.emailService.sendConfirmationCode(email, code, accessToken);
+      if (showLoginLink) {
+        await this.emailService.sendConfirmationCode(email, code, accessToken);
+      } else {
+        await this.emailService.sendConfirmationCode(email, code, accessToken, false);
+      }
     } catch (error) {
       this.logger.error(`Не удалось отправить письмо с кодом подтверждения на ${email}`, error);
       throw new ServiceUnavailableException(`Не удалось отправить письмо. Причина: ${getEmailDeliveryReason(error)}`);
