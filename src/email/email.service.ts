@@ -20,13 +20,21 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
   constructor(@Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService) {}
-  async sendConfirmationCode(emailAddress: string, confirmationCode: number, loginCredential: string) {
+  async sendConfirmationCode(
+    emailAddress: string,
+    confirmationCode: number,
+    loginCredential: string,
+    showLoginLink = true,
+  ) {
     try {
       const subject = 'Подтверждение электронной почты';
-      const loginUrl = new URL(getAuthFrontendRedirectUri());
-      loginUrl.searchParams.set('code', loginCredential);
+      const loginUrl = showLoginLink ? new URL(getAuthFrontendRedirectUri()) : undefined;
+      loginUrl?.searchParams.set('code', loginCredential);
       const html = await render(
-        ConfirmEmailAddressWithLinkAndCode({ text: confirmationCode.toString(), loginUrl: loginUrl.toString() }),
+        ConfirmEmailAddressWithLinkAndCode({
+          text: confirmationCode.toString(),
+          loginUrl: loginUrl?.toString(),
+        }),
       );
       await sendEmail(emailAddress, subject, html, [], this.latencyMetrics);
     } catch (error) {

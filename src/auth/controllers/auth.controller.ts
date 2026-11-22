@@ -142,7 +142,7 @@ export class AuthController {
   @ApiBody({ type: RegisterUserDto })
   @ApiOkResponse({ type: MessageResponseDto })
   @ApiCreatedResponse({ type: MessageResponseDto })
-  async registerUser(@Body() { email, password }: RegisterUserDto) {
+  async registerUser(@Body() { email, password }: RegisterUserDto, @Req() request?: Request) {
     const normalizedEmail = normalizeEmail(email);
     if (!isRussianEmailAddress(normalizedEmail)) {
       throw new BadRequestException(RUSSIAN_EMAIL_REGISTRATION_ERROR);
@@ -159,7 +159,9 @@ export class AuthController {
       }
       throw new ConflictException('Под этим адресом почты уже зарегистрирован пользователь');
     }
-    return this.authService.signUp(normalizedEmail, password);
+    return request
+      ? this.authService.signUp(normalizedEmail, password, this.getSessionMetadata(request))
+      : this.authService.signUp(normalizedEmail, password);
   }
 
   @HttpCode(HttpStatus.OK)

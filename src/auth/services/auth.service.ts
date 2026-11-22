@@ -121,15 +121,16 @@ export class AuthService {
     );
   }
 
-  async signUp(email: string, password: string) {
+  async signUp(email: string, password: string, metadata: SessionMetadata = {}) {
     try {
       const normalizedEmail = normalizeEmail(email);
+      const showLoginLink = metadata.osName?.trim().toLowerCase() !== 'ios';
       const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
 
       if (user && !user?.emailConfirmedAt) {
         const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
         const confirmationCode = getRandomInt(1, 100000);
-        await this.sendConfirmationEmail(normalizedEmail, confirmationCode, loginCredential);
+        await this.sendConfirmationEmail(normalizedEmail, confirmationCode, loginCredential, showLoginLink);
         await this.prisma.user.update({
           where: { email: normalizedEmail },
           data: { confirmationSentAt: new Date(), confirmationToken: `${confirmationCode}` },
@@ -150,7 +151,7 @@ export class AuthService {
           },
         });
         const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
-        await this.sendConfirmationEmail(normalizedEmail, confirmationCode, loginCredential);
+        await this.sendConfirmationEmail(normalizedEmail, confirmationCode, loginCredential, showLoginLink);
         return { message: 'Код подтверждения был выслан на Вашу электронную почту' };
       }
     } catch (error) {
@@ -158,13 +159,25 @@ export class AuthService {
     }
   }
 
-  private async sendConfirmationCode(email: string, confirmationCode: number, loginCredential: string) {
-    return this.authEmailService.sendConfirmationCode(email, confirmationCode, loginCredential);
+  private async sendConfirmationCode(
+    email: string,
+    confirmationCode: number,
+    loginCredential: string,
+    showLoginLink: boolean,
+  ) {
+    return showLoginLink
+      ? this.authEmailService.sendConfirmationCode(email, confirmationCode, loginCredential)
+      : this.authEmailService.sendConfirmationCode(email, confirmationCode, loginCredential, false);
   }
 
-  private async sendConfirmationEmail(email: string, confirmationCode: number, loginCredential: string) {
+  private async sendConfirmationEmail(
+    email: string,
+    confirmationCode: number,
+    loginCredential: string,
+    showLoginLink: boolean,
+  ) {
     try {
-      return await this.sendConfirmationCode(email, confirmationCode, loginCredential);
+      return await this.sendConfirmationCode(email, confirmationCode, loginCredential, showLoginLink);
     } catch (error) {
       if (error instanceof ServiceUnavailableException) throw error;
       this.logger.error(`Не удалось отправить письмо подтверждения на ${email}`, error);
