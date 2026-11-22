@@ -12,6 +12,7 @@ import {
   LOCAL_TEXT_MODERATION_MODEL_VERSION,
   TEXT_MODERATION_POLL_INTERVAL_MS,
   TEXT_MODERATION_STALE_PROCESSING_MS,
+  getTextModerationReviewThreshold,
   getTextModerationThreshold,
   getLocalReviewReason,
   normalizeModerationText,
@@ -216,10 +217,11 @@ export class TextModerationWorkerService {
     );
     const toxic = labels.find(({ label }) => label === 'toxic');
     if (!toxic) throw new Error('Локальная ONNX-модель не вернула оценку toxic');
-    const threshold = getTextModerationThreshold(
+    const configuredThreshold = getTextModerationThreshold(
       'TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD',
       DEFAULT_TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD,
     );
+    const threshold = getTextModerationReviewThreshold(text, configuredThreshold);
     return {
       needsReview: toxic.score >= threshold,
       scores: Object.fromEntries(labels.map(({ label, score }) => [label, score])),

@@ -12,6 +12,12 @@ The production Compose service caps `background_worker` at one CPU. The Alloy co
 
 The ONNX Runtime session is configured for one intra-op thread, one inter-op thread, and sequential execution. This limits parallel inference inside the shared worker. It does not stop the worker from draining a large pending queue; that work is expected to consume CPU until the queue is drained.
 
+## False-positive calibration
+
+The model's `toxic` score is not a calibrated probability. It is only one input to the review decision. The current decision floor is 0.95; for text with at most four words it is 0.99. A short list of explicit profanity, direct threats, and collective attacks against identity groups routes to manual review independently of the model score. These rules create review candidates; they do not delete content.
+
+The production image smoke check in `scripts/text-moderation-onnx-smoke.mjs` keeps representative Russian noise, transliteration, slang, ordinary comments, and explicit insults as calibration examples. Expand that set with moderator-labeled Runich examples before changing the thresholds. Track false-positive and false-negative rates separately across short/long text, language, transliteration, and identity mentions; the current examples are a regression set, not a claim that every language or abuse type is covered.
+
 The worker emits one `ONNX text moderation inference` summary per minute with the inference count, failures, average duration, and maximum duration. It logs zero counts too, and never includes text, user IDs, or row IDs. Compare these summaries with the `background_worker` CPU over the same interval:
 
 - Inference runs alongside high worker CPU support the ONNX/backlog hypothesis.

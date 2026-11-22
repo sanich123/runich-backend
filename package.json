@@ -43,8 +43,8 @@
   },
   "dependencies": {
     "@ardentcode/sports-lib": "^5.4.29",
-    "@aws-sdk/client-s3": "3.1173.0",
-    "@aws-sdk/s3-request-presigner": "3.1173.0",
+    "@aws-sdk/client-s3": "3.1175.0",
+    "@aws-sdk/s3-request-presigner": "3.1175.0",
     "@huggingface/transformers": "4.3.2",
     "@mapbox/polyline": "^1.2.1",
     "@maplibre/maplibre-gl-native": "6.5.0-pre.1",
@@ -97,7 +97,7 @@
     "@nestjs/cli": "12.0.15",
     "@nestjs/schematics": "12.0.16",
     "@nestjs/testing": "12.6.0",
-    "@prisma/management-api-sdk": "^1.100.0",
+    "@prisma/management-api-sdk": "^1.101.0",
     "@swc/core": "^1.16.22",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
@@ -115,7 +115,7 @@
     "husky": "^9.1.7",
     "jest": "^30.5.2",
     "js-yaml": "^5.5.0",
-    "lint-staged": "^17.6.1",
+    "lint-staged": "^17.6.2",
     "madge": "^8.0.0",
     "prettier": "^3.10.1",
     "supertest": "^7.3.2",
@@ -127,7 +127,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.73.0"
   },
-  "packageManager": "yarn@4.18.1",
+  "packageManager": "yarn@4.19.0",
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
       "eslint --fix",
