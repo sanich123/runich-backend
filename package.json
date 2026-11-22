@@ -1,6 +1,6 @@
 {
   "name": "runich-backend",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "type": "module",
   "description": "Backend service for runich app",
   "author": "Alexander Voronin",
