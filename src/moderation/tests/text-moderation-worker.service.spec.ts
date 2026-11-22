@@ -133,10 +133,10 @@ describe('TextModerationWorkerService', () => {
     });
   });
 
-  it('sends locally classified toxic content to manual review', async () => {
+  it('sends high-confidence locally classified toxic content to manual review', async () => {
     localClassifier.classify.mockResolvedValueOnce([
-      { label: 'not-toxic', score: 0.1 },
-      { label: 'toxic', score: 0.9 },
+      { label: 'not-toxic', score: 0.001 },
+      { label: 'toxic', score: 0.999 },
     ]);
     prisma.comment.findFirst.mockResolvedValue({
       id: 'comment-3',
@@ -153,7 +153,7 @@ describe('TextModerationWorkerService', () => {
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          details: expect.stringContaining('Локальная ONNX оценка toxic=0.900'),
+          details: expect.stringContaining('Локальная ONNX оценка toxic=0.999'),
         }),
       }),
     );
@@ -182,12 +182,61 @@ describe('TextModerationWorkerService', () => {
     expect(prisma.transaction.contentReport.create).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { text: 'айос', toxicScore: 0.6925 },
+    { text: 'Айос удобный', toxicScore: 0.5216 },
+    { text: 'фвыа', toxicScore: 0.9384 },
+    { text: 'лол', toxicScore: 0.8447 },
+  ])('keeps low-context false-positive candidate "$text" visible', async ({ text, toxicScore }) => {
+    localClassifier.classify.mockResolvedValueOnce([
+      { label: 'not-toxic', score: 1 - toxicScore },
+      { label: 'toxic', score: toxicScore },
+    ]);
+    prisma.comment.findFirst.mockResolvedValue({
+      id: 'comment-short-neutral',
+      comment: text,
+      authorId: 'author-short',
+    });
+    prisma.groupPost.findFirst.mockResolvedValue(null);
+    prisma.activity.findFirst.mockResolvedValue(null);
+
+    await service.processNextText();
+
+    expect(localClassifier.classify).toHaveBeenCalledWith(text);
+    expect(prisma.transaction.comment.updateMany).toHaveBeenCalledWith({
+      where: { id: 'comment-short-neutral', moderationStatus: 'processing' },
+      data: { moderationStatus: 'visible', moderationProcessingStartedAt: null },
+    });
+    expect(prisma.transaction.contentReport.create).not.toHaveBeenCalled();
+  });
+
+  it('routes explicit profanity to review without relying on the ONNX score', async () => {
+    prisma.comment.findFirst.mockResolvedValue({
+      id: 'comment-explicit-abuse',
+      comment: 'Сука',
+      authorId: 'author-explicit-abuse',
+    });
+    prisma.groupPost.findFirst.mockResolvedValue(null);
+    prisma.activity.findFirst.mockResolvedValue(null);
+
+    await service.processNextText();
+
+    expect(localClassifier.classify).not.toHaveBeenCalled();
+    expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          details: expect.stringContaining('Локальное правило: explicit_abuse'),
+        }),
+      }),
+    );
+  });
+
   it('ignores legacy Hugging Face settings and keeps classification local', async () => {
     process.env.HF_TOKEN = 'legacy-token';
     process.env.TEXT_MODERATION_HF_MODEL = 'org/legacy-model';
     localClassifier.classify.mockResolvedValueOnce([
-      { label: 'not-toxic', score: 0.2 },
-      { label: 'toxic', score: 0.8 },
+      { label: 'not-toxic', score: 0.001 },
+      { label: 'toxic', score: 0.999 },
     ]);
     prisma.comment.findFirst.mockResolvedValue({
       id: 'comment-quota',
@@ -203,7 +252,7 @@ describe('TextModerationWorkerService', () => {
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          details: expect.stringContaining('Локальная ONNX оценка toxic=0.800'),
+          details: expect.stringContaining('Локальная ONNX оценка toxic=0.999'),
         }),
       }),
     );
@@ -230,15 +279,15 @@ describe('TextModerationWorkerService', () => {
     );
   });
 
-  it('queues scores at the configured threshold for moderator review', async () => {
+  it('keeps the calibrated threshold floor when configuration asks for a lower value', async () => {
     process.env.TEXT_MODERATION_LOCAL_REVIEW_THRESHOLD = '0.7';
     localClassifier.classify.mockResolvedValueOnce([
-      { label: 'not-toxic', score: 0.3 },
-      { label: 'toxic', score: 0.7 },
+      { label: 'not-toxic', score: 0.03 },
+      { label: 'toxic', score: 0.97 },
     ]);
     prisma.groupPost.findFirst.mockResolvedValue({
       id: 'post-1',
-      text: 'Post text',
+      text: 'A post with enough context to cross the calibrated review threshold.',
       createdByUserId: 'post-author',
     });
     prisma.activity.findFirst.mockResolvedValue(null);
@@ -246,7 +295,9 @@ describe('TextModerationWorkerService', () => {
     await expect(service.processNextText()).resolves.toBe(true);
 
     expect(fetch).not.toHaveBeenCalled();
-    expect(localClassifier.classify).toHaveBeenCalledWith('Post text');
+    expect(localClassifier.classify).toHaveBeenCalledWith(
+      'A post with enough context to cross the calibrated review threshold.',
+    );
     expect(prisma.transaction.contentReport.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -275,8 +326,8 @@ describe('TextModerationWorkerService', () => {
       userId: 'activity-owner',
     });
     localClassifier.classify.mockResolvedValueOnce([
-      { label: 'not-toxic', score: 0.2 },
-      { label: 'toxic', score: 0.8 },
+      { label: 'not-toxic', score: 0.001 },
+      { label: 'toxic', score: 0.999 },
     ]);
 
     await expect(service.processNextText()).resolves.toBe(true);
@@ -455,8 +506,8 @@ describe('TextModerationWorkerService', () => {
 
     prisma.comment.findFirst.mockResolvedValue(content);
     localClassifier.classify.mockResolvedValueOnce([
-      { label: 'not-toxic', score: 0.1 },
-      { label: 'toxic', score: 0.9 },
+      { label: 'not-toxic', score: 0.001 },
+      { label: 'toxic', score: 0.999 },
     ]);
     await service.processNextText();
     expect(fetch).not.toHaveBeenCalled();
@@ -464,7 +515,7 @@ describe('TextModerationWorkerService', () => {
     expect(prisma.transaction.contentReport.create).toHaveBeenLastCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          details: expect.stringContaining('Локальная ONNX оценка toxic=0.900'),
+          details: expect.stringContaining('Локальная ONNX оценка toxic=0.999, порог=0.990'),
         }),
       }),
     );
