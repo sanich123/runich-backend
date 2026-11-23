@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'ffe39931e9232f247c4263bd97e46e55ca027b4cd9e17a03d74fdfa7235c2bf3'>;
+  StorageHashBase<'08d305c4383245b6a5fbbeb9940aca147f0e6b0d633f6346f185d469bed4be29'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -1706,6 +1706,16 @@ type ContractBase = Omit<
                 },
               ];
               indexes: readonly [
+                {
+                  readonly name: 'Activity_location_enrichment_status_created_at_id_idx';
+                  readonly columns: readonly ['location_enrichment_status', 'createdAt', 'id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Activity_media_processing_status_created_at_id_idx';
+                  readonly columns: readonly ['media_processing_status', 'createdAt', 'id'];
+                  readonly unique: false;
+                },
                 {
                   readonly name: 'Activity_text_moderation_status_updated_at_id_idx';
                   readonly columns: readonly ['text_moderation_status', 'updatedAt', 'id'];

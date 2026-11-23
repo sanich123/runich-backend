@@ -7821,6 +7821,24 @@
               "indexes": [
                 {
                   "columns": [
+                    "location_enrichment_status",
+                    "createdAt",
+                    "id"
+                  ],
+                  "name": "Activity_location_enrichment_status_created_at_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "media_processing_status",
+                    "createdAt",
+                    "id"
+                  ],
+                  "name": "Activity_media_processing_status_created_at_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
                     "text_moderation_status",
                     "updatedAt",
                     "id"
@@ -13484,7 +13502,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "ffe39931e9232f247c4263bd97e46e55ca027b4cd9e17a03d74fdfa7235c2bf3"
+    "storageHash": "08d305c4383245b6a5fbbeb9940aca147f0e6b0d633f6346f185d469bed4be29"
   },
   "capabilities": {
     "postgres": {
