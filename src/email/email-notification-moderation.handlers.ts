@@ -6,6 +6,15 @@ import {
   getModerationEmailActionLabel,
 } from 'src/moderation/moderation-email-actions.policy';
 import { getModerationEmailActionUrl } from 'src/moderation/moderation-email-action-token.utils';
+import {
+  getReportedContent,
+  getReportedModerationStatus,
+  resolveReportedMediaUrls,
+} from './email-notification-moderation-report.utils';
+import type {
+  ModerationReportEmailGroup,
+  ModerationReportEmailRecord,
+} from './email-notification-moderation-report.utils';
 
 export async function resolveModerationReportNotification(
   prisma: PrismaService,
@@ -41,7 +50,7 @@ export async function resolveModerationReportNotification(
       },
     },
   };
-  const report = await prisma.contentReport.findUnique({
+  const report: ModerationReportEmailRecord | null = await prisma.contentReport.findUnique({
     where: { id: sourceId },
     select: {
       id: true,
@@ -134,7 +143,7 @@ export async function resolveModerationReportNotification(
     },
   });
   if (!report) return null;
-  const group =
+  const group: ModerationReportEmailGroup =
     report.targetType === 'group'
       ? await prisma.group.findUnique({
           where: { id: report.targetId },
@@ -232,83 +241,13 @@ export async function resolveModerationReportNotification(
         })
       : null,
   ]);
-  const activityMedia = activity?.media ?? [];
-  const reportedMediaUrls: string[] = [];
-  const reportedVideoUrls: string[] = [];
-  const isVideo = (contentType: string | null | undefined, url?: string | null) =>
-    contentType?.startsWith('video/') === true || /\.(mp4|mov|webm)(?:$|[?#])/i.test(url ?? '');
-  if (report.targetType === 'media_upload' && report.mediaUpload?.status !== 'rejected') {
-    const preview = await resolveAssetPreview(report.mediaUpload?.ownerId, report.mediaUpload?.id);
-    if (preview) {
-      (isVideo(report.mediaUpload?.contentType, preview) ? reportedVideoUrls : reportedMediaUrls).push(preview);
-    }
-  } else if (report.targetType === 'group_post') {
-    const preview = await resolveAssetPreview(report.groupPost?.photoAsset?.ownerId, report.groupPost?.photoAsset?.id);
-    if (preview) reportedMediaUrls.push(preview);
-  } else if (report.targetType === 'group') {
-    const preview = await resolveAssetPreview(group?.photoAsset?.ownerId, group?.photoAsset?.id);
-    if (preview) reportedMediaUrls.push(preview);
-  } else if (report.targetType === 'media' && report.media?.mediaReviewStatus !== 'rejected') {
-    const thumbnail = await resolveAssetPreview(report.media?.userId, report.media?.thumbnailModerationAssetId);
-    const original = await resolveAssetPreview(report.media?.userId, report.media?.mediaModerationAssetId);
-    const thumbnailPreview = thumbnail ?? report.media?.thumbnail;
-    const originalPreview = original ?? report.media?.url;
-    const targetPreview = originalPreview ?? thumbnailPreview;
-    if (targetPreview) {
-      (isVideo(report.media?.mediaModerationAsset?.contentType, targetPreview)
-        ? reportedVideoUrls
-        : reportedMediaUrls
-      ).push(targetPreview);
-    }
-  }
-  if (report.targetType !== 'media') {
-    for (const media of activityMedia) {
-      if (media.mediaReviewStatus === 'rejected') continue;
-      const thumbnail = await resolveAssetPreview(media.userId, media.thumbnailModerationAssetId);
-      const original = await resolveAssetPreview(media.userId, media.mediaModerationAssetId);
-      const thumbnailPreview = thumbnail ?? media.thumbnail;
-      const originalPreview = original ?? media.url;
-      if (thumbnailPreview && !reportedMediaUrls.includes(thumbnailPreview)) reportedMediaUrls.push(thumbnailPreview);
-      else if (originalPreview) {
-        const destination = isVideo(media.mediaModerationAsset?.contentType, originalPreview)
-          ? reportedVideoUrls
-          : reportedMediaUrls;
-        if (!destination.includes(originalPreview)) destination.push(originalPreview);
-      }
-    }
-  }
+  const { reportedMediaUrls, reportedVideoUrls } = await resolveReportedMediaUrls(report, group, resolveAssetPreview);
   const contentAuthor = report.subjectUser ?? report.mediaUpload?.owner ?? fallbackAuthor;
-  const reportedContent =
-    report.targetType === 'activity' || report.targetType === 'activity_text'
-      ? (report.activity?.description ?? null)
-      : report.targetType === 'comment'
-        ? (report.comment?.comment ?? null)
-        : report.targetType === 'group_post'
-          ? (report.groupPost?.text ?? null)
-          : report.targetType === 'user'
-            ? (contentAuthor?.profile?.bio ?? null)
-            : report.targetType === 'group'
-              ? (group?.description ?? null)
-              : null;
+  const reportedContent = getReportedContent(report, group, contentAuthor);
   const reporterUser = report.reporter ?? fallbackReporter;
   const reporter = reporterUser ? await mapPerson(reporterUser) : null;
   const reportedUser = await mapPerson(contentAuthor);
-  const moderationStatus =
-    report.targetType === 'media_upload'
-      ? report.mediaUpload?.status
-      : report.targetType === 'activity'
-        ? report.activity?.moderationStatus
-        : report.targetType === 'activity_text'
-          ? report.activity?.textModerationStatus
-          : report.targetType === 'comment'
-            ? report.comment?.moderationStatus
-            : report.targetType === 'group_post'
-              ? report.groupPost?.moderationStatus
-              : report.targetType === 'media'
-                ? report.media?.moderationStatus
-                : report.targetType === 'group'
-                  ? group?.moderationStatus
-                  : null;
+  const moderationStatus = getReportedModerationStatus(report, group);
   const moderationActions = getAvailableModerationEmailActions(report.targetType, report.status, moderationStatus).map(
     (action) => ({
       label: getModerationEmailActionLabel(action),

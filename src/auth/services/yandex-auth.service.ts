@@ -6,6 +6,8 @@ import { getAuthFrontendRedirectUri } from 'src/common/config/environment';
 import { normalizeEmail } from '../utils/russian-email';
 import { SuperuserEmailBootstrapService } from './superuser-email-bootstrap.service';
 import type { SessionMetadata } from '../types/auth.types';
+import { provisionSocialEmailAccount } from '../utils/social-auth-account';
+import { parseYandexUserProfile } from '../utils/yandex-auth.utils';
 
 @Injectable()
 export class YandexAuthService {
@@ -29,53 +31,8 @@ export class YandexAuthService {
     if (!yandexAccessToken || yandexAccessToken.length > 8192) {
       throw new UnauthorizedException('Недействительный токен Яндекс');
     }
-
-    const userResponse = await fetch('https://login.yandex.ru/info?format=json', {
-      headers: { Authorization: `OAuth ${yandexAccessToken}` },
-    });
-    if (!userResponse.ok) throw new UnauthorizedException('Не удалось проверить токен Яндекс');
-
-    const yandexUser = (await userResponse.json()) as {
-      default_email?: string;
-      login?: string;
-      first_name?: string;
-      last_name?: string;
-      real_name?: string;
-      city?: string;
-      default_avatar_id?: string;
-    };
-    const rawEmail = yandexUser.default_email ?? (yandexUser.login ? `${yandexUser.login}@yandex.ru` : undefined);
-    if (!rawEmail) throw new UnauthorizedException('Яндекс не вернул email пользователя');
-    const email = normalizeEmail(rawEmail);
-
-    let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          authProvider: 'YANDEX',
-          emailConfirmedAt: new Date(),
-          createdAt: new Date(),
-          profile: {
-            create: {
-              name: yandexUser.first_name ?? yandexUser.real_name?.split(' ')[0],
-              surname: yandexUser.last_name,
-              city: yandexUser.city,
-              profilePhoto: yandexUser.default_avatar_id
-                ? `https://avatars.yandex.net/get-yapic/${yandexUser.default_avatar_id}/islands-200`
-                : undefined,
-              email,
-            },
-          },
-        },
-      });
-    } else if (!user.emailConfirmedAt) {
-      user = await this.prisma.user.update({ where: { id: user.id }, data: { emailConfirmedAt: new Date() } });
-    }
-
-    await this.superuserEmailBootstrapService.grantIfAllowlisted(user.id, email);
-    await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
-    return this.tokenService.createSessionTokens(user.id, metadata);
+    const userId = await this.getOrCreateUser(yandexAccessToken, 'Не удалось проверить токен Яндекс');
+    return this.tokenService.createSessionTokens(userId, metadata);
   }
 
   async callback(code: string, error: string, response: Response) {
@@ -100,53 +57,42 @@ export class YandexAuthService {
     const { access_token: yandexAccessToken } = (await tokenResponse.json()) as { access_token?: string };
     if (!yandexAccessToken) throw new UnauthorizedException('Яндекс не вернул access token');
 
+    const userId = await this.getOrCreateUser(yandexAccessToken, 'Не удалось получить данные пользователя Яндекс');
+
+    const redirect = new URL(frontendUrl);
+    const loginCredential = await this.tokenService.createEmailLoginCredential(userId);
+    redirect.searchParams.set('code', loginCredential);
+    return response.redirect(redirect.toString());
+  }
+
+  private async getOrCreateUser(accessToken: string, requestFailureMessage: string): Promise<string> {
     const userResponse = await fetch('https://login.yandex.ru/info?format=json', {
-      headers: { Authorization: `OAuth ${yandexAccessToken}` },
+      headers: { Authorization: `OAuth ${accessToken}` },
     });
-    if (!userResponse.ok) throw new UnauthorizedException('Не удалось получить данные пользователя Яндекс');
-    const yandexUser = (await userResponse.json()) as {
-      default_email?: string;
-      login?: string;
-      first_name?: string;
-      last_name?: string;
-      real_name?: string;
-      city?: string;
-      default_avatar_id?: string;
-    };
+    if (!userResponse.ok) throw new UnauthorizedException(requestFailureMessage);
+
+    let payload: unknown;
+    try {
+      payload = await userResponse.json();
+    } catch {
+      throw new UnauthorizedException('Яндекс вернул некорректный профиль пользователя');
+    }
+    const yandexUser = parseYandexUserProfile(payload);
     const rawEmail = yandexUser.default_email ?? (yandexUser.login ? `${yandexUser.login}@yandex.ru` : undefined);
     if (!rawEmail) throw new UnauthorizedException('Яндекс не вернул email пользователя');
     const email = normalizeEmail(rawEmail);
 
-    let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          authProvider: 'YANDEX',
-          emailConfirmedAt: new Date(),
-          createdAt: new Date(),
-          profile: {
-            create: {
-              name: yandexUser.first_name ?? yandexUser.real_name?.split(' ')[0],
-              surname: yandexUser.last_name,
-              city: yandexUser.city,
-              profilePhoto: yandexUser.default_avatar_id
-                ? `https://avatars.yandex.net/get-yapic/${yandexUser.default_avatar_id}/islands-200`
-                : undefined,
-              email,
-            },
-          },
-        },
-      });
-    } else if (!user.emailConfirmedAt) {
-      user = await this.prisma.user.update({ where: { id: user.id }, data: { emailConfirmedAt: new Date() } });
-    }
-    await this.superuserEmailBootstrapService.grantIfAllowlisted(user.id, email);
-    await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
-
-    const redirect = new URL(frontendUrl);
-    const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
-    redirect.searchParams.set('code', loginCredential);
-    return response.redirect(redirect.toString());
+    return provisionSocialEmailAccount(this.prisma, this.superuserEmailBootstrapService, {
+      email,
+      provider: 'YANDEX',
+      profile: {
+        name: yandexUser.first_name ?? yandexUser.real_name?.split(' ')[0],
+        surname: yandexUser.last_name,
+        city: yandexUser.city,
+        profilePhoto: yandexUser.default_avatar_id
+          ? `https://avatars.yandex.net/get-yapic/${yandexUser.default_avatar_id}/islands-200`
+          : undefined,
+      },
+    });
   }
 }

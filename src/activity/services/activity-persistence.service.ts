@@ -8,11 +8,11 @@ export class ActivityPersistenceService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   create(data: Record<string, unknown>, media: Record<string, unknown>[] = []) {
-    if (!media.length) return this.prisma.activity.create({ data: data as never });
+    if (!media.length) return this.prisma.activity.create({ data });
 
     return this.prisma.$transaction(async (transaction) => {
-      const activity = await transaction.activity.create({ data: data as never });
-      await transaction.activityMedia.createMany({ data: media as never, skipDuplicates: true });
+      const activity = await transaction.activity.create({ data });
+      await transaction.activityMedia.createMany({ data: media, skipDuplicates: true });
       return activity;
     });
   }
@@ -22,8 +22,8 @@ export class ActivityPersistenceService {
     database: ActivityDatabase = this.prisma,
     media: Record<string, unknown>[] = [],
   ) {
-    const result = await database.activity.createMany({ data: data as never, skipDuplicates: true });
-    if (media.length) await database.activityMedia.createMany({ data: media as never, skipDuplicates: true });
+    const result = await database.activity.createMany({ data, skipDuplicates: true });
+    if (media.length) await database.activityMedia.createMany({ data: media, skipDuplicates: true });
     return result;
   }
 
@@ -47,21 +47,29 @@ export class ActivityPersistenceService {
         );
         return database.activity.upsert({
           where: { userId_source_sourceActivityId: where },
-          create: activity as never,
-          update: update as never,
+          create: activity,
+          update,
         });
       }),
     );
 
-    const persistedIds = new Map(
-      data.map((activity, index) => [activity.id as string, activities[index]?.id as string] as const),
-    );
-    const mediaRows = media.map((item) => ({
-      ...item,
-      activityId: persistedIds.get(item.activityId as string) ?? item.activityId,
-    }));
+    const persistedIds = new Map<string, string>();
+    data.forEach((activity, index) => {
+      const sourceId = activity.id;
+      const persistedId = activities[index]?.id;
+      if (typeof sourceId === 'string' && typeof persistedId === 'string') {
+        persistedIds.set(sourceId, persistedId);
+      }
+    });
+    const mediaRows = media.map((item) => {
+      const activityId = item.activityId;
+      return {
+        ...item,
+        activityId: typeof activityId === 'string' ? (persistedIds.get(activityId) ?? activityId) : activityId,
+      };
+    });
     if (mediaRows.length) {
-      await database.activityMedia.createMany({ data: mediaRows as never, skipDuplicates: true });
+      await database.activityMedia.createMany({ data: mediaRows, skipDuplicates: true });
     }
 
     await Promise.all(
@@ -81,7 +89,7 @@ export class ActivityPersistenceService {
   }
 
   update(id: string, userId: string, data: Record<string, unknown>) {
-    return this.prisma.activity.update({ where: { id, userId }, data: data as never });
+    return this.prisma.activity.update({ where: { id, userId }, data });
   }
 
   delete(id: string, userId: string) {
