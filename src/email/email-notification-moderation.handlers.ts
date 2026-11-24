@@ -253,26 +253,28 @@ export async function resolveModerationReportNotification(
     const original = await resolveAssetPreview(report.media?.userId, report.media?.mediaModerationAssetId);
     const thumbnailPreview = thumbnail ?? report.media?.thumbnail;
     const originalPreview = original ?? report.media?.url;
-    if (thumbnailPreview) reportedMediaUrls.push(thumbnailPreview);
-    else if (originalPreview) {
-      (isVideo(report.media?.mediaModerationAsset?.contentType, originalPreview)
+    const targetPreview = originalPreview ?? thumbnailPreview;
+    if (targetPreview) {
+      (isVideo(report.media?.mediaModerationAsset?.contentType, targetPreview)
         ? reportedVideoUrls
         : reportedMediaUrls
-      ).push(originalPreview);
+      ).push(targetPreview);
     }
   }
-  for (const media of activityMedia) {
-    if (media.mediaReviewStatus === 'rejected') continue;
-    const thumbnail = await resolveAssetPreview(media.userId, media.thumbnailModerationAssetId);
-    const original = await resolveAssetPreview(media.userId, media.mediaModerationAssetId);
-    const thumbnailPreview = thumbnail ?? media.thumbnail;
-    const originalPreview = original ?? media.url;
-    if (thumbnailPreview && !reportedMediaUrls.includes(thumbnailPreview)) reportedMediaUrls.push(thumbnailPreview);
-    else if (originalPreview) {
-      const destination = isVideo(media.mediaModerationAsset?.contentType, originalPreview)
-        ? reportedVideoUrls
-        : reportedMediaUrls;
-      if (!destination.includes(originalPreview)) destination.push(originalPreview);
+  if (report.targetType !== 'media') {
+    for (const media of activityMedia) {
+      if (media.mediaReviewStatus === 'rejected') continue;
+      const thumbnail = await resolveAssetPreview(media.userId, media.thumbnailModerationAssetId);
+      const original = await resolveAssetPreview(media.userId, media.mediaModerationAssetId);
+      const thumbnailPreview = thumbnail ?? media.thumbnail;
+      const originalPreview = original ?? media.url;
+      if (thumbnailPreview && !reportedMediaUrls.includes(thumbnailPreview)) reportedMediaUrls.push(thumbnailPreview);
+      else if (originalPreview) {
+        const destination = isVideo(media.mediaModerationAsset?.contentType, originalPreview)
+          ? reportedVideoUrls
+          : reportedMediaUrls;
+        if (!destination.includes(originalPreview)) destination.push(originalPreview);
+      }
     }
   }
   const contentAuthor = report.subjectUser ?? report.mediaUpload?.owner ?? fallbackAuthor;

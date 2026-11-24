@@ -1,0 +1,47 @@
+[
+  {
+    "id": "dropTable.LoadTestSeedJob",
+    "label": "Drop table \"LoadTestSeedJob\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "LoadTestSeedJob"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"LoadTestSeedJob\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"LoadTestSeedJob\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"LoadTestSeedJob\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop table \"LoadTestSeedJob\"",
+        "sql": "DROP TABLE \"public\".\"LoadTestSeedJob\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"LoadTestSeedJob\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"LoadTestSeedJob\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"LoadTestSeedJob\""
+        }
+      }
+    ]
+  }
+]

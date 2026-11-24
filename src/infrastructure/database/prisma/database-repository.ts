@@ -201,7 +201,6 @@ export function createDatabaseRepositories(client: RuntimeClient, latencyMetrics
     notification: new ModelRepository(client, 'Notification', latencyMetrics),
     pushDeviceToken: new ModelRepository(client, 'PushDeviceToken', latencyMetrics),
     pushNotificationJob: new ModelRepository(client, 'PushNotificationJob', latencyMetrics),
-    loadTestSeedJob: new ModelRepository(client, 'LoadTestSeedJob', latencyMetrics),
     friend: new ModelRepository(client, 'Friend', latencyMetrics),
     comment: new ModelRepository(client, 'Comment', latencyMetrics),
     commentLike: new ModelRepository(client, 'CommentLike', latencyMetrics),

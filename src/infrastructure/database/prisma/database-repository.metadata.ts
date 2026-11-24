@@ -41,7 +41,6 @@ export type ModelName =
   | 'Notification'
   | 'PushDeviceToken'
   | 'PushNotificationJob'
-  | 'LoadTestSeedJob'
   | 'Friend'
   | 'Comment'
   | 'CommentLike'
@@ -115,7 +114,6 @@ export const relationModels: Record<ModelName, Record<string, ModelName>> = {
   Like: { activity: 'Activity', profile: 'Profile' },
   MediaCleanupJob: {},
   EmailNotificationJob: {},
-  LoadTestSeedJob: {},
   UserSession: { user: 'User' },
   Notification: { recipient: 'User', actor: 'User', pushJob: 'PushNotificationJob' },
   PushDeviceToken: { user: 'User' },
@@ -174,7 +172,6 @@ export const dateFields: Record<ModelName, ReadonlySet<string>> = {
   Like: new Set(['date']),
   MediaCleanupJob: new Set(['createdAt', 'startedAt', 'finishedAt']),
   EmailNotificationJob: new Set(['availableAt', 'createdAt', 'startedAt', 'finishedAt']),
-  LoadTestSeedJob: new Set(['createdAt', 'startedAt', 'finishedAt']),
   UserSession: new Set(['lastSeenAt', 'lastLocationAt', 'createdAt', 'revokedAt']),
   Notification: new Set(['createdAt', 'readAt']),
   PushDeviceToken: new Set(['createdAt', 'updatedAt']),

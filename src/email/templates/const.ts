@@ -24,11 +24,11 @@ export const emailLayoutStyles = {
     color: emailColors.text,
     fontFamily: emailFontFamily,
     margin: 0,
-    padding: '28px 14px',
+    padding: '28px 0',
   } satisfies CSSProperties,
   container: {
     margin: '0 auto',
-    maxWidth: '720px',
+    maxWidth: '100%',
     width: '100%',
   } satisfies CSSProperties,
   header: {

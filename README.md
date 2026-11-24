@@ -145,8 +145,6 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | VK_CLIENT_ID                 | VK ID application client ID                                                              |
 | VK_REDIRECT_URI              | Registered VK OAuth callback URL                                                         |
 | RUNICH_PROCESS               | Process role: api or worker                                                              |
-| LOAD_TEST_SEED_TOKEN         | Required only to enqueue the protected stage/local load-test job                         |
-| LOAD_TEST_ASSET_MANIFEST_KEY | Optional S3 key of the prepared load-test manifest                                       |
 
 Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. If Yandex
 has a network failure or returns a temporary SMTP error, and both Mail.ru
@@ -204,42 +202,6 @@ The API removes temporary local migration files after uploading them to S3. The
 worker downloads an archive to its own temporary filesystem, processes it, and
 removes the S3 object after a terminal status. An interrupted job keeps its S3
 archive so the worker can resume it.
-
-### Stage feed load-test
-
-The controlled load-test fixture is separate from the automatic mock seed. It
-uses 100 dedicated mock users, 100 activities per user, 10 activity likes, 10
-comments and one comment like per activity. The target user both follows those
-100 users (so their activities appear in the feed) and is followed by them (so
-the target has 100 followers). The fixture is written by the background
-worker in batches and can be resumed safely after a restart.
-
-Prepare the archive assets from a machine that has the stage S3 variables:
-
-    yarn load-test:prepare /path/to/export.zip stage-feed-v1
-
-Before a real upload, append `--dry-run` to validate the archive and report the
-asset counts without writing to S3.
-
-The command uploads only 25 photo variants, 100 compressed route templates and
-one manifest under `load-test/stage-feed-v1/`. It does not upload the full
-Strava archive. Then set a strong `LOAD_TEST_SEED_TOKEN` in both Railway
-stage services and enqueue the job:
-
-    curl -X POST https://runich-backend-stage.up.railway.app/load-test/seed \
-      -H 'content-type: application/json' \
-      -H 'x-load-test-token: <token>' \
-      -d '{"runId":"stage-feed-v1"}'
-
-Poll `GET /load-test/seed/:runId` with the same header. To remove only this
-fixture, call `DELETE /load-test/seed/:runId`; it removes users whose email is
-scoped to that run, their activities and relations, and the job record. Shared
-S3 templates remain available for another run.
-
-The seed marks copied activities as media-processing `completed`, so the
-regular media worker does not download the same 25 photos 10,000 times. This
-test measures the feed/database path; media blurhash processing should be
-tested as a separate workload.
 
 ### Timeweb stage
 
@@ -304,7 +266,6 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 | `yarn db:sync`                               | Synchronize the database with the current contract        |
 | `yarn db:migrate:prod`                       | Apply and verify checked-in Prisma 8 migrations           |
 | `yarn db:seed`                               | Seed the configured database                              |
-| `yarn load-test:prepare [archive] [version]` | Upload 25 photo variants, 100 routes and a manifest to S3 |
 
 ### Tests
 
