@@ -31,5 +31,8 @@ yarn madge --ts-config ./tsconfig.json --warning --circular --extensions ts ./sr
 # 9. Проверка неиспользуемых экспортов (Prisma/generated/d.ts исключены)
 yarn ts-prune --ignore 'tsdown\.config\.ts|src/admin/admin-access\.constants\.ts|src/moderation/moderation\.constants\.ts|tests/mocks/nestjs-throttler\.ts|src/email/templates/index\.ts|src/infrastructure|^prisma/|(^|/)generated/|(^|/)(migrations|snapshots)/|\.d\.ts$|prisma\.config\.ts|\.spec\.ts$'
 
-# 10. Проверка неиспользуемых зависимостей (диагностическая)
+# 10. Проверка доступных обновлений зависимостей
+yarn deps
+
+# 11. Проверка неиспользуемых зависимостей (диагностическая)
 yarn depcheck || true
