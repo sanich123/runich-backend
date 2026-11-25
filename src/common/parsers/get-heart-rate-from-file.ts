@@ -70,7 +70,7 @@ export async function getHeartRateFromFile(filePath: string, migrationDirectory:
       event = await SportsLib.importFromFit(fileBuffer as ArrayBuffer);
     } else if (extension === '.gpx') {
       const gpx = await readFile(inputFilePath, { encoding: 'utf-8' });
-      event = await SportsLib.importFromGPX(gpx, parseXml);
+      event = await SportsLib.importFromGPX(gpx, DOMParser);
     } else if (extension === '.tcx') {
       const tcx = await readFile(inputFilePath, { encoding: 'utf-8' });
       event = await SportsLib.importFromTCX(parseXml(tcx));

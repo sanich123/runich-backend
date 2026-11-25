@@ -21,6 +21,7 @@ module.exports = {
     '!src/**/*.spec.ts',
   ],
   coverageDirectory: '../coverage',
+  coverageReporters: ['json', 'json-summary'],
   coverageThreshold: {
     global: {
       branches: 85,
@@ -29,5 +30,6 @@ module.exports = {
       statements: 85,
     },
   },
+  silent: true,
   testEnvironment: 'node',
 };

@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import { Logger } from '@nestjs/common';
+import { DOMParser } from 'xmldom-qsa';
 import { asyncMock } from 'src/tests/helpers';
 import { MAX_ACTIVITY_HEART_RATE_SAMPLES } from 'src/common/constants';
 
@@ -75,9 +76,7 @@ describe('getHeartRateFromFile', () => {
     await expect(getHeartRateFromFile('activities/run.tcx', '/tmp/migration')).resolves.toEqual({ samples: [] });
 
     expect(readFile).toHaveBeenNthCalledWith(1, '/tmp/migration/activities/run.gpx', { encoding: 'utf-8' });
-    expect(importFromGPX).toHaveBeenCalledWith('<gpx/>', expect.any(Function));
-    const [, parseGpxXml] = importFromGPX.mock.calls[0] as unknown as [string, (xml: string) => unknown];
-    expect(parseGpxXml('<gpx/>')).toBeDefined();
+    expect(importFromGPX).toHaveBeenCalledWith('<gpx/>', DOMParser);
     expect(readFile).toHaveBeenNthCalledWith(2, '/tmp/migration/activities/run.tcx', { encoding: 'utf-8' });
     expect(importFromTCX).toHaveBeenCalledWith(expect.any(Object));
   });
