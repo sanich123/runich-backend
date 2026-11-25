@@ -2794,9 +2794,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/common@npm:12.6.1":
-  version: 12.6.1
-  resolution: "@nestjs/common@npm:12.6.1"
+"@nestjs/common@npm:12.6.2":
+  version: 12.6.2
+  resolution: "@nestjs/common@npm:12.6.2"
   dependencies:
     "@standard-schema/spec": "npm:1.1.0"
     file-type: "npm:22.3.0"
@@ -2814,13 +2814,13 @@ __metadata:
       optional: true
     class-validator:
       optional: true
-  checksum: 10c0/80c8b8e6fffa20640c10ebf42594caacf16878f35667c1a6528eafea6daa0c745a5c11c3439200c6d9eb38d556d3de9554211f32f6ff069f838952ded8d28dde
+  checksum: 10c0/6c85e62f7e898450c2577701af847473b34ef6c309aa39eb257e6ab3e1392377252dc823f22951bd0559f8c6356748e413dfe9ecdd9ea11f04043395e91dabaf
   languageName: node
   linkType: hard
 
-"@nestjs/core@npm:12.6.1":
-  version: 12.6.1
-  resolution: "@nestjs/core@npm:12.6.1"
+"@nestjs/core@npm:12.6.2":
+  version: 12.6.2
+  resolution: "@nestjs/core@npm:12.6.2"
   dependencies:
     fast-safe-stringify: "npm:2.1.1"
     iterare: "npm:1.2.1"
@@ -2841,7 +2841,7 @@ __metadata:
       optional: true
     "@nestjs/websockets":
       optional: true
-  checksum: 10c0/78eb625d5f20a6933b1fa9ca013546c04a395049996d83bebf226d20609dfc17204a57bd9af41c06183f1cb7645ec12d877536c4dc7819f4a722047f93063a67
+  checksum: 10c0/f2c45b26cdf5108d4ec26a6e55a69c58b2c3c215c0bb85302011815d1c9a2db049f2672b5110e7c47db54e051aaa5390f564f96b9470ce59b8ab4b53c039efd0
   languageName: node
   linkType: hard
 
@@ -2931,9 +2931,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/platform-express@npm:12.6.1":
-  version: 12.6.1
-  resolution: "@nestjs/platform-express@npm:12.6.1"
+"@nestjs/platform-express@npm:12.6.2":
+  version: 12.6.2
+  resolution: "@nestjs/platform-express@npm:12.6.2"
   dependencies:
     cors: "npm:2.8.6"
     express: "npm:5.3.0"
@@ -2944,7 +2944,7 @@ __metadata:
     "@nestjs/common": ^12.0.0
     "@nestjs/core": ^12.0.0
     rxjs: ^7.1.0
-  checksum: 10c0/1b0906af00f08686345289448cb9514cb0e6d3c83de70c96323a464a46c886e32d255f62cc1af3cae8a0de81bf09610aae1675beae205c625c8bce11f6577f15
+  checksum: 10c0/e383a4c71ed690e61ddfd0558745922a472a882c6612a0bedb0705437c209e4dd75f3615f4520987f0ba98027b17191f62eede2d56539004c7f9dc1a9a274f81
   languageName: node
   linkType: hard
 
@@ -3018,9 +3018,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/testing@npm:12.6.1":
-  version: 12.6.1
-  resolution: "@nestjs/testing@npm:12.6.1"
+"@nestjs/testing@npm:12.6.2":
+  version: 12.6.2
+  resolution: "@nestjs/testing@npm:12.6.2"
   dependencies:
     tslib: "npm:2.9.1"
   peerDependencies:
@@ -3033,7 +3033,7 @@ __metadata:
       optional: true
     "@nestjs/platform-express":
       optional: true
-  checksum: 10c0/d8d6be633189089e3f4e4dc8b325b04598538a787fb7bd914a3c345d5875720ad47c396fa25221cc8ecec3f3d5068d6d424ce105005cec294ae7ea5751bf3e0e
+  checksum: 10c0/dd7827ace907d536ab4a9ec628fd44cdab295625b1fde5335c2d2e7a5ced3b0327f93448e49102ba0631d931e91602c783104c3dd178229fe869a054342d585e
   languageName: node
   linkType: hard
 
@@ -4910,12 +4910,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:^19.3.2":
-  version: 19.3.2
-  resolution: "@types/react@npm:19.3.2"
+"@types/react@npm:^19.3.3":
+  version: 19.3.3
+  resolution: "@types/react@npm:19.3.3"
   dependencies:
     csstype: "npm:^3.2.2"
-  checksum: 10c0/a48b88520146e39681fedd80f0a56002fa58ca588e44a8332136ac02e9c68511c1bb96fadfb24ada1f3c7a1c0f0a99578c603179b1ae771883aa85852a133d22
+  checksum: 10c0/b435951e715578f769df747431bcdd95e07b93238008365622b76d46e3ec76235c869d3007b2ea9063c30f05c35dc3baa2d9833bf09c3faf1e548f0e028f79ec
   languageName: node
   linkType: hard
 
@@ -12671,15 +12671,15 @@ __metadata:
     "@mapbox/polyline": "npm:^1.2.1"
     "@maplibre/maplibre-gl-native": "npm:6.5.0-pre.1"
     "@nestjs/cli": "npm:12.0.15"
-    "@nestjs/common": "npm:12.6.1"
-    "@nestjs/core": "npm:12.6.1"
+    "@nestjs/common": "npm:12.6.2"
+    "@nestjs/core": "npm:12.6.2"
     "@nestjs/jwt": "npm:12.0.5"
     "@nestjs/observe": "npm:0.3.28"
     "@nestjs/passport": "npm:12.0.2"
-    "@nestjs/platform-express": "npm:12.6.1"
+    "@nestjs/platform-express": "npm:12.6.2"
     "@nestjs/schematics": "npm:12.0.16"
     "@nestjs/swagger": "npm:12.1.2"
-    "@nestjs/testing": "npm:12.6.1"
+    "@nestjs/testing": "npm:12.6.2"
     "@nestjs/throttler": "npm:6.8.0"
     "@prisma/cli-engine": "npm:0.10.4"
     "@prisma/management-api-sdk": "npm:^1.104.0"
@@ -12696,7 +12696,7 @@ __metadata:
     "@types/node": "npm:^26.6.10"
     "@types/passport-jwt": "npm:^4.0.2"
     "@types/pg": "npm:^8.23.1"
-    "@types/react": "npm:^19.3.2"
+    "@types/react": "npm:^19.3.3"
     "@types/supertest": "npm:^7.2.1"
     "@types/uuid": "npm:^11.0.0"
     "@we-gold/gpxjs": "npm:^1.2.1"
