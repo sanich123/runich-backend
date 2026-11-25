@@ -147,7 +147,7 @@ function assertQueryOptions(model: ModelName, options: AnyRecord | undefined) {
     if (selection === undefined) continue;
     assertRecord(selection, `${model}.${key}`);
     for (const [field, config] of Object.entries(selection)) {
-      if (field === '_count' && key === 'select') {
+      if (field === '_count' && (key === 'select' || key === 'include')) {
         assertRecord(config, `${model}.${key}._count`);
         const countSelection = config.select;
         if (countSelection === undefined) continue;
