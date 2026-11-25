@@ -1,8 +1,8 @@
 import { getCoordinatesFromFitFile, parseFitActivityFromFile } from './get-coordinates-from-fit';
-import { getCoordinatesFromTcxFile } from './get-coordinates-from-tcx';
-import { getCoordinatesFromGpxFile } from './get-coordinates-from-gpx';
+import { getCoordinatesFromTcxFile, parseTcxActivityFromFile } from './get-coordinates-from-tcx';
+import { getCoordinatesFromGpxFile, parseGpxActivityFromFile } from './get-coordinates-from-gpx';
 import { existsSync } from 'node:fs';
-import { join } from 'path';
+import { extname, join } from 'path';
 import { LocationObject } from 'src/activity/dto/activity.dto';
 import { Logger } from '@nestjs/common';
 import { resolveMigrationPath } from './migration-path';
@@ -49,6 +49,30 @@ export async function parseFitActivityFromMigrationFile(
     return await parseFitActivityFromFile(inputFilePath);
   } catch (error) {
     logger.error(`Не удалось обработать FIT-файл ${filePath}`, error instanceof Error ? error.stack : String(error));
+    throw error;
+  }
+}
+
+export async function parseActivityDataFromMigrationFile(
+  filePath: string,
+  migrationDirectory = join(process.cwd(), 'dist', 'migration'),
+) {
+  try {
+    const inputFilePath = resolveMigrationPath(migrationDirectory, filePath);
+    if (!existsSync(inputFilePath)) {
+      throw new Error(`Файл с координатами не найден: ${filePath}`);
+    }
+
+    const extension = extname(filePath).toLowerCase();
+    if (extension === '.gpx') return await parseGpxActivityFromFile(inputFilePath);
+    if (extension === '.tcx') return await parseTcxActivityFromFile(inputFilePath);
+    if (extension === '.fit') return await parseFitActivityFromFile(inputFilePath);
+    return { locations: [], heartRateData: { samples: [] } };
+  } catch (error) {
+    logger.error(
+      `Не удалось обработать файл миграции ${filePath}`,
+      error instanceof Error ? error.stack : String(error),
+    );
     throw error;
   }
 }

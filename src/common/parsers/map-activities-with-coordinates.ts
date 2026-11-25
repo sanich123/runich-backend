@@ -1,5 +1,5 @@
 import { extname, join } from 'path';
-import { parseCoordinatesFromFile, parseFitActivityFromMigrationFile } from './parse-coordinates-from-file';
+import { parseActivityDataFromMigrationFile } from './parse-coordinates-from-file';
 import { ungzipFile } from './ungzip';
 import { getMapBoxImage } from './get-mapbox-image';
 import { getSpeedInMinsInKm } from './get-speed';
@@ -10,7 +10,7 @@ import type { MigratedActivity } from 'src/activity/shared/types';
 import { Logger } from '@nestjs/common';
 import { calculateKilometreSplits } from './calculate-kilometre-splits';
 import { reduceLocations } from './reduce-locations';
-import { getHeartRateFromFile, type ParsedHeartRate } from './get-heart-rate-from-file';
+import type { ParsedHeartRate } from './get-heart-rate-from-file';
 
 const logger = new Logger('ActivityMapper');
 const MIGRATION_BATCH_SIZE = 8;
@@ -95,16 +95,17 @@ export async function mapActivitiesWithCoordinates({
             }
 
             const fileExtension = extname(fileName).toLowerCase();
-            if (fileExtension === Extensions.fit) {
-              const parsedFit = await parseFitActivityFromMigrationFile(fileName, migrationDirectory);
-              rawLocations = parsedFit.locations;
-              heartRateData = parsedFit.heartRateData;
-            } else if (fileExtension === Extensions.gpx || fileExtension === Extensions.tcx) {
-              rawLocations = await parseCoordinatesFromFile(fileName, migrationDirectory);
-              heartRateData = await getHeartRateFromFile(
+            if (
+              fileExtension === Extensions.fit ||
+              fileExtension === Extensions.gpx ||
+              fileExtension === Extensions.tcx
+            ) {
+              const parsedActivity = await parseActivityDataFromMigrationFile(
                 fileName,
                 migrationDirectory ?? join(process.cwd(), 'dist', 'migration'),
               );
+              rawLocations = parsedActivity.locations;
+              heartRateData = parsedActivity.heartRateData;
             }
 
             const movingTime = Number(activity['Moving Time']);

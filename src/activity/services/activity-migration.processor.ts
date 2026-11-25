@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { rm } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { setImmediate as yieldToEventLoop, setTimeout as delay } from 'node:timers/promises';
+import { performance } from 'node:perf_hooks';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { mapActivitiesWithCoordinates } from 'src/common/parsers/map-activities-with-coordinates';
 import { parseCsvFileIntoArray } from 'src/common/parsers/parse-csv';
@@ -43,6 +44,7 @@ export class ActivityMigrationProcessor {
     };
 
     try {
+      const downloadStartedAt = performance.now();
       if (isLegacyLocalArchive) {
         if (!(await fileExists(job.archivePath))) throw new Error('Файл архива миграции не найден');
       } else {
@@ -52,14 +54,21 @@ export class ActivityMigrationProcessor {
           'Файл архива миграции не найден',
         );
       }
+      const downloadDurationMs = Math.round(performance.now() - downloadStartedAt);
 
+      const unzipStartedAt = performance.now();
       const archiveStats = await unzipTransferArchive(archivePath, workDirectory);
+      const unzipDurationMs = Math.round(performance.now() - unzipStartedAt);
       this.logger.log(
         `Migration job ${job.id}: ${archiveStats.compressedBytes} compressed bytes, ` +
-          `${archiveStats.uncompressedBytes} uncompressed bytes, ${archiveStats.entries} entries`,
+          `${archiveStats.uncompressedBytes} uncompressed bytes, ${archiveStats.entries} entries, ` +
+          `download=${downloadDurationMs}ms, unzip=${unzipDurationMs}ms`,
       );
 
+      const csvStartedAt = performance.now();
       const parsedActivities = await parseCsvFileIntoArray(workDirectory);
+      const csvDurationMs = Math.round(performance.now() - csvStartedAt);
+      this.logger.log(`Migration job ${job.id}: csv=${csvDurationMs}ms, activities=${parsedActivities.length}`);
       if (progress.processedActivities > parsedActivities.length) {
         throw new Error('Сохранённый прогресс миграции превышает количество активностей в архиве');
       }
@@ -77,16 +86,22 @@ export class ActivityMigrationProcessor {
         }
 
         const sourceBatch = parsedActivities.slice(offset, offset + this.batchSize);
+        const mappingStartedAt = performance.now();
         const mappedBatch = await mapActivitiesWithCoordinates({
           parsedActivities: sourceBatch,
           userId: job.userId,
           profileId: job.profileId,
           migrationDirectory: workDirectory,
         });
+        const mappingDurationMs = Math.round(performance.now() - mappingStartedAt);
 
+        const persistenceStartedAt = performance.now();
         progress = await this.persistBatch(job.id, sourceBatch.length, mappedBatch, progress);
-        this.logger.debug(
-          `Migration job ${job.id}: processed=${progress.processedActivities}/${parsedActivities.length}, ` +
+        const persistenceDurationMs = Math.round(performance.now() - persistenceStartedAt);
+        this.logger.log(
+          `Migration job ${job.id}: batch=${offset + 1}-${offset + sourceBatch.length}, ` +
+            `map=${mappingDurationMs}ms, persist=${persistenceDurationMs}ms, ` +
+            `processed=${progress.processedActivities}/${parsedActivities.length}, ` +
             `imported=${progress.importedActivities}, skipped=${progress.skippedActivities}`,
         );
 
