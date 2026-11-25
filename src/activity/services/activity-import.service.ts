@@ -13,6 +13,7 @@ import { chunkArray } from 'src/common/parsers/chunk-array';
 import { calculateActiveCalories, generateActivityTitle } from '../shared/utils';
 import { ACTIVITY_ENRICHMENT_STATUS, ACTIVITY_MEDIA_PROCESSING_STATUS } from '../shared/const';
 import type { ActivityDatabase, MigratedActivity } from '../shared/types';
+import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 
 @Injectable()
 export class ActivityImportService {
@@ -26,6 +27,7 @@ export class ActivityImportService {
     @Optional() @Inject(MediaCleanupService) private readonly mediaCleanupService: MediaCleanupService | undefined,
     @Inject(ActivityWriteService) private readonly writeService: ActivityWriteService,
     @Inject(ActivityMediaService) private readonly mediaService: ActivityMediaService,
+    @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
   ) {}
 
   async getWatchWorkoutSyncCandidates(workouts: WatchWorkoutImportIdentityDto[], userId: string) {
@@ -328,6 +330,30 @@ export class ActivityImportService {
               if (failedPreparation?.status === 'rejected') throw failedPreparation.reason;
             }
             const mediaPreparationDurationMs = Math.round(performance.now() - mediaPreparationStartedAt);
+            const mediaPhaseMetrics = this.latencyMetrics
+              ?.drainSnapshots()
+              .filter(
+                ({ category, name }) =>
+                  (category === 'processing' &&
+                    [
+                      'activity_route.encode',
+                      'activity_heart_rate.encode',
+                      'static_map.vector.render',
+                      'static_map.route_only.render',
+                    ].includes(name)) ||
+                  (category === 'external' &&
+                    [
+                      's3.activityRoute.putObject',
+                      's3.activityHeartRate.putObject',
+                      's3.activityMap.putObject',
+                      's3.routeOnlyMap.putObject',
+                    ].includes(name)),
+              )
+              .map(
+                ({ category, name, count, p50, p95 }) =>
+                  `${category}.${name}=n${count}/p50:${Math.round(p50)}ms/p95:${Math.round(p95)}ms`,
+              )
+              .join(',');
 
             const preparedData = preparedActivities.map(({ data }) => {
               const activityData = { ...data };
@@ -365,7 +391,8 @@ export class ActivityImportService {
             const dbWriteDurationMs = Math.round(performance.now() - dbWriteStartedAt);
             this.logger.log(
               `Strava import batch: activities=${activityBatch.length}, ` +
-                `media_prepare=${mediaPreparationDurationMs}ms, db_write=${dbWriteDurationMs}ms`,
+                `media_prepare=${mediaPreparationDurationMs}ms, db_write=${dbWriteDurationMs}ms` +
+                (mediaPhaseMetrics ? `, media_phases=[${mediaPhaseMetrics}]` : ''),
             );
             return result;
           } catch (error) {

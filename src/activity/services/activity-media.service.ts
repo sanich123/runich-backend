@@ -190,39 +190,44 @@ export class ActivityMediaService {
     let routeOnlyMapKey: string | undefined;
 
     try {
-      if (heartRateSamples?.length && this.storageService) {
-        heartRateKey = await this.storageService.uploadActivityHeartRateSamples(
-          activity.userId,
-          activityId,
-          heartRateSamples,
-        );
-      }
-
-      const routeMetadata =
+      const [heartRateResult, routeResult, mapResult, routeOnlyMapResult] = await Promise.allSettled([
+        heartRateSamples?.length && this.storageService
+          ? this.storageService.uploadActivityHeartRateSamples(activity.userId, activityId, heartRateSamples)
+          : Promise.resolve(undefined),
         activity.locations?.length && this.storageService
-          ? await this.storageService.uploadActivityRoute(activity.userId, activityId, activity.locations)
-          : undefined;
-      routeKey = routeMetadata?.key;
-      const generatedMap =
+          ? this.storageService.uploadActivityRoute(activity.userId, activityId, activity.locations)
+          : Promise.resolve(undefined),
         activity.locations?.length && this.staticMapService
-          ? await this.staticMapService.generateActivityMap({
+          ? this.staticMapService.generateActivityMap({
               userId: activity.userId,
               activityId,
               locations: activity.locations,
               hideMap: false,
             })
-          : undefined;
-      mapKey = generatedMap?.key;
-      const generatedRouteOnlyMap =
+          : Promise.resolve(undefined),
         activity.locations?.length && activity.hideMap
-          ? await this.staticMapService?.generateActivityMap({
+          ? this.staticMapService?.generateActivityMap({
               userId: activity.userId,
               activityId,
               locations: activity.locations,
               hideMap: true,
             })
-          : undefined;
-      routeOnlyMapKey = generatedRouteOnlyMap?.key;
+          : Promise.resolve(undefined),
+      ]);
+
+      if (heartRateResult.status === 'fulfilled') heartRateKey = heartRateResult.value;
+      if (routeResult.status === 'fulfilled') routeKey = routeResult.value?.key;
+      if (mapResult.status === 'fulfilled') mapKey = mapResult.value?.key;
+      if (routeOnlyMapResult.status === 'fulfilled') routeOnlyMapKey = routeOnlyMapResult.value?.key;
+
+      const failedResult = [heartRateResult, routeResult, mapResult, routeOnlyMapResult].find(
+        (result) => result.status === 'rejected',
+      );
+      if (failedResult?.status === 'rejected') throw failedResult.reason;
+
+      const routeMetadata = routeResult.status === 'fulfilled' ? routeResult.value : undefined;
+      const generatedMap = mapResult.status === 'fulfilled' ? mapResult.value : undefined;
+      const generatedRouteOnlyMap = routeOnlyMapResult.status === 'fulfilled' ? routeOnlyMapResult.value : undefined;
 
       const dataWithoutLocations = { ...activity } as unknown as Record<string, unknown>;
       delete dataWithoutLocations.locations;

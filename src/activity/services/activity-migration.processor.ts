@@ -92,6 +92,7 @@ export class ActivityMigrationProcessor {
           userId: job.userId,
           profileId: job.profileId,
           migrationDirectory: workDirectory,
+          activityIndexOffset: offset,
         });
         const mappingDurationMs = Math.round(performance.now() - mappingStartedAt);
 

@@ -1,5 +1,7 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { performance } from 'node:perf_hooks';
 import { getMapBoxImage } from 'src/common/parsers/get-mapbox-image';
+import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { getActivityMapKey, getActivityRouteOnlyMapKey } from 'src/storage/shared/storage-key';
 import { StorageService } from 'src/storage/services/storage.service';
 import { STATIC_MAP_CACHE_CONTROL, STATIC_MAP_MAX_CONCURRENCY } from './static-map.constants';
@@ -19,7 +21,10 @@ export class StaticMapService {
   private activeRenders = 0;
   private readonly renderWaiters: Array<() => void> = [];
 
-  constructor(@Inject(StorageService) private readonly storageService: StorageService) {}
+  constructor(
+    @Inject(StorageService) private readonly storageService: StorageService,
+    @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
+  ) {}
 
   async generateActivityMap(input: GenerateActivityMapInput): Promise<GeneratedActivityMap | null> {
     const locations = normalizeStaticMapLocations(input.locations);
@@ -57,15 +62,22 @@ export class StaticMapService {
 
     const release = await this.acquireRenderSlot();
     try {
-      const renderedImage = await renderRouteOnlyMap(locations);
-      await validateStaticMap(renderedImage);
+      const renderStartedAt = performance.now();
+      let renderedImage: Buffer;
+      try {
+        renderedImage = await renderRouteOnlyMap(locations);
+        await validateStaticMap(renderedImage);
+      } finally {
+        this.latencyMetrics?.observeProcessing('static_map.route_only.render', performance.now() - renderStartedAt);
+      }
       const key = getActivityRouteOnlyMapKey(userId, activityId);
-      const uploaded = await this.storageService.uploadObject(
-        key,
-        renderedImage,
-        'image/webp',
-        STATIC_MAP_CACHE_CONTROL,
-      );
+      const uploadStartedAt = performance.now();
+      let uploaded: Awaited<ReturnType<StorageService['uploadObject']>>;
+      try {
+        uploaded = await this.storageService.uploadObject(key, renderedImage, 'image/webp', STATIC_MAP_CACHE_CONTROL);
+      } finally {
+        this.latencyMetrics?.observeExternal('s3', 'routeOnlyMap.putObject', performance.now() - uploadStartedAt);
+      }
       return { url: uploaded.url, key: uploaded.key };
     } finally {
       release();
@@ -83,16 +95,23 @@ export class StaticMapService {
     try {
       const route = locations.map(({ coords }) => [coords.longitude, coords.latitude] as [number, number]);
       const viewport = calculateStaticMapViewport(route);
-      const renderedImage = await renderRunichVectorMap(route, viewport.center, viewport.zoom);
-      await validateStaticMap(renderedImage);
+      const renderStartedAt = performance.now();
+      let renderedImage: Buffer;
+      try {
+        renderedImage = await renderRunichVectorMap(route, viewport.center, viewport.zoom);
+        await validateStaticMap(renderedImage);
+      } finally {
+        this.latencyMetrics?.observeProcessing('static_map.vector.render', performance.now() - renderStartedAt);
+      }
 
       const key = getActivityMapKey(userId, activityId);
-      const uploaded = await this.storageService.uploadObject(
-        key,
-        renderedImage,
-        'image/webp',
-        STATIC_MAP_CACHE_CONTROL,
-      );
+      const uploadStartedAt = performance.now();
+      let uploaded: Awaited<ReturnType<StorageService['uploadObject']>>;
+      try {
+        uploaded = await this.storageService.uploadObject(key, renderedImage, 'image/webp', STATIC_MAP_CACHE_CONTROL);
+      } finally {
+        this.latencyMetrics?.observeExternal('s3', 'activityMap.putObject', performance.now() - uploadStartedAt);
+      }
       return { url: uploaded.url, key: uploaded.key };
     } finally {
       release();

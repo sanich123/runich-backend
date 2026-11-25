@@ -1,6 +1,8 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
+import { performance } from 'node:perf_hooks';
 import { StorageCoreService } from './storage-core.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { BadRequestException } from '@nestjs/common';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createReadStream } from 'node:fs';
@@ -19,6 +21,7 @@ export class StorageActivityService {
   constructor(
     @Inject(StorageCoreService) private readonly core: StorageCoreService,
     @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
+    @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
   ) {}
 
   async uploadMigrationArchive(userId: string, migrationId: string, filePath: string) {
@@ -51,22 +54,34 @@ export class StorageActivityService {
 
   async uploadActivityRoute(userId: string, activityId: string, locations: LocationObject[]) {
     this.core.assertConfigured();
-    const { body, metadata } = await encodeActivityRoute(locations);
+    const encodeStartedAt = performance.now();
+    let encoded: Awaited<ReturnType<typeof encodeActivityRoute>>;
+    try {
+      encoded = await encodeActivityRoute(locations);
+    } finally {
+      this.latencyMetrics?.observeProcessing('activity_route.encode', performance.now() - encodeStartedAt);
+    }
+    const { body, metadata } = encoded;
     const key = getActivityRouteKey(userId, activityId);
 
-    await this.core.measureS3('putObject', () =>
-      this.core.client.send(
-        new PutObjectCommand({
-          Bucket: this.core.settings.bucket,
-          Key: key,
-          Body: body,
-          ContentLength: body.byteLength,
-          ContentType: 'application/json',
-          ContentEncoding: 'gzip',
-          CacheControl: 'private, no-store',
-        }),
-      ),
-    );
+    const uploadStartedAt = performance.now();
+    try {
+      await this.core.measureS3('putObject', () =>
+        this.core.client.send(
+          new PutObjectCommand({
+            Bucket: this.core.settings.bucket,
+            Key: key,
+            Body: body,
+            ContentLength: body.byteLength,
+            ContentType: 'application/json',
+            ContentEncoding: 'gzip',
+            CacheControl: 'private, no-store',
+          }),
+        ),
+      );
+    } finally {
+      this.latencyMetrics?.observeExternal('s3', 'activityRoute.putObject', performance.now() - uploadStartedAt);
+    }
 
     this.activityRouteCache.delete(key);
     return { key, ...metadata } satisfies ActivityRouteStorageMetadata;
@@ -78,21 +93,33 @@ export class StorageActivityService {
 
   async uploadActivityHeartRateSamples(userId: string, activityId: string, samples: ActivityHeartRateSampleObject[]) {
     this.core.assertConfigured();
-    const { body, key } = await encodeActivityHeartRateSamples(userId, activityId, samples);
+    const encodeStartedAt = performance.now();
+    let encoded: Awaited<ReturnType<typeof encodeActivityHeartRateSamples>>;
+    try {
+      encoded = await encodeActivityHeartRateSamples(userId, activityId, samples);
+    } finally {
+      this.latencyMetrics?.observeProcessing('activity_heart_rate.encode', performance.now() - encodeStartedAt);
+    }
+    const { body, key } = encoded;
 
-    await this.core.measureS3('putObject', () =>
-      this.core.client.send(
-        new PutObjectCommand({
-          Bucket: this.core.settings.bucket,
-          Key: key,
-          Body: body,
-          ContentLength: body.byteLength,
-          ContentType: 'application/json',
-          ContentEncoding: 'gzip',
-          CacheControl: 'private, no-store',
-        }),
-      ),
-    );
+    const uploadStartedAt = performance.now();
+    try {
+      await this.core.measureS3('putObject', () =>
+        this.core.client.send(
+          new PutObjectCommand({
+            Bucket: this.core.settings.bucket,
+            Key: key,
+            Body: body,
+            ContentLength: body.byteLength,
+            ContentType: 'application/json',
+            ContentEncoding: 'gzip',
+            CacheControl: 'private, no-store',
+          }),
+        ),
+      );
+    } finally {
+      this.latencyMetrics?.observeExternal('s3', 'activityHeartRate.putObject', performance.now() - uploadStartedAt);
+    }
 
     return key;
   }

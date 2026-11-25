@@ -22,12 +22,13 @@ export class LatencyMetricsService {
   });
   private readonly operationDuration = new Histogram({
     name: 'runich_operation_duration_seconds',
-    help: 'Database and external operation duration in seconds.',
+    help: 'Database, external, and application processing duration in seconds.',
     labelNames: ['category', 'operation'],
-    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
+    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 30, 60, 120],
     registers: [this.registry],
   });
   private readonly samples = new Map<string, number[]>();
+  private readonly pendingSamples = new Map<string, number[]>();
 
   constructor() {
     collectDefaultMetrics({ register: this.registry, prefix: 'runich_' });
@@ -45,6 +46,13 @@ export class LatencyMetricsService {
     metricSamples.push(durationMs);
     if (metricSamples.length > MAX_SAMPLES_PER_METRIC) metricSamples.shift();
     this.samples.set(key, metricSamples);
+
+    if (category !== 'http') {
+      const pending = this.pendingSamples.get(key) ?? [];
+      pending.push(durationMs);
+      if (pending.length > MAX_SAMPLES_PER_METRIC) pending.shift();
+      this.pendingSamples.set(key, pending);
+    }
   }
 
   observeHttp(endpoint: string, durationMs: number, statusCode?: number) {
@@ -68,6 +76,10 @@ export class LatencyMetricsService {
 
   observeExternal(service: string, operation: string, durationMs: number) {
     this.observe('external', `${service}.${operation}`, durationMs);
+  }
+
+  observeProcessing(operation: string, durationMs: number) {
+    this.observe('processing', operation, durationMs);
   }
 
   getSnapshot(category: LatencyCategory, name: string): LatencySnapshot | null {
@@ -94,6 +106,25 @@ export class LatencyMetricsService {
         return this.getSnapshot(category, name);
       })
       .filter((snapshot): snapshot is LatencySnapshot => snapshot !== null);
+  }
+
+  drainSnapshots() {
+    const snapshots = [...this.pendingSamples.entries()].map(([key, metricSamples]) => {
+      const separatorIndex = key.indexOf(':');
+      const category = key.slice(0, separatorIndex) as LatencyCategory;
+      const name = key.slice(separatorIndex + 1);
+      const sortedSamples = [...metricSamples].sort((left, right) => left - right);
+      return {
+        category,
+        name,
+        count: sortedSamples.length,
+        p50: percentile(sortedSamples, 50),
+        p95: percentile(sortedSamples, 95),
+        p99: percentile(sortedSamples, 99),
+      } satisfies LatencySnapshot;
+    });
+    this.pendingSamples.clear();
+    return snapshots;
   }
 
   getPrometheusMetrics() {

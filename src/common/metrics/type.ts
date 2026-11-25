@@ -1,4 +1,4 @@
-export type LatencyCategory = 'db' | 'external' | 'http';
+export type LatencyCategory = 'db' | 'external' | 'http' | 'processing';
 
 export type LatencySnapshot = {
   category: LatencyCategory;
