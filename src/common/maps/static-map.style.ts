@@ -24,17 +24,10 @@ export type RunichMapStyle = {
   [key: string]: unknown;
 };
 
-let baseStylePromise: Promise<RunichMapStyle> | undefined;
+let preparedBaseStylePromise: Promise<RunichMapStyle> | undefined;
 
 export async function createRunichMapStyle(route: [number, number][]) {
-  const baseStyle = await getBaseStyle();
-  const style = structuredClone(baseStyle);
-  const requiredLayers = insertAdditionalNaturalLayers(
-    style.layers.filter(isRequiredLayer).map(enhanceMapLayer),
-    findVectorSourceId(style.layers),
-  );
-  const usedSourceIds = new Set(requiredLayers.map((layer) => layer.source).filter(Boolean));
-  style.sources = Object.fromEntries(Object.entries(style.sources).filter(([sourceId]) => usedSourceIds.has(sourceId)));
+  const style = structuredClone(await getPreparedBaseStyle());
 
   style.sources['runich-route'] = {
     type: 'geojson',
@@ -45,7 +38,7 @@ export async function createRunichMapStyle(route: [number, number][]) {
     },
   };
   style.layers = [
-    ...requiredLayers,
+    ...style.layers,
     {
       id: 'runich-route',
       type: 'line',
@@ -63,15 +56,29 @@ export async function createRunichMapStyle(route: [number, number][]) {
   return style;
 }
 
-function getBaseStyle() {
-  if (!baseStylePromise) {
-    baseStylePromise = fetchBaseStyle().catch((error) => {
-      baseStylePromise = undefined;
-      throw error;
-    });
+function getPreparedBaseStyle() {
+  if (!preparedBaseStylePromise) {
+    preparedBaseStylePromise = fetchBaseStyle()
+      .then((baseStyle) => {
+        const style = structuredClone(baseStyle);
+        const requiredLayers = insertAdditionalNaturalLayers(
+          style.layers.filter(isRequiredLayer).map(enhanceMapLayer),
+          findVectorSourceId(style.layers),
+        );
+        const usedSourceIds = new Set(requiredLayers.map((layer) => layer.source).filter(Boolean));
+        style.sources = Object.fromEntries(
+          Object.entries(style.sources).filter(([sourceId]) => usedSourceIds.has(sourceId)),
+        );
+        style.layers = requiredLayers;
+        return style;
+      })
+      .catch((error) => {
+        preparedBaseStylePromise = undefined;
+        throw error;
+      });
   }
 
-  return baseStylePromise;
+  return preparedBaseStylePromise;
 }
 
 async function fetchBaseStyle(): Promise<RunichMapStyle> {

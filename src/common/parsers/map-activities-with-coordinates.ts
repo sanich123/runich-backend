@@ -1,7 +1,6 @@
 import { extname, join } from 'path';
 import { parseActivityDataFromMigrationFile } from './parse-coordinates-from-file';
 import { ungzipFile } from './ungzip';
-import { getMapBoxImage } from './get-mapbox-image';
 import { getSpeedInMinsInKm } from './get-speed';
 import { Extensions, RawStravaCsvColumns } from './types';
 import { v4 } from 'uuid';
@@ -15,7 +14,6 @@ import type { ParsedHeartRate } from './get-heart-rate-from-file';
 
 const logger = new Logger('ActivityMapper');
 const MIGRATION_BATCH_SIZE = 8;
-const MAX_MAP_IMAGE_LOCATIONS = 500;
 const MIN_HEART_RATE = 1;
 const MAX_HEART_RATE = 300;
 
@@ -164,11 +162,6 @@ export async function mapActivitiesWithCoordinates({
             const csvCaloriesActive = parseCaloriesValue(activity.Calories);
             const csvAverageHeartRate = parseHeartRateValue(activity['Average Heart Rate']);
             const csvMaxHeartRate = parseHeartRateValue(activity['Max Heart Rate']);
-            const mapPhotoUrl =
-              rawLocations.length > 1 && process.env.MAPBOX_ACCESS_TOKEN
-                ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS))
-                : '';
-
             return {
               id: v4(),
               source: 'strava',
@@ -193,7 +186,7 @@ export async function mapActivitiesWithCoordinates({
                 ? { maxHeartRate: csvMaxHeartRate ?? heartRateData.statistics?.maxHeartRate }
                 : {}),
               userId,
-              mapPhotoUrl,
+              mapPhotoUrl: '',
               profileId,
             };
           }),

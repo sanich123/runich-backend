@@ -91,9 +91,9 @@ describe('mapActivitiesWithCoordinates', () => {
       5,
     );
     expect(activity.kilometresSplit?.[0].lastKilometerAltitude).toBeGreaterThan(0);
-    expect(activity.mapPhotoUrl).toBe('https://map.example/route');
+    expect(activity.mapPhotoUrl).toBe('');
     expect(parseActivityDataFromMigrationFile).toHaveBeenCalledWith('activities/run.gpx', '/tmp/migration-job-1');
-    expect(getMapBoxImage).toHaveBeenCalledWith(createRoute());
+    expect(getMapBoxImage).not.toHaveBeenCalled();
   });
 
   it('uses the CSV distance to keep imported split count consistent with the activity', async () => {
@@ -221,7 +221,7 @@ describe('mapActivitiesWithCoordinates', () => {
     expect(activities[1]).not.toHaveProperty('caloriesActive');
   });
 
-  it('unzips and parses TCX routes before generating a map image', async () => {
+  it('unzips and parses TCX routes without generating a Mapbox fallback URL', async () => {
     ungzipFile.mockResolvedValue(undefined);
 
     const [activity] = await mapActivitiesWithCoordinates({
@@ -242,7 +242,8 @@ describe('mapActivitiesWithCoordinates', () => {
       ],
     });
 
-    expect(activity.mapPhotoUrl).toBe('https://map.example/route');
+    expect(activity.mapPhotoUrl).toBe('');
+    expect(getMapBoxImage).not.toHaveBeenCalled();
     expect(ungzipFile).toHaveBeenCalledWith('activities/run.tcx.gz', '/tmp/migration-job-2');
     expect(parseActivityDataFromMigrationFile).toHaveBeenCalledWith('activities/run.tcx', '/tmp/migration-job-2');
   });

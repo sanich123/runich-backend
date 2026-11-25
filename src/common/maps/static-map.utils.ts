@@ -82,11 +82,28 @@ function getRamerDouglasPeuckerIndexes(
 
   while (segments.length) {
     const [startIndex, endIndex] = segments.pop()!;
+    const start = points[startIndex];
+    const end = points[endIndex];
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    const segmentLengthSquared = deltaX ** 2 + deltaY ** 2;
     let farthestIndex = -1;
     let farthestDistance = toleranceMeters;
 
     for (let index = startIndex + 1; index < endIndex; index += 1) {
-      const distance = getPointToSegmentDistance(points[index], points[startIndex], points[endIndex]);
+      const point = points[index];
+      let distance: number;
+      if (segmentLengthSquared === 0) {
+        distance = Math.hypot(point.x - start.x, point.y - start.y);
+      } else {
+        const projection = Math.max(
+          0,
+          Math.min(1, ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY) / segmentLengthSquared),
+        );
+        const projectedX = start.x + projection * deltaX;
+        const projectedY = start.y + projection * deltaY;
+        distance = Math.hypot(point.x - projectedX, point.y - projectedY);
+      }
       if (distance > farthestDistance) {
         farthestDistance = distance;
         farthestIndex = index;
@@ -100,22 +117,6 @@ function getRamerDouglasPeuckerIndexes(
   }
 
   return [...selectedIndexes].sort((left, right) => left - right);
-}
-
-function getPointToSegmentDistance(point: ProjectedLocation, start: ProjectedLocation, end: ProjectedLocation) {
-  const deltaX = end.x - start.x;
-  const deltaY = end.y - start.y;
-  const segmentLengthSquared = deltaX ** 2 + deltaY ** 2;
-
-  if (segmentLengthSquared === 0) return Math.hypot(point.x - start.x, point.y - start.y);
-
-  const projection = Math.max(
-    0,
-    Math.min(1, ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY) / segmentLengthSquared),
-  );
-  const projectedX = start.x + projection * deltaX;
-  const projectedY = start.y + projection * deltaY;
-  return Math.hypot(point.x - projectedX, point.y - projectedY);
 }
 
 export function calculateStaticMapBbox(route: [number, number][]): [number, number, number, number] {
@@ -169,13 +170,19 @@ export function calculateStaticMapViewport(route: [number, number][]): StaticMap
 }
 
 function getProjectedStaticMapExtent(route: [number, number][], zoom: number) {
-  const projectedRoute = route.map(
-    ([longitude, latitude]) => [longitudeToX(longitude, zoom), latitudeToY(latitude, zoom)] as [number, number],
-  );
-  const minX = Math.min(...projectedRoute.map(([x]) => x));
-  const maxX = Math.max(...projectedRoute.map(([x]) => x));
-  const minY = Math.min(...projectedRoute.map(([, y]) => y));
-  const maxY = Math.max(...projectedRoute.map(([, y]) => y));
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const [longitude, latitude] of route) {
+    const x = longitudeToX(longitude, zoom);
+    const y = latitudeToY(latitude, zoom);
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
 
   return { minX, minY, maxX, maxY };
 }
