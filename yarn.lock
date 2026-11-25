@@ -2874,9 +2874,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/observe@npm:0.3.27":
-  version: 0.3.27
-  resolution: "@nestjs/observe@npm:0.3.27"
+"@nestjs/observe@npm:0.3.28":
+  version: 0.3.28
+  resolution: "@nestjs/observe@npm:0.3.28"
   dependencies:
     "@jridgewell/trace-mapping": "npm:0.3.31"
   peerDependencies:
@@ -2917,7 +2917,7 @@ __metadata:
       optional: true
   bin:
     observe: dist/cli/observe-cli.js
-  checksum: 10c0/a9fa9d3829b470cd5153765814c1822019afa72306772de924831faf344f1eb30a5ba013944cf136048682950f3b98c864337cc98b825a4b46023e6983cc8b27
+  checksum: 10c0/801213bb56c7cf3d6ed18bafa3dc44259618c63969db645086efdbb78c83ed089b7319784ad4ff328d5e19b8926fb4443339eb5a525ab2ea02e0243e661d5fce
   languageName: node
   linkType: hard
 
@@ -12674,7 +12674,7 @@ __metadata:
     "@nestjs/common": "npm:12.6.1"
     "@nestjs/core": "npm:12.6.1"
     "@nestjs/jwt": "npm:12.0.5"
-    "@nestjs/observe": "npm:0.3.27"
+    "@nestjs/observe": "npm:0.3.28"
     "@nestjs/passport": "npm:12.0.2"
     "@nestjs/platform-express": "npm:12.6.1"
     "@nestjs/schematics": "npm:12.0.16"

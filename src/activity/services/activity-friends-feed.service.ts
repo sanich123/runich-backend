@@ -18,16 +18,18 @@ export class ActivityFriendsFeedService {
     @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
   ) {}
 
-  resolveFeedProfilePhoto<T extends ActivityFeedSqlRow>(activity: T): T {
+  resolveFeedProfilePhoto(activity: ActivityFeedSqlRow): ActivityFeedSqlRow {
     const rawProfile = activity.profile;
     if (!rawProfile || typeof rawProfile !== 'object' || Array.isArray(rawProfile)) return activity;
 
-    const { profilePhotoAssetStatus, profilePhotoPublishedKey, ...profile } = rawProfile as Record<string, unknown>;
+    const profile = Object.fromEntries(Object.entries(rawProfile));
+    const profilePhotoAssetStatus = profile.profilePhotoAssetStatus;
+    const profilePhotoPublishedKey = profile.profilePhotoPublishedKey;
     if (profilePhotoAssetStatus === 'approved' && typeof profilePhotoPublishedKey === 'string' && this.storageService) {
       profile.profilePhoto = this.storageService.getPublicUrl(profilePhotoPublishedKey);
     }
 
-    return { ...activity, profile } as T;
+    return { ...activity, profile };
   }
 
   async getAllActivitiesWithFriends(
@@ -205,8 +207,7 @@ export class ActivityFriendsFeedService {
             }
           : {}),
         hasMore,
-        nextCursor:
-          hasMore && activities.length ? encodeActivityCursor(activities.at(-1)! as unknown as ActivityCursor) : null,
+        nextCursor: hasMore && activities.length ? encodeActivityCursor(activities.at(-1)!) : null,
         isLastPage: !hasMore,
       };
     } catch (error) {

@@ -57,6 +57,7 @@ export function normalizeActivityCardForViewer<T extends Record<string, unknown>
   const normalizedActivity = hideActivityMapForViewer(normalizeActivityCard(activityWithoutPendingMedia), viewerId);
   const profile = normalizedActivity.profile as { allowActivityElevationViewing?: boolean } | undefined;
   const isOwner = typeof viewerId === 'string' && normalizedActivity.userId === viewerId;
+  // Response normalization changes presentation fields but preserves the activity cursor keys.
   if (isOwner || profile?.allowActivityElevationViewing !== false) return normalizedActivity as T;
   return { ...normalizedActivity, elevationGain: null } as T;
 }
