@@ -1,4 +1,4 @@
-import { applyDecorators, DynamicModule, Global, Module, SetMetadata } from '@nestjs/common';
+import { applyDecorators as applyNestDecorators, DynamicModule, Global, Module, SetMetadata } from '@nestjs/common';
 
 type ThrottlerSettings = {
   ttl?: number;
@@ -16,6 +16,33 @@ const THROTTLER_BLOCK_DURATION = 'THROTTLER:BLOCK_DURATION';
 const THROTTLER_TRACKER = 'THROTTLER:TRACKER';
 const THROTTLER_KEY_GENERATOR = 'THROTTLER:KEY_GENERATOR';
 const THROTTLER_SKIP = 'THROTTLER:SKIP';
+
+function applyDecorators(decorators: Array<ClassDecorator & MethodDecorator>): ClassDecorator & MethodDecorator {
+  const applyNestDecorator = applyNestDecorators(...decorators);
+
+  function applyDecorator(target: object): void;
+  function applyDecorator(
+    target: object,
+    propertyKey: string | symbol,
+    descriptor: TypedPropertyDescriptor<unknown>,
+  ): void;
+  function applyDecorator(
+    target: object,
+    propertyKey?: string | symbol,
+    descriptor?: TypedPropertyDescriptor<unknown>,
+  ): void {
+    if (propertyKey === undefined && typeof target === 'function') {
+      applyNestDecorator(target);
+      return;
+    }
+
+    if (propertyKey !== undefined && descriptor !== undefined) {
+      applyNestDecorator(target, propertyKey, descriptor);
+    }
+  }
+
+  return applyDecorator;
+}
 
 export class ThrottlerGuard {
   canActivate(): boolean {
@@ -44,11 +71,9 @@ export function Throttle(options: ThrottleOptions): ClassDecorator & MethodDecor
     SetMetadata(`${THROTTLER_KEY_GENERATOR}${name}`, settings.generateKey),
   ]);
 
-  return applyDecorators(...metadataDecorators);
+  return applyDecorators(metadataDecorators);
 }
 
 export function SkipThrottle(skip: Record<string, boolean> = { default: true }): ClassDecorator & MethodDecorator {
-  return applyDecorators(
-    ...Object.entries(skip).map(([name, value]) => SetMetadata(`${THROTTLER_SKIP}${name}`, value)),
-  );
+  return applyDecorators(Object.entries(skip).map(([name, value]) => SetMetadata(`${THROTTLER_SKIP}${name}`, value)));
 }
