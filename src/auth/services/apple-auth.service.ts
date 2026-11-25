@@ -85,6 +85,8 @@ export class AppleAuthService {
       }
     }
 
+    if (!user) throw new ConflictException('Не удалось получить аккаунт Apple после авторизации');
+
     await this.superuserEmailBootstrapService.grantIfAllowlisted(user.id, user.email);
     await this.prisma.user.update({
       where: { id: user.id },

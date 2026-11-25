@@ -92,7 +92,7 @@ export type GroupRow = {
   categoryTags?: string[];
   photoAssetId?: string | null;
   photoAsset?: { status: string; publishedKey: string | null; blurhash: string | null } | null;
-  moderationStatus?: 'visible' | 'hidden' | 'removed';
+  moderationStatus?: 'pending' | 'processing' | 'visible' | 'hidden' | 'removed';
   privacy: 'open' | 'closed';
   locationName: string | null;
   createdAt: Date | string;

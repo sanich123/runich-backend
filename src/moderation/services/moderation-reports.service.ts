@@ -1,11 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-  Optional,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { StorageService } from 'src/storage/services/storage.service';
 import { ModerationTargetsService } from './moderation-targets.service';
@@ -29,13 +22,12 @@ export class ModerationReportsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(StorageService) private readonly storage: StorageService,
     @Inject(ModerationTargetsService) private readonly targets: ModerationTargetsService,
-    @Optional() @Inject(ModerationReportsQueryService) reportQueries?: ModerationReportsQueryService,
-    @Optional()
+    @Inject(ModerationReportsQueryService) reportQueries: ModerationReportsQueryService,
     @Inject(ModerationEmailActionValidationService)
-    emailActionValidation?: ModerationEmailActionValidationService,
+    emailActionValidation: ModerationEmailActionValidationService,
   ) {
-    this.reportQueries = reportQueries ?? new ModerationReportsQueryService(prisma, storage);
-    this.emailActionValidation = emailActionValidation ?? new ModerationEmailActionValidationService(prisma);
+    this.reportQueries = reportQueries;
+    this.emailActionValidation = emailActionValidation;
   }
 
   async submitReport(reporterId: string, request: SubmitContentReportDto) {

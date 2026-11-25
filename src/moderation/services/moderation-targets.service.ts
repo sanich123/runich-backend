@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ContentReportTargetType, ModerationTarget } from '../shared/moderation.types';
 import { ModerationContentNotificationsService } from './moderation-content-notifications.service';
@@ -9,11 +9,9 @@ export class ModerationTargetsService {
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Optional()
-    @Inject(ModerationContentNotificationsService)
-    contentNotifications?: ModerationContentNotificationsService,
+    @Inject(ModerationContentNotificationsService) contentNotifications: ModerationContentNotificationsService,
   ) {
-    this.contentNotifications = contentNotifications ?? new ModerationContentNotificationsService();
+    this.contentNotifications = contentNotifications;
   }
 
   async resolveReportTarget(targetType: ContentReportTargetType, targetId: string): Promise<ModerationTarget | null> {

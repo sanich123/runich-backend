@@ -1,6 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
-import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { StorageService } from 'src/storage/services/storage.service';
+import { Inject, Injectable } from '@nestjs/common';
 import type { ModerationActionDto, ModerationAppealDecisionDto, SubmitContentReportDto } from './dto/moderation.dto';
 import { UserBlocksService } from './services/user-blocks.service';
 import { ModerationReportsService } from './services/moderation-reports.service';
@@ -17,17 +15,15 @@ export class ModerationService {
   private readonly appeals: ModerationAppealsService;
 
   constructor(
-    @Inject(PrismaService) prisma: PrismaService,
-    @Inject(StorageService) storage: StorageService,
-    @Optional() @Inject(ModerationTargetsService) targets?: ModerationTargetsService,
-    @Optional() @Inject(ModerationReportsService) reports?: ModerationReportsService,
-    @Optional() @Inject(UserBlocksService) blocks?: UserBlocksService,
-    @Optional() @Inject(ModerationAppealsService) appeals?: ModerationAppealsService,
+    @Inject(ModerationTargetsService) targets: ModerationTargetsService,
+    @Inject(ModerationReportsService) reports: ModerationReportsService,
+    @Inject(UserBlocksService) blocks: UserBlocksService,
+    @Inject(ModerationAppealsService) appeals: ModerationAppealsService,
   ) {
-    this.targets = targets ?? new ModerationTargetsService(prisma);
-    this.reports = reports ?? new ModerationReportsService(prisma, storage, this.targets);
-    this.blocks = blocks ?? new UserBlocksService(prisma);
-    this.appeals = appeals ?? new ModerationAppealsService(prisma, this.targets);
+    this.targets = targets;
+    this.reports = reports;
+    this.blocks = blocks;
+    this.appeals = appeals;
   }
 
   async submitReport(reporterId: string, request: SubmitContentReportDto) {

@@ -7,6 +7,7 @@ import { MAX_ATTEMPTS, MAX_RETRY_DELAY_MS, STALE_JOB_AGE_MS } from './email-noti
 import { EMAIL_NOTIFICATION_JOB_STATUS } from './email-notification.constants';
 import { EmailNotificationResolver } from './email-notification.resolver';
 import { StorageService } from 'src/storage/services/storage.service';
+import type { RepositoryWhere } from 'src/infrastructure/database/prisma/database-repository.metadata';
 
 @Injectable()
 export class EmailNotificationWorkerService {
@@ -108,11 +109,12 @@ export class EmailNotificationWorkerService {
   }
 
   private async requeueInterruptedJobs() {
+    const staleJobWhere: RepositoryWhere<'EmailNotificationJob'> = {
+      status: EMAIL_NOTIFICATION_JOB_STATUS.processing,
+      startedAt: { lt: new Date(Date.now() - STALE_JOB_AGE_MS) },
+    };
     await this.prisma.emailNotificationJob.updateMany({
-      where: {
-        status: EMAIL_NOTIFICATION_JOB_STATUS.processing,
-        startedAt: { lt: new Date(Date.now() - STALE_JOB_AGE_MS) },
-      },
+      where: staleJobWhere,
       data: {
         status: EMAIL_NOTIFICATION_JOB_STATUS.queued,
         startedAt: null,

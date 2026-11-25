@@ -1,32 +1,20 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
-import { AccountService } from 'src/account/account.service';
-import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { StorageService } from 'src/storage/services/storage.service';
-import { ActivityAccessService } from './activity-access.service';
+import { Inject, Injectable } from '@nestjs/common';
 import { ActivityContentReadService } from './activity-content-read.service';
 import { ActivityFeedService } from './activity-feed.service';
+import { ActivityRouteFeedService } from './activity-route-feed.service';
+import { ActivityFriendsFeedService } from './activity-friends-feed.service';
 import type { ActivityCursor, ActivityMediaCursor } from '../shared/activity.pagination';
 import type { ActivityRouteWorkoutFilters } from '../shared/types';
 import { DEFAULT_ACTIVITY_PAGE_SIZE } from '../shared/const';
 
 @Injectable()
 export class ActivityReadService {
-  private readonly contentService: ActivityContentReadService;
-  private readonly feedService: ActivityFeedService;
-
   constructor(
-    @Inject(PrismaService) prisma: PrismaService,
-    @Inject(AccountService) accountService: AccountService,
-    @Inject(ActivityAccessService) accessService: ActivityAccessService,
-    @Optional() @Inject(StorageService) storageService?: StorageService,
-    @Optional() @Inject(ActivityContentReadService) contentService?: ActivityContentReadService,
-    @Optional() @Inject(ActivityFeedService) feedService?: ActivityFeedService,
-  ) {
-    this.contentService = contentService ?? new ActivityContentReadService(prisma, accessService, storageService);
-    this.feedService =
-      feedService ??
-      new ActivityFeedService(prisma, accountService, accessService, this.contentService, storageService);
-  }
+    @Inject(ActivityContentReadService) private readonly contentService: ActivityContentReadService,
+    @Inject(ActivityFeedService) private readonly feedService: ActivityFeedService,
+    @Inject(ActivityRouteFeedService) private readonly routeFeedService: ActivityRouteFeedService,
+    @Inject(ActivityFriendsFeedService) private readonly friendsFeedService: ActivityFriendsFeedService,
+  ) {}
 
   async getLocationsByActivityId(id: string, currentUserId?: string, raw = false) {
     return await this.contentService.getLocationsByActivityId(id, currentUserId, raw);
@@ -58,7 +46,7 @@ export class ActivityReadService {
     cursor: ActivityCursor | undefined,
     filters: ActivityRouteWorkoutFilters,
   ) {
-    return await this.feedService.getActivitiesWithRoutes(currentUserId, take, cursor, filters);
+    return await this.routeFeedService.getActivitiesWithRoutes(currentUserId, take, cursor, filters);
   }
 
   async getActivitesByUserId(
@@ -80,6 +68,6 @@ export class ActivityReadService {
     cursor?: ActivityCursor,
     currentUserId = id,
   ) {
-    return await this.feedService.getAllActivitiesWithFriends(id, take, cursor, currentUserId);
+    return await this.friendsFeedService.getAllActivitiesWithFriends(id, take, cursor, currentUserId);
   }
 }

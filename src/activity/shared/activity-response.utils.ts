@@ -49,7 +49,7 @@ export function hideActivityMapForViewer<T extends Record<string, unknown>>(acti
   };
 }
 
-export function normalizeActivityCardForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {
+export function normalizeActivityCardForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string): T {
   const activityWithoutPendingMedia = hidePendingActivityTextForViewer(
     hidePendingActivityMediaForViewer(activity, viewerId),
     viewerId,
@@ -57,8 +57,8 @@ export function normalizeActivityCardForViewer<T extends Record<string, unknown>
   const normalizedActivity = hideActivityMapForViewer(normalizeActivityCard(activityWithoutPendingMedia), viewerId);
   const profile = normalizedActivity.profile as { allowActivityElevationViewing?: boolean } | undefined;
   const isOwner = typeof viewerId === 'string' && normalizedActivity.userId === viewerId;
-  if (isOwner || profile?.allowActivityElevationViewing !== false) return normalizedActivity;
-  return { ...normalizedActivity, elevationGain: null };
+  if (isOwner || profile?.allowActivityElevationViewing !== false) return normalizedActivity as T;
+  return { ...normalizedActivity, elevationGain: null } as T;
 }
 
 export function hidePendingActivityTextForViewer<T extends Record<string, unknown>>(activity: T, viewerId?: string) {

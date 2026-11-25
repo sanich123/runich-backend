@@ -1,24 +1,35 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Prisma ORM collections are dynamic at this boundary. */
 import { param } from '@prisma/orm-postgres/relational-core/expression';
 import type { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { databaseClient } from './client';
 import { getCodecId, quoteIdentifier, SQL_CASTS } from './database-repository.metadata';
-import type { AnyRecord, ModelName, RawSqlBuilder, RuntimeClient } from './database-repository.metadata';
+import type {
+  AnyRecord,
+  ModelName,
+  RawSqlBuilder,
+  RepositoryMutation,
+  RepositoryQueryOptions,
+  RepositoryQueryResult,
+  RepositoryScalarMutation,
+  RepositoryUniqueQueryOptions,
+  RepositoryUniqueWhere,
+  RuntimeClient,
+} from './database-repository.metadata';
 import {
   applyOptions,
   normalizeCriterion,
   normalizeMutationInput,
   normalizeOutput,
   restoreCountShape,
+  validateCreateManyOptions,
 } from './database-repository.query';
 import type { CountSpec } from './database-repository.query';
 
 export type { RuntimeClient };
 
-export class ModelRepository {
+export class ModelRepository<Model extends ModelName> {
   constructor(
     private readonly client: RuntimeClient,
-    private readonly model: ModelName,
+    private readonly model: Model,
     private readonly latencyMetrics?: LatencyMetricsService,
   ) {}
 
@@ -26,9 +37,13 @@ export class ModelRepository {
     return (this.client.orm as AnyRecord).public[this.model];
   }
 
-  private async read(options: AnyRecord | undefined, first: boolean) {
+  private async read(
+    options: RepositoryQueryOptions<Model> | RepositoryUniqueQueryOptions<Model> | undefined,
+    first: boolean,
+  ) {
     const countSpecs: CountSpec[] = [];
-    const collection = applyOptions(this.root, this.model, options, countSpecs);
+    // The runtime adapter accepts a dynamic Prisma-shaped query; applyOptions validates its fields before evaluation.
+    const collection = applyOptions(this.root, this.model, options as AnyRecord | undefined, countSpecs);
     const row = first ? await collection.first() : await collection.all();
     const normalized = normalizeOutput(this.model, row);
     return first
@@ -45,33 +60,49 @@ export class ModelRepository {
     }
   }
 
-  findUnique(options: AnyRecord): Promise<any> {
-    return this.measure('findUnique', () => this.read(options, true));
+  findUnique<const Options extends RepositoryUniqueQueryOptions<Model>>(
+    options: Options,
+  ): Promise<RepositoryQueryResult<Model, Options> | null> {
+    return this.measure('findUnique', () => this.read(options, true)) as Promise<RepositoryQueryResult<
+      Model,
+      Options
+    > | null>;
   }
 
-  findFirst(options: AnyRecord): Promise<any> {
-    return this.measure('findFirst', () => this.read(options, true));
+  findFirst<const Options extends RepositoryQueryOptions<Model>>(
+    options: Options,
+  ): Promise<RepositoryQueryResult<Model, Options> | null> {
+    return this.measure('findFirst', () => this.read(options, true)) as Promise<RepositoryQueryResult<
+      Model,
+      Options
+    > | null>;
   }
 
-  findMany(options?: AnyRecord): Promise<any> {
-    return this.measure('findMany', () => this.read(options, false));
+  findMany<const Options extends RepositoryQueryOptions<Model> | undefined = undefined>(
+    options?: Options,
+  ): Promise<Array<RepositoryQueryResult<Model, Options>>> {
+    return this.measure('findMany', () => this.read(options, false)) as Promise<
+      Array<RepositoryQueryResult<Model, Options>>
+    >;
   }
 
-  count(options?: AnyRecord): Promise<number> {
+  count(options?: RepositoryQueryOptions<Model>): Promise<number> {
     return this.measure('count', async () => {
-      const collection = applyOptions(this.root, this.model, options, []);
+      const collection = applyOptions(this.root, this.model, options as AnyRecord | undefined, []);
       const result = await collection.aggregate((aggregate: AnyRecord) => ({ count: aggregate.count() }));
       return result.count;
     });
   }
 
-  create(options: AnyRecord): Promise<any> {
+  create<const Options extends RepositoryQueryOptions<Model> & { data: RepositoryMutation<Model> }>(
+    options: Options,
+  ): Promise<RepositoryQueryResult<Model, Options>> {
     return this.measure('create', async () => {
       const countSpecs: CountSpec[] = [];
-      const collection = applyOptions(this.root, this.model, options, countSpecs);
+      const collection = applyOptions(this.root, this.model, options as AnyRecord, countSpecs);
       const row = await collection.create(normalizeMutationInput(this.model, options.data));
-      return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
-    });
+      return restoreCountShape(normalizeOutput(this.model, row), countSpecs) as RepositoryQueryResult<Model, Options>;
+    }) as Promise<RepositoryQueryResult<Model, Options>>;
   }
 
   private executePlan(plan: AnyRecord) {
@@ -110,9 +141,13 @@ export class ModelRepository {
     return rawPlan.affectedCount().build();
   }
 
-  createMany(options: AnyRecord): Promise<{ count: number }> {
+  createMany(options: {
+    data: readonly RepositoryScalarMutation<Model>[];
+    skipDuplicates?: boolean;
+  }): Promise<{ count: number }> {
     return this.measure('createMany', async () => {
-      const data = options.data as AnyRecord[];
+      validateCreateManyOptions(this.model, options as unknown as AnyRecord);
+      const data = options.data as readonly AnyRecord[];
       if (!data.length) return { count: 0 };
 
       const modelSpec = (databaseClient.contract as AnyRecord).domain.namespaces.public.models[this.model];
@@ -121,9 +156,10 @@ export class ModelRepository {
 
       for (const item of data) {
         const normalized = normalizeMutationInput(this.model, item) as AnyRecord;
-        const row = Object.fromEntries(
-          Object.entries(normalized).filter(([field, value]) => field in modelFields && value !== undefined),
-        );
+        const normalizedEntries = Object.entries(normalized);
+        const invalidField = normalizedEntries.find(([field]) => !(field in modelFields))?.[0];
+        if (invalidField) throw new TypeError(`Unknown scalar field in ${this.model}.createMany.data: ${invalidField}`);
+        const row = Object.fromEntries(normalizedEntries.filter(([, value]) => value !== undefined));
         const fields = Object.keys(row).sort();
         const shape = fields.join('\u0000');
         const group = rowsByShape.get(shape) ?? { fields, rows: [] };
@@ -142,47 +178,57 @@ export class ModelRepository {
     });
   }
 
-  update(options: AnyRecord): Promise<any> {
+  update<const Options extends RepositoryUniqueQueryOptions<Model> & { data: RepositoryMutation<Model> }>(
+    options: Options,
+  ): Promise<RepositoryQueryResult<Model, Options>> {
     return this.measure('update', async () => {
       const countSpecs: CountSpec[] = [];
-      const collection = applyOptions(this.root, this.model, options, countSpecs);
+      const collection = applyOptions(this.root, this.model, options as AnyRecord, countSpecs);
       const row = await collection.update(normalizeMutationInput(this.model, options.data));
-      return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
-    });
+      return restoreCountShape(normalizeOutput(this.model, row), countSpecs) as RepositoryQueryResult<Model, Options>;
+    }) as Promise<RepositoryQueryResult<Model, Options>>;
   }
 
-  updateMany(options: AnyRecord): Promise<{ count: number }> {
+  updateMany(options: RepositoryQueryOptions<Model> & { data: RepositoryMutation<Model> }): Promise<{ count: number }> {
     return this.measure('updateMany', async () => {
-      const collection = applyOptions(this.root, this.model, options, []);
+      const collection = applyOptions(this.root, this.model, options as AnyRecord, []);
       return { count: await collection.updateAndCount(normalizeMutationInput(this.model, options.data)) };
     });
   }
 
-  delete(options: AnyRecord): Promise<any> {
+  delete<const Options extends RepositoryUniqueQueryOptions<Model>>(
+    options: Options,
+  ): Promise<RepositoryQueryResult<Model, Options> | null> {
     return this.measure('delete', async () => {
-      const collection = applyOptions(this.root, this.model, options, []);
-      return normalizeOutput(this.model, await collection.delete());
-    });
+      const collection = applyOptions(this.root, this.model, options as AnyRecord, []);
+      return normalizeOutput(this.model, await collection.delete()) as RepositoryQueryResult<Model, Options> | null;
+    }) as Promise<RepositoryQueryResult<Model, Options> | null>;
   }
 
-  deleteMany(options: AnyRecord): Promise<{ count: number }> {
+  deleteMany(options: RepositoryQueryOptions<Model>): Promise<{ count: number }> {
     return this.measure('deleteMany', async () => {
-      const collection = applyOptions(this.root, this.model, options, []);
+      const collection = applyOptions(this.root, this.model, options as AnyRecord, []);
       return { count: await collection.deleteAndCount() };
     });
   }
 
-  upsert(options: AnyRecord): Promise<any> {
+  upsert<
+    const Options extends Omit<RepositoryQueryOptions<Model>, 'where'> & {
+      where: RepositoryUniqueWhere<Model>;
+      create: RepositoryMutation<Model>;
+      update: RepositoryMutation<Model>;
+    },
+  >(options: Options): Promise<RepositoryQueryResult<Model, Options>> {
     return this.measure('upsert', async () => {
       const countSpecs: CountSpec[] = [];
-      const collection = applyOptions(this.root, this.model, options, countSpecs);
+      const collection = applyOptions(this.root, this.model, options as AnyRecord, countSpecs);
       const row = await collection.upsert({
         create: normalizeMutationInput(this.model, options.create),
         update: normalizeMutationInput(this.model, options.update),
         conflictOn: normalizeCriterion(this.model, options.where),
       });
-      return restoreCountShape(normalizeOutput(this.model, row), countSpecs);
-    });
+      return restoreCountShape(normalizeOutput(this.model, row), countSpecs) as RepositoryQueryResult<Model, Options>;
+    }) as Promise<RepositoryQueryResult<Model, Options>>;
   }
 }
 

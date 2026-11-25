@@ -1,9 +1,5 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { AccountService } from 'src/account/account.service';
-import { StorageService } from 'src/storage/services/storage.service';
-import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
-import { StaticMapService } from 'src/common/maps/static-map.service';
 import {
   ActivityDto,
   type ActivityMediaObject,
@@ -20,7 +16,6 @@ import type {
   HomeFeedCursors,
   MigratedActivity,
 } from '../shared/types';
-import { ActivityPersistenceService } from './activity-persistence.service';
 import { ActivityAccessService } from './activity-access.service';
 import { ActivityReadService } from './activity-read.service';
 import { ActivityMediaService } from './activity-media.service';
@@ -31,53 +26,12 @@ import { ActivityImportService } from './activity-import.service';
 export class ActivityService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(AccountService) private readonly accountService: AccountService,
-    @Optional() @Inject(ActivityPersistenceService) persistenceService?: ActivityPersistenceService,
-    @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
-    @Optional() @Inject(MediaCleanupService) private readonly mediaCleanupService?: MediaCleanupService,
-    @Optional() @Inject(StaticMapService) private readonly staticMapService?: StaticMapService,
-    @Optional() @Inject(ActivityAccessService) activityAccessService?: ActivityAccessService,
-    @Optional() @Inject(ActivityReadService) activityReadService?: ActivityReadService,
-    @Optional() @Inject(ActivityMediaService) activityMediaService?: ActivityMediaService,
-    @Optional() @Inject(ActivityWriteService) activityWriteService?: ActivityWriteService,
-    @Optional() @Inject(ActivityImportService) activityImportService?: ActivityImportService,
-  ) {
-    const persistence = persistenceService ?? new ActivityPersistenceService(this.prisma);
-    const access = activityAccessService ?? new ActivityAccessService(this.prisma);
-    this.readService =
-      activityReadService ?? new ActivityReadService(this.prisma, this.accountService, access, this.storageService);
-    this.mediaService =
-      activityMediaService ??
-      new ActivityMediaService(this.prisma, this.storageService, this.mediaCleanupService, this.staticMapService);
-    this.writeService =
-      activityWriteService ??
-      new ActivityWriteService(
-        this.prisma,
-        this.accountService,
-        persistence,
-        this.storageService,
-        this.mediaCleanupService,
-        this.staticMapService,
-        this.mediaService,
-      );
-    this.importService =
-      activityImportService ??
-      new ActivityImportService(
-        this.prisma,
-        this.accountService,
-        persistence,
-        this.mediaCleanupService,
-        this.writeService,
-        this.mediaService,
-      );
-    this.accessService = access;
-  }
-
-  private readonly readService: ActivityReadService;
-  private readonly mediaService: ActivityMediaService;
-  private readonly writeService: ActivityWriteService;
-  private readonly importService: ActivityImportService;
-  private readonly accessService: ActivityAccessService;
+    @Inject(ActivityAccessService) private readonly accessService: ActivityAccessService,
+    @Inject(ActivityReadService) private readonly readService: ActivityReadService,
+    @Inject(ActivityMediaService) private readonly mediaService: ActivityMediaService,
+    @Inject(ActivityWriteService) private readonly writeService: ActivityWriteService,
+    @Inject(ActivityImportService) private readonly importService: ActivityImportService,
+  ) {}
 
   async canAccessActivity(id: string, currentUserId?: string) {
     return await this.accessService.canAccessActivity(id, currentUserId);

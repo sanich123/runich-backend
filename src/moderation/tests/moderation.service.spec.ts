@@ -3,7 +3,7 @@ import { BadRequestException, ConflictException, ForbiddenException, NotFoundExc
 import { asyncMock, transactionMock } from 'src/tests/helpers';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
-import { ModerationService } from '../moderation.service';
+import { createModerationService } from './helpers/moderation-service.factory';
 import { makeModerationReport, makeSpamActivityReport } from './fixtures';
 
 function createPrismaMock() {
@@ -51,7 +51,7 @@ function createPrismaMock() {
 describe('ModerationService', () => {
   it('creates one report and queues a moderator email without exposing the reporter in the email job', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const createdReport = { id: 'report-1', status: 'open', createdAt: new Date() };
     prisma.activity.findUnique.mockResolvedValue({ id: 'activity-1', userId: 'author-1', moderationStatus: 'visible' });
     prisma.contentReport.findFirst.mockResolvedValue(null);
@@ -111,7 +111,7 @@ describe('ModerationService', () => {
 
   it('returns an open duplicate report and rejects missing, hidden, and self-owned targets', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const duplicate = { id: 'report-existing', status: 'open', createdAt: new Date() };
     prisma.activity.findUnique.mockResolvedValue({ userId: 'author-1', moderationStatus: 'visible' });
     prisma.contentReport.findFirst.mockResolvedValue(duplicate);
@@ -133,7 +133,7 @@ describe('ModerationService', () => {
 
   it('blocks a user, removes both follow directions, and prevents self or missing-user blocks', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     prisma.user.findUnique.mockResolvedValue({ id: 'blocked-1' });
 
     await service.blockUser('blocker-1', 'blocked-1');
@@ -158,7 +158,7 @@ describe('ModerationService', () => {
 
   it("lists blocked profiles, handles empty lists, and unblocks only the requesting user's row", async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const createdAt = new Date();
     prisma.userBlock.findMany.mockResolvedValue([{ blockedId: 'blocked-1', createdAt }]);
     prisma.profile.findMany.mockResolvedValue([{ userId: 'blocked-1', name: 'Runner' }]);
@@ -184,7 +184,7 @@ describe('ModerationService', () => {
 
   it('queries the queue from newest to oldest before applying the page limit', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const queue = [{ id: 'urgent-1', priority: 'urgent' }];
     prisma.contentReport.findMany.mockResolvedValue(queue);
 
@@ -205,7 +205,7 @@ describe('ModerationService', () => {
   it('returns report context, signed media preview, and the action audit trail', async () => {
     const prisma = createPrismaMock();
     const storage = { getQuarantinePreviewUrl: asyncMock().mockResolvedValue('signed-preview') };
-    const service = new ModerationService(prisma as never, storage as never);
+    const service = createModerationService(prisma as never, storage as never);
     const report = { id: 'report-1', targetType: 'media_upload', targetId: 'asset-1' };
     const actions = [{ action: 'reject_media' }];
     prisma.contentReport.findUnique.mockResolvedValueOnce(report).mockResolvedValue(null);
@@ -237,7 +237,7 @@ describe('ModerationService', () => {
 
   it('returns the reporter and original content author with profile and email details', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     prisma.contentReport.findUnique.mockResolvedValue({
       id: 'report-1',
       targetType: 'comment',
@@ -277,7 +277,7 @@ describe('ModerationService', () => {
 
   it('returns null for a deleted reporter and keeps empty author profile fields nullable', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     prisma.contentReport.findUnique.mockResolvedValue({
       id: 'report-1',
       targetType: 'comment',
@@ -305,7 +305,7 @@ describe('ModerationService', () => {
 
   it('deletes a report and its related history in a transaction', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     prisma.contentReport.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'report-1' });
 
     await expect(service.deleteReport('missing')).rejects.toBeInstanceOf(NotFoundException);
@@ -324,7 +324,7 @@ describe('ModerationService', () => {
       getPublicUrl: jest.fn((key: string) => `public:${key}`),
       getQuarantinePreviewUrl: asyncMock().mockResolvedValue('quarantine-preview'),
     };
-    const service = new ModerationService(prisma as never, storage as never);
+    const service = createModerationService(prisma as never, storage as never);
     prisma.contentReport.findUnique.mockResolvedValue({ id: 'report-1', targetType: 'group_post', targetId: 'post-1' });
     prisma.groupPost.findUnique.mockResolvedValue({
       text: 'Post text',
@@ -359,7 +359,7 @@ describe('ModerationService', () => {
   it('uses the quarantine preview for pending group-post media and handles deleted posts', async () => {
     const prisma = createPrismaMock();
     const storage = { getQuarantinePreviewUrl: asyncMock().mockResolvedValue('quarantine-preview') };
-    const service = new ModerationService(prisma as never, storage as never);
+    const service = createModerationService(prisma as never, storage as never);
     prisma.contentReport.findUnique
       .mockResolvedValueOnce({ id: 'report-1', targetType: 'group_post', targetId: 'post-1' })
       .mockResolvedValueOnce({ id: 'report-2', targetType: 'group_post', targetId: 'deleted-post' });
@@ -398,7 +398,7 @@ describe('ModerationService', () => {
 
   it('hides reported comments and records the moderator action in the same transaction', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const report = makeModerationReport({ targetType: 'comment', targetId: 'comment-1' });
     prisma.contentReport.findUnique
       .mockResolvedValueOnce(report)
@@ -426,7 +426,7 @@ describe('ModerationService', () => {
 
   it('validates moderation actions and applies temporary account suspensions', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const userReport = makeModerationReport({ targetType: 'user', targetId: 'user-2', subjectUserId: 'user-2' });
     prisma.contentReport.findUnique.mockResolvedValue(userReport);
     prisma.contentReport.updateMany.mockResolvedValue({ count: 1 });
@@ -447,7 +447,7 @@ describe('ModerationService', () => {
 
   it('submits and decides appeals, restoring content when an appeal is upheld', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const report = makeModerationReport({ status: 'resolved' });
     const appeal = {
       id: 'appeal-1',
@@ -495,7 +495,7 @@ describe('ModerationService', () => {
 
   it('creates reports for comments, media, and user profiles with the matching target reference', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     prisma.contentReport.findFirst.mockResolvedValue(null);
     prisma.contentReport.create.mockResolvedValue({ id: 'report-1' });
     prisma.comment.findUnique.mockResolvedValue({ authorId: 'comment-author', moderationStatus: 'visible' });
@@ -520,7 +520,7 @@ describe('ModerationService', () => {
   it('returns context for each report target and tolerates a deleted quarantine asset', async () => {
     const prisma = createPrismaMock();
     const storage = { getQuarantinePreviewUrl: asyncMock().mockResolvedValue('signed-preview') };
-    const service = new ModerationService(prisma as never, storage as never);
+    const service = createModerationService(prisma as never, storage as never);
     prisma.activity.findUnique.mockResolvedValue({ title: 'Run' });
     prisma.comment.findUnique.mockResolvedValue({ comment: 'Hello' });
     prisma.activityMedia.findUnique.mockResolvedValue({ url: 'image-url' });
@@ -545,7 +545,7 @@ describe('ModerationService', () => {
 
   it('includes ordered activity media in the context moderators review', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const media = [
       { id: 'media-1', url: 'first-image', thumbnail: 'first-thumbnail' },
       { id: 'media-2', url: 'second-video', thumbnail: 'second-thumbnail' },
@@ -577,7 +577,7 @@ describe('ModerationService', () => {
   it('validates moderator actions and records content decisions for each supported target type', async () => {
     const prisma = createPrismaMock();
     const storage = { approveModerationAsset: asyncMock(), rejectModerationAsset: asyncMock() };
-    const service = new ModerationService(prisma as never, storage as never);
+    const service = createModerationService(prisma as never, storage as never);
     const report = {
       id: 'report-1',
       reporterId: 'reporter-1',
@@ -651,7 +651,7 @@ describe('ModerationService', () => {
 
   it('rejects invalid appeals and handles upheld, rejected, and concurrent decisions', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const report = makeModerationReport({
       status: 'resolved',
       targetType: 'user',
@@ -713,7 +713,7 @@ describe('ModerationService', () => {
       approveModerationAsset: asyncMock(),
       rejectModerationAsset: asyncMock(),
     };
-    const service = new ModerationService(prisma as never, storage as never);
+    const service = createModerationService(prisma as never, storage as never);
     const mediaReport = {
       id: 'report-media',
       status: 'open',
@@ -775,7 +775,7 @@ describe('ModerationService', () => {
 
     for (const scenario of cases) {
       const prisma = createPrismaMock();
-      const service = new ModerationService(prisma as never, {} as never);
+      const service = createModerationService(prisma as never, {} as never);
       prisma.contentReport.findUnique.mockResolvedValue({
         id: 'report-1',
         targetType: scenario.targetType,
@@ -815,7 +815,7 @@ describe('ModerationService', () => {
 
   it('rejects missing targets and closed reports for email actions', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     prisma.contentReport.findUnique.mockResolvedValueOnce(null);
     await expect(service.validateEmailModerationAction('missing', 'hide_content')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -835,7 +835,7 @@ describe('ModerationService', () => {
 
   it('rejects reports for deleted comment, media, and user targets', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     prisma.comment.findUnique.mockResolvedValue(null);
     prisma.activityMedia.findUnique.mockResolvedValue(null);
     prisma.user.findUnique.mockResolvedValue(null);
@@ -854,7 +854,7 @@ describe('ModerationService', () => {
 
   it('handles appeal submission races and upheld user appeals without a suspension action', async () => {
     const prisma = createPrismaMock();
-    const service = new ModerationService(prisma as never, {} as never);
+    const service = createModerationService(prisma as never, {} as never);
     const report = {
       id: 'report-1',
       status: 'resolved',

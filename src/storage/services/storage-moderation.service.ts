@@ -285,7 +285,6 @@ export class StorageModerationService {
             select: { thumbnailModerationAssetId: true },
           })
         : [];
-    if (asset.status === 'approved' && asset.publishedKey) await this.core.deleteObjectByKey(asset.publishedKey);
     await this.deleteQuarantineObject(asset.quarantineKey);
     await this.prisma.mediaModerationAsset.update({
       where: { id: asset.id },

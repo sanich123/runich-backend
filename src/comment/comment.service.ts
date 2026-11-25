@@ -64,9 +64,9 @@ export class CommentService {
               AND: [
                 {
                   OR: [
-                    { moderationStatus: { in: ['visible', 'pending', 'processing'] } },
+                    { moderationStatus: { in: ['visible', 'pending', 'processing'] as const } },
                     ...(currentUserId
-                      ? [{ authorId: currentUserId, moderationStatus: { in: ['hidden', 'removed'] } }]
+                      ? [{ authorId: currentUserId, moderationStatus: { in: ['hidden', 'removed'] as const } }]
                       : []),
                   ],
                 },
@@ -101,7 +101,7 @@ export class CommentService {
       }
       const commentsWithExtraItem = activity.comments;
       const hasMore = commentsWithExtraItem.length > pageSize;
-      const comments = commentsWithExtraItem.slice(0, pageSize).map((value: Record<string, unknown>) => {
+      const comments = commentsWithExtraItem.slice(0, pageSize).map((value) => {
         const { commentLikes, ...comment } = value;
         const isHiddenForViewer = comment.moderationStatus !== 'visible' && comment.authorId !== currentUserId;
         return { ...comment, comment: isHiddenForViewer ? null : comment.comment, commentLike: commentLikes ?? [] };

@@ -1,5 +1,5 @@
 import { ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { ActivityService } from '../services/activity.service';
+import { createActivityService } from './helpers/activity-service.factory';
 import { ActivityMediaService } from '../services/activity-media.service';
 import { MAX_MAP_ROUTE_LOCATIONS } from '../shared/const';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
@@ -54,7 +54,7 @@ describe('ActivityService', () => {
   it('saves activity media for an account without a subscription', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     prisma.activity.create.mockResolvedValue(makeQueuedActivity());
 
     await expect(
@@ -70,7 +70,7 @@ describe('ActivityService', () => {
   it('rejects appending more than five media files', async () => {
     const prisma = createPrismaMock();
     const storage = { promoteActivityPhotos: asyncMock() };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
     prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: new Date('2026-09-28T12:00:00.000Z') });
     prisma.activityMedia.count.mockResolvedValue(0);
 
@@ -86,7 +86,7 @@ describe('ActivityService', () => {
 
   it('rejects appending media when the activity does not exist', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue(null);
 
     await expect(service.appendActivityMedia('missing-activity', 'user-1', [makeActivityPhoto()])).rejects.toThrow(
@@ -97,7 +97,7 @@ describe('ActivityService', () => {
 
   it('rejects appending media when the current user is not the activity owner', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1', date: new Date() });
 
     await expect(service.appendActivityMedia('activity-1', 'user-1', [makeActivityPhoto()])).rejects.toThrow(
@@ -108,7 +108,7 @@ describe('ActivityService', () => {
 
   it('rejects appending media when storage is not configured', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: new Date() });
 
     await expect(service.appendActivityMedia('activity-1', 'user-1', [makeActivityPhoto()])).rejects.toThrow(
@@ -126,7 +126,7 @@ describe('ActivityService', () => {
       }),
       refreshLinkedActivityMedia: asyncMock(),
     };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
     const activityDate = new Date('2026-09-28T12:00:00.000Z');
     prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: activityDate });
     prisma.activityMedia.count.mockResolvedValue(2);
@@ -170,7 +170,7 @@ describe('ActivityService', () => {
       }),
       deleteObjectByKey: asyncMock(),
     };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
     prisma.activity.findUnique.mockResolvedValue({ userId: 'user-1', date: new Date() });
     prisma.activityMedia.count.mockResolvedValueOnce(4).mockResolvedValueOnce(5);
 
@@ -191,7 +191,14 @@ describe('ActivityService', () => {
   it('creates activities with and without a generated map image', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never, undefined, undefined, undefined, undefined);
+    const service = createActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
     prisma.activity.create.mockResolvedValue(makeQueuedActivity());
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
@@ -236,7 +243,7 @@ describe('ActivityService', () => {
       }),
     };
     const locations = [{ coords: makeMoscowCoordinate() }, { coords: makeNearbyMoscowCoordinate() }];
-    const service = new ActivityService(
+    const service = createActivityService(
       prisma as never,
       account as never,
       undefined,
@@ -265,7 +272,7 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const staticMap = { generateActivityMap: asyncMock().mockResolvedValue(null) };
-    const service = new ActivityService(
+    const service = createActivityService(
       prisma as never,
       account as never,
       undefined,
@@ -288,7 +295,7 @@ describe('ActivityService', () => {
     const account = {
       getAccountByUserId: asyncMock().mockResolvedValue(makeActivityProfile()),
     };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     prisma.activity.create.mockResolvedValue(makeQueuedActivity());
 
     await service.createActivity({ ...makeActivityDto(), distance: 10_000, duration: 3_600_000 }, 'user-1');
@@ -303,7 +310,7 @@ describe('ActivityService', () => {
     const account = {
       getAccountByUserId: asyncMock().mockResolvedValue(makeActivityProfile()),
     };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     prisma.activity.findMany.mockResolvedValue([]);
     prisma.activity.create.mockResolvedValue(makeQueuedActivity());
 
@@ -340,7 +347,7 @@ describe('ActivityService', () => {
     process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     prisma.activity.create.mockResolvedValue(makeQueuedActivity());
     const locations = [100, 100, 100, 120, 120, 120].map((altitude) => ({
       coords: { ...makeMoscowCoordinate(), altitude },
@@ -368,7 +375,7 @@ describe('ActivityService', () => {
       deleteObjectByKey: asyncMock(),
       refreshLinkedActivityMedia: asyncMock(),
     };
-    const service = new ActivityService(prisma as never, account as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, account as never, undefined, storage as never);
     prisma.activity.create.mockResolvedValue(makeQueuedActivity());
     const locations = [{ timestamp: 1, coords: makeMoscowCoordinate() }];
 
@@ -402,7 +409,7 @@ describe('ActivityService', () => {
       }),
       deleteObjectByKey: asyncMock(),
     };
-    const service = new ActivityService(prisma as never, account as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, account as never, undefined, storage as never);
     prisma.activity.create.mockRejectedValue(new Error('database unavailable'));
 
     await expectInternalServerError(
@@ -440,7 +447,7 @@ describe('ActivityService', () => {
       deleteActivityModerationAssets: asyncMock(),
     };
     const cleanup = { enqueueObjectCleanup: asyncMock() };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, cleanup as never);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never, cleanup as never);
 
     await expect(service.deleteActivityById('activity-1', 'user-1')).resolves.toEqual({ id: 'activity-1' });
 
@@ -458,7 +465,7 @@ describe('ActivityService', () => {
   it('deletes unattached moderation assets when deleting an activity without cleanup worker', async () => {
     const prisma = createPrismaMock();
     const storage = { deleteActivityModerationAssets: asyncMock() };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never);
     prisma.activity.findFirst.mockResolvedValue({
       media: [{ mediaModerationAssetId: 'asset-1', thumbnailModerationAssetId: null }],
     });
@@ -472,7 +479,7 @@ describe('ActivityService', () => {
   it('reads a stored route while keeping the locations endpoint response unchanged', async () => {
     const prisma = createPrismaMock();
     const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: makeRoundedMoscowCoordinate() }]) };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
     prisma.activity.findUnique.mockResolvedValue(makeStoredActivity());
 
     await expect(service.getLocationsByActivityId('activity-1', 'user-1')).resolves.toEqual({
@@ -491,7 +498,7 @@ describe('ActivityService', () => {
       coords: makeRoundedMoscowCoordinate(),
     }));
     const storage = { readActivityRoute: asyncMock().mockResolvedValue(locations) };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
     prisma.activity.findUnique.mockResolvedValue(makeStoredActivity());
 
     await expect(service.getLocationsByActivityId('activity-1', 'user-1', true)).resolves.toEqual({
@@ -510,7 +517,7 @@ describe('ActivityService', () => {
       checksum: 'checksum',
     };
     const storage = { uploadActivityRoute: asyncMock().mockResolvedValue(routeMetadata) };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
     const locations = [
       { coords: { latitude: 55.75, longitude: 37.61 } },
       { coords: { latitude: 55.76, longitude: 37.62 } },
@@ -533,21 +540,21 @@ describe('ActivityService', () => {
 
   it('rejects raw route uploads for a missing or foreign activity, or without storage', async () => {
     const notFoundPrisma = createPrismaMock();
-    const notFoundService = new ActivityService(notFoundPrisma as never, {} as never);
+    const notFoundService = createActivityService(notFoundPrisma as never, {} as never);
     notFoundPrisma.activity.findUnique.mockResolvedValue(null);
     await expect(notFoundService.uploadRawActivityLocations('missing', 'user-1', [])).rejects.toBeInstanceOf(
       NotFoundException,
     );
 
     const foreignPrisma = createPrismaMock();
-    const foreignService = new ActivityService(foreignPrisma as never, {} as never);
+    const foreignService = createActivityService(foreignPrisma as never, {} as never);
     foreignPrisma.activity.findUnique.mockResolvedValue({ id: 'activity-1', userId: 'owner-1' });
     await expect(foreignService.uploadRawActivityLocations('activity-1', 'viewer-1', [])).rejects.toBeInstanceOf(
       ForbiddenException,
     );
 
     const noStoragePrisma = createPrismaMock();
-    const noStorageService = new ActivityService(noStoragePrisma as never, {} as never);
+    const noStorageService = createActivityService(noStoragePrisma as never, {} as never);
     noStoragePrisma.activity.findUnique.mockResolvedValue({ id: 'activity-1', userId: 'user-1' });
     await expect(noStorageService.uploadRawActivityLocations('activity-1', 'user-1', [])).rejects.toBeInstanceOf(
       ServiceUnavailableException,
@@ -557,7 +564,7 @@ describe('ActivityService', () => {
   it('reads public route locations for another user', async () => {
     const prisma = createPrismaMock();
     const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: makeRoundedMoscowCoordinate() }]) };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never, undefined);
     prisma.activity.findUnique.mockResolvedValue(makeStoredActivity({ userId: 'owner-1', visibility: 'public' }));
 
     await expect(service.getLocationsByActivityId('activity-1', 'viewer-1')).resolves.toEqual({
@@ -581,7 +588,7 @@ describe('ActivityService', () => {
       },
     }));
     const storage = { readActivityRoute: asyncMock().mockResolvedValue(locations) };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never);
     prisma.activity.findUnique.mockResolvedValue(makeStoredActivity());
 
     const response = await service.getLocationsByActivityId('activity-1', 'user-1');
@@ -600,7 +607,7 @@ describe('ActivityService', () => {
   it('generates a title from the activity time and sport when title is missing', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
 
     await service.createActivity({ ...makeActivityDto(), date: '2026-08-12T07:15:00', title: '   ' }, 'user-1');
     expect(prisma.activity.create).toHaveBeenLastCalledWith({
@@ -630,7 +637,7 @@ describe('ActivityService', () => {
   it('persists optional pedometer data for the activity and its kilometre splits', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     const pedometerActivity = {
       ...makeActivityDto(),
       sport: 'walk',
@@ -673,7 +680,7 @@ describe('ActivityService', () => {
 
   it('upserts migration activities and skips duplicate source identities', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);
     const activities = Array.from({ length: 101 }, (_, index) => ({
       ...makeActivityDto(),
@@ -711,7 +718,7 @@ describe('ActivityService', () => {
   it('imports watch workouts once per source identity', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     prisma.activity.findMany.mockResolvedValue([{ source: 'health-connect', sourceActivityId: 'existing' }]);
     prisma.activity.create.mockResolvedValue(makeQueuedActivity({ id: 'activity-new' }));
 
@@ -740,7 +747,7 @@ describe('ActivityService', () => {
 
   it('returns only new watch workouts or those with missing non-empty provenance', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     const newWorkout = { source: 'health-connect' as const, sourceActivityId: 'new' };
     const completeWorkout = {
       source: 'health-connect' as const,
@@ -844,7 +851,7 @@ describe('ActivityService', () => {
 
   it('returns no sync candidates without querying activities for an empty batch', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
 
     await expect(service.getWatchWorkoutSyncCandidates([], 'user-1')).resolves.toEqual({ workoutsToSync: [] });
     expect(prisma.activity.findMany).not.toHaveBeenCalled();
@@ -852,7 +859,7 @@ describe('ActivityService', () => {
 
   it('backfills missing provenance for an already imported watch workout without replacing saved values', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([
       {
         id: 'activity-empty-provenance',
@@ -920,7 +927,7 @@ describe('ActivityService', () => {
   it('uses Strava elevation gain from the migration CSV for imported routes', async () => {
     process.env.MAPBOX_ACCESS_TOKEN = 'test-token';
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);
 
     await service.createActivitiesFromMigrationArchive([
@@ -952,7 +959,7 @@ describe('ActivityService', () => {
           : { id: 'profile-incomplete' },
       ),
     };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     prisma.activity.findMany.mockResolvedValue([]);
     const sharedActivity = {
       ...makeActivityDto(),
@@ -1003,7 +1010,7 @@ describe('ActivityService', () => {
         url: 'https://cdn.example.com/user-1/activities/activity-1/map.webp',
       }),
     };
-    const service = new ActivityService(
+    const service = createActivityService(
       prisma as never,
       {} as never,
       undefined,
@@ -1062,7 +1069,7 @@ describe('ActivityService', () => {
 
   it('updates, reads, paginates and deletes activities', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, { getAccountByUserId: asyncMock() } as never);
+    const service = createActivityService(prisma as never, { getAccountByUserId: asyncMock() } as never);
     const activity = { id: 'activity-1' };
     const activityWithMedia = { id: 'activity-1', media: [makeActivityPhoto()] };
     const activityPage = { activities: [activityWithMedia], hasMore: false, nextCursor: null, isLastPage: true };
@@ -1115,7 +1122,7 @@ describe('ActivityService', () => {
   it('preserves imported calorie values when editing an activity', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     prisma.activity.findFirst.mockResolvedValue({ source: 'strava', caloriesActive: 613 });
     prisma.activity.update.mockResolvedValue({ id: 'activity-1' });
 
@@ -1131,7 +1138,7 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
     const staticMap = { generateActivityMap: asyncMock() };
-    const service = new ActivityService(
+    const service = createActivityService(
       prisma as never,
       account as never,
       undefined,
@@ -1174,7 +1181,7 @@ describe('ActivityService', () => {
         url: 'https://cdn.example.com/map-route-only.webp',
       }),
     };
-    const service = new ActivityService(
+    const service = createActivityService(
       prisma as never,
       account as never,
       undefined,
@@ -1227,7 +1234,7 @@ describe('ActivityService', () => {
           url: 'https://cdn.example.com/new-route-only.webp',
         }),
     };
-    const service = new ActivityService(
+    const service = createActivityService(
       prisma as never,
       account as never,
       undefined,
@@ -1271,7 +1278,7 @@ describe('ActivityService', () => {
   it('rejects a visibility change for a missing activity', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     prisma.activity.findFirst.mockResolvedValue(null);
 
     await expect(
@@ -1282,7 +1289,7 @@ describe('ActivityService', () => {
 
   it('uses twenty activities as the default page size', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, { getAccountByUserId: asyncMock() } as never);
+    const service = createActivityService(prisma as never, { getAccountByUserId: asyncMock() } as never);
     prisma.activity.findMany.mockResolvedValue([]);
     prisma.$queryRaw.mockResolvedValue([]);
 
@@ -1312,7 +1319,7 @@ describe('ActivityService', () => {
 
   it('uses a stable cursor for activities and media pages', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     const newestDate = new Date('2026-08-12T23:15:00.000Z');
     const olderDate = new Date('2026-08-12T22:15:00.000Z');
 
@@ -1376,7 +1383,7 @@ describe('ActivityService', () => {
 
   it('returns favorite activities with a stable cursor and owner filter', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     const newestDate = new Date('2026-08-12T23:15:00.000Z');
     const olderDate = new Date('2026-08-12T22:15:00.000Z');
     prisma.activity.findMany.mockResolvedValueOnce([
@@ -1422,7 +1429,7 @@ describe('ActivityService', () => {
 
   it('allows only the activity owner to update the favorite state', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1' });
     prisma.activity.update.mockResolvedValue({ id: 'activity-1', isFavorite: true });
 
@@ -1447,7 +1454,7 @@ describe('ActivityService', () => {
 
   it('uses a compact select for activity list responses', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);
     prisma.friend.findMany.mockResolvedValue([]);
     prisma.$queryRaw.mockResolvedValue([]);
@@ -1501,7 +1508,7 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const storage = { getPublicUrl: (key: string) => 'https://cdn.example/' + key };
     const account = { getAccountByUserId: asyncMock().mockResolvedValue(null) };
-    const service = new ActivityService(prisma as never, account as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, account as never, undefined, storage as never);
     prisma.$queryRaw.mockResolvedValue([
       {
         id: 'activity-1',
@@ -1533,7 +1540,7 @@ describe('ActivityService', () => {
     const prisma = createPrismaMock();
     const error = new Error('database unavailable');
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     prisma.activity.create.mockRejectedValue(error);
     await expectInternalServerError(service.createActivity({ ...makeActivityDto() }, 'u1'));
     prisma.activity.findMany.mockResolvedValue([]);
@@ -1559,7 +1566,7 @@ describe('ActivityService', () => {
 
   it('propagates the raw database error from the locations query', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     const error = new Error('database unavailable');
     prisma.activity.findUnique.mockRejectedValue(error);
 
@@ -1569,7 +1576,7 @@ describe('ActivityService', () => {
   it('persists queued moderation references without requiring a public media URL', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
 
     await expect(
       service.createActivity(

@@ -1,4 +1,4 @@
-import { ActivityService } from '../services/activity.service';
+import { createActivityService } from './helpers/activity-service.factory';
 import { asyncMock } from 'src/tests/helpers';
 import { makeActivityRouteCoordinate } from './fixtures';
 import { makeRoundedMoscowCoordinate } from 'src/tests/fixtures/geography.fixtures';
@@ -18,7 +18,7 @@ function createPrismaMock() {
 describe('ActivityService privacy', () => {
   it('limits another user to public activities, photos and locations', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findMany.mockResolvedValue([]);
     prisma.activityMedia.findMany.mockResolvedValue([]);
     prisma.profile.findUnique.mockResolvedValue({ hideProfilePhotos: false });
@@ -50,7 +50,7 @@ describe('ActivityService privacy', () => {
   it('allows an owner to read private activity locations', async () => {
     const prisma = createPrismaMock();
     const storage = { readActivityRoute: asyncMock().mockResolvedValue([{ coords: makeRoundedMoscowCoordinate() }]) };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never);
     const locations = [{ coords: makeRoundedMoscowCoordinate() }];
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
@@ -71,7 +71,7 @@ describe('ActivityService privacy', () => {
   it('hides route replay locations from external viewers when disabled by the owner', async () => {
     const prisma = createPrismaMock();
     const storage = { readActivityRoute: asyncMock() };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never);
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       visibility: 'public',
@@ -86,7 +86,7 @@ describe('ActivityService privacy', () => {
 
   it('hides a private activity detail from another user', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       visibility: 'private',
@@ -98,7 +98,7 @@ describe('ActivityService privacy', () => {
 
   it('allows followers visibility only to users who follow the owner', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       visibility: 'followers',
@@ -118,7 +118,7 @@ describe('ActivityService privacy', () => {
 
   it('hides the profile photo gallery from other users but keeps it available to its owner', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.profile.findUnique.mockResolvedValue({ hideProfilePhotos: true });
     prisma.activityMedia.findMany.mockResolvedValue([
       {
@@ -160,7 +160,7 @@ describe('ActivityService privacy', () => {
 
   it('returns only a blurhash placeholder for queued media and omits rejected media for other viewers', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activityMedia.findMany.mockResolvedValue([
       {
         id: 'queued-media',
@@ -224,7 +224,7 @@ describe('ActivityService privacy', () => {
         'asset-2': 'https://owner-preview.example/thumbnail.jpg',
       }),
     };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never);
     prisma.activityMedia.findMany.mockResolvedValue([
       {
         id: 'queued-media',
@@ -265,7 +265,7 @@ describe('ActivityService privacy', () => {
         { timestamp: 61_000, coords: { latitude: 0, longitude: 0.001, altitude: 110, timestamp: 61_000 } },
       ]),
     };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never);
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       visibility: 'public',
@@ -300,7 +300,7 @@ describe('ActivityService privacy', () => {
   it('does not return chart data when fewer than two metrics are visible', async () => {
     const prisma = createPrismaMock();
     const storage = { readActivityRoute: asyncMock() };
-    const service = new ActivityService(prisma as never, {} as never, undefined, storage as never);
+    const service = createActivityService(prisma as never, {} as never, undefined, storage as never);
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       visibility: 'public',
@@ -322,7 +322,7 @@ describe('ActivityService privacy', () => {
 
   it('redacts heart rate and elevation summaries from activity details for external viewers', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({
       id: 'activity-1',
       userId: 'owner-1',
@@ -356,7 +356,7 @@ describe('ActivityService privacy', () => {
 
   it('blocks activity likes and comments only for external users when disabled', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({
       userId: 'owner-1',
       moderationStatus: 'visible',
