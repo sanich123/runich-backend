@@ -10,6 +10,7 @@ module.exports = {
     '^@nestjs/throttler$': '<rootDir>/tests/mocks/nestjs-throttler.ts',
     '^src/(.*)$': '<rootDir>/src/$1',
   },
+  setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/infrastructure/database/**',
