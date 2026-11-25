@@ -25,6 +25,8 @@ export class ActivityFriendsFeedService {
     const profile = Object.fromEntries(Object.entries(rawProfile));
     const profilePhotoAssetStatus = profile.profilePhotoAssetStatus;
     const profilePhotoPublishedKey = profile.profilePhotoPublishedKey;
+    delete profile.profilePhotoAssetStatus;
+    delete profile.profilePhotoPublishedKey;
     if (profilePhotoAssetStatus === 'approved' && typeof profilePhotoPublishedKey === 'string' && this.storageService) {
       profile.profilePhoto = this.storageService.getPublicUrl(profilePhotoPublishedKey);
     }
