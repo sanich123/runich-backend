@@ -133,6 +133,7 @@ export class ActivityWriteService {
           : ACTIVITY_VISIBILITY.public);
       const description = activityDto.description?.trim() || null;
       const hasTextToModerate = Boolean(activityDto.title?.trim() || description);
+      const isImportedActivity = ['strava', 'health-connect', 'healthkit'].includes(activityDto.source ?? '');
 
       const data = {
         ...(activityId ? { id: activityId } : {}),
@@ -146,7 +147,7 @@ export class ActivityWriteService {
         ...(migratedActivity.minHeartRate !== undefined ? { minHeartRate: migratedActivity.minHeartRate } : {}),
         ...(migratedActivity.maxHeartRate !== undefined ? { maxHeartRate: migratedActivity.maxHeartRate } : {}),
         description,
-        textModerationStatus: hasTextToModerate ? 'pending' : 'visible',
+        textModerationStatus: hasTextToModerate && !isImportedActivity ? 'pending' : 'visible',
         elevationGain: activityDto.locations?.length
           ? getElevationGainFromLocations(activityDto.locations)
           : getElevationGainFromKilometreSplits(activityDto.kilometresSplit),

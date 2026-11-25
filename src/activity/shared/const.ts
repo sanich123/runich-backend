@@ -146,6 +146,7 @@ export const ACTIVITY_UPDATE_FIELDS: ActivityUpdateField[] = [
   'speed',
   'sport',
   'title',
+  'sourceAppName',
   'textModerationStatus',
   'textModerationProcessingStartedAt',
   'kilometresSplit',

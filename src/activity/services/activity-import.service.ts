@@ -6,6 +6,7 @@ import { ActivityMediaService } from './activity-media.service';
 import { ActivityWriteService } from './activity-write.service';
 import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
 import { randomUUID } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import { type WatchWorkoutImportDto, type WatchWorkoutImportIdentityDto } from '../dto/activity.dto';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { chunkArray } from 'src/common/parsers/chunk-array';
@@ -16,6 +17,7 @@ import type { ActivityDatabase, MigratedActivity } from '../shared/types';
 @Injectable()
 export class ActivityImportService {
   private readonly logger = new Logger('ActivityService');
+  private readonly mediaPreparationConcurrency = 4;
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
@@ -192,6 +194,7 @@ export class ActivityImportService {
               mapPhotoUrl: true,
               routeOnlyMapPhotoUrl: true,
               hideMap: true,
+              textModerationStatus: true,
             },
           })) as {
             id: string;
@@ -202,6 +205,7 @@ export class ActivityImportService {
             mapPhotoUrl: string | null;
             routeOnlyMapPhotoUrl: string | null;
             hideMap: boolean;
+            textModerationStatus: string;
           }[])
         : [];
       const existingActivitiesBySource = new Map(
@@ -238,9 +242,12 @@ export class ActivityImportService {
         return {
           ...activity,
           caloriesActive,
+          sourceAppName: activity.sourceAppName?.trim() || 'Strava',
           textModerationStatus:
-            activity.textModerationStatus ??
-            (activity.title?.trim() || activity.description?.trim() ? 'pending' : 'visible'),
+            existingActivity?.textModerationStatus === 'pending' ||
+            existingActivity?.textModerationStatus === 'processing'
+              ? 'visible'
+              : (existingActivity?.textModerationStatus ?? 'visible'),
           textModerationProcessingStartedAt: null,
           hideMap: existingActivity?.hideMap ?? activity.hideMap ?? false,
           // Use a fresh storage namespace for replacements so immutable map caches cannot serve old imagery.
@@ -263,54 +270,65 @@ export class ActivityImportService {
             userId: string;
           }[] = [];
           try {
-            for (const activity of activityBatch) {
-              const key = activity.userId + '\u0000' + activity.source + '\u0000' + activity.sourceActivityId;
-              const existingActivity = existingActivitiesBySource.get(key);
-              const prepared = await this.mediaService.prepareActivityRoute(activity);
-              const preparedData = prepared.data as unknown as Record<string, unknown>;
-              const data = existingActivity
-                ? {
-                    ...preparedData,
-                    id: existingActivity.id,
-                    timeZone: preparedData.timeZone ?? null,
-                    description: preparedData.description ?? null,
-                    elevationGain: preparedData.elevationGain ?? null,
-                    kilometresSplit: preparedData.kilometresSplit ?? [],
-                    mapPhotoUrl:
-                      typeof preparedData.mapPhotoUrl === 'string' && preparedData.mapPhotoUrl.trim()
-                        ? preparedData.mapPhotoUrl
-                        : null,
-                    routeOnlyMapPhotoUrl:
-                      typeof preparedData.routeOnlyMapPhotoUrl === 'string' && preparedData.routeOnlyMapPhotoUrl.trim()
-                        ? preparedData.routeOnlyMapPhotoUrl
-                        : null,
-                    routeStorageKey: preparedData.routeStorageKey ?? null,
-                    routeFormatVersion: preparedData.routeFormatVersion ?? null,
-                    routePointCount: preparedData.routePointCount ?? null,
-                    routeSizeBytes: preparedData.routeSizeBytes ?? null,
-                    routeChecksum: preparedData.routeChecksum ?? null,
-                    mapPhotoUrlBlurhash: null,
-                    mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued,
-                    locationName: null,
-                    weatherTemperature: null,
-                    weatherWindSpeed: null,
-                    weatherCode: null,
-                    locationEnrichmentStatus: ACTIVITY_ENRICHMENT_STATUS.queued,
-                    caloriesActive: preparedData.caloriesActive ?? null,
-                  }
-                : preparedData;
-              preparedActivities.push({
-                data,
-                routeKey: prepared.routeKey,
-                heartRateKey: prepared.heartRateKey,
-                mapKey: prepared.mapKey,
-                routeOnlyMapKey: prepared.routeOnlyMapKey,
-                existingActivity,
-                userId: activity.userId,
-              });
+            const mediaPreparationStartedAt = performance.now();
+            for (const preparationBatch of chunkArray(activityBatch, this.mediaPreparationConcurrency)) {
+              const preparationResults = await Promise.allSettled(
+                preparationBatch.map(async (activity) => {
+                  const key = activity.userId + '\u0000' + activity.source + '\u0000' + activity.sourceActivityId;
+                  const existingActivity = existingActivitiesBySource.get(key);
+                  const prepared = await this.mediaService.prepareActivityRoute(activity);
+                  const preparedData = prepared.data as unknown as Record<string, unknown>;
+                  const data = existingActivity
+                    ? {
+                        ...preparedData,
+                        id: existingActivity.id,
+                        timeZone: preparedData.timeZone ?? null,
+                        description: preparedData.description ?? null,
+                        elevationGain: preparedData.elevationGain ?? null,
+                        kilometresSplit: preparedData.kilometresSplit ?? [],
+                        mapPhotoUrl:
+                          typeof preparedData.mapPhotoUrl === 'string' && preparedData.mapPhotoUrl.trim()
+                            ? preparedData.mapPhotoUrl
+                            : null,
+                        routeOnlyMapPhotoUrl:
+                          typeof preparedData.routeOnlyMapPhotoUrl === 'string' &&
+                          preparedData.routeOnlyMapPhotoUrl.trim()
+                            ? preparedData.routeOnlyMapPhotoUrl
+                            : null,
+                        routeStorageKey: preparedData.routeStorageKey ?? null,
+                        routeFormatVersion: preparedData.routeFormatVersion ?? null,
+                        routePointCount: preparedData.routePointCount ?? null,
+                        routeSizeBytes: preparedData.routeSizeBytes ?? null,
+                        routeChecksum: preparedData.routeChecksum ?? null,
+                        mapPhotoUrlBlurhash: null,
+                        mediaProcessingStatus: ACTIVITY_MEDIA_PROCESSING_STATUS.queued,
+                        locationName: null,
+                        weatherTemperature: null,
+                        weatherWindSpeed: null,
+                        weatherCode: null,
+                        locationEnrichmentStatus: ACTIVITY_ENRICHMENT_STATUS.queued,
+                        caloriesActive: preparedData.caloriesActive ?? null,
+                      }
+                    : preparedData;
+                  return {
+                    data,
+                    routeKey: prepared.routeKey,
+                    heartRateKey: prepared.heartRateKey,
+                    mapKey: prepared.mapKey,
+                    routeOnlyMapKey: prepared.routeOnlyMapKey,
+                    existingActivity,
+                    userId: activity.userId,
+                  };
+                }),
+              );
+              for (const result of preparationResults) {
+                if (result.status === 'fulfilled') preparedActivities.push(result.value);
+              }
+              const failedPreparation = preparationResults.find((result) => result.status === 'rejected');
+              if (failedPreparation?.status === 'rejected') throw failedPreparation.reason;
             }
+            const mediaPreparationDurationMs = Math.round(performance.now() - mediaPreparationStartedAt);
 
-            this.logger.debug(`Writing activity batch (${activityBatch.length} records)`);
             const preparedData = preparedActivities.map(({ data }) => {
               const activityData = { ...data };
               delete activityData.media;
@@ -319,6 +337,7 @@ export class ActivityImportService {
             const media = preparedActivities.flatMap(({ data }) =>
               this.mediaService.getActivityMediaRows(data.id, data.userId, data.date ?? new Date(), data.media),
             );
+            const dbWriteStartedAt = performance.now();
             const result = await this.persistenceService.upsertMany(preparedData, database, media);
             const cleanupJobs = preparedActivities.flatMap(
               ({ routeKey, heartRateKey, mapKey, routeOnlyMapKey, existingActivity, userId }) => {
@@ -343,6 +362,11 @@ export class ActivityImportService {
                 ),
               );
             }
+            const dbWriteDurationMs = Math.round(performance.now() - dbWriteStartedAt);
+            this.logger.log(
+              `Strava import batch: activities=${activityBatch.length}, ` +
+                `media_prepare=${mediaPreparationDurationMs}ms, db_write=${dbWriteDurationMs}ms`,
+            );
             return result;
           } catch (error) {
             await Promise.all(
