@@ -1,5 +1,5 @@
 import { ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { ActivityService } from '../services/activity.service';
+import { createActivityService } from './helpers/activity-service.factory';
 import { asyncMock } from 'src/tests/helpers';
 import { jest } from '@jest/globals';
 
@@ -21,7 +21,7 @@ function createService(ownerId = 'owner-1') {
     deleteActivityModerationAssets: asyncMock(),
   };
   const cleanup = { enqueueObjectCleanup: asyncMock() };
-  const service = new ActivityService(prisma as never, {} as never, undefined, storage as never, cleanup as never);
+  const service = createActivityService(prisma as never, {} as never, undefined, storage as never, cleanup as never);
 
   return { service, prisma, transaction, mediaFindFirst, mediaDelete, storage, cleanup };
 }
@@ -65,7 +65,7 @@ describe('ActivityService.deleteActivityMedia', () => {
 
   it('rejects when media cleanup services are not configured', async () => {
     const prisma = { activity: { findUnique: asyncMock().mockResolvedValue({ userId: 'owner-1' }) } };
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
 
     await expect(service.deleteActivityMedia('activity-1', 'media-1', 'owner-1')).rejects.toBeInstanceOf(
       ServiceUnavailableException,

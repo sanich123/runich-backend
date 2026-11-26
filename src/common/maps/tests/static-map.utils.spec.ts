@@ -55,6 +55,22 @@ describe('static map utilities', () => {
     expect(simplified.length).toBeGreaterThan(2);
   });
 
+  it('retains route extremes when simplifying a long route that doubles back', () => {
+    const locations = Array.from({ length: 501 }, (_, index) => location(0, index / 1_000_000));
+    locations[1] = location(0, 0.01);
+    locations[2] = location(0.01, 0.02);
+    locations[3] = location(-0.01, 0.03);
+    locations[4] = location(0, -0.01);
+
+    const simplified = simplifyStaticMapLocations(locations);
+
+    expect(simplified).toContain(locations[1]);
+    expect(simplified).toContain(locations[2]);
+    expect(simplified).toContain(locations[3]);
+    expect(simplified).toContain(locations[4]);
+    expect(simplified.length).toBeLessThan(locations.length);
+  });
+
   it('escapes the attribution text and exposes useful error messages', () => {
     expect(createAttributionOverlay().toString()).toContain('OpenFreeMap');
     expect(getErrorMessage(new Error('map failed'))).toBe('map failed');

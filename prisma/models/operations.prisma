@@ -14,26 +14,3 @@ model MediaCleanupJob {
   @@index([userId, createdAt], map: "MediaCleanupJob_user_id_createdAt_idx")
   @@map("MediaCleanupJob")
 }
-
-model LoadTestSeedJob {
-  id                  Uuid                  @id(map: "LoadTestSeedJob_pkey") @default(sql`gen_random_uuid()`)
-  runId               Varchar(64)           @unique(map: "LoadTestSeedJob_runId_key") @map("run_id")
-  targetUserId        Uuid                  @map("target_user_id")
-  manifestKey         Varchar(512)          @map("manifest_key")
-  config              Jsonb
-  status              Varchar(32)
-  totalUsers          Int                   @default(0) @map("total_users")
-  totalActivities     Int                   @default(0) @map("total_activities")
-  processedActivities Int                   @default(0) @map("processed_activities")
-  createdActivities   Int                   @default(0) @map("created_activities")
-  createdLikes        Int                   @default(0) @map("created_likes")
-  createdComments     Int                   @default(0) @map("created_comments")
-  createdCommentLikes Int                   @default(0) @map("created_comment_likes")
-  errorMessage        String?               @map("error_message")
-  createdAt            TimestamptzString(6)  @default(now()) @map("created_at")
-  startedAt            TimestamptzString(6)? @map("started_at")
-  finishedAt           TimestamptzString(6)? @map("finished_at")
-
-  @@index([status, createdAt], map: "LoadTestSeedJob_status_createdAt_idx")
-  @@map("LoadTestSeedJob")
-}

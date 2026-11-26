@@ -18,7 +18,7 @@ import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
 import { asyncMock } from 'src/tests/helpers';
 import { makeActivityMediaFixture, makePhotoUpload } from './fixtures';
 import { makeMoscowCoordinate } from 'src/tests/fixtures/geography.fixtures';
-import { StorageService } from '../services/storage.service';
+import { createStorageService } from './helpers/storage-service.factory';
 import { decodeActivityRoute, encodeActivityRoute } from '../shared/activity-route';
 import { getActivityPhotoKey, getExtensionFromStorageKey } from '../shared/storage-key';
 import { getStorageErrorMessage } from '../shared/utils';
@@ -80,7 +80,7 @@ describe('StorageService', () => {
   it('normalizes an image and uploads it under the authenticated user prefix', async () => {
     s3Send.mockResolvedValue({} as never);
     const metrics = { observeExternal: jest.fn() };
-    const service = new StorageService(metrics as never);
+    const service = createStorageService(metrics as never);
     const image = await createTestImage();
 
     await expect(
@@ -116,7 +116,7 @@ describe('StorageService', () => {
   });
 
   it('validates authenticated and guest feedback attachment paths', () => {
-    const service = new StorageService();
+    const service = createStorageService();
     const userUrl = 'https://s3.twcstorage.ru/runich-test/user-1/feedback/2026-09-17/feedback-1/screen.jpg';
     const guestUrl = 'https://s3.twcstorage.ru/runich-test/guest-feedback/2026-09-17/feedback-1/screen.jpg';
 
@@ -152,7 +152,7 @@ describe('StorageService', () => {
 
   it('deletes only a validated feedback attachment key', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
     const url = 'https://s3.twcstorage.ru/runich-test/guest-feedback/2026-09-17/feedback-1/screen.jpg';
 
     await service.deleteFeedbackPhoto(null, 'feedback-1', url);
@@ -166,7 +166,7 @@ describe('StorageService', () => {
 
   it('uploads a guest support attachment and rejects anonymous non-feedback uploads', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
     const image = await createTestImage();
     const manifest = JSON.stringify([makeActivityMediaFixture()]);
 
@@ -190,7 +190,7 @@ describe('StorageService', () => {
   });
 
   it('limits total guest support attachment bytes', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhotos(
@@ -215,7 +215,7 @@ describe('StorageService', () => {
       status: 'queued',
       contentType: 'image/webp',
     });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
     const image = await createTestImage();
     const manifest = JSON.stringify([makeActivityMediaFixture(), { mediaId: 'media-2', role: 'media' }]);
 
@@ -253,7 +253,7 @@ describe('StorageService', () => {
 
   it('rejects a batch when manifest length does not match files', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.uploadPhotos('user-1', [makePhotoUpload()], {}, '[]')).rejects.toBeInstanceOf(
       BadRequestException,
@@ -263,7 +263,7 @@ describe('StorageService', () => {
 
   it('rejects a batch whose total size exceeds 250 MB', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhotos(
@@ -277,7 +277,7 @@ describe('StorageService', () => {
   });
 
   it('rejects an empty batch and a batch above the file limit', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.uploadPhotos('user-1', [])).rejects.toThrow('Не указаны файлы: files');
 
@@ -291,7 +291,7 @@ describe('StorageService', () => {
   });
 
   it('treats a batch file without size or buffer as empty before upload', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhotos(
@@ -312,7 +312,7 @@ describe('StorageService', () => {
       quarantineKey: 'moderation-quarantine/user-1/asset-1.mp4',
       publishedKey: null,
     });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
     const manifest = JSON.stringify([makeActivityMediaFixture(), { mediaId: 'media-2', role: 'media' }]);
 
     await expect(
@@ -336,7 +336,7 @@ describe('StorageService', () => {
     ['null entry', JSON.stringify([null])],
     ['invalid role', JSON.stringify([{ mediaId: 'media-1', role: 'original' }])],
   ])('rejects a manifest with an invalid %s', async (_caseName, manifest) => {
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.uploadPhotos('user-1', [makePhotoUpload()], {}, manifest)).rejects.toThrow(
       'Некорректная запись manifest медиафайлов',
@@ -345,7 +345,7 @@ describe('StorageService', () => {
   });
 
   it('rejects duplicate media identifiers with the same role', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhotos(
@@ -365,7 +365,7 @@ describe('StorageService', () => {
     s3Send.mockResolvedValue({} as never);
     process.env.S3_ENDPOINT = 'https://s3.stage.example';
     process.env.S3_REGION = 'stage-1';
-    const service = new StorageService();
+    const service = createStorageService();
     expect((service as unknown as { settings: { region: string } }).settings.region).toBe('ru-1');
 
     await expect(
@@ -386,7 +386,7 @@ describe('StorageService', () => {
   });
 
   it('does not add optional flexible checksum headers for S3-compatible storage', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
     const client = (service as unknown as { client: S3Client }).client;
     const requestChecksumCalculation = client.config.requestChecksumCalculation;
     const responseChecksumValidation = client.config.responseChecksumValidation;
@@ -401,7 +401,7 @@ describe('StorageService', () => {
 
   it('uses webp for images even when the original file name has no extension', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
     const image = await createTestImage();
 
     await expect(
@@ -421,7 +421,7 @@ describe('StorageService', () => {
   });
 
   it('rejects an upload when neither a path nor a buffer is provided', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhoto('user-1', { originalname: 'photo.jpg', mimetype: 'image/jpeg' }),
@@ -431,7 +431,7 @@ describe('StorageService', () => {
 
   it('uses the binary fallback extension when a file has no usable extension', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhoto(
@@ -453,7 +453,7 @@ describe('StorageService', () => {
     delete process.env.S3_QUARANTINE_BUCKET;
     delete process.env.S3_QUARANTINE_PREFIX;
 
-    const service = new StorageService();
+    const service = createStorageService();
 
     expect((service as unknown as { settings: unknown }).settings).toEqual({
       endpoint: '',
@@ -468,7 +468,7 @@ describe('StorageService', () => {
   });
 
   it('rejects unsupported video containers before writing to S3', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhoto('user-1', {
@@ -482,7 +482,7 @@ describe('StorageService', () => {
 
   it('moves a staged upload into the profile folder when it becomes an avatar', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
     const stagedUrl = 'https://s3.twcstorage.ru/runich-test/user-1/uploads/avatar.webp';
 
     await expect(service.promoteProfilePhoto('user-1', stagedUrl)).resolves.toEqual(
@@ -504,7 +504,7 @@ describe('StorageService', () => {
   });
 
   it('keeps an already-promoted or externally hosted profile photo unchanged', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
     const profileUrl = 'https://s3.twcstorage.ru/runich-test/user-1/profile/avatar.webp';
     const externalUrl = 'https://images.example/avatar.webp';
 
@@ -527,7 +527,7 @@ describe('StorageService', () => {
       status: 'queued',
       contentType: 'image/webp',
     });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
     const image = await createTestImage();
 
     await expect(
@@ -557,7 +557,7 @@ describe('StorageService', () => {
       status: 'queued',
       contentType: 'image/webp',
     });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
     const image = await createTestImage();
 
     await service.uploadPhoto(
@@ -575,7 +575,7 @@ describe('StorageService', () => {
 
   it('uploads feedback media into the dated feedback folder', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhoto(
@@ -590,7 +590,7 @@ describe('StorageService', () => {
   });
 
   it('rejects feedback uploads without a feedback id', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhoto(
@@ -604,7 +604,7 @@ describe('StorageService', () => {
 
   it('moves staged activity media into the activity photos folder', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
     const stagedPhotoUrl = 'https://s3.twcstorage.ru/runich-test/user-1/uploads/activity.jpg';
 
     await expect(
@@ -624,7 +624,7 @@ describe('StorageService', () => {
 
   it('keeps external activity media and reuses a destination for duplicate staged media', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
     const stagedUrl = 'https://s3.twcstorage.ru/runich-test/user-1/uploads/activity.jpg';
     const externalUrl = 'https://images.example/activity.jpg';
 
@@ -667,7 +667,7 @@ describe('StorageService', () => {
       status: 'queued',
       contentType: 'video/mp4',
     });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await expect(
       service.uploadPhoto('user-1', {
@@ -695,7 +695,7 @@ describe('StorageService', () => {
       for await (const chunk of body as AsyncIterable<Uint8Array>) streamedContent += Buffer.from(chunk).toString();
       return {} as never;
     });
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.uploadMigrationArchive('user-1', 'migration-1', path)).resolves.toEqual({
       key: 'user-1/migrations/migration-1/archive.zip',
@@ -717,7 +717,7 @@ describe('StorageService', () => {
     const directory = await mkdtemp(join(tmpdir(), 'runich-storage-download-test-'));
     const path = join(directory, 'archive.zip');
     s3Send.mockResolvedValue({ Body: Readable.from(Buffer.from('archive')) } as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await service.downloadObjectToFile('user-1/migrations/migration-1/archive.zip', path);
 
@@ -730,7 +730,7 @@ describe('StorageService', () => {
 
   it('reports a missing S3 object when the response has no body', async () => {
     s3Send.mockResolvedValue({ Body: undefined } as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.downloadObjectToFile('user-1/migrations/migration-1/archive.zip', join(tmpdir(), 'missing.zip')),
@@ -742,7 +742,7 @@ describe('StorageService', () => {
     s3Send.mockImplementation(async () => {
       throw missingObjectError;
     });
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.downloadObjectToFile(
@@ -755,7 +755,7 @@ describe('StorageService', () => {
 
   it('rethrows a non-object S3 error unchanged', async () => {
     s3Send.mockRejectedValueOnce(null as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.downloadObjectToFile('user-1/migrations/migration-1/archive.zip', join(tmpdir(), 'failed.zip')),
@@ -766,14 +766,14 @@ describe('StorageService', () => {
     s3Send.mockResolvedValueOnce({
       Body: { transformToByteArray: async () => Buffer.from('{"ok":true}') },
     } as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.readJson<{ ok: boolean }>('user-1/data.json')).resolves.toEqual({ ok: true });
   });
 
   it('omits CacheControl when a generic object has no cache policy', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.uploadObject('user-1/test.txt', Buffer.from('test'), 'text/plain')).resolves.toMatchObject({
       key: 'user-1/test.txt',
@@ -783,7 +783,7 @@ describe('StorageService', () => {
 
   it('passes CacheControl when a generic object has a cache policy', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await service.uploadObject('user-1/test.txt', Buffer.from('test'), 'text/plain', 'private, no-store');
 
@@ -794,7 +794,7 @@ describe('StorageService', () => {
 
   it('uploads a compressed activity route under the user and activity prefix', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
     const locations = [{ timestamp: 1, coords: makeMoscowCoordinate() }];
 
     await expect(service.uploadActivityRoute('user-1', 'activity-1', locations)).resolves.toMatchObject({
@@ -821,7 +821,7 @@ describe('StorageService', () => {
     const locations = [{ timestamp: 1, coords: makeMoscowCoordinate() }];
     const encoded = await encodeActivityRoute(locations);
     s3Send.mockResolvedValue({ Body: { transformToByteArray: async () => encoded.body } } as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     const routeKey = 'user-1/activities/activity-1/locations/locations-v1.json.gz';
     await expect(service.readActivityRoute(routeKey)).resolves.toEqual(locations);
@@ -838,7 +838,7 @@ describe('StorageService', () => {
 
   it('rejects an activity route response without a body', async () => {
     s3Send.mockResolvedValue({ Body: undefined } as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.readActivityRoute('user-1/activities/activity-1/locations/locations-v1.json.gz'),
@@ -847,7 +847,7 @@ describe('StorageService', () => {
 
   it('deletes only an object belonging to the authenticated user', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.deletePhoto('user-1', 'https://s3.twcstorage.ru/runich-test/user-1/photo.jpg'),
@@ -867,7 +867,7 @@ describe('StorageService', () => {
   });
 
   it('rejects an S3 URL with an invalid encoded path', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.deletePhoto('user-1', 'https://s3.twcstorage.ru/runich-test/user-1/%E0%A4%A')).rejects.toThrow(
       'Некорректный путь к фото',
@@ -876,7 +876,7 @@ describe('StorageService', () => {
   });
 
   it('keeps nested non-upload storage paths unchanged during promotion', async () => {
-    const service = new StorageService();
+    const service = createStorageService();
     const migrationUrl = 'https://s3.twcstorage.ru/runich-test/user-1/migrations/migration-1/archive.zip';
 
     await expect(service.promoteProfilePhoto('user-1', migrationUrl)).resolves.toBe(migrationUrl);
@@ -886,7 +886,7 @@ describe('StorageService', () => {
   it('deletes legacy direct S3 URLs after switching public URLs to CDN', async () => {
     process.env.S3_PUBLIC_URL = 'https://cdn.example.com';
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.deletePhoto('user-1', 'https://s3.twcstorage.ru/runich-test/user-1/legacy-photo.jpg'),
@@ -911,7 +911,7 @@ describe('StorageService', () => {
         IsTruncated: false,
       } as never)
       .mockResolvedValueOnce({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.deleteUserFiles('user-1')).resolves.toEqual({ deleted: 2 });
 
@@ -940,14 +940,14 @@ describe('StorageService', () => {
     s3Send
       .mockResolvedValueOnce({ Contents: [{ Key: 'user-1/one.jpg' }], IsTruncated: false } as never)
       .mockResolvedValueOnce({ Errors: [{ Key: 'user-1/one.jpg' }] } as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.deleteUserFiles('user-1')).rejects.toThrow('S3 не удалил 1 объектов пользователя');
   });
 
   it('handles an empty S3 listing page when deleting user files', async () => {
     s3Send.mockResolvedValueOnce({ IsTruncated: false } as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(service.deleteUserFiles('user-1')).resolves.toEqual({ deleted: 0 });
     expect(s3Send).toHaveBeenCalledTimes(1);
@@ -966,7 +966,7 @@ describe('StorageService', () => {
 
   it('fails clearly when S3 credentials are not configured', async () => {
     delete process.env.S3_ACCESS_KEY;
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhoto('user-1', { buffer: Buffer.alloc(0), originalname: 'photo.jpg', mimetype: 'image/jpeg' }),
@@ -982,7 +982,7 @@ describe('StorageService', () => {
       status: 'queued',
       contentType: 'image/webp',
     });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
     const image = await createTestImage();
 
     await expect(service.uploadPhoto('user-1', makePhotoUpload({ buffer: image }))).resolves.toMatchObject({
@@ -1000,7 +1000,7 @@ describe('StorageService', () => {
 
   it('rejects image bytes that sharp cannot process', async () => {
     s3Send.mockResolvedValue({} as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.uploadPhoto('user-1', {
@@ -1019,7 +1019,7 @@ describe('StorageService', () => {
       { id: 'approved-2', status: 'approved', publishedKey: null, contentType: 'image/jpeg' },
       { id: 'queued-1', status: 'queued', publishedKey: null, contentType: 'video/mp4' },
     ]);
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await expect(
       service.getModerationUploadStatuses('user-1', ['approved-1', 'approved-2', 'queued-1']),
@@ -1039,7 +1039,7 @@ describe('StorageService', () => {
       where: { ownerId: 'user-1', id: { in: ['approved-1', 'approved-2', 'queued-1'] } },
       select: { id: true, status: true, publishedKey: true, contentType: true },
     });
-    await expect(new StorageService().getModerationUploadStatuses('user-1', [])).rejects.toBeInstanceOf(
+    await expect(createStorageService().getModerationUploadStatuses('user-1', [])).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
   });
@@ -1084,7 +1084,7 @@ describe('StorageService', () => {
         publishedKey: null,
       },
     ]);
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     const previews = await service.getOwnerModerationPreviewUrls('user-1', [
       null,
@@ -1112,7 +1112,7 @@ describe('StorageService', () => {
       select: { id: true, status: true, quarantineKey: true, publishedKey: true },
     });
     await expect(service.getOwnerModerationPreviewUrls('user-1', [null, undefined])).resolves.toEqual({});
-    await expect(new StorageService().getOwnerModerationPreviewUrls('user-1', ['asset-1'])).resolves.toEqual({});
+    await expect(createStorageService().getOwnerModerationPreviewUrls('user-1', ['asset-1'])).resolves.toEqual({});
     await expect(service.getOwnerModerationPreviewUrl('user-1', null)).resolves.toBeNull();
   });
 
@@ -1134,7 +1134,7 @@ describe('StorageService', () => {
       })
       .mockResolvedValue({ role: 'media' });
     prisma.profile.findFirst.mockResolvedValue({ userId: 'user-1', profilePhotoPendingBlurhash: 'pending-hash' });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await expect(service.approveModerationAsset('asset-1', 'moderator-1', '  approved  ')).resolves.toEqual({
       url: 'https://s3.twcstorage.ru/runich-test/user-1/uploads/moderated/asset-1.webp',
@@ -1193,7 +1193,7 @@ describe('StorageService', () => {
         reviewNote: 'clean scan',
       })
       .mockResolvedValue({ role: 'media' });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await service.approveModerationAsset('asset-auto');
 
@@ -1216,7 +1216,7 @@ describe('StorageService', () => {
       .mockResolvedValueOnce({ id: 'asset-2', status: 'rejected' })
       .mockResolvedValueOnce({ id: 'asset-3', status: 'queued' })
       .mockResolvedValueOnce(null);
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await expect(service.approveModerationAsset('asset-1')).resolves.toMatchObject({
       key: 'user-1/uploads/approved.webp',
@@ -1253,7 +1253,7 @@ describe('StorageService', () => {
       quarantineKey: 'moderation-quarantine/user-1/thumbnail-1.webp',
       publishedKey: null,
     });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await service.rejectModerationAsset('asset-1', 'moderator-1', '  rejected  ');
 
@@ -1287,7 +1287,7 @@ describe('StorageService', () => {
       .mockResolvedValueOnce({ status: 'queued', role: 'media', publishedKey: null })
       .mockResolvedValueOnce({ status: 'approved', role: 'thumbnail', publishedKey: 'user-1/thumbnail.webp' })
       .mockResolvedValueOnce({ role: 'thumbnail' });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await service.refreshLinkedActivityMedia(['asset-1', null, 'asset-1', 'asset-2', 'asset-3', 'asset-4']);
 
@@ -1324,7 +1324,7 @@ describe('StorageService', () => {
         publishedKey: 'user-1/b.webp',
       });
     prisma.activityMedia.findFirst.mockResolvedValue(null);
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await service.deleteUnattachedModerationAsset('user-1', 'asset-1');
     await service.deleteUnattachedModerationAsset('user-1', 'asset-2');
@@ -1332,7 +1332,7 @@ describe('StorageService', () => {
     expect(prisma.mediaModerationAsset.delete).toHaveBeenNthCalledWith(1, { where: { id: 'asset-1' } });
     expect(prisma.mediaModerationAsset.delete).toHaveBeenNthCalledWith(2, { where: { id: 'asset-2' } });
     expect(s3Send).toHaveBeenCalledTimes(3);
-    await expect(new StorageService().deleteUnattachedModerationAsset('user-1', 'asset-1')).rejects.toBeInstanceOf(
+    await expect(createStorageService().deleteUnattachedModerationAsset('user-1', 'asset-1')).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
   });
@@ -1345,7 +1345,7 @@ describe('StorageService', () => {
       publishedKey: null,
     });
     prisma.activityMedia.findFirst.mockResolvedValue({ id: 'media-1' });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await expect(service.deleteUnattachedModerationAsset('user-1', 'missing')).rejects.toBeInstanceOf(
       BadRequestException,
@@ -1362,7 +1362,7 @@ describe('StorageService', () => {
     [UPLOAD_LIMITS.photoBytes + 1, 'image/jpeg', 'photo.jpg', 'Размер изображения должен быть не более 15 МБ'],
     [UPLOAD_LIMITS.videoBytes + 1, 'video/mp4', 'clip.mp4', 'Размер видео должен быть не более 50 МБ'],
   ])('rejects an upload that exceeds its media type size limit', async (size, mimetype, originalname, message) => {
-    const service = new StorageService(undefined, createModerationPrismaMock() as never);
+    const service = createStorageService(undefined, createModerationPrismaMock() as never);
 
     await expect(
       service.uploadPhoto('user-1', { buffer: Buffer.from('content'), size, mimetype, originalname }),
@@ -1372,10 +1372,12 @@ describe('StorageService', () => {
 
   it('requires Prisma and a separate quarantine prefix before uploading to a shared bucket', async () => {
     const file = { buffer: Buffer.from('video'), originalname: 'clip.mp4', mimetype: 'video/mp4' };
-    await expect(new StorageService().uploadPhoto('user-1', file)).rejects.toBeInstanceOf(ServiceUnavailableException);
+    await expect(createStorageService().uploadPhoto('user-1', file)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
 
     delete process.env.S3_QUARANTINE_PREFIX;
-    const service = new StorageService(undefined, createModerationPrismaMock() as never);
+    const service = createStorageService(undefined, createModerationPrismaMock() as never);
     await expect(service.uploadPhoto('user-1', file)).rejects.toThrow(
       'Для карантина в основном S3-бакете задайте S3_QUARANTINE_PREFIX',
     );
@@ -1385,12 +1387,12 @@ describe('StorageService', () => {
   it('rejects invalid quarantine path segments during service configuration', () => {
     process.env.S3_QUARANTINE_PREFIX = 'moderation/../uploads';
 
-    expect(() => new StorageService()).toThrow('S3_QUARANTINE_PREFIX contains an invalid path segment');
+    expect(() => createStorageService()).toThrow('S3_QUARANTINE_PREFIX contains an invalid path segment');
   });
 
   it('fails when a downloaded quarantine object has no response body', async () => {
     s3Send.mockResolvedValue({ Body: undefined } as never);
-    const service = new StorageService();
+    const service = createStorageService();
 
     await expect(
       service.downloadQuarantineObjectToFile('moderation-quarantine/user-1/missing.jpg', '/tmp/missing.jpg'),
@@ -1400,7 +1402,7 @@ describe('StorageService', () => {
   it('refuses to publish assets that are not approved or do not belong to the requester', async () => {
     const prisma = createModerationPrismaMock();
     prisma.mediaModerationAsset.findFirst.mockResolvedValue({ id: 'asset-1', status: 'queued' });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await expect(service.publishApprovedModerationAsset('owner-1', 'asset-1')).rejects.toThrow(
       'Модератор ещё не одобрил этот файл',
@@ -1417,24 +1419,24 @@ describe('StorageService', () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 'asset-rejected', status: 'rejected' })
       .mockResolvedValueOnce({ id: 'asset-queued', status: 'queued' });
-    const service = new StorageService(undefined, prisma as never);
+    const service = createStorageService(undefined, prisma as never);
 
     await expect(service.rejectModerationAsset('missing', 'moderator-1')).rejects.toThrow('Загруженный файл не найден');
     await expect(service.rejectModerationAsset('asset-rejected', 'moderator-1')).resolves.toBeUndefined();
     await expect(service.rejectModerationAsset('asset-queued', 'moderator-1')).rejects.toThrow(
       'Этот файл больше не ожидает решения модератора',
     );
-    await expect(new StorageService().rejectModerationAsset('asset-1', 'moderator-1')).rejects.toBeInstanceOf(
+    await expect(createStorageService().rejectModerationAsset('asset-1', 'moderator-1')).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
   });
 
   it('does not refresh moderation links when storage records are unavailable', async () => {
-    await expect(new StorageService().refreshLinkedActivityMedia(['asset-1', null])).resolves.toBeUndefined();
+    await expect(createStorageService().refreshLinkedActivityMedia(['asset-1', null])).resolves.toBeUndefined();
     const prisma = createModerationPrismaMock();
     prisma.mediaModerationAsset.findUnique.mockResolvedValue(null);
     await expect(
-      new StorageService(undefined, prisma as never).refreshLinkedActivityMedia(['missing']),
+      createStorageService(undefined, prisma as never).refreshLinkedActivityMedia(['missing']),
     ).resolves.toBeUndefined();
     expect(prisma.activityMedia.updateMany).not.toHaveBeenCalled();
   });

@@ -1,6 +1,4 @@
-import { BadRequestException, Inject, Injectable, Optional } from '@nestjs/common';
-import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
-import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type { PhotoUploadOptions, StorageFile, MediaUploadManifestEntry, UploadedPhotoBatch } from '../shared/types';
 import type { ActivityHeartRateSampleObject, ActivityMediaObject, LocationObject } from 'src/activity/dto/activity.dto';
 import { StorageCoreService } from './storage-core.service';
@@ -11,11 +9,13 @@ import { StorageProfileService } from './storage-profile.service';
 
 @Injectable()
 export class StorageService {
-  private readonly core: StorageCoreService;
-  private readonly uploads: StorageUploadService;
-  private readonly moderation: StorageModerationService;
-  private readonly activity: StorageActivityService;
-  private readonly profile: StorageProfileService;
+  constructor(
+    @Inject(StorageCoreService) private readonly core: StorageCoreService,
+    @Inject(StorageUploadService) private readonly uploads: StorageUploadService,
+    @Inject(StorageModerationService) private readonly moderation: StorageModerationService,
+    @Inject(StorageActivityService) private readonly activity: StorageActivityService,
+    @Inject(StorageProfileService) private readonly profile: StorageProfileService,
+  ) {}
 
   get settings() {
     return this.core.settings;
@@ -23,22 +23,6 @@ export class StorageService {
 
   get client() {
     return this.core.client;
-  }
-
-  constructor(
-    @Optional() @Inject(LatencyMetricsService) latencyMetrics?: LatencyMetricsService,
-    @Optional() @Inject(PrismaService) prisma?: PrismaService,
-    @Optional() @Inject(StorageCoreService) core?: StorageCoreService,
-    @Optional() @Inject(StorageModerationService) moderation?: StorageModerationService,
-    @Optional() @Inject(StorageUploadService) uploads?: StorageUploadService,
-    @Optional() @Inject(StorageActivityService) activity?: StorageActivityService,
-    @Optional() @Inject(StorageProfileService) profile?: StorageProfileService,
-  ) {
-    this.core = core ?? new StorageCoreService(latencyMetrics);
-    this.moderation = moderation ?? new StorageModerationService(this.core, prisma);
-    this.uploads = uploads ?? new StorageUploadService(this.core, this.moderation, prisma);
-    this.activity = activity ?? new StorageActivityService(this.core, prisma);
-    this.profile = profile ?? new StorageProfileService(this.core);
   }
 
   async readJson<T>(key: string): Promise<T> {

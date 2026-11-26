@@ -1,3 +1,4 @@
+import { gzipSync } from 'node:zlib';
 import { decodeActivityRoute, encodeActivityRoute, getActivityRouteKey } from '../shared/activity-route';
 
 describe('activity route storage format', () => {
@@ -35,5 +36,11 @@ describe('activity route storage format', () => {
     expect(getActivityRouteKey('user-1', 'activity-1')).toBe(
       'user-1/activities/activity-1/locations/locations-v1.json.gz',
     );
+  });
+
+  it('rejects an unsupported stored route version', async () => {
+    const body = gzipSync(Buffer.from(JSON.stringify({ version: 2, locations: [] })));
+
+    await expect(decodeActivityRoute(body)).rejects.toThrow('Неизвестный формат маршрута активности');
   });
 });

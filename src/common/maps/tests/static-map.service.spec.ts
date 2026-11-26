@@ -46,6 +46,32 @@ describe('StaticMapService', () => {
     );
   });
 
+  it('queues vector rendering while both render slots are occupied', async () => {
+    const renderedWebp = await createRenderedWebp();
+    const renderResolvers: Array<(image: Buffer) => void> = [];
+    renderRunichVectorMap.mockImplementation(() => new Promise<Buffer>((resolve) => renderResolvers.push(resolve)));
+    const storage = createStorage();
+    const service = new StaticMapService(storage as never);
+    const generateMap = (activityId: string) =>
+      service.generateActivityMap({ userId: 'user-1', activityId, locations });
+
+    const firstMap = generateMap('activity-1');
+    const secondMap = generateMap('activity-2');
+    const thirdMap = generateMap('activity-3');
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(renderRunichVectorMap).toHaveBeenCalledTimes(2);
+    renderResolvers[0](renderedWebp);
+    await firstMap;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(renderRunichVectorMap).toHaveBeenCalledTimes(3);
+    renderResolvers[1](renderedWebp);
+    renderResolvers[2](renderedWebp);
+    await Promise.all([secondMap, thirdMap]);
+    expect(storage.uploadObject).toHaveBeenCalledTimes(3);
+  });
+
   it('renders and uploads a separate route-only map when hideMap is enabled', async () => {
     const storage = createStorage();
     const service = new StaticMapService(storage as never);

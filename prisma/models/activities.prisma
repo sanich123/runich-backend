@@ -59,6 +59,8 @@ model Activity {
   @@index([userId, date, id], map: "Activity_user_id_date_id_idx")
   @@index([userId, visibility, date, id], map: "Activity_user_id_visibility_date_id_idx")
   @@index([visibility, date, id], map: "Activity_visibility_date_id_idx")
+  @@index([mediaProcessingStatus, createdAt, id], map: "Activity_media_processing_status_created_at_id_idx")
+  @@index([locationEnrichmentStatus, createdAt, id], map: "Activity_location_enrichment_status_created_at_id_idx")
   @@index([textModerationStatus, updatedAt, id], map: "Activity_text_moderation_status_updated_at_id_idx")
   @@map("Activity")
 }

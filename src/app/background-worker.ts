@@ -8,7 +8,6 @@ import { MediaCleanupService } from 'src/storage/services/media-cleanup.service'
 import { getAppEnvironment } from 'src/common/config/environment';
 import { getLogLevels } from 'src/common/utils/log-levels';
 import { BackgroundWorkerModule } from './background-worker.module';
-import { LoadTestSeedService } from 'src/load-test/load-test.service';
 import { observeInstrument } from 'src/common/observe/observe.config';
 import { EmailNotificationWorkerService } from 'src/email/email-notification-worker.service';
 import { PushNotificationWorkerService } from 'src/notification/push-notification-worker.service';
@@ -24,7 +23,6 @@ async function bootstrap() {
   const mediaProcessingService = app.get(ActivityMediaProcessingService);
   const enrichmentService = app.get(ActivityEnrichmentService);
   const cleanupService = app.get(MediaCleanupService);
-  const loadTestSeedService = app.get(LoadTestSeedService);
   const emailNotificationWorkerService = app.get(EmailNotificationWorkerService);
   const pushNotificationWorkerService = app.get(PushNotificationWorkerService);
   const mediaModerationWorkerService = app.get(MediaModerationWorkerService);
@@ -34,7 +32,6 @@ async function bootstrap() {
     mediaProcessingService.requestStop();
     enrichmentService.requestStop();
     cleanupService.requestStop();
-    loadTestSeedService.requestStop();
     emailNotificationWorkerService.requestStop();
     pushNotificationWorkerService.requestStop();
     mediaModerationWorkerService.requestStop();
@@ -50,7 +47,6 @@ async function bootstrap() {
       mediaProcessingService.runWorker(),
       enrichmentService.runWorker(),
       cleanupService.runWorker(),
-      ...(getAppEnvironment() === 'production' ? [] : [loadTestSeedService.runWorker()]),
       emailNotificationWorkerService.runWorker(),
       pushNotificationWorkerService.runWorker(),
       mediaModerationWorkerService.runWorker(),

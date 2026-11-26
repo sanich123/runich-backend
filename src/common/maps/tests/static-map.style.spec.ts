@@ -49,6 +49,36 @@ describe('Runich static map style', () => {
     expect(style.layers.map(({ id }) => id)).toEqual(['background', 'runich-route']);
   });
 
+  it('appends natural layers when the vector source has no road layers', async () => {
+    jest.resetModules();
+    const { createRunichMapStyle: createFreshStyle } = await import('../static-map.style');
+    const fetch = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          version: 8,
+          sources: { openmaptiles: { type: 'vector' } },
+          layers: [
+            { id: 'background', type: 'background' },
+            { id: 'landcover_wood', type: 'fill', source: 'openmaptiles', 'source-layer': 'landcover' },
+          ],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+
+    const style = await createFreshStyle([]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(style.layers.map(({ id }) => id)).toEqual([
+      'background',
+      'landcover_wood',
+      'runich-landcover-grass',
+      'runich-landcover-wetland',
+      'runich-landuse-cemetery',
+      'runich-route',
+    ]);
+  });
+
   it('keeps only map context needed for routes and labels', async () => {
     const fetch = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(

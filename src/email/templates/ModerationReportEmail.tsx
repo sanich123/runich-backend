@@ -183,6 +183,14 @@ export function ModerationReportEmail({
     reportedActivity?.duration != null ||
     reportedActivity?.locationName,
   );
+  const hasReportedContent = Boolean(
+    reportedContent ||
+    reportedProfile?.bio ||
+    (targetType === 'user' && reportedProfilePhoto) ||
+    reportedActivity?.mapPhotoUrl ||
+    mediaUrls.length ||
+    reportedVideoUrls?.length,
+  );
 
   return (
     <EmailLayout preview={preview}>
@@ -202,9 +210,61 @@ export function ModerationReportEmail({
             <PersonDetails label="Кто пожаловался" person={null} />
           )}
           <Text style={emailStyles.paragraph}>Тип контента: {targetLabels[targetType] ?? targetType}</Text>
+          {hasReportedContent ? (
+            <>
+              <Text style={{ ...emailStyles.paragraph, fontWeight: 700 }}>Контент, на который пожаловались:</Text>
+              {reportedContent ? (
+                <Text style={{ ...emailStyles.paragraph, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                  {contentLabels[targetType] ?? 'Содержимое'}: {reportedContent}
+                </Text>
+              ) : null}
+              {targetType === 'user' && reportedProfilePhoto ? (
+                <Img
+                  src={reportedProfilePhoto}
+                  alt="Фото профиля, на которое пожаловались"
+                  width="480"
+                  style={{ borderRadius: '8px', maxWidth: '100%', objectFit: 'contain', marginBottom: '18px' }}
+                />
+              ) : null}
+              {reportedProfile?.bio && reportedContent !== reportedProfile.bio ? (
+                <Text style={{ ...emailStyles.paragraph, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                  Описание профиля: {reportedProfile.bio}
+                </Text>
+              ) : null}
+              {reportedActivity?.mapPhotoUrl ? (
+                <>
+                  <Text style={emailStyles.paragraph}>Карта активности:</Text>
+                  <Img
+                    src={reportedActivity.mapPhotoUrl}
+                    alt="Карта активности"
+                    width="480"
+                    style={{ borderRadius: '8px', maxWidth: '100%', objectFit: 'contain', marginBottom: '18px' }}
+                  />
+                </>
+              ) : null}
+              {mediaUrls.map((url, index) => (
+                <Img
+                  key={`${index}-${url}`}
+                  src={url}
+                  alt={`${targetLabels[targetType] ?? 'Контент'}: фото ${index + 1}`}
+                  width="480"
+                  style={{ borderRadius: '8px', maxWidth: '100%', objectFit: 'contain', marginBottom: '18px' }}
+                />
+              ))}
+              {reportedVideoUrls?.map((url, index) => (
+                <Text key={`${index}-${url}`} style={emailStyles.paragraph}>
+                  Видео: <Link href={url}>открыть</Link>
+                </Text>
+              ))}
+            </>
+          ) : null}
           <PersonDetails
             label="Автор контента"
-            person={reportedProfilePerson ? { ...reportedProfilePerson, profilePhoto: reportedProfilePhoto } : null}
+            person={
+              reportedProfilePerson
+                ? { ...reportedProfilePerson, profilePhoto: targetType === 'user' ? null : reportedProfilePhoto }
+                : null
+            }
           />
           {reportedGroup ? (
             <Text style={emailStyles.paragraph}>
@@ -236,41 +296,6 @@ export function ModerationReportEmail({
               ) : null}
             </>
           ) : null}
-          {reportedContent ? (
-            <Text style={{ ...emailStyles.paragraph, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-              {contentLabels[targetType] ?? 'Содержимое'}: {reportedContent}
-            </Text>
-          ) : null}
-          {reportedProfile?.bio && reportedContent !== reportedProfile.bio ? (
-            <Text style={{ ...emailStyles.paragraph, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-              Описание профиля: {reportedProfile.bio}
-            </Text>
-          ) : null}
-          {reportedActivity?.mapPhotoUrl ? (
-            <>
-              <Text style={emailStyles.paragraph}>Карта активности:</Text>
-              <Img
-                src={reportedActivity.mapPhotoUrl}
-                alt="Карта активности"
-                width="480"
-                style={{ borderRadius: '8px', maxWidth: '100%', objectFit: 'contain', marginBottom: '18px' }}
-              />
-            </>
-          ) : null}
-          {mediaUrls.map((url, index) => (
-            <Img
-              key={`${index}-${url}`}
-              src={url}
-              alt={`${targetLabels[targetType] ?? 'Контент'}: фото ${index + 1}`}
-              width="480"
-              style={{ borderRadius: '8px', maxWidth: '100%', objectFit: 'contain', marginBottom: '18px' }}
-            />
-          ))}
-          {reportedVideoUrls?.map((url, index) => (
-            <Text key={`${index}-${url}`} style={emailStyles.paragraph}>
-              Видео: <Link href={url}>открыть</Link>
-            </Text>
-          ))}
           <Text style={emailStyles.paragraph}>Причина: {reasonLabels[reason] ?? reason}</Text>
           {reporterDetails ? (
             <Text style={{ ...emailStyles.paragraph, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>

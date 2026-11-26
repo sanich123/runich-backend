@@ -19,5 +19,9 @@ export const RATE_LIMITS = {
 } as const;
 
 export function RateLimit(limit: number, ttl: number): MethodDecorator {
-  return applyDecorators(Throttle({ default: { limit, ttl } }), UseGuards(ThrottlerGuard));
+  const rateLimitDecorator = applyDecorators(Throttle({ default: { limit, ttl } }), UseGuards(ThrottlerGuard));
+
+  return (target, propertyKey, descriptor) => {
+    rateLimitDecorator(target, propertyKey, descriptor);
+  };
 }

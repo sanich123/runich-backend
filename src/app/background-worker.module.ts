@@ -5,7 +5,6 @@ import { ActivityMediaProcessingService } from 'src/activity/services/activity-m
 import { ActivityEnrichmentService } from 'src/activity/services/activity-enrichment.service';
 import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { StorageModule } from 'src/storage/storage.module';
-import { LoadTestModule } from 'src/load-test/load-test.module';
 import { observeImports } from 'src/common/observe/observe.config';
 import { EmailNotificationModule } from 'src/email/email-notification.module';
 import { NotificationModule } from 'src/notification/notification.module';
@@ -19,7 +18,6 @@ import { ModerationModule } from 'src/moderation/moderation.module';
     PrismaModule,
     StorageModule,
     ActivityModule,
-    LoadTestModule,
     EmailNotificationModule,
     NotificationModule,
     ModerationModule,

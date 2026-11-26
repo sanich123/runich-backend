@@ -2,16 +2,14 @@ import { jest } from '@jest/globals';
 import { asyncMock, syncMock } from 'src/tests/helpers';
 import type { LocationObject } from 'src/activity/dto/activity.dto';
 
-const parseCoordinatesFromFile = asyncMock();
-const parseFitActivityFromMigrationFile = asyncMock();
+const parseActivityDataFromMigrationFile = asyncMock();
 const ungzipFile = asyncMock();
 const getMapBoxImage = syncMock();
 const getSpeedInMinsInKm = syncMock();
 const uuid = syncMock();
 
 jest.unstable_mockModule('../parse-coordinates-from-file', () => ({
-  parseCoordinatesFromFile,
-  parseFitActivityFromMigrationFile,
+  parseActivityDataFromMigrationFile,
 }));
 jest.unstable_mockModule('../ungzip', () => ({ ungzipFile }));
 jest.unstable_mockModule('../get-mapbox-image', () => ({ getMapBoxImage }));
@@ -40,8 +38,7 @@ describe('mapActivitiesWithCoordinates', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.MAPBOX_ACCESS_TOKEN = 'mapbox-token';
-    parseCoordinatesFromFile.mockResolvedValue(createRoute());
-    parseFitActivityFromMigrationFile.mockResolvedValue({ locations: createRoute(), heartRateData: { samples: [] } });
+    parseActivityDataFromMigrationFile.mockResolvedValue({ locations: createRoute(), heartRateData: { samples: [] } });
     getMapBoxImage.mockReturnValue('https://map.example/route');
     getSpeedInMinsInKm.mockReturnValue({ paceAsNumber: 6 });
     uuid.mockReturnValue('activity-1');
@@ -94,9 +91,9 @@ describe('mapActivitiesWithCoordinates', () => {
       5,
     );
     expect(activity.kilometresSplit?.[0].lastKilometerAltitude).toBeGreaterThan(0);
-    expect(activity.mapPhotoUrl).toBe('https://map.example/route');
-    expect(parseCoordinatesFromFile).toHaveBeenCalledWith('activities/run.gpx', '/tmp/migration-job-1');
-    expect(getMapBoxImage).toHaveBeenCalledWith(createRoute());
+    expect(activity.mapPhotoUrl).toBe('');
+    expect(parseActivityDataFromMigrationFile).toHaveBeenCalledWith('activities/run.gpx', '/tmp/migration-job-1');
+    expect(getMapBoxImage).not.toHaveBeenCalled();
   });
 
   it('uses the CSV distance to keep imported split count consistent with the activity', async () => {
@@ -108,7 +105,7 @@ describe('mapActivitiesWithCoordinates', () => {
         timestamp: index * 60_000,
       },
     }));
-    parseFitActivityFromMigrationFile.mockResolvedValueOnce({ locations: route, heartRateData: { samples: [] } });
+    parseActivityDataFromMigrationFile.mockResolvedValueOnce({ locations: route, heartRateData: { samples: [] } });
 
     const [activity] = await mapActivitiesWithCoordinates({
       userId: 'user-1',
@@ -189,7 +186,7 @@ describe('mapActivitiesWithCoordinates', () => {
     expect(activities[0].sport).toBe('');
     expect(activities[0].mapPhotoUrl).toBe('');
     expect(activities[1].duration).toBe(0);
-    expect(parseCoordinatesFromFile).not.toHaveBeenCalled();
+    expect(parseActivityDataFromMigrationFile).not.toHaveBeenCalled();
     expect(getMapBoxImage).not.toHaveBeenCalled();
   });
 
@@ -224,7 +221,7 @@ describe('mapActivitiesWithCoordinates', () => {
     expect(activities[1]).not.toHaveProperty('caloriesActive');
   });
 
-  it('unzips and parses TCX routes before generating a map image', async () => {
+  it('unzips and parses TCX routes without generating a Mapbox fallback URL', async () => {
     ungzipFile.mockResolvedValue(undefined);
 
     const [activity] = await mapActivitiesWithCoordinates({
@@ -245,13 +242,14 @@ describe('mapActivitiesWithCoordinates', () => {
       ],
     });
 
-    expect(activity.mapPhotoUrl).toBe('https://map.example/route');
+    expect(activity.mapPhotoUrl).toBe('');
+    expect(getMapBoxImage).not.toHaveBeenCalled();
     expect(ungzipFile).toHaveBeenCalledWith('activities/run.tcx.gz', '/tmp/migration-job-2');
-    expect(parseCoordinatesFromFile).toHaveBeenCalledWith('activities/run.tcx', '/tmp/migration-job-2');
+    expect(parseActivityDataFromMigrationFile).toHaveBeenCalledWith('activities/run.tcx', '/tmp/migration-job-2');
   });
 
   it('parses FIT routes but skips the map when the route has one point', async () => {
-    parseFitActivityFromMigrationFile.mockResolvedValueOnce({
+    parseActivityDataFromMigrationFile.mockResolvedValueOnce({
       locations: [createRoute()[0]],
       heartRateData: { samples: [] },
     });
@@ -276,7 +274,7 @@ describe('mapActivitiesWithCoordinates', () => {
 
     expect(activity.locations).toHaveLength(1);
     expect(activity.mapPhotoUrl).toBe('');
-    expect(parseFitActivityFromMigrationFile).toHaveBeenCalledWith('activities/run.fit', '/tmp/migration-job-3');
+    expect(parseActivityDataFromMigrationFile).toHaveBeenCalledWith('activities/run.fit', '/tmp/migration-job-3');
     expect(getMapBoxImage).not.toHaveBeenCalled();
   });
 

@@ -5,15 +5,24 @@ const getCoordinatesFromFitFile = jest.fn<(...args: unknown[]) => Promise<unknow
 const parseFitActivityFromFile = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 const getCoordinatesFromTcxFile = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 const getCoordinatesFromGpxFile = jest.fn<(...args: unknown[]) => Promise<unknown>>();
+const parseTcxActivityFromFile = jest.fn<(...args: unknown[]) => Promise<unknown>>();
+const parseGpxActivityFromFile = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 jest.unstable_mockModule('node:fs', () => ({ existsSync }));
 jest.unstable_mockModule('../get-coordinates-from-fit', () => ({
   getCoordinatesFromFitFile,
   parseFitActivityFromFile,
 }));
-jest.unstable_mockModule('../get-coordinates-from-tcx', () => ({ getCoordinatesFromTcxFile }));
-jest.unstable_mockModule('../get-coordinates-from-gpx', () => ({ getCoordinatesFromGpxFile }));
+jest.unstable_mockModule('../get-coordinates-from-tcx', () => ({
+  getCoordinatesFromTcxFile,
+  parseTcxActivityFromFile,
+}));
+jest.unstable_mockModule('../get-coordinates-from-gpx', () => ({
+  getCoordinatesFromGpxFile,
+  parseGpxActivityFromFile,
+}));
 
-const { parseCoordinatesFromFile, parseFitActivityFromMigrationFile } = await import('../parse-coordinates-from-file');
+const { parseCoordinatesFromFile, parseFitActivityFromMigrationFile, parseActivityDataFromMigrationFile } =
+  await import('../parse-coordinates-from-file');
 
 describe('parseCoordinatesFromFile', () => {
   beforeEach(() => {
@@ -23,6 +32,8 @@ describe('parseCoordinatesFromFile', () => {
     parseFitActivityFromFile.mockResolvedValue({ locations: [], heartRateData: { samples: [] } });
     getCoordinatesFromTcxFile.mockResolvedValue([{ coords: { latitude: 3, longitude: 4 } }]);
     getCoordinatesFromGpxFile.mockResolvedValue([{ coords: { latitude: 5, longitude: 6 } }]);
+    parseTcxActivityFromFile.mockResolvedValue({ locations: [], heartRateData: { samples: [] } });
+    parseGpxActivityFromFile.mockResolvedValue({ locations: [], heartRateData: { samples: [] } });
   });
 
   it.each([
@@ -47,6 +58,43 @@ describe('parseCoordinatesFromFile', () => {
 
     expect(existsSync).toHaveBeenCalledWith('/tmp/migration/activity.fit');
     expect(parseFitActivityFromFile).toHaveBeenCalledWith('/tmp/migration/activity.fit');
+  });
+
+  it.each([
+    ['activities/run.gpx', parseGpxActivityFromFile],
+    ['activities/run.tcx', parseTcxActivityFromFile],
+  ])('routes %s through a combined coordinates and heart-rate parser', async (filePath, parser) => {
+    const parsedActivity = { locations: [{ coords: { latitude: 1, longitude: 2 } }], heartRateData: { samples: [] } };
+    parser.mockResolvedValueOnce(parsedActivity);
+
+    await expect(parseActivityDataFromMigrationFile(filePath, '/tmp/migration')).resolves.toEqual(parsedActivity);
+    expect(existsSync).toHaveBeenCalledWith(`/tmp/migration/${filePath}`);
+    expect(parser).toHaveBeenCalledWith(`/tmp/migration/${filePath}`);
+  });
+
+  it('routes FIT through its combined route and heart-rate parser', async () => {
+    const parsedActivity = { locations: [], heartRateData: { samples: [] } };
+    parseFitActivityFromFile.mockResolvedValueOnce(parsedActivity);
+
+    await expect(parseActivityDataFromMigrationFile('activities/run.fit', '/tmp/migration')).resolves.toEqual(
+      parsedActivity,
+    );
+    expect(parseFitActivityFromFile).toHaveBeenCalledWith('/tmp/migration/activities/run.fit');
+  });
+
+  it('returns empty activity data for unsupported migration files', async () => {
+    await expect(parseActivityDataFromMigrationFile('activities/notes.json', '/tmp/migration')).resolves.toEqual({
+      locations: [],
+      heartRateData: { samples: [] },
+    });
+  });
+
+  it('rejects combined parsing when the migration file is missing', async () => {
+    existsSync.mockReturnValue(false);
+
+    await expect(parseActivityDataFromMigrationFile('activities/missing.gpx', '/tmp/migration')).rejects.toThrow(
+      'Файл с координатами не найден',
+    );
   });
 
   it('rejects files that are absent from the migration directory', async () => {

@@ -28,7 +28,7 @@ export async function seedMockData(prisma: DatabaseRepositories) {
     select: {
       id: true,
       email: true,
-      profile: { select: { bio: true, name: true, surname: true, profilePhoto: true } },
+      profile: { select: { id: true, bio: true, name: true, surname: true, profilePhoto: true } },
       _count: { select: { activities: true } },
     },
   });

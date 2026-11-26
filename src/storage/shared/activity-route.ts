@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { gunzip, gzip } from 'node:zlib';
+import { constants as zlibConstants, gunzip, gzip } from 'node:zlib';
 import { promisify } from 'node:util';
 import type { LocationObject } from 'src/activity/dto/activity.dto';
 
@@ -43,7 +43,7 @@ export async function encodeActivityRoute(locations: LocationObject[]) {
       ];
     }),
   };
-  const body = await gzipAsync(Buffer.from(JSON.stringify(route), 'utf8'));
+  const body = await gzipAsync(Buffer.from(JSON.stringify(route), 'utf8'), { level: zlibConstants.Z_BEST_SPEED });
 
   return {
     body,

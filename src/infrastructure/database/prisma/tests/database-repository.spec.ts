@@ -2,6 +2,37 @@ import { jest } from '@jest/globals';
 import { ModelRepository } from '../database-repository';
 
 describe('ModelRepository', () => {
+  it('rejects unknown where fields instead of dropping the filter', async () => {
+    const repository = new ModelRepository({ orm: { public: { Activity: {} } } } as never, 'Activity');
+
+    await expect(repository.findMany({ where: { userID: 'user-1' } } as never)).rejects.toThrow(
+      'Unknown field in Activity.where: userID',
+    );
+  });
+
+  it('rejects unsupported scalar filter operators', async () => {
+    const repository = new ModelRepository({ orm: { public: { Activity: {} } } } as never, 'Activity');
+
+    await expect(repository.findMany({ where: { date: { before: new Date() } } } as never)).rejects.toThrow(
+      'Unsupported scalar filter Activity.where.date.before',
+    );
+  });
+
+  it('rejects relation data in createMany instead of omitting it from the insert', async () => {
+    const execute = jest.fn();
+    const repository = new ModelRepository(
+      { orm: { public: { Activity: {} } }, runtime: () => ({ execute }) } as never,
+      'Activity',
+    );
+
+    await expect(
+      repository.createMany({
+        data: [{ user: { create: { id: 'user-1' } } }],
+      } as never),
+    ).rejects.toThrow('Unknown scalar field in Activity.createMany.data[0]: user');
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it('loads moderated photo assets for groups', async () => {
     let photoAssetLoaded = false;
     const photoAsset = { status: 'queued', publishedKey: null, blurhash: 'pending-blurhash' };

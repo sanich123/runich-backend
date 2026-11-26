@@ -1,0 +1,98 @@
+[
+  {
+    "id": "index.Activity.Activity_location_enrichment_status_created_at_id_idx",
+    "label": "Create index \"Activity_location_enrichment_status_created_at_id_idx\" on \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Activity_location_enrichment_status_created_at_id_idx",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Activity_location_enrichment_status_created_at_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_location_enrichment_status_created_at_id_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Activity_location_enrichment_status_created_at_id_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Activity_location_enrichment_status_created_at_id_idx\"",
+        "sql": "CREATE INDEX \"Activity_location_enrichment_status_created_at_id_idx\" ON \"public\".\"Activity\" (\"location_enrichment_status\", \"createdAt\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Activity_location_enrichment_status_created_at_id_idx\" exists on \"Activity\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_location_enrichment_status_created_at_id_idx\"",
+          "i",
+          "I",
+          "\"public\".\"Activity\"",
+          "btree",
+          "[\"location_enrichment_status\",\"createdAt\",\"id\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Activity.Activity_media_processing_status_created_at_id_idx",
+    "label": "Create index \"Activity_media_processing_status_created_at_id_idx\" on \"Activity\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Activity_media_processing_status_created_at_id_idx",
+        "table": "Activity"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Activity_media_processing_status_created_at_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_media_processing_status_created_at_id_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Activity_media_processing_status_created_at_id_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Activity_media_processing_status_created_at_id_idx\"",
+        "sql": "CREATE INDEX \"Activity_media_processing_status_created_at_id_idx\" ON \"public\".\"Activity\" (\"media_processing_status\", \"createdAt\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Activity_media_processing_status_created_at_id_idx\" exists on \"Activity\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Activity_media_processing_status_created_at_id_idx\"",
+          "i",
+          "I",
+          "\"public\".\"Activity\"",
+          "btree",
+          "[\"media_processing_status\",\"createdAt\",\"id\"]"
+        ]
+      }
+    ]
+  }
+]

@@ -76,15 +76,19 @@ changes through `db:migrate:prod`, never through API or worker startup.
 
 ## Testing and checks
 
-Run the full quality gate before pushing:
+Run the full quality gate before pushing. This sequence generates the Prisma
+contract once and then reuses it for both Jest runs:
 
-    yarn typecheck
+    yarn db:generate
+    yarn tsc --noEmit
     yarn eslint src
     yarn build
-    yarn test:ci
-    yarn test:cov
-    yarn test:integration
-    yarn madge
+    node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --maxWorkers=50% --no-watchman
+    yarn db:up:check
+    yarn prisma db verify
+    RUNICH_INTEGRATION=true node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.cjs --runInBand --no-watchman
+    yarn madge --ts-config ./tsconfig.json --warning --circular --extensions ts ./src
+    yarn ts-prune --ignore 'tsdown\.config\.ts|src/admin/admin-access\.constants\.ts|src/moderation/moderation\.constants\.ts|tests/mocks/nestjs-throttler\.ts|src/email/templates/index\.ts|src/infrastructure|^prisma/|(^|/)generated/|(^|/)(migrations|snapshots)/|\.d\.ts$|prisma\.config\.ts|\.spec\.ts$'
 
 Tests should be deterministic and isolated from production services.
 The integration suite uses PostgreSQL and must run only against a disposable
@@ -95,8 +99,10 @@ Activity requests are bounded at 5,000 location points and 5 MiB of JSON body
 data. Keep the client-side reduction in place; do not bypass these limits by
 raising the global parser limit for a single large route.
 
-The test, coverage and typecheck scripts run `yarn db:generate` before
-executing, so generated Prisma 8 contract artifacts cannot become stale in CI.
+Standalone `yarn test:cov`, `yarn test:integration`, and the direct TypeScript
+check should run after `yarn db:generate`. For a combined pass, run generation
+once before typecheck, then use the Jest commands above so generated Prisma 8
+contract artifacts are reused.
 
 ## Pull requests
 

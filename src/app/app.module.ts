@@ -15,7 +15,6 @@ import LoggingService from 'src/common/logger/logger.middleware';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { StorageModule } from 'src/storage/storage.module';
 import { SubscriptionModule } from 'src/subscription/subscription.module';
-import { LoadTestModule } from 'src/load-test/load-test.module';
 import { observeImports } from 'src/common/observe/observe.config';
 import { NotificationModule } from 'src/notification/notification.module';
 import { ModerationModule } from 'src/moderation/moderation.module';
@@ -43,7 +42,6 @@ import { GroupsModule } from 'src/groups/groups.module';
     HealthModule,
     StorageModule,
     SubscriptionModule,
-    LoadTestModule,
   ],
 })
 export class AppModule {

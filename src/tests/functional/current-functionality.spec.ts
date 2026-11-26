@@ -4,7 +4,7 @@ import { jest } from '@jest/globals';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from '../../auth/services/auth.service';
 import { AccountService } from '../../account/account.service';
-import { ActivityService } from '../../activity/services/activity.service';
+import { createActivityService } from '../../activity/tests/helpers/activity-service.factory';
 import { makeActivityDto, makeMigrationSuccessResult } from '../../activity/tests/fixtures';
 import {
   makeConfirmedPasswordUser,
@@ -224,7 +224,7 @@ describe('activity, comments and statistics', () => {
         emailNotifications: true,
       }),
     };
-    const service = new ActivityService(prisma as never, account as never);
+    const service = createActivityService(prisma as never, account as never);
     const queryRaw = createMock();
     Object.assign(prisma, { $queryRaw: queryRaw });
     prisma.activity.create.mockResolvedValue({ id: 'a1' });
@@ -277,7 +277,7 @@ describe('activity, comments and statistics', () => {
 
   it('updates existing activities by Strava source identity during archive migration', async () => {
     const prisma = db();
-    const service = new ActivityService(prisma as never, {} as never);
+    const service = createActivityService(prisma as never, {} as never);
     const activity = {
       duration: 100,
       distance: 1000,

@@ -27,7 +27,6 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   readonly notification!: DatabaseRepositories['notification'];
   readonly pushDeviceToken!: DatabaseRepositories['pushDeviceToken'];
   readonly pushNotificationJob!: DatabaseRepositories['pushNotificationJob'];
-  readonly loadTestSeedJob!: DatabaseRepositories['loadTestSeedJob'];
   readonly friend!: DatabaseRepositories['friend'];
   readonly comment!: DatabaseRepositories['comment'];
   readonly commentLike!: DatabaseRepositories['commentLike'];

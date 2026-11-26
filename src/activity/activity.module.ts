@@ -9,6 +9,8 @@ import { ActivityAccessService } from './services/activity-access.service';
 import { ActivityReadService } from './services/activity-read.service';
 import { ActivityContentReadService } from './services/activity-content-read.service';
 import { ActivityFeedService } from './services/activity-feed.service';
+import { ActivityRouteFeedService } from './services/activity-route-feed.service';
+import { ActivityFriendsFeedService } from './services/activity-friends-feed.service';
 import { ActivityMediaService } from './services/activity-media.service';
 import { ActivityWriteService } from './services/activity-write.service';
 import { ActivityImportService } from './services/activity-import.service';
@@ -39,6 +41,8 @@ import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
     ActivityReadService,
     ActivityContentReadService,
     ActivityFeedService,
+    ActivityRouteFeedService,
+    ActivityFriendsFeedService,
     ActivityMediaService,
     ActivityWriteService,
     ActivityImportService,

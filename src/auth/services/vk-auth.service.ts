@@ -17,16 +17,8 @@ import type { VkState } from '../types/auth.types';
 import { normalizeEmail } from '../utils/russian-email';
 import { SuperuserEmailBootstrapService } from './superuser-email-bootstrap.service';
 import type { SessionMetadata } from '../types/auth.types';
-
-function getVkRequestUrl(endpoint: string, parameters: Record<string, string>) {
-  const url = new URL(endpoint);
-  Object.entries(parameters).forEach(([name, value]) => url.searchParams.set(name, value));
-  return url;
-}
-
-function getSafeVkErrorCode(error: unknown) {
-  return typeof error === 'string' && /^[A-Za-z0-9._-]{1,64}$/.test(error) ? error : 'unknown';
-}
+import { provisionSocialEmailAccount } from '../utils/social-auth-account';
+import { getSafeVkErrorCode, getVkRequestUrl } from '../utils/vk-auth.utils';
 
 @Injectable()
 export class VkAuthService {
@@ -130,32 +122,17 @@ export class VkAuthService {
     const profile = profilePayload.user;
     const profileId = profile.user_id ?? String(tokenPayload.user_id);
     const email = normalizeEmail(tokenPayload.email?.trim() || profile.email?.trim() || `vk_${profileId}@vk.local`);
-    let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          authProvider: 'VK',
-          emailConfirmedAt: new Date(),
-          createdAt: new Date(),
-          profile: {
-            create: {
-              name: profile.first_name,
-              surname: profile.last_name,
-              city: profile.city,
-              profilePhoto: profile.avatar,
-              email,
-            },
-          },
-        },
-      });
-    } else if (!user.emailConfirmedAt) {
-      user = await this.prisma.user.update({ where: { id: user.id }, data: { emailConfirmedAt: new Date() } });
-    }
-
-    await this.superuserEmailBootstrapService.grantIfAllowlisted(user.id, email);
-    await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
-    return this.tokenService.createSessionTokens(user.id, metadata);
+    const userId = await provisionSocialEmailAccount(this.prisma, this.superuserEmailBootstrapService, {
+      email,
+      provider: 'VK',
+      profile: {
+        name: profile.first_name,
+        surname: profile.last_name,
+        city: profile.city,
+        profilePhoto: profile.avatar,
+      },
+    });
+    return this.tokenService.createSessionTokens(userId, metadata);
   }
 
   start(response: Response) {
@@ -243,7 +220,14 @@ export class VkAuthService {
         body: new URLSearchParams({ access_token: accessToken }),
       });
       const profilePayload = (await profileResponse.json()) as {
-        user?: { user_id?: string; first_name?: string; last_name?: string; avatar?: string; city?: string };
+        user?: {
+          user_id?: string;
+          first_name?: string;
+          last_name?: string;
+          avatar?: string;
+          city?: string;
+          email?: string;
+        };
         error?: string;
         error_description?: string;
       };
@@ -258,33 +242,19 @@ export class VkAuthService {
       const profile = profilePayload.user;
 
       const profileId = profile.user_id ?? String(tokenPayload.user_id);
-      const email = normalizeEmail(tokenPayload.email?.trim() || `vk_${profileId}@vk.local`);
-      let user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailConfirmedAt: true } });
-      if (!user) {
-        user = await this.prisma.user.create({
-          data: {
-            email,
-            authProvider: 'VK',
-            emailConfirmedAt: new Date(),
-            createdAt: new Date(),
-            profile: {
-              create: {
-                name: profile.first_name,
-                surname: profile.last_name,
-                city: profile.city,
-                profilePhoto: profile.avatar,
-                email,
-              },
-            },
-          },
-        });
-      } else if (!user.emailConfirmedAt) {
-        user = await this.prisma.user.update({ where: { id: user.id }, data: { emailConfirmedAt: new Date() } });
-      }
-      await this.superuserEmailBootstrapService.grantIfAllowlisted(user.id, email);
-      await this.prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
+      const email = normalizeEmail(tokenPayload.email?.trim() || profile.email?.trim() || `vk_${profileId}@vk.local`);
+      const userId = await provisionSocialEmailAccount(this.prisma, this.superuserEmailBootstrapService, {
+        email,
+        provider: 'VK',
+        profile: {
+          name: profile.first_name,
+          surname: profile.last_name,
+          city: profile.city,
+          profilePhoto: profile.avatar,
+        },
+      });
       const redirect = new URL(frontendUrl);
-      const loginCredential = await this.tokenService.createEmailLoginCredential(user.id);
+      const loginCredential = await this.tokenService.createEmailLoginCredential(userId);
       redirect.searchParams.set('code', loginCredential);
       return response.redirect(redirect.toString());
     } catch (cause) {

@@ -380,7 +380,7 @@ describe('resolveModerationReportNotification', () => {
     });
   });
 
-  it('uses a media thumbnail fallback and categorizes an image upload preview', async () => {
+  it('prefers the reported media original and categorizes an image upload preview', async () => {
     const thumbnail = await resolve(
       makeReport({
         targetType: 'media',
@@ -398,7 +398,7 @@ describe('resolveModerationReportNotification', () => {
       }),
     );
     expect(thumbnail).toMatchObject({
-      reportedMediaUrls: ['https://cdn.example/thumbnail.jpg'],
+      reportedMediaUrls: ['https://cdn.example/original.jpg'],
       reportedVideoUrls: [],
     });
 

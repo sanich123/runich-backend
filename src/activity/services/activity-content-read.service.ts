@@ -118,11 +118,12 @@ export class ActivityContentReadService {
       )
         return null;
       const activityWithOwnerPreviews = await this.resolveActivityMediaForViewer({ ...activity }, currentUserId);
-      const activityForResponse = hidePendingActivityTextForViewer(
+      const activityWithPendingContentHidden = hidePendingActivityTextForViewer(
         hidePendingActivityMediaForViewer(activityWithOwnerPreviews, currentUserId),
         currentUserId,
       );
-      delete activityForResponse.moderationStatus;
+      const { moderationStatus: _moderationStatus, ...activityForResponse } = activityWithPendingContentHidden;
+      void _moderationStatus;
       const normalizedActivity = hideActivityMapForViewer(
         normalizeActivityDetails(activityForResponse as Record<string, unknown>),
         currentUserId,

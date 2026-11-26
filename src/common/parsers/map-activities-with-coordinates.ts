@@ -1,20 +1,19 @@
 import { extname, join } from 'path';
-import { parseCoordinatesFromFile, parseFitActivityFromMigrationFile } from './parse-coordinates-from-file';
+import { parseActivityDataFromMigrationFile } from './parse-coordinates-from-file';
 import { ungzipFile } from './ungzip';
-import { getMapBoxImage } from './get-mapbox-image';
 import { getSpeedInMinsInKm } from './get-speed';
 import { Extensions, RawStravaCsvColumns } from './types';
 import { v4 } from 'uuid';
 import { LocationObject } from 'src/activity/dto/activity.dto';
 import type { MigratedActivity } from 'src/activity/shared/types';
 import { Logger } from '@nestjs/common';
+import { performance } from 'node:perf_hooks';
 import { calculateKilometreSplits } from './calculate-kilometre-splits';
 import { reduceLocations } from './reduce-locations';
-import { getHeartRateFromFile, type ParsedHeartRate } from './get-heart-rate-from-file';
+import type { ParsedHeartRate } from './get-heart-rate-from-file';
 
 const logger = new Logger('ActivityMapper');
 const MIGRATION_BATCH_SIZE = 8;
-const MAX_MAP_IMAGE_LOCATIONS = 500;
 const MIN_HEART_RATE = 1;
 const MAX_HEART_RATE = 300;
 
@@ -64,11 +63,13 @@ export async function mapActivitiesWithCoordinates({
   userId,
   profileId,
   migrationDirectory,
+  activityIndexOffset = 0,
 }: {
   parsedActivities?: RawStravaCsvColumns[];
   userId: string;
   profileId: string;
   migrationDirectory?: string;
+  activityIndexOffset?: number;
 }): Promise<MigratedActivity[]> {
   try {
     if (!parsedActivities) return [];
@@ -76,10 +77,17 @@ export async function mapActivitiesWithCoordinates({
     const results: PromiseSettledResult<MigratedActivity>[] = [];
     for (let offset = 0; offset < parsedActivities.length; offset += MIGRATION_BATCH_SIZE) {
       const batch = parsedActivities.slice(offset, offset + MIGRATION_BATCH_SIZE);
+      const fileTimings: Array<{
+        index: number;
+        extension: string;
+        gzipDurationMs: number;
+        parseDurationMs: number;
+        points: number;
+      }> = [];
       results.push(
         ...(await Promise.allSettled(
           batch.map(async (activity, batchIndex): Promise<MigratedActivity> => {
-            const i = offset + batchIndex;
+            const i = activityIndexOffset + offset + batchIndex;
             const sourceActivityId = String(activity['Activity ID'] ?? '').trim();
             if (!sourceActivityId) {
               throw new Error('Не указан идентификатор активности Strava: Activity ID');
@@ -88,23 +96,48 @@ export async function mapActivitiesWithCoordinates({
             let rawLocations: LocationObject[] = [];
             let fileName = String(activity['Filename'] ?? '').trim();
             let heartRateData: ParsedHeartRate = { samples: [] };
+            let gzipDurationMs = 0;
+            let parseDurationMs = 0;
+            let fileExtension = extname(fileName).toLowerCase();
 
-            if (extname(fileName).toLowerCase() === Extensions.gz) {
-              await ungzipFile(fileName, migrationDirectory);
-              fileName = fileName.slice(0, -3);
-            }
+            try {
+              if (fileExtension === Extensions.gz) {
+                const gzipStartedAt = performance.now();
+                try {
+                  await ungzipFile(fileName, migrationDirectory);
+                } finally {
+                  gzipDurationMs = performance.now() - gzipStartedAt;
+                }
+                fileName = fileName.slice(0, -3);
+                fileExtension = extname(fileName).toLowerCase();
+              }
 
-            const fileExtension = extname(fileName).toLowerCase();
-            if (fileExtension === Extensions.fit) {
-              const parsedFit = await parseFitActivityFromMigrationFile(fileName, migrationDirectory);
-              rawLocations = parsedFit.locations;
-              heartRateData = parsedFit.heartRateData;
-            } else if (fileExtension === Extensions.gpx || fileExtension === Extensions.tcx) {
-              rawLocations = await parseCoordinatesFromFile(fileName, migrationDirectory);
-              heartRateData = await getHeartRateFromFile(
-                fileName,
-                migrationDirectory ?? join(process.cwd(), 'dist', 'migration'),
-              );
+              if (
+                fileExtension === Extensions.fit ||
+                fileExtension === Extensions.gpx ||
+                fileExtension === Extensions.tcx
+              ) {
+                const parseStartedAt = performance.now();
+                let parsedActivity: Awaited<ReturnType<typeof parseActivityDataFromMigrationFile>>;
+                try {
+                  parsedActivity = await parseActivityDataFromMigrationFile(
+                    fileName,
+                    migrationDirectory ?? join(process.cwd(), 'dist', 'migration'),
+                  );
+                } finally {
+                  parseDurationMs = performance.now() - parseStartedAt;
+                }
+                rawLocations = parsedActivity.locations;
+                heartRateData = parsedActivity.heartRateData;
+              }
+            } finally {
+              fileTimings.push({
+                index: i + 1,
+                extension: fileExtension || 'unknown',
+                gzipDurationMs,
+                parseDurationMs,
+                points: rawLocations.length,
+              });
             }
 
             const movingTime = Number(activity['Moving Time']);
@@ -129,12 +162,6 @@ export async function mapActivitiesWithCoordinates({
             const csvCaloriesActive = parseCaloriesValue(activity.Calories);
             const csvAverageHeartRate = parseHeartRateValue(activity['Average Heart Rate']);
             const csvMaxHeartRate = parseHeartRateValue(activity['Max Heart Rate']);
-            logger.debug(`Processing activity ${i + 1}`);
-            const mapPhotoUrl =
-              rawLocations.length > 1 && process.env.MAPBOX_ACCESS_TOKEN
-                ? getMapBoxImage(reduceLocations(rawLocations, MAX_MAP_IMAGE_LOCATIONS))
-                : '';
-
             return {
               id: v4(),
               source: 'strava',
@@ -159,11 +186,21 @@ export async function mapActivitiesWithCoordinates({
                 ? { maxHeartRate: csvMaxHeartRate ?? heartRateData.statistics?.maxHeartRate }
                 : {}),
               userId,
-              mapPhotoUrl,
+              mapPhotoUrl: '',
               profileId,
             };
           }),
         )),
+      );
+      logger.log(
+        `Activity file timings: batch=${activityIndexOffset + offset + 1}-${activityIndexOffset + offset + batch.length}, ` +
+          fileTimings
+            .sort((left, right) => left.index - right.index)
+            .map(
+              ({ index, extension, gzipDurationMs, parseDurationMs, points }) =>
+                `${index}:${extension}:gzip=${gzipDurationMs.toFixed(1)}ms:parse=${parseDurationMs.toFixed(1)}ms:points=${points}`,
+            )
+            .join(' '),
       );
     }
 

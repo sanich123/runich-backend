@@ -115,6 +115,7 @@ export type ActivityUpdateField =
   | 'speed'
   | 'sport'
   | 'title'
+  | 'sourceAppName'
   | 'textModerationStatus'
   | 'textModerationProcessingStartedAt'
   | 'kilometresSplit'

@@ -10,19 +10,19 @@ module.exports = {
     '^@nestjs/throttler$': '<rootDir>/tests/mocks/nestjs-throttler.ts',
     '^src/(.*)$': '<rootDir>/src/$1',
   },
+  setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/infrastructure/database/**',
     '!src/**/*.module.ts',
     '!src/app/**',
-    // The stage-only worker is exercised against the disposable Railway database.
-    '!src/load-test/load-test.service.ts',
     '!src/main.ts',
     '!src/**/*.d.ts',
     '!src/tests/integration/**',
     '!src/**/*.spec.ts',
   ],
   coverageDirectory: '../coverage',
+  coverageReporters: ['json', 'json-summary'],
   coverageThreshold: {
     global: {
       branches: 85,
@@ -31,5 +31,6 @@ module.exports = {
       statements: 85,
     },
   },
+  silent: true,
   testEnvironment: 'node',
 };

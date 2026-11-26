@@ -43,7 +43,7 @@ RUN apt-get update \
     xauth \
     xvfb \
     zlib1g \
-  && npm install --global @yarnpkg/cli-dist@4.18.1 \
+  && npm install --global @yarnpkg/cli-dist@4.19.0 \
   && yarn --version
 
 FROM yarn-base AS builder

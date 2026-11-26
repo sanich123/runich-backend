@@ -3,27 +3,22 @@
 // To regenerate, run: prisma contract emit
 import type {
   CodecTypes as PgTypes,
-  ParameterizedOutputTypesForTypeParams as PgParameterizedOutputTypes,
-} from '@prisma/orm-postgres/target/codec-types';
-import type { QueryOperationTypes as PgTargetQueryOps } from '@prisma/orm-postgres/target/operation-types';
-
-import type {
   ColumnTypesFromStorage,
-  ContractWithTypeMaps,
-  RelationKeys,
-  TypeMaps as TypeMapsType,
-} from '@prisma/orm-postgres/family-contract/types';
-import type {
   Contract as ContractType,
+  ContractWithTypeMaps,
   ExecutionHashBase,
   FieldTypesFromDomain,
   NamespaceId,
+  ParameterizedOutputTypesForTypeParams as PgParameterizedOutputTypes,
   ProfileHashBase,
+  QueryOperationTypes as PgTargetQueryOps,
+  RelationKeys,
   StorageHashBase,
-} from '@prisma/orm-postgres/contract/types';
+  TypeMaps as TypeMapsType,
+} from '@prisma/orm-postgres/contract-types';
 
 export type StorageHash =
-  StorageHashBase<'ffe39931e9232f247c4263bd97e46e55ca027b4cd9e17a03d74fdfa7235c2bf3'>;
+  StorageHashBase<'fe587b83b4b648d68a452c3e10239235203f1c6316d4df94f519e61b7ece22ea'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -34,14 +29,14 @@ export type QueryOperationTypes = PgTargetQueryOps<CodecTypes>;
 export type AggregateTypes = {
   readonly avg: {
     readonly byCodec: {
-      readonly 'pg/float@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
       readonly 'pg/float4@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
       readonly 'pg/float8@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
-      readonly 'pg/int@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
+      readonly 'pg/float@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
       readonly 'pg/int2@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
       readonly 'pg/int4@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
       readonly 'pg/int8@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
       readonly 'pg/int8number@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
+      readonly 'pg/int@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
       readonly 'pg/interval-string@1': {
         readonly output: 'pg/interval-string@1';
         readonly nullable: true;
@@ -57,11 +52,11 @@ export type AggregateTypes = {
   };
   readonly avgDecimal: {
     readonly byCodec: {
-      readonly 'pg/int@1': { readonly output: 'pg/numeric@1'; readonly nullable: true };
       readonly 'pg/int2@1': { readonly output: 'pg/numeric@1'; readonly nullable: true };
       readonly 'pg/int4@1': { readonly output: 'pg/numeric@1'; readonly nullable: true };
       readonly 'pg/int8@1': { readonly output: 'pg/numeric@1'; readonly nullable: true };
       readonly 'pg/int8number@1': { readonly output: 'pg/numeric@1'; readonly nullable: true };
+      readonly 'pg/int@1': { readonly output: 'pg/numeric@1'; readonly nullable: true };
       readonly 'pg/numeric@1': { readonly output: 'pg/numeric@1'; readonly nullable: true };
       readonly 'pg/unboundedint@1': { readonly output: 'pg/numeric@1'; readonly nullable: true };
       readonly 'sql/int@1': { readonly output: 'pg/numeric@1'; readonly nullable: true };
@@ -86,15 +81,15 @@ export type AggregateTypes = {
         readonly nullable: true;
       };
       readonly 'pg/enum@1': { readonly output: 'pg/enum@1'; readonly nullable: true };
-      readonly 'pg/float@1': { readonly output: 'pg/float@1'; readonly nullable: true };
       readonly 'pg/float4@1': { readonly output: 'pg/float4@1'; readonly nullable: true };
       readonly 'pg/float8@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
+      readonly 'pg/float@1': { readonly output: 'pg/float@1'; readonly nullable: true };
       readonly 'pg/inet@1': { readonly output: 'pg/inet@1'; readonly nullable: true };
-      readonly 'pg/int@1': { readonly output: 'pg/int@1'; readonly nullable: true };
       readonly 'pg/int2@1': { readonly output: 'pg/int2@1'; readonly nullable: true };
       readonly 'pg/int4@1': { readonly output: 'pg/int4@1'; readonly nullable: true };
       readonly 'pg/int8@1': { readonly output: 'pg/int8@1'; readonly nullable: true };
       readonly 'pg/int8number@1': { readonly output: 'pg/int8number@1'; readonly nullable: true };
+      readonly 'pg/int@1': { readonly output: 'pg/int@1'; readonly nullable: true };
       readonly 'pg/interval-string@1': {
         readonly output: 'pg/interval-string@1';
         readonly nullable: true;
@@ -160,15 +155,15 @@ export type AggregateTypes = {
         readonly nullable: true;
       };
       readonly 'pg/enum@1': { readonly output: 'pg/enum@1'; readonly nullable: true };
-      readonly 'pg/float@1': { readonly output: 'pg/float@1'; readonly nullable: true };
       readonly 'pg/float4@1': { readonly output: 'pg/float4@1'; readonly nullable: true };
       readonly 'pg/float8@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
+      readonly 'pg/float@1': { readonly output: 'pg/float@1'; readonly nullable: true };
       readonly 'pg/inet@1': { readonly output: 'pg/inet@1'; readonly nullable: true };
-      readonly 'pg/int@1': { readonly output: 'pg/int@1'; readonly nullable: true };
       readonly 'pg/int2@1': { readonly output: 'pg/int2@1'; readonly nullable: true };
       readonly 'pg/int4@1': { readonly output: 'pg/int4@1'; readonly nullable: true };
       readonly 'pg/int8@1': { readonly output: 'pg/int8@1'; readonly nullable: true };
       readonly 'pg/int8number@1': { readonly output: 'pg/int8number@1'; readonly nullable: true };
+      readonly 'pg/int@1': { readonly output: 'pg/int@1'; readonly nullable: true };
       readonly 'pg/interval-string@1': {
         readonly output: 'pg/interval-string@1';
         readonly nullable: true;
@@ -227,14 +222,14 @@ export type AggregateTypes = {
   };
   readonly sum: {
     readonly byCodec: {
-      readonly 'pg/float@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
       readonly 'pg/float4@1': { readonly output: 'pg/float4@1'; readonly nullable: true };
       readonly 'pg/float8@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
-      readonly 'pg/int@1': { readonly output: 'pg/int8number@1'; readonly nullable: true };
+      readonly 'pg/float@1': { readonly output: 'pg/float8@1'; readonly nullable: true };
       readonly 'pg/int2@1': { readonly output: 'pg/int8number@1'; readonly nullable: true };
       readonly 'pg/int4@1': { readonly output: 'pg/int8number@1'; readonly nullable: true };
       readonly 'pg/int8@1': { readonly output: 'pg/int8number@1'; readonly nullable: true };
       readonly 'pg/int8number@1': { readonly output: 'pg/int8number@1'; readonly nullable: true };
+      readonly 'pg/int@1': { readonly output: 'pg/int8number@1'; readonly nullable: true };
       readonly 'pg/interval-string@1': {
         readonly output: 'pg/interval-string@1';
         readonly nullable: true;
@@ -254,11 +249,11 @@ export type AggregateTypes = {
   };
   readonly sumBigInt: {
     readonly byCodec: {
-      readonly 'pg/int@1': { readonly output: 'pg/int8@1'; readonly nullable: true };
       readonly 'pg/int2@1': { readonly output: 'pg/int8@1'; readonly nullable: true };
       readonly 'pg/int4@1': { readonly output: 'pg/int8@1'; readonly nullable: true };
       readonly 'pg/int8@1': { readonly output: 'pg/unboundedint@1'; readonly nullable: true };
       readonly 'pg/int8number@1': { readonly output: 'pg/unboundedint@1'; readonly nullable: true };
+      readonly 'pg/int@1': { readonly output: 'pg/int8@1'; readonly nullable: true };
       readonly 'pg/unboundedint@1': {
         readonly output: 'pg/unboundedint@1';
         readonly nullable: true;
@@ -962,26 +957,6 @@ export namespace Models {
     profile: public_Profile;
     readonly [RelationKeys]?: 'activity' | 'profile';
   };
-  export type public_LoadTestSeedJob = {
-    config: FieldOutputTypes['public']['LoadTestSeedJob']['config'];
-    createdActivities: FieldOutputTypes['public']['LoadTestSeedJob']['createdActivities'];
-    createdAt: FieldOutputTypes['public']['LoadTestSeedJob']['createdAt'];
-    createdCommentLikes: FieldOutputTypes['public']['LoadTestSeedJob']['createdCommentLikes'];
-    createdComments: FieldOutputTypes['public']['LoadTestSeedJob']['createdComments'];
-    createdLikes: FieldOutputTypes['public']['LoadTestSeedJob']['createdLikes'];
-    errorMessage: FieldOutputTypes['public']['LoadTestSeedJob']['errorMessage'];
-    finishedAt: FieldOutputTypes['public']['LoadTestSeedJob']['finishedAt'];
-    id: FieldOutputTypes['public']['LoadTestSeedJob']['id'];
-    manifestKey: FieldOutputTypes['public']['LoadTestSeedJob']['manifestKey'];
-    processedActivities: FieldOutputTypes['public']['LoadTestSeedJob']['processedActivities'];
-    runId: FieldOutputTypes['public']['LoadTestSeedJob']['runId'];
-    startedAt: FieldOutputTypes['public']['LoadTestSeedJob']['startedAt'];
-    status: FieldOutputTypes['public']['LoadTestSeedJob']['status'];
-    targetUserId: FieldOutputTypes['public']['LoadTestSeedJob']['targetUserId'];
-    totalActivities: FieldOutputTypes['public']['LoadTestSeedJob']['totalActivities'];
-    totalUsers: FieldOutputTypes['public']['LoadTestSeedJob']['totalUsers'];
-    readonly [RelationKeys]?: never;
-  };
   export type public_MediaCleanupJob = {
     createdAt: FieldOutputTypes['public']['MediaCleanupJob']['createdAt'];
     errorMessage: FieldOutputTypes['public']['MediaCleanupJob']['errorMessage'];
@@ -1330,7 +1305,6 @@ export declare const models: {
     GroupMember: Models.public_GroupMember;
     GroupPost: Models.public_GroupPost;
     Like: Models.public_Like;
-    LoadTestSeedJob: Models.public_LoadTestSeedJob;
     MediaCleanupJob: Models.public_MediaCleanupJob;
     MediaModerationAsset: Models.public_MediaModerationAsset;
     ModerationAction: Models.public_ModerationAction;
@@ -1706,6 +1680,16 @@ type ContractBase = Omit<
                 },
               ];
               indexes: readonly [
+                {
+                  readonly name: 'Activity_location_enrichment_status_created_at_id_idx';
+                  readonly columns: readonly ['location_enrichment_status', 'createdAt', 'id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Activity_media_processing_status_created_at_id_idx';
+                  readonly columns: readonly ['media_processing_status', 'createdAt', 'id'];
+                  readonly unique: false;
+                },
                 {
                   readonly name: 'Activity_text_moderation_status_updated_at_id_idx';
                   readonly columns: readonly ['text_moderation_status', 'updatedAt', 'id'];
@@ -4001,169 +3985,6 @@ type ContractBase = Omit<
                 },
               ];
             };
-            readonly LoadTestSeedJob: {
-              columns: {
-                readonly config: {
-                  readonly dataType: 'pg/jsonb';
-                  readonly codecId: 'pg/jsonb@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly created_activities: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
-                  };
-                  readonly many: false;
-                };
-                readonly created_at: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly typeParams: { readonly precision: 6 };
-                  readonly many: false;
-                };
-                readonly created_comment_likes: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
-                  };
-                  readonly many: false;
-                };
-                readonly created_comments: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
-                  };
-                  readonly many: false;
-                };
-                readonly created_likes: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
-                  };
-                  readonly many: false;
-                };
-                readonly error_message: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly finished_at: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly precision: 6 };
-                  readonly many: false;
-                };
-                readonly id: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'function';
-                    readonly expression: 'gen_random_uuid()';
-                  };
-                  readonly many: false;
-                };
-                readonly manifest_key: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
-                  readonly typeParams: { readonly length: 512 };
-                  readonly many: false;
-                };
-                readonly processed_activities: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
-                  };
-                  readonly many: false;
-                };
-                readonly run_id: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
-                  readonly typeParams: { readonly length: 64 };
-                  readonly many: false;
-                };
-                readonly started_at: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly precision: 6 };
-                  readonly many: false;
-                };
-                readonly status: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
-                  readonly typeParams: { readonly length: 32 };
-                  readonly many: false;
-                };
-                readonly target_user_id: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly total_activities: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
-                  };
-                  readonly many: false;
-                };
-                readonly total_users: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
-                  };
-                  readonly many: false;
-                };
-              };
-              primaryKey: {
-                readonly columns: readonly ['id'];
-                readonly name: 'LoadTestSeedJob_pkey';
-              };
-              uniques: readonly [
-                {
-                  readonly columns: readonly ['run_id'];
-                  readonly name: 'LoadTestSeedJob_runId_key';
-                },
-              ];
-              indexes: readonly [
-                {
-                  readonly name: 'LoadTestSeedJob_status_createdAt_idx';
-                  readonly columns: readonly ['status', 'created_at'];
-                  readonly unique: false;
-                },
-              ];
-              foreignKeys: readonly [];
-            };
             readonly MediaCleanupJob: {
               columns: {
                 readonly createdAt: {
@@ -5642,6 +5463,193 @@ type ContractBase = Omit<
                 },
               ];
             };
+            readonly UserSession: {
+              columns: {
+                readonly app_build: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 32 };
+                  readonly many: false;
+                };
+                readonly app_version: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 32 };
+                  readonly many: false;
+                };
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly device_id: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 128 };
+                  readonly many: false;
+                };
+                readonly device_model: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 128 };
+                  readonly many: false;
+                };
+                readonly device_name: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 255 };
+                  readonly many: false;
+                };
+                readonly device_type: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 64 };
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'gen_random_uuid()';
+                  };
+                  readonly many: false;
+                };
+                readonly ip_address: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 128 };
+                  readonly many: false;
+                };
+                readonly last_latitude: {
+                  readonly dataType: 'pg/float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly last_location_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly last_longitude: {
+                  readonly dataType: 'pg/float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly last_seen_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly manufacturer: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 128 };
+                  readonly many: false;
+                };
+                readonly os_name: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 64 };
+                  readonly many: false;
+                };
+                readonly os_version: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 64 };
+                  readonly many: false;
+                };
+                readonly platform: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 64 };
+                  readonly many: false;
+                };
+                readonly refresh_hash: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly length: 128 };
+                  readonly many: false;
+                };
+                readonly revoked_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 6 };
+                  readonly many: false;
+                };
+                readonly user_agent: {
+                  readonly dataType: 'pg/varchar';
+                  readonly codecId: 'sql/varchar@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly length: 512 };
+                  readonly many: false;
+                };
+                readonly user_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id']; readonly name: 'UserSession_pkey' };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['refresh_hash'];
+                  readonly name: 'UserSession_refresh_hash_key';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'UserSession_user_id_device_id_idx';
+                  readonly columns: readonly ['user_id', 'device_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'UserSession_user_id_idx';
+                  readonly columns: readonly ['user_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'UserSession';
+                    readonly columns: readonly ['user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Users';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'UserSession_user_id_fkey';
+                },
+              ];
+            };
             readonly Users: {
               columns: {
                 readonly apple_refresh_token_encrypted: {
@@ -5926,193 +5934,6 @@ type ContractBase = Omit<
               ];
               foreignKeys: readonly [];
             };
-            readonly UserSession: {
-              columns: {
-                readonly app_build: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 32 };
-                  readonly many: false;
-                };
-                readonly app_version: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 32 };
-                  readonly many: false;
-                };
-                readonly created_at: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly typeParams: { readonly precision: 6 };
-                  readonly many: false;
-                };
-                readonly device_id: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
-                  readonly typeParams: { readonly length: 128 };
-                  readonly many: false;
-                };
-                readonly device_model: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 128 };
-                  readonly many: false;
-                };
-                readonly device_name: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 255 };
-                  readonly many: false;
-                };
-                readonly device_type: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 64 };
-                  readonly many: false;
-                };
-                readonly id: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'function';
-                    readonly expression: 'gen_random_uuid()';
-                  };
-                  readonly many: false;
-                };
-                readonly ip_address: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 128 };
-                  readonly many: false;
-                };
-                readonly last_latitude: {
-                  readonly dataType: 'pg/float8';
-                  readonly codecId: 'pg/float8@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly last_location_at: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly precision: 6 };
-                  readonly many: false;
-                };
-                readonly last_longitude: {
-                  readonly dataType: 'pg/float8';
-                  readonly codecId: 'pg/float8@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly last_seen_at: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly typeParams: { readonly precision: 6 };
-                  readonly many: false;
-                };
-                readonly manufacturer: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 128 };
-                  readonly many: false;
-                };
-                readonly os_name: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 64 };
-                  readonly many: false;
-                };
-                readonly os_version: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 64 };
-                  readonly many: false;
-                };
-                readonly platform: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 64 };
-                  readonly many: false;
-                };
-                readonly refresh_hash: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
-                  readonly typeParams: { readonly length: 128 };
-                  readonly many: false;
-                };
-                readonly revoked_at: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly precision: 6 };
-                  readonly many: false;
-                };
-                readonly user_agent: {
-                  readonly dataType: 'pg/varchar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: true;
-                  readonly typeParams: { readonly length: 512 };
-                  readonly many: false;
-                };
-                readonly user_id: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-              };
-              primaryKey: { readonly columns: readonly ['id']; readonly name: 'UserSession_pkey' };
-              uniques: readonly [
-                {
-                  readonly columns: readonly ['refresh_hash'];
-                  readonly name: 'UserSession_refresh_hash_key';
-                },
-              ];
-              indexes: readonly [
-                {
-                  readonly name: 'UserSession_user_id_device_id_idx';
-                  readonly columns: readonly ['user_id', 'device_id'];
-                  readonly unique: false;
-                },
-                {
-                  readonly name: 'UserSession_user_id_idx';
-                  readonly columns: readonly ['user_id'];
-                  readonly unique: false;
-                },
-              ];
-              foreignKeys: readonly [
-                {
-                  readonly source: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'UserSession';
-                    readonly columns: readonly ['user_id'];
-                  };
-                  readonly target: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'Users';
-                    readonly columns: readonly ['id'];
-                  };
-                  readonly name: 'UserSession_user_id_fkey';
-                },
-              ];
-            };
           };
           readonly valueSet: {
             readonly ActivityVisibility: {
@@ -6277,10 +6098,6 @@ type ContractBase = Omit<
     };
     readonly GroupPost: { readonly namespace: 'public' & NamespaceId; readonly model: 'GroupPost' };
     readonly Like: { readonly namespace: 'public' & NamespaceId; readonly model: 'Like' };
-    readonly LoadTestSeedJob: {
-      readonly namespace: 'public' & NamespaceId;
-      readonly model: 'LoadTestSeedJob';
-    };
     readonly MediaCleanupJob: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'MediaCleanupJob';
@@ -8522,126 +8339,6 @@ type ContractBase = Omit<
                 readonly date: { readonly column: 'date' };
                 readonly id: { readonly column: 'id' };
                 readonly profileId: { readonly column: 'profileId' };
-              };
-            };
-          };
-          readonly LoadTestSeedJob: {
-            readonly fields: {
-              readonly config: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
-              };
-              readonly createdActivities: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly createdAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly typeParams: { readonly precision: 6 };
-                };
-              };
-              readonly createdCommentLikes: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly createdComments: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly createdLikes: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly errorMessage: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly finishedAt: {
-                readonly nullable: true;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly typeParams: { readonly precision: 6 };
-                };
-              };
-              readonly id: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly manifestKey: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly typeParams: { readonly length: 512 };
-                };
-              };
-              readonly processedActivities: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly runId: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly typeParams: { readonly length: 64 };
-                };
-              };
-              readonly startedAt: {
-                readonly nullable: true;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly typeParams: { readonly precision: 6 };
-                };
-              };
-              readonly status: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly typeParams: { readonly length: 32 };
-                };
-              };
-              readonly targetUserId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly totalActivities: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly totalUsers: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-            };
-            readonly relations: Record<string, never>;
-            readonly storage: {
-              readonly table: 'LoadTestSeedJob';
-              readonly namespaceId: 'public';
-              readonly fields: {
-                readonly config: { readonly column: 'config' };
-                readonly createdActivities: { readonly column: 'created_activities' };
-                readonly createdAt: { readonly column: 'created_at' };
-                readonly createdCommentLikes: { readonly column: 'created_comment_likes' };
-                readonly createdComments: { readonly column: 'created_comments' };
-                readonly createdLikes: { readonly column: 'created_likes' };
-                readonly errorMessage: { readonly column: 'error_message' };
-                readonly finishedAt: { readonly column: 'finished_at' };
-                readonly id: { readonly column: 'id' };
-                readonly manifestKey: { readonly column: 'manifest_key' };
-                readonly processedActivities: { readonly column: 'processed_activities' };
-                readonly runId: { readonly column: 'run_id' };
-                readonly startedAt: { readonly column: 'started_at' };
-                readonly status: { readonly column: 'status' };
-                readonly targetUserId: { readonly column: 'target_user_id' };
-                readonly totalActivities: { readonly column: 'total_activities' };
-                readonly totalUsers: { readonly column: 'total_users' };
               };
             };
           };
@@ -10988,10 +10685,13 @@ type ContractBase = Omit<
       readonly insertOnConflictSkip: true;
       readonly insertOnConflictTarget: true;
       readonly insertOnConflictWithoutTarget: true;
+      readonly jsonAgg: true;
+      readonly jsonAggWithoutTruncation: true;
       readonly lateral: true;
       readonly lockNowait: true;
       readonly lockOf: true;
       readonly lockSkipLocked: true;
+      readonly outerReferencesInDerivedTables: true;
       readonly returning: true;
       readonly scalarList: true;
     };

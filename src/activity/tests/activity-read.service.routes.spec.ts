@@ -1,5 +1,7 @@
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
+import { jest } from '@jest/globals';
 import type { ActivityCursor } from '../shared/activity.pagination';
+import { createActivityReadService } from './helpers/activity-service.factory';
 import { ActivityReadService } from '../services/activity-read.service';
 
 function createPrismaMock() {
@@ -24,9 +26,44 @@ function makeActivity(overrides: Record<string, unknown> = {}) {
 }
 
 describe('ActivityReadService route list', () => {
+  it('delegates each read operation to its injected service', async () => {
+    const content = {
+      getLocationsByActivityId: jest.fn(async () => 'locations'),
+      getChartDataByActivityId: jest.fn(async () => 'chart'),
+      getActivityByActivityId: jest.fn(async () => 'activity'),
+      getMediaByUserId: jest.fn(async () => 'media'),
+    };
+    const feed = {
+      getFavoriteActivities: jest.fn(async () => 'favorites'),
+      getActivitesByUserId: jest.fn(async () => 'profile-feed'),
+      getActivitiesByTheirIds: jest.fn(async () => 'activities-by-id'),
+    };
+    const routeFeed = { getActivitiesWithRoutes: jest.fn(async () => 'route-feed') };
+    const friendsFeed = { getAllActivitiesWithFriends: jest.fn(async () => 'friends-feed') };
+    const service = new ActivityReadService(content as never, feed as never, routeFeed as never, friendsFeed as never);
+
+    await expect(service.getLocationsByActivityId('activity-1')).resolves.toBe('locations');
+    await expect(service.getChartDataByActivityId('activity-1')).resolves.toBe('chart');
+    await expect(service.getActivityByActivityId('activity-1')).resolves.toBe('activity');
+    await expect(service.getMediaByUserId('user-1')).resolves.toBe('media');
+    await expect(service.getFavoriteActivities('user-1')).resolves.toBe('favorites');
+    await expect(service.getActivitiesWithRoutes('user-1', undefined, undefined, { timeZone: 'UTC' })).resolves.toBe(
+      'route-feed',
+    );
+    await expect(service.getActivitesByUserId('user-1')).resolves.toBe('profile-feed');
+    await expect(service.getActivitiesByTheirIds()).resolves.toBe('activities-by-id');
+    await expect(service.getAllActivitiesWithFriends('user-1')).resolves.toBe('friends-feed');
+
+    expect(content.getLocationsByActivityId).toHaveBeenCalledWith('activity-1', undefined, false);
+    expect(content.getMediaByUserId).toHaveBeenCalledWith('user-1', '10', undefined, undefined);
+    expect(feed.getFavoriteActivities).toHaveBeenCalledWith('user-1', '20', undefined);
+    expect(routeFeed.getActivitiesWithRoutes).toHaveBeenCalledWith('user-1', '20', undefined, { timeZone: 'UTC' });
+    expect(friendsFeed.getAllActivitiesWithFriends).toHaveBeenCalledWith('user-1', '20', undefined, 'user-1');
+  });
+
   it('returns distinct sorted date filters and an empty first page without optional filters', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityReadService(prisma as never, {} as never, {} as never);
+    const service = createActivityReadService(prisma as never, {} as never, {} as never);
     prisma.$queryRaw.mockResolvedValue([
       { year: 2023, month: 2, day: 4 },
       { year: 2024, month: 1, day: 3 },
@@ -56,7 +93,7 @@ describe('ActivityReadService route list', () => {
 
   it('applies search, local date and cursor filters and returns a next page cursor', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityReadService(prisma as never, {} as never, {} as never);
+    const service = createActivityReadService(prisma as never, {} as never, {} as never);
     prisma.$queryRaw
       .mockResolvedValueOnce([
         { year: 2024, month: 5, day: 2 },
@@ -115,7 +152,7 @@ describe('ActivityReadService route list', () => {
 
   it('filters by one local date component and keeps the remaining filter options available', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityReadService(prisma as never, {} as never, {} as never);
+    const service = createActivityReadService(prisma as never, {} as never, {} as never);
     prisma.$queryRaw
       .mockResolvedValueOnce([
         { year: 2024, month: 5, day: 1 },
@@ -143,7 +180,7 @@ describe('ActivityReadService route list', () => {
 
   it('uses a canonical zone name in PostgreSQL date filters for legacy aliases', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityReadService(prisma as never, {} as never, {} as never);
+    const service = createActivityReadService(prisma as never, {} as never, {} as never);
     prisma.$queryRaw.mockResolvedValue([]);
     prisma.activity.findMany.mockResolvedValue([]);
 
@@ -154,7 +191,7 @@ describe('ActivityReadService route list', () => {
 
   it('maps an empty page after a zero-sized slice to a null cursor even when more rows exist', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityReadService(prisma as never, {} as never, {} as never);
+    const service = createActivityReadService(prisma as never, {} as never, {} as never);
     prisma.$queryRaw.mockResolvedValue([]);
     prisma.activity.findMany.mockResolvedValue([makeActivity()]);
 
@@ -170,7 +207,7 @@ describe('ActivityReadService route list', () => {
 
   it('maps query failures to the standard internal server error', async () => {
     const prisma = createPrismaMock();
-    const service = new ActivityReadService(prisma as never, {} as never, {} as never);
+    const service = createActivityReadService(prisma as never, {} as never, {} as never);
     prisma.$queryRaw.mockRejectedValue(new Error('database unavailable'));
 
     await expectInternalServerError(service.getActivitiesWithRoutes('user-1', '10', undefined, { timeZone: 'UTC' }));

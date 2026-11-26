@@ -1,5 +1,9 @@
-# 1. Проверка TypeScript
-yarn typecheck
+# 0. Проверка зависимостей на уязвимости уровня high и critical
+yarn npm audit --recursive --severity high
+
+# 1. Один раз генерируем Prisma-контракт и проверяем TypeScript
+yarn db:generate
+yarn tsc --noEmit
 
 # 2. Проверка связности графа Prisma-миграций для актуального контракта
 yarn prisma migration check
@@ -7,27 +11,28 @@ yarn prisma migration check
 # 3. Линтинг и форматирование только подготовленных исходников
 yarn lint-staged
 
-# 4. Unit-тесты
-yarn test:ci
+# 4. Полный набор unit-тестов с порогами покрытия
+node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --maxWorkers=50% --no-watchman
 
-# 5. Coverage-тесты с порогами покрытия
-yarn test:cov
-
-# 6. PostgreSQL integration/e2e-тесты
+# 5. PostgreSQL integration/e2e-тесты
 yarn db:up:check
-yarn test:integration
+yarn prisma db verify
+RUNICH_INTEGRATION=true node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.cjs --runInBand --no-watchman
 
-# 7. Остановка локальной БД после успешного прохождения всех тестов
+# 6. Остановка локальной БД после успешного прохождения всех тестов
 docker compose stop db
 
-# 8. Production-сборка
+# 7. Production-сборка
 yarn build
 
-# 9. Проверка circular dependencies
-yarn madge
+# 8. Проверка circular dependencies
+yarn madge --ts-config ./tsconfig.json --warning --circular --extensions ts ./src
 
-# 10. Проверка неиспользуемых экспортов (Prisma/generated/d.ts исключены в package.json)
-yarn ts-prune
+# 9. Проверка неиспользуемых экспортов (Prisma/generated/d.ts исключены)
+yarn ts-prune --ignore 'tsdown\.config\.ts|src/admin/admin-access\.constants\.ts|src/moderation/moderation\.constants\.ts|tests/mocks/nestjs-throttler\.ts|src/email/templates/index\.ts|src/infrastructure|^prisma/|(^|/)generated/|(^|/)(migrations|snapshots)/|\.d\.ts$|prisma\.config\.ts|\.spec\.ts$'
+
+# 10. Проверка доступных обновлений зависимостей
+yarn deps
 
 # 11. Проверка неиспользуемых зависимостей (диагностическая)
 yarn depcheck || true

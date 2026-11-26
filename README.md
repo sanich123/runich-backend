@@ -6,7 +6,7 @@ Backend API for Runich, a social fitness application for activities, profiles, f
 
 - NestJS 12, TypeScript 6 and ESM
 - Node.js >=26 <27
-- Yarn 4.18.0
+- Yarn 4.19.0
 - PostgreSQL 18.6 and Prisma 8 (RC contract/runtime)
 - JWT bearer authentication
 - Swagger/OpenAPI at /api in local and stage; production access is disabled
@@ -145,8 +145,6 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | VK_CLIENT_ID                 | VK ID application client ID                                                              |
 | VK_REDIRECT_URI              | Registered VK OAuth callback URL                                                         |
 | RUNICH_PROCESS               | Process role: api or worker                                                              |
-| LOAD_TEST_SEED_TOKEN         | Required only to enqueue the protected stage/local load-test job                         |
-| LOAD_TEST_ASSET_MANIFEST_KEY | Optional S3 key of the prepared load-test manifest                                       |
 
 Email is sent through Yandex SMTP at `smtp.yandex.ru:465` with TLS. If Yandex
 has a network failure or returns a temporary SMTP error, and both Mail.ru
@@ -205,42 +203,6 @@ worker downloads an archive to its own temporary filesystem, processes it, and
 removes the S3 object after a terminal status. An interrupted job keeps its S3
 archive so the worker can resume it.
 
-### Stage feed load-test
-
-The controlled load-test fixture is separate from the automatic mock seed. It
-uses 100 dedicated mock users, 100 activities per user, 10 activity likes, 10
-comments and one comment like per activity. The target user both follows those
-100 users (so their activities appear in the feed) and is followed by them (so
-the target has 100 followers). The fixture is written by the background
-worker in batches and can be resumed safely after a restart.
-
-Prepare the archive assets from a machine that has the stage S3 variables:
-
-    yarn load-test:prepare /path/to/export.zip stage-feed-v1
-
-Before a real upload, append `--dry-run` to validate the archive and report the
-asset counts without writing to S3.
-
-The command uploads only 25 photo variants, 100 compressed route templates and
-one manifest under `load-test/stage-feed-v1/`. It does not upload the full
-Strava archive. Then set a strong `LOAD_TEST_SEED_TOKEN` in both Railway
-stage services and enqueue the job:
-
-    curl -X POST https://runich-backend-stage.up.railway.app/load-test/seed \
-      -H 'content-type: application/json' \
-      -H 'x-load-test-token: <token>' \
-      -d '{"runId":"stage-feed-v1"}'
-
-Poll `GET /load-test/seed/:runId` with the same header. To remove only this
-fixture, call `DELETE /load-test/seed/:runId`; it removes users whose email is
-scoped to that run, their activities and relations, and the job record. Shared
-S3 templates remain available for another run.
-
-The seed marks copied activities as media-processing `completed`, so the
-regular media worker does not download the same 25 photos 10,000 times. This
-test measures the feed/database path; media blurhash processing should be
-tested as a separate workload.
-
 ### Timeweb stage
 
 The `stage` branch deploys to the Timeweb server with a colocated PostgreSQL
@@ -290,7 +252,7 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 | `yarn dev`         | Development API with watch mode        |
 | `yarn start`       | Development API without watch mode     |
 | `yarn start:debug` | Development API with Node inspector    |
-| `yarn build`       | Build the production bundles with tsup |
+| `yarn build`       | Build the production bundles with tsdown |
 | `yarn start:prod`  | Run the compiled API                   |
 | `yarn worker:dev`  | Development background worker          |
 | `yarn worker:prod` | Run the built worker                   |
@@ -304,29 +266,27 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 | `yarn db:sync`                               | Synchronize the database with the current contract        |
 | `yarn db:migrate:prod`                       | Apply and verify checked-in Prisma 8 migrations           |
 | `yarn db:seed`                               | Seed the configured database                              |
-| `yarn load-test:prepare [archive] [version]` | Upload 25 photo variants, 100 routes and a manifest to S3 |
 
 ### Tests
 
-| Command                 | Description                         |
-| ----------------------- | ----------------------------------- |
-| `yarn test`             | Default Jest run                    |
-| `yarn test:watch`       | Jest watch mode                     |
-| `yarn test:ci`          | Serial CI unit-test run             |
-| `yarn test:cov`         | Unit tests with coverage thresholds |
-| `yarn test:integration` | PostgreSQL integration/e2e tests    |
-| `yarn test:all`         | Local database and all test groups  |
+| Command                 | Description                                                               |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `yarn test`             | Default Jest run                                                          |
+| `yarn test:watch`       | Jest watch mode                                                           |
+| `yarn test:cov`         | Unit tests with coverage thresholds; generates the Prisma contract first |
+| `yarn test:integration` | PostgreSQL integration/e2e tests; generates the contract first           |
+| `yarn test:all`         | Starts local PostgreSQL and runs unit and integration tests               |
 
 ### Code quality
 
-| Command          | Description                                       |
-| ---------------- | ------------------------------------------------- |
-| `yarn typecheck` | TypeScript check                                  |
-| `yarn lint`      | ESLint with fixes for `src` and integration tests |
-| `yarn format`    | Format TypeScript source and tests                |
-| `yarn madge`     | Check circular dependencies                       |
-| `yarn ts-prune`  | Find unused exports                               |
-| `yarn depcheck`  | Inspect unused dependencies                       |
+| Command                                                                       | Description                                       |
+| ----------------------------------------------------------------------------- | ------------------------------------------------- |
+| `yarn db:generate && yarn tsc --noEmit`                                       | Generate Prisma contract and check TypeScript     |
+| `yarn eslint src`                                                             | Check source and tests without modifying files   |
+| `yarn prettier --config .prettierrc --write './src/**/*.{ts,tsx}'`            | Format TypeScript source and tests                |
+| `yarn madge --ts-config ./tsconfig.json --warning --circular --extensions ts ./src` | Check circular dependencies               |
+| `yarn ts-prune`                                                               | Find unused exports                               |
+| `yarn depcheck`                                                               | Inspect unused dependencies                       |
 
 ## Database and seed data
 
@@ -419,17 +379,22 @@ and map images after the activity has been saved.
 Before opening a pull request:
 
     yarn db:generate
-    yarn typecheck
+    yarn tsc --noEmit
     yarn eslint src
     yarn build
-    yarn test:ci
-    yarn test:cov
-    yarn test:integration
-    yarn madge
+    node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --maxWorkers=50% --no-watchman
+    yarn db:up:check
+    yarn prisma db verify
+    RUNICH_INTEGRATION=true node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.cjs --runInBand --no-watchman
+    yarn madge --ts-config ./tsconfig.json --warning --circular --extensions ts ./src
+    yarn ts-prune --ignore 'tsdown\.config\.ts|src/admin/admin-access\.constants\.ts|src/moderation/moderation\.constants\.ts|tests/mocks/nestjs-throttler\.ts|src/email/templates/index\.ts|src/infrastructure|^prisma/|(^|/)generated/|(^|/)(migrations|snapshots)/|\.d\.ts$|prisma\.config\.ts|\.spec\.ts$'
 
 Integration tests require a disposable PostgreSQL database configured through
-`DATABASE_URL`. `yarn test:integration` synchronizes the current contract before
-running the e2e suite. The CI workflow starts PostgreSQL, synchronizes the
-contract, runs all quality gates and builds the Docker image.
+`DATABASE_URL`. `yarn db:generate` emits the Prisma contract once before the
+combined checks; the standalone `yarn test:cov` and `yarn test:integration`
+commands also emit it when run separately. The current GitHub Actions workflows
+build and deploy Stage/Production images and send daily metrics. Docker image
+builds check the migration graph, compile the application and run the MapLibre
+runtime smoke test; the workflows do not run Jest suites.
 
 See CONTRIBUTING.md for development and review rules. The package is private and marked UNLICENSED.
