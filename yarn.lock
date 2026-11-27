@@ -184,9 +184,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/client-s3@npm:3.1177.0":
-  version: 3.1177.0
-  resolution: "@aws-sdk/client-s3@npm:3.1177.0"
+"@aws-sdk/client-s3@npm:3.1178.0":
+  version: 3.1178.0
+  resolution: "@aws-sdk/client-s3@npm:3.1178.0"
   dependencies:
     "@aws-sdk/checksums": "npm:^3.1002.7"
     "@aws-sdk/core": "npm:^3.981.2"
@@ -199,7 +199,7 @@ __metadata:
     "@smithy/node-http-handler": "npm:^4.14.2"
     "@smithy/types": "npm:^4.20.0"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/7cda6b87c9d1d9ec717612e873a7f433f9e94085ac173366946b7b4fa400ac3448667feac493a34a69f3d3516ae317326e5d1def2373a7740a54b488d0bf2e53
+  checksum: 10c0/d50f1546c1fad2e552ddb49385becffc7b8b07336e86f5396a3d834a56e4611409676ae71388c1e4c71501a8a768ba8030ded1473d5febce4425957196788d76
   languageName: node
   linkType: hard
 
@@ -373,9 +373,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/s3-request-presigner@npm:3.1177.0":
-  version: 3.1177.0
-  resolution: "@aws-sdk/s3-request-presigner@npm:3.1177.0"
+"@aws-sdk/s3-request-presigner@npm:3.1178.0":
+  version: 3.1178.0
+  resolution: "@aws-sdk/s3-request-presigner@npm:3.1178.0"
   dependencies:
     "@aws-sdk/core": "npm:^3.981.2"
     "@aws-sdk/signature-v4-multi-region": "npm:^3.996.52"
@@ -383,7 +383,7 @@ __metadata:
     "@smithy/core": "npm:^3.41.1"
     "@smithy/types": "npm:^4.20.0"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/1faf9a451d6cbfbd175c9de409a7a1d21b2ff9917281fd6b68f21cd996053df980f66e5252497896d2f27de9a0db44566efcff81ef28fa8de36f09d9e3b76e0c
+  checksum: 10c0/1dd0c0e24a65da485f3867f12eb8bdcf8e4dbd4f6d52a3084af6ab2cf86647032001923145471f6656228de5671b2c50b917291b7e0d5b2360ad6d41903e92ec
   languageName: node
   linkType: hard
 
@@ -2794,9 +2794,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/common@npm:12.6.2":
-  version: 12.6.2
-  resolution: "@nestjs/common@npm:12.6.2"
+"@nestjs/common@npm:12.6.3":
+  version: 12.6.3
+  resolution: "@nestjs/common@npm:12.6.3"
   dependencies:
     "@standard-schema/spec": "npm:1.1.0"
     file-type: "npm:22.3.0"
@@ -2814,13 +2814,13 @@ __metadata:
       optional: true
     class-validator:
       optional: true
-  checksum: 10c0/6c85e62f7e898450c2577701af847473b34ef6c309aa39eb257e6ab3e1392377252dc823f22951bd0559f8c6356748e413dfe9ecdd9ea11f04043395e91dabaf
+  checksum: 10c0/a114e0b63ff337b70c9492acb00acb585445c905d9b08320f5e71a53f43d865f852e02304ce54598df63ffa046d16adce117839641a7e9ef3805eb14e25d119c
   languageName: node
   linkType: hard
 
-"@nestjs/core@npm:12.6.2":
-  version: 12.6.2
-  resolution: "@nestjs/core@npm:12.6.2"
+"@nestjs/core@npm:12.6.3":
+  version: 12.6.3
+  resolution: "@nestjs/core@npm:12.6.3"
   dependencies:
     fast-safe-stringify: "npm:2.1.1"
     iterare: "npm:1.2.1"
@@ -2841,7 +2841,7 @@ __metadata:
       optional: true
     "@nestjs/websockets":
       optional: true
-  checksum: 10c0/f2c45b26cdf5108d4ec26a6e55a69c58b2c3c215c0bb85302011815d1c9a2db049f2672b5110e7c47db54e051aaa5390f564f96b9470ce59b8ab4b53c039efd0
+  checksum: 10c0/990c61d0c531b2ce30ce9a50ffad993702b9090bf00e965cf10b4338352f474e7c7dc6d194552a519d0f98091001d0eea6fae62fc49251339df466d460d269f6
   languageName: node
   linkType: hard
 
@@ -2874,9 +2874,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/observe@npm:0.3.28":
-  version: 0.3.28
-  resolution: "@nestjs/observe@npm:0.3.28"
+"@nestjs/observe@npm:0.3.29":
+  version: 0.3.29
+  resolution: "@nestjs/observe@npm:0.3.29"
   dependencies:
     "@jridgewell/trace-mapping": "npm:0.3.31"
   peerDependencies:
@@ -2917,7 +2917,7 @@ __metadata:
       optional: true
   bin:
     observe: dist/cli/observe-cli.js
-  checksum: 10c0/801213bb56c7cf3d6ed18bafa3dc44259618c63969db645086efdbb78c83ed089b7319784ad4ff328d5e19b8926fb4443339eb5a525ab2ea02e0243e661d5fce
+  checksum: 10c0/aa8cb57d091d4ef62259c7c8d4f49b5cf48fd8dfd0ebb776e8bcc841212d165b689904049d72e73bb96083a7a58debc86cfdcdd3690990b43477e20fd392b281
   languageName: node
   linkType: hard
 
@@ -2931,9 +2931,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/platform-express@npm:12.6.2":
-  version: 12.6.2
-  resolution: "@nestjs/platform-express@npm:12.6.2"
+"@nestjs/platform-express@npm:12.6.3":
+  version: 12.6.3
+  resolution: "@nestjs/platform-express@npm:12.6.3"
   dependencies:
     cors: "npm:2.8.6"
     express: "npm:5.3.0"
@@ -2944,13 +2944,13 @@ __metadata:
     "@nestjs/common": ^12.0.0
     "@nestjs/core": ^12.0.0
     rxjs: ^7.1.0
-  checksum: 10c0/e383a4c71ed690e61ddfd0558745922a472a882c6612a0bedb0705437c209e4dd75f3615f4520987f0ba98027b17191f62eede2d56539004c7f9dc1a9a274f81
+  checksum: 10c0/82a4520d6a8ad382c1d11393871821bbbf4ae4bac976a3e556fcd7e6a1b418d22170ad321f66fb0170795179fa58c883b6a6eb6c8fab0c8caad28cc8955a360c
   languageName: node
   linkType: hard
 
-"@nestjs/schematics@npm:12.0.16":
-  version: 12.0.16
-  resolution: "@nestjs/schematics@npm:12.0.16"
+"@nestjs/schematics@npm:12.0.17":
+  version: 12.0.17
+  resolution: "@nestjs/schematics@npm:12.0.17"
   dependencies:
     "@angular-devkit/core": "npm:22.2.7"
     "@angular-devkit/schematics": "npm:22.2.7"
@@ -2963,7 +2963,7 @@ __metadata:
   peerDependenciesMeta:
     prettier:
       optional: true
-  checksum: 10c0/8f6ce583847158efa291d0a635a9814d11e9c2cd4378b311e3cebad9af7d1ecb009b8998c9ca1c664ed6a7bd588d418453731a2de691ecdff29aa27aa59ad60e
+  checksum: 10c0/55757dc11618e2e8ff5dcc72e515823e66e5095ec52aa69cfa9cbcae6327b873a0370d8376028f8dd21089ece05905e6395581725cd20986aea4780abac0b41f
   languageName: node
   linkType: hard
 
@@ -2986,17 +2986,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/swagger@npm:12.1.2":
-  version: 12.1.2
-  resolution: "@nestjs/swagger@npm:12.1.2"
+"@nestjs/swagger@npm:12.1.3":
+  version: 12.1.3
+  resolution: "@nestjs/swagger@npm:12.1.3"
   dependencies:
     "@microsoft/tsdoc": "npm:0.17.1"
     "@nestjs/mapped-types": "npm:12.0.1"
     "@standard-schema/spec": "npm:1.1.0"
-    es-toolkit: "npm:1.53.1"
+    es-toolkit: "npm:1.53.2"
     js-yaml: "npm:5.5.0"
     path-to-regexp: "npm:8.4.2"
-    swagger-ui-dist: "npm:5.34.1"
+    swagger-ui-dist: "npm:5.35.0"
   peerDependencies:
     "@fastify/static": ^8.0.0 || ^9.0.0 || ^10.0.0
     "@nestjs/common": ^12.0.0
@@ -3014,13 +3014,13 @@ __metadata:
       optional: true
     typescript:
       optional: true
-  checksum: 10c0/b40d0fa5a904411f3b12a9eeb97bff91f78a1e5bb3b21140a9ee118cee82da3f995ce0edc2f2d6bd66b6224ed688a6c7fa0b57c4259b3343a68d7bc34ba2722e
+  checksum: 10c0/71b94128b63a290b535e31708548e1da519eec8aef11e5eae9ed8641851c39a98b000ca0767b7a5cd08c9aebab67d12bb9f1a8764fb52b9866a6bc639405bf06
   languageName: node
   linkType: hard
 
-"@nestjs/testing@npm:12.6.2":
-  version: 12.6.2
-  resolution: "@nestjs/testing@npm:12.6.2"
+"@nestjs/testing@npm:12.6.3":
+  version: 12.6.3
+  resolution: "@nestjs/testing@npm:12.6.3"
   dependencies:
     tslib: "npm:2.9.1"
   peerDependencies:
@@ -3033,7 +3033,7 @@ __metadata:
       optional: true
     "@nestjs/platform-express":
       optional: true
-  checksum: 10c0/dd7827ace907d536ab4a9ec628fd44cdab295625b1fde5335c2d2e7a5ced3b0327f93448e49102ba0631d931e91602c783104c3dd178229fe869a054342d585e
+  checksum: 10c0/5a34cb732dfa27247d5c096bcd73631fb210b5d4e37c9d2ebd7fc14b6620c0dd70b72b98d21d5ddd7d7817cdcb65f51081626955e45a1589254ec25fd9cfbbd0
   languageName: node
   linkType: hard
 
@@ -3349,12 +3349,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prisma/management-api-sdk@npm:^1.104.0":
-  version: 1.104.0
-  resolution: "@prisma/management-api-sdk@npm:1.104.0"
+"@prisma/management-api-sdk@npm:^1.106.0":
+  version: 1.106.0
+  resolution: "@prisma/management-api-sdk@npm:1.106.0"
   dependencies:
     openapi-fetch: "npm:0.14.0"
-  checksum: 10c0/7655b66ae8f7838a54e048805feab311ae9b22e510f7711e34c932fd001438a7e7490150159d9e81b35931f3e23ebda5a92fe3bdb6e01e696ac27a7f5e8ed9a6
+  checksum: 10c0/3b57d9368ff2608f14d560bb289dc8a4d51429d4955c6b0cf80173315740ee117cf6208c4ecf2c809c540ef8e7ebc87fc0998d0516128159862fac90c0f9d4d3
   languageName: node
   linkType: hard
 
@@ -4819,12 +4819,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^26.6.10":
-  version: 26.6.10
-  resolution: "@types/node@npm:26.6.10"
+"@types/node@npm:^26.6.11":
+  version: 26.6.11
+  resolution: "@types/node@npm:26.6.11"
   dependencies:
     undici-types: "npm:~8.9.0"
-  checksum: 10c0/d249c40c72ee1e61aeb9633263e5ebf428359206926a2ca12435cf7112e09a49aa5ef7a787e413fdf66b9ad8f41fb474eeb4e18e31e9b49a64033393e888ce56
+  checksum: 10c0/9771f1140557ee98f65de05fdc50a4da8d0e602bbbedf206b41f679f95fb52c9a39d854ad813dc3e4f1fb9a4c22f1b4d324607eb299670c515d3ab093701e815
   languageName: node
   linkType: hard
 
@@ -7580,17 +7580,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"es-toolkit@npm:1.53.1":
-  version: 1.53.1
-  resolution: "es-toolkit@npm:1.53.1"
+"es-toolkit@npm:1.53.2":
+  version: 1.53.2
+  resolution: "es-toolkit@npm:1.53.2"
   dependenciesMeta:
-    "@trivago/prettier-plugin-sort-imports@4.3.0":
-      unplugged: true
-    prettier-plugin-sort-re-exports@0.0.1:
-      unplugged: true
     vitepress-plugin-sandpack@1.1.4:
       unplugged: true
-  checksum: 10c0/d91b1585acbc7768adbf8767b6c554c4112658fda9ccd5d244db5a853e9ee336dd1269422bc21ff63ec798d39c343b4dde5968c2a05c153163c5b91c2de5abcd
+  checksum: 10c0/5b0cad13f54e010d84fabd74dbc016a3db09cd9d3992bd97bc06fe54568af439333a61692e68494751c71fd2f453f882711cceb9c61239658a231f013882452a
   languageName: node
   linkType: hard
 
@@ -12015,15 +12011,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prisma@npm:8.0.0-rc.35":
-  version: 8.0.0-rc.35
-  resolution: "prisma@npm:8.0.0-rc.35"
+"prisma@npm:8.0.0-rc.36":
+  version: 8.0.0-rc.36
+  resolution: "prisma@npm:8.0.0-rc.36"
   dependencies:
     "@manypkg/tools": "npm:^2.1.2"
     "@prisma/cli-engine": "npm:0.10.4"
     "@prisma/composer-cli": "npm:0.40.0"
     "@prisma/compute-sdk": "npm:0.43.0"
     "@prisma/management-api-sdk": "npm:1.101.0"
+    "@prisma/orm-framework": "npm:8.0.0-rc.25"
     "@prisma/orm-toolchain": "npm:8.0.0-rc.25"
     "@vercel/detect-agent": "npm:^1.2.3"
     better-result: "npm:^2.9.2"
@@ -12033,7 +12030,7 @@ __metadata:
     open: "npm:^11.0.0"
   bin:
     prisma: ./dist/prisma.js
-  checksum: 10c0/40ddd2e969fd05583c7abf6f30e46a8c90d32ec1e908485ebd648faefba259e7aef5feb314a0452f103b9b98eed33a5033e411fcfb3673c3a4b56c3685ff9ada
+  checksum: 10c0/6679ad99d9ad7e4ca8d46db47e4bc92912d4b3ff1fd2125983a571ad23a7e1122f4b45cf7fad500bee27b5a4c9ee06b412cc03ee950702dc29fa3eea587b0ee3
   languageName: node
   linkType: hard
 
@@ -12663,26 +12660,26 @@ __metadata:
   resolution: "runich-backend@workspace:."
   dependencies:
     "@ardentcode/sports-lib": "npm:^5.4.29"
-    "@aws-sdk/client-s3": "npm:3.1177.0"
-    "@aws-sdk/s3-request-presigner": "npm:3.1177.0"
+    "@aws-sdk/client-s3": "npm:3.1178.0"
+    "@aws-sdk/s3-request-presigner": "npm:3.1178.0"
     "@eslint/js": "npm:^10.0.1"
     "@huggingface/transformers": "npm:4.3.2"
     "@jest/globals": "npm:^30.5.2"
     "@mapbox/polyline": "npm:^1.2.1"
     "@maplibre/maplibre-gl-native": "npm:6.5.0-pre.1"
     "@nestjs/cli": "npm:12.0.15"
-    "@nestjs/common": "npm:12.6.2"
-    "@nestjs/core": "npm:12.6.2"
+    "@nestjs/common": "npm:12.6.3"
+    "@nestjs/core": "npm:12.6.3"
     "@nestjs/jwt": "npm:12.0.5"
-    "@nestjs/observe": "npm:0.3.28"
+    "@nestjs/observe": "npm:0.3.29"
     "@nestjs/passport": "npm:12.0.2"
-    "@nestjs/platform-express": "npm:12.6.2"
-    "@nestjs/schematics": "npm:12.0.16"
-    "@nestjs/swagger": "npm:12.1.2"
-    "@nestjs/testing": "npm:12.6.2"
+    "@nestjs/platform-express": "npm:12.6.3"
+    "@nestjs/schematics": "npm:12.0.17"
+    "@nestjs/swagger": "npm:12.1.3"
+    "@nestjs/testing": "npm:12.6.3"
     "@nestjs/throttler": "npm:6.8.0"
     "@prisma/cli-engine": "npm:0.10.4"
-    "@prisma/management-api-sdk": "npm:^1.104.0"
+    "@prisma/management-api-sdk": "npm:^1.106.0"
     "@prisma/orm-postgres": "npm:8.0.0-rc.25"
     "@react-email/components": "npm:^1.0.12"
     "@swc/core": "npm:^1.16.22"
@@ -12693,7 +12690,7 @@ __metadata:
     "@types/express": "npm:^5.0.6"
     "@types/jest": "npm:30.0.0"
     "@types/multer": "npm:^2.3.0"
-    "@types/node": "npm:^26.6.10"
+    "@types/node": "npm:^26.6.11"
     "@types/passport-jwt": "npm:^4.0.2"
     "@types/pg": "npm:^8.23.1"
     "@types/react": "npm:^19.3.3"
@@ -12725,7 +12722,7 @@ __metadata:
     passport-jwt: "npm:^4.0.1"
     pg: "npm:^8.23.1"
     prettier: "npm:^3.10.1"
-    prisma: "npm:8.0.0-rc.35"
+    prisma: "npm:8.0.0-rc.36"
     prom-client: "npm:^15.1.3"
     react: "npm:^19.3.1"
     react-dom: "npm:^19.3.1"
@@ -13603,12 +13600,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"swagger-ui-dist@npm:5.34.1":
-  version: 5.34.1
-  resolution: "swagger-ui-dist@npm:5.34.1"
+"swagger-ui-dist@npm:5.35.0":
+  version: 5.35.0
+  resolution: "swagger-ui-dist@npm:5.35.0"
   dependencies:
     "@scarf/scarf": "npm:=1.4.0"
-  checksum: 10c0/e840abba4c177facbc14d8e2f696aad36d951a94b8ec67e5affbf127bbb8dc31ba03bc6539877cb0f8a38626d9e8c6c01769025b08970076aa34429d41f244cd
+  checksum: 10c0/573fb15e352bfd0372be3cae10c48391001363cd042feac1a086387ff53750827b3059e3581e2a88cb38df7803d415493c90fe762fdd794c48b7445a15ca0090
   languageName: node
   linkType: hard
 
