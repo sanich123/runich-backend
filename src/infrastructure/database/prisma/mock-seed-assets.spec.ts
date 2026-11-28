@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 import { S3Client } from '@aws-sdk/client-s3';
 import { loadMockActivityTemplates } from './mock-seed-assets';
 
-const environmentKeys = ['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY', 'S3_SECRET_ACCESS_KEY', 'S3_PUBLIC_URL'] as const;
+const environmentKeys = ['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY', 'S3_SECRET_ACCESS_KEY'] as const;
 const originalEnvironment = Object.fromEntries(environmentKeys.map((key) => [key, process.env[key]]));
 
 function manifest() {
@@ -59,7 +59,6 @@ describe('mock activity asset manifest', () => {
     process.env.S3_BUCKET = 'runich-stage';
     process.env.S3_ACCESS_KEY = 'test-access-key';
     process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
-    delete process.env.S3_PUBLIC_URL;
   });
 
   afterEach(() => {

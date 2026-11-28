@@ -60,7 +60,6 @@ describe('StorageService', () => {
     process.env.S3_QUARANTINE_BUCKET = 'runich-test';
     process.env.S3_QUARANTINE_PREFIX = 'moderation-quarantine';
     delete process.env.APP_ENV;
-    delete process.env.S3_PUBLIC_URL;
     s3Send.mockReset();
   });
 
@@ -72,7 +71,6 @@ describe('StorageService', () => {
     delete process.env.S3_SECRET_ACCESS_KEY;
     delete process.env.S3_QUARANTINE_BUCKET;
     delete process.env.S3_QUARANTINE_PREFIX;
-    delete process.env.S3_PUBLIC_URL;
     delete process.env.APP_ENV;
     s3Send.mockRestore();
   });
@@ -444,27 +442,17 @@ describe('StorageService', () => {
     });
   });
 
-  it('does not default the endpoint and keeps the code-defined region when environment values are absent', () => {
-    delete process.env.S3_ENDPOINT;
-    delete process.env.S3_REGION;
-    delete process.env.S3_BUCKET;
-    delete process.env.S3_ACCESS_KEY;
-    delete process.env.S3_SECRET_ACCESS_KEY;
-    delete process.env.S3_QUARANTINE_BUCKET;
-    delete process.env.S3_QUARANTINE_PREFIX;
+  it.each([
+    'S3_ENDPOINT',
+    'S3_BUCKET',
+    'S3_ACCESS_KEY',
+    'S3_SECRET_ACCESS_KEY',
+    'S3_QUARANTINE_BUCKET',
+    'S3_QUARANTINE_PREFIX',
+  ])('requires %s before constructing the storage service', (key) => {
+    delete process.env[key];
 
-    const service = createStorageService();
-
-    expect((service as unknown as { settings: unknown }).settings).toEqual({
-      endpoint: '',
-      region: 'ru-1',
-      bucket: '',
-      quarantineBucket: '',
-      quarantinePrefix: '',
-      accessKey: '',
-      secretKey: '',
-      publicUrl: '',
-    });
+    expect(() => createStorageService()).toThrow(`${key} is required`);
   });
 
   it('rejects unsupported video containers before writing to S3', async () => {
@@ -883,13 +871,15 @@ describe('StorageService', () => {
     expect(s3Send).not.toHaveBeenCalled();
   });
 
-  it('deletes legacy direct S3 URLs after switching public URLs to CDN', async () => {
-    process.env.S3_PUBLIC_URL = 'https://cdn.example.com';
+  it('builds new URLs from the S3 endpoint and accepts previously stored production CDN URLs', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = createStorageService();
 
+    expect(service.getPublicUrl('user-1/legacy-photo.jpg')).toBe(
+      'https://s3.twcstorage.ru/runich-test/user-1/legacy-photo.jpg',
+    );
     await expect(
-      service.deletePhoto('user-1', 'https://s3.twcstorage.ru/runich-test/user-1/legacy-photo.jpg'),
+      service.deletePhoto('user-1', 'https://q0tsp3wn9v.cdn.twcstorage.ru/user-1/legacy-photo.jpg'),
     ).resolves.toBeUndefined();
 
     expect((s3Send.mock.calls[0]?.[0] as DeleteObjectCommand).input).toEqual({
@@ -966,11 +956,8 @@ describe('StorageService', () => {
 
   it('fails clearly when S3 credentials are not configured', async () => {
     delete process.env.S3_ACCESS_KEY;
-    const service = createStorageService();
 
-    await expect(
-      service.uploadPhoto('user-1', { buffer: Buffer.alloc(0), originalname: 'photo.jpg', mimetype: 'image/jpeg' }),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(() => createStorageService()).toThrow('S3_ACCESS_KEY is required');
   });
 
   it('writes to the shared S3 bucket in stage', async () => {
@@ -1370,16 +1357,15 @@ describe('StorageService', () => {
     expect(s3Send).not.toHaveBeenCalled();
   });
 
-  it('requires Prisma and a separate quarantine prefix before uploading to a shared bucket', async () => {
+  it('requires Prisma for video moderation and validates a quarantine prefix at startup', async () => {
     const file = { buffer: Buffer.from('video'), originalname: 'clip.mp4', mimetype: 'video/mp4' };
     await expect(createStorageService().uploadPhoto('user-1', file)).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
 
     delete process.env.S3_QUARANTINE_PREFIX;
-    const service = createStorageService(undefined, createModerationPrismaMock() as never);
-    await expect(service.uploadPhoto('user-1', file)).rejects.toThrow(
-      'Для карантина в основном S3-бакете задайте S3_QUARANTINE_PREFIX',
+    expect(() => createStorageService(undefined, createModerationPrismaMock() as never)).toThrow(
+      'S3_QUARANTINE_PREFIX is required',
     );
     expect(s3Send).not.toHaveBeenCalled();
   });

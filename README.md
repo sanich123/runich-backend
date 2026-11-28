@@ -132,7 +132,6 @@ Use secret management and rotated credentials in production. Never commit .env, 
 | S3_BUCKET                    | S3 bucket name                                                                           |
 | S3_ACCESS_KEY                | Server-side S3 access key                                                                |
 | S3_SECRET_ACCESS_KEY         | Server-side S3 secret key                                                                |
-| S3_PUBLIC_URL                | Optional public URL prefix; defaults to endpoint plus bucket                             |
 | JWT_SECRET                   | Secret used to sign and verify JWT tokens                                                |
 | YANDEX_CLIENT_ID             | Yandex ID application client ID                                                          |
 | YANDEX_CLIENT_SECRET         | Yandex ID application secret, server-side only                                           |
@@ -223,9 +222,10 @@ Stage uses the dedicated S3 bucket and these non-secret settings:
     APP_ENV=stage
     S3_BUCKET=runich-stage
 
-Stage defaults `S3_PUBLIC_URL` to the endpoint plus bucket; Production sets its
-CDN URL explicitly. `S3_ENDPOINT` is required in `.env`; the S3 region `ru-1`
-is hardcoded in the backend. The server `/opt/runich-stage/.env` is the single
+Stage and Production build object URLs from `S3_ENDPOINT` and `S3_BUCKET`.
+Previously stored Production CDN URLs remain accepted for owner-scoped file
+operations. `S3_ENDPOINT` is required in `.env`; the S3 region `ru-1` is
+hardcoded in the backend. The server `/opt/runich-stage/.env` is the single
 source for Compose, API, and worker settings. It contains `DATABASE_URL_DOCKER`
 pointing to the Compose `db` service and must have mode `0600`; never commit it.
 GitHub Actions validates all required keys in `.env` before migrations. Deploy
@@ -238,7 +238,6 @@ Production on Timeweb uses the same endpoint with:
 
     APP_ENV=production
     S3_BUCKET=runich-production
-    S3_PUBLIC_URL=https://q0tsp3wn9v.cdn.twcstorage.ru
 
 ## Commands
 

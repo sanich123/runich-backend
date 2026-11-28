@@ -22,7 +22,8 @@ import { dirname, extname } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { LatencyMetricsService } from 'src/common/metrics/latency-metrics.service';
 import { normalizeImage } from 'src/common/images/image-processing';
-import { MAX_DELETE_BATCH_SIZE, S3_REGION } from '../shared/const';
+import { MAX_DELETE_BATCH_SIZE } from '../shared/const';
+import { LEGACY_PUBLIC_STORAGE_URL_BASES, loadStorageSettings } from '../shared/storage-config';
 import { getFeedbackPhotoKey, getProfilePhotoKey, getUserUploadKey } from '../shared/storage-key';
 import type { PhotoUploadOptions, StorageSettings } from '../shared/types';
 
@@ -33,34 +34,17 @@ export class StorageCoreService {
   readonly client: S3Client;
 
   constructor(@Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService) {
-    const endpoint = process.env.S3_ENDPOINT?.trim() || '';
-    const region = S3_REGION;
-    const bucket = process.env.S3_BUCKET?.trim() || '';
-    const quarantineBucket = process.env.S3_QUARANTINE_BUCKET?.trim() || '';
-    const rawQuarantinePrefix = process.env.S3_QUARANTINE_PREFIX?.trim().replace(/^\/+|\/+$/g, '') || '';
-    const quarantinePrefix = rawQuarantinePrefix ? `${rawQuarantinePrefix}/` : '';
-    if (
-      rawQuarantinePrefix &&
-      rawQuarantinePrefix.split('/').some((segment) => !segment || segment === '.' || segment === '..')
-    ) {
-      throw new Error('S3_QUARANTINE_PREFIX contains an invalid path segment');
-    }
-    const accessKey = process.env.S3_ACCESS_KEY?.trim() || '';
-    const secretKey = process.env.S3_SECRET_ACCESS_KEY?.trim() || '';
-    const configuredPublicUrl = process.env.S3_PUBLIC_URL?.trim();
-    const publicUrl = (configuredPublicUrl || (endpoint && bucket ? `${endpoint}/${bucket}` : '')).replace(/\/$/, '');
-
-    this.settings = { endpoint, region, bucket, quarantineBucket, quarantinePrefix, accessKey, secretKey, publicUrl };
+    this.settings = loadStorageSettings();
     this.client = new S3Client({
-      endpoint: endpoint || undefined,
-      region,
+      endpoint: this.settings.endpoint,
+      region: this.settings.region,
       forcePathStyle: true,
       // Timeweb S3 совместим с AWS API, но не требует дополнительных заголовков
       // контрольных сумм, которые новые версии AWS SDK добавляют к PutObject.
       // Добавляем их только для операций, которым контрольная сумма нужна явно.
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',
-      credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
+      credentials: { accessKeyId: this.settings.accessKey, secretAccessKey: this.settings.secretKey },
     });
   }
 
@@ -174,10 +158,11 @@ export class StorageCoreService {
   }
 
   getPublicUrl(key: string) {
-    if (!this.settings.endpoint) {
-      throw new ServiceUnavailableException('S3_ENDPOINT не задан в конфигурации сервера');
-    }
-    return `${this.settings.publicUrl}/${key.split('/').map(encodeURIComponent).join('/')}`;
+    return `${this.getPublicUrlBase()}/${key.split('/').map(encodeURIComponent).join('/')}`;
+  }
+
+  private getPublicUrlBase() {
+    return `${this.settings.endpoint}/${this.settings.bucket}`;
   }
 
   getOwnedKey(userId: string, publicUrl: string) {
@@ -188,7 +173,7 @@ export class StorageCoreService {
       throw new BadRequestException('Некорректная ссылка на фото');
     }
 
-    const publicBaseUrl = [this.settings.publicUrl, `${this.settings.endpoint}/${this.settings.bucket}`]
+    const publicBaseUrl = [this.getPublicUrlBase(), ...LEGACY_PUBLIC_STORAGE_URL_BASES]
       .map((value) => {
         try {
           return new URL(value);

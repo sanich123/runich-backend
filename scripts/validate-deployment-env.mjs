@@ -160,7 +160,6 @@ function normalizeDeploymentEnv(filePath, environment) {
 function validateEnvironment(file, environment) {
   const requiredKeys = [
     ...REQUIRED_APP_KEYS,
-    ...(environment === 'production' ? ['S3_PUBLIC_URL'] : []),
     ...(environment === 'stage' ? REQUIRED_STAGE_COMPOSE_KEYS : REQUIRED_PRODUCTION_COMPOSE_KEYS),
   ];
   const missingKeys = requiredKeys.filter((key) => !file.values[key]?.trim());
@@ -174,14 +173,8 @@ function validateEnvironment(file, environment) {
   if (file.values.APP_ENV !== expectedAppEnv) fail(`APP_ENV must be ${expectedAppEnv}.`);
 
   const expectedBucket = environment === 'stage' ? 'runich-stage' : 'runich-production';
-  const expectedPublicUrl =
-    environment === 'stage' ? 'https://s3.twcstorage.ru/runich-stage' : 'https://q0tsp3wn9v.cdn.twcstorage.ru';
   const expectedQuarantinePrefix = `moderation-quarantine/${environment}/`;
   if (file.values.S3_BUCKET !== expectedBucket) fail(`S3_BUCKET must be ${expectedBucket}.`);
-  const configuredPublicUrl = file.values.S3_PUBLIC_URL?.trim();
-  if (configuredPublicUrl && configuredPublicUrl !== expectedPublicUrl) {
-    fail(`S3_PUBLIC_URL must be ${expectedPublicUrl}.`);
-  }
   if (file.values.S3_QUARANTINE_BUCKET !== 'runich-stage') {
     fail('S3_QUARANTINE_BUCKET must be runich-stage.');
   }
@@ -234,15 +227,6 @@ function validateEnvironment(file, environment) {
       }
     } catch {
       fail('DATABASE_URL_DOCKER is not a valid PostgreSQL URL.');
-    }
-  }
-
-  if (file.values.S3_PUBLIC_URL?.trim()) {
-    try {
-      const url = new URL(file.values.S3_PUBLIC_URL);
-      if (!['http:', 'https:'].includes(url.protocol)) throw new Error('unsupported protocol');
-    } catch {
-      fail('S3_PUBLIC_URL must be an absolute HTTP or HTTPS URL when set.');
     }
   }
 

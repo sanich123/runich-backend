@@ -83,9 +83,11 @@ Observe остаётся необязательным и включается т
 mock-seed остаются опциональными; без `NSFWJS_MODEL_URL` worker использует
 встроенную модель. На Stage и Production адрес фронтенда выбирается по `APP_ENV`;
 `AUTH_FRONTEND_REDIRECT_URI` в deployment `.env` не нужен.
-`S3_ENDPOINT` обязателен в `.env`; регион `ru-1` задан в коде и в `.env` не
-хранится. Stage может не задавать `S3_PUBLIC_URL` — он строится из endpoint и
-bucket; Production задаёт его явно, чтобы ссылки шли через CDN.
+`S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_ACCESS_KEY`,
+`S3_QUARANTINE_BUCKET` и `S3_QUARANTINE_PREFIX` обязательны и проверяются при
+старте API и worker. Ссылки на объекты в обеих средах строятся из endpoint и
+bucket; ранее сохранённые Production CDN-ссылки продолжают приниматься при
+операциях владельца с файлами. Регион `ru-1` задан в коде и в `.env` не хранится.
 
 ### Production
 

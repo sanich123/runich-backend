@@ -45,7 +45,6 @@ export type StorageSettings = {
   quarantinePrefix: string;
   accessKey: string;
   secretKey: string;
-  publicUrl: string;
 };
 
 export type CleanupDatabase = Pick<PrismaService, 'mediaCleanupJob'>;
