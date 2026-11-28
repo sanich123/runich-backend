@@ -61,6 +61,7 @@ export class ActivityFriendsFeedService {
                     'url', am."url",
                     'thumbnail', am."thumbnail",
                     'blurhash', am."blurhash",
+                    'aspectRatio', am."aspect_ratio",
                     'mediaReviewStatus', am."media_review_status",
                     'mediaModerationAssetId', am."media_moderation_asset_id",
                     'thumbnailModerationAssetId', am."thumbnail_moderation_asset_id"
