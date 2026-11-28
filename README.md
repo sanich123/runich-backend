@@ -54,10 +54,10 @@ Start the background worker in a second terminal:
 
 `yarn dev` emits the Prisma 8 contract and synchronizes the database with the
 current contract before starting the development server. To update only the
-database, run `yarn db:sync`. Prisma 8 uses `prisma/contract.prisma` as the
+database, run `yarn prisma:sync`. Prisma 8 uses `prisma/contract.prisma` as the
 source of truth; `contract.json` and `contract.d.ts` are generated runtime
 artifacts and are ignored by Git. Scripts that need them emit them with
-`yarn db:generate`.
+`yarn prisma:generate`.
 
 The API is available at http://localhost:3000; Swagger is at http://localhost:3000/api.
 Liveness is available at `/health/live`, and Railway readiness checks should use
@@ -243,29 +243,29 @@ Production on Timeweb uses the same endpoint with:
 ## Commands
 
 Scripts are grouped by responsibility: application lifecycle, `worker:*`,
-`db:*`, `test:*`, and code-quality commands.
+`prisma:*`, `test:*`, and code-quality commands. Production containers invoke
+the compiled Node entrypoints directly; deployment-only commands are kept in
+Docker and Compose configuration.
 
 ### Application and worker
 
-| Command            | Description                            |
-| ------------------ | -------------------------------------- |
-| `yarn dev`         | Development API with watch mode        |
-| `yarn start`       | Development API without watch mode     |
-| `yarn start:debug` | Development API with Node inspector    |
+| Command            | Description                              |
+| ------------------ | ---------------------------------------- |
+| `yarn dev`         | Development API with watch mode          |
+| `yarn start`       | Development API without watch mode       |
+| `yarn start:debug` | Development API with Node inspector      |
 | `yarn build`       | Build the production bundles with tsdown |
-| `yarn start:prod`  | Run the compiled API                   |
-| `yarn worker:dev`  | Development background worker          |
-| `yarn worker:prod` | Run the built worker                   |
+| `yarn worker:dev`  | Development background worker            |
 
 ### Database
 
-| Command                                      | Description                                               |
-| -------------------------------------------- | --------------------------------------------------------- |
-| `yarn db:up`                                 | Start local PostgreSQL and reconcile its Prisma 8 marker  |
-| `yarn db:generate`                           | Emit the Prisma 8 contract artifacts                      |
-| `yarn db:sync`                               | Synchronize the database with the current contract        |
-| `yarn db:migrate:prod`                       | Apply and verify checked-in Prisma 8 migrations           |
-| `yarn db:seed`                               | Seed the configured database                              |
+| Command                                         | Description                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------ |
+| `yarn prisma:local-db`                          | Start local PostgreSQL and reconcile its Prisma 8 marker     |
+| `yarn prisma:local-db --no-advance-ref`         | Start local PostgreSQL without advancing the Prisma DB ref   |
+| `yarn prisma:generate`                          | Emit the Prisma 8 contract artifacts                         |
+| `yarn prisma:sync`                              | Synchronize a local/bootstrap database with the contract     |
+| `yarn prisma:seed`                              | Seed the configured database                                 |
 
 ### Tests
 
@@ -281,7 +281,7 @@ Scripts are grouped by responsibility: application lifecycle, `worker:*`,
 
 | Command                                                                       | Description                                       |
 | ----------------------------------------------------------------------------- | ------------------------------------------------- |
-| `yarn db:generate && yarn tsc --noEmit`                                       | Generate Prisma contract and check TypeScript     |
+| `yarn prisma:generate && yarn tsc --noEmit`                                   | Generate Prisma contract and check TypeScript     |
 | `yarn eslint src`                                                             | Check source and tests without modifying files   |
 | `yarn prettier --config .prettierrc --write './src/**/*.{ts,tsx}'`            | Format TypeScript source and tests                |
 | `yarn madge --ts-config ./tsconfig.json --warning --circular --extensions ts ./src` | Check circular dependencies               |
@@ -297,17 +297,17 @@ and Production pre-release schemas must be reset once before applying it. After
 launch, add migrations without rewriting the applied history. For a schema
 change, emit the contract, plan and inspect a migration, then commit the
 contract and migration together. Production applies migrations once in the
-Timeweb deployment workflow. Keep `yarn db:sync` for local/bootstrap use only;
+Timeweb deployment workflow. Keep `yarn prisma:sync` for local/bootstrap use only;
 do not run it from API or worker startup. The database column names remain
 stable through `@map(...)`; application and API names use camelCase.
 
-    yarn db:generate
-    yarn db:sync
-    yarn db:seed
+    yarn prisma:generate
+    yarn prisma:sync
+    yarn prisma:seed
 
 For later schema changes:
 
-    yarn db:generate
+    yarn prisma:generate
     yarn prisma migration plan --name describe_the_change
     yarn prisma migration show migrations/app/<migration_directory>
 
@@ -378,19 +378,19 @@ and map images after the activity has been saved.
 
 Before opening a pull request:
 
-    yarn db:generate
+    yarn prisma:generate
     yarn tsc --noEmit
     yarn eslint src
     yarn build
     node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --maxWorkers=50% --no-watchman
-    yarn db:up:check
+    yarn prisma:local-db --no-advance-ref
     yarn prisma db verify
     RUNICH_INTEGRATION=true node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.cjs --runInBand --no-watchman
     yarn madge --ts-config ./tsconfig.json --warning --circular --extensions ts ./src
     yarn ts-prune --ignore 'tsdown\.config\.ts|src/admin/admin-access\.constants\.ts|src/moderation/moderation\.constants\.ts|tests/mocks/nestjs-throttler\.ts|src/email/templates/index\.ts|src/infrastructure|^prisma/|(^|/)generated/|(^|/)(migrations|snapshots)/|\.d\.ts$|prisma\.config\.ts|\.spec\.ts$'
 
 Integration tests require a disposable PostgreSQL database configured through
-`DATABASE_URL`. `yarn db:generate` emits the Prisma contract once before the
+`DATABASE_URL`. `yarn prisma:generate` emits the Prisma contract once before the
 combined checks; the standalone `yarn test:cov` and `yarn test:integration`
 commands also emit it when run separately. The current GitHub Actions workflows
 build and deploy Stage/Production images and send daily metrics. Docker image

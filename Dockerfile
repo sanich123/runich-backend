@@ -54,15 +54,15 @@ RUN yarn install --immutable
 
 COPY scripts/download-text-moderation-model.mjs ./scripts/
 
-RUN yarn model:download:text-moderation
+RUN node scripts/download-text-moderation-model.mjs
 
 COPY . .
 
-RUN yarn db:generate && yarn prisma migration check && yarn build
+RUN yarn prisma:generate && yarn prisma migration check && yarn build
 
 # Завершаем сборку образа с ошибкой, если нативный модуль MapLibre не загружается
 # или не выполняет рендеринг в той же среде Linux, где он будет работать в Production.
-RUN yarn maplibre:smoke
+RUN xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' node scripts/maplibre-runtime-smoke.mjs
 
 FROM yarn-base AS runtime
 
@@ -90,4 +90,4 @@ COPY --from=builder /usr/src/app/scripts/summarize-deployment-env.mjs ./scripts/
 EXPOSE 3000
 
 ENTRYPOINT ["tini", "--"]
-CMD ["yarn", "start:prod"]
+CMD ["node", "dist/main.js"]

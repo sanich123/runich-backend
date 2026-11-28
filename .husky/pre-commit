@@ -2,7 +2,7 @@
 yarn npm audit --recursive --severity high
 
 # 1. Один раз генерируем Prisma-контракт и проверяем TypeScript
-yarn db:generate
+yarn prisma:generate
 yarn tsc --noEmit
 
 # 2. Проверка связности графа Prisma-миграций для актуального контракта
@@ -15,7 +15,7 @@ npx lint-staged@latest
 node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --maxWorkers=50% --no-watchman
 
 # 5. PostgreSQL integration/e2e-тесты
-yarn db:up:check
+yarn prisma:local-db --no-advance-ref
 yarn prisma db verify
 RUNICH_INTEGRATION=true node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.cjs --runInBand --no-watchman
 

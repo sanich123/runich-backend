@@ -12,8 +12,8 @@ Thank you for contributing. This document describes the local workflow, code org
 
     corepack enable
     yarn install
-    yarn db:generate
-    yarn db:sync
+    yarn prisma:generate
+    yarn prisma:sync
     yarn dev
 
 Mock data is enabled automatically for local and stage. Use it only with a
@@ -50,7 +50,7 @@ Keep commits small enough to review. Explain breaking changes in the commit body
 - Return safe client-facing errors and retain details only in server logs.
 - Commit `prisma/contract.prisma` and its migration package with schema changes.
   Generated `prisma/contract.json` and `prisma/contract.d.ts` are ignored; scripts
-  emit them with `yarn db:generate`.
+  emit them with `yarn prisma:generate`.
 
 ## Adding an endpoint
 
@@ -64,7 +64,7 @@ Keep commits small enough to review. Explain breaking changes in the commit body
 
 ## Database changes
 
-    yarn db:generate
+    yarn prisma:generate
     yarn prisma migration plan
     yarn prisma migration check
 
@@ -72,19 +72,19 @@ Edit `prisma/contract.prisma`, emit the contract, review the planned migration,
 and commit its package under `migrations/`. Do not edit `contract.json` or
 `contract.d.ts` manually. The pre-release history is one initial migration;
 after launch, add migrations without rewriting the applied history. Apply schema
-changes through `db:migrate:prod`, never through API or worker startup.
+changes through the deployment migration container, never through API or worker startup.
 
 ## Testing and checks
 
 Run the full quality gate before pushing. This sequence generates the Prisma
 contract once and then reuses it for both Jest runs:
 
-    yarn db:generate
+    yarn prisma:generate
     yarn tsc --noEmit
     yarn eslint src
     yarn build
     node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --maxWorkers=50% --no-watchman
-    yarn db:up:check
+    yarn prisma:local-db --no-advance-ref
     yarn prisma db verify
     RUNICH_INTEGRATION=true node --max-old-space-size=6144 --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.cjs --runInBand --no-watchman
     yarn madge --ts-config ./tsconfig.json --warning --circular --extensions ts ./src
@@ -100,7 +100,7 @@ data. Keep the client-side reduction in place; do not bypass these limits by
 raising the global parser limit for a single large route.
 
 Standalone `yarn test:cov`, `yarn test:integration`, and the direct TypeScript
-check should run after `yarn db:generate`. For a combined pass, run generation
+check should run after `yarn prisma:generate`. For a combined pass, run generation
 once before typecheck, then use the Jest commands above so generated Prisma 8
 contract artifacts are reused.
 

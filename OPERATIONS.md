@@ -127,18 +127,18 @@ BACKEND_IMAGE='ghcr.io/sanich123/runich-backend:production-<sha>-<run>-<attempt>
 ## Миграции Prisma
 
 Production и Stage применяют только checked-in migrations через
-`yarn db:migrate:prod`: создаётся `pg_trgm`, выполняются миграции, затем `migration
-status` и `db verify`.
+контейнер миграции запускает `node prisma/db-migrate.mjs`: создаётся `pg_trgm`,
+выполняются миграции, затем `migration status` и `db verify`.
 
 Для изменения схемы локально:
 
 ```bash
-yarn db:generate
+yarn prisma:generate
 yarn prisma migration plan --name describe_the_change
 yarn prisma migration show migrations/app/<migration_directory>
 ```
 
-Закоммитьте совместимые код, контракт и миграцию вместе. `yarn db:sync` и
+Закоммитьте совместимые код, контракт и миграцию вместе. `yarn prisma:sync` и
 `prisma db update` — только local/bootstrap; не запускайте их на Stage/Production.
 `prisma db sign` допустим только после доказательства, что реальная схема уже
 совпадает с контрактом; это не замена миграции.
