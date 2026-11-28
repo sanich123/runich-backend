@@ -33,6 +33,10 @@ function spyOnScanner(worker: MediaModerationWorkerService) {
   return jest.spyOn(scanner, 'scan');
 }
 
+function createWorker(prisma: unknown, storage: unknown) {
+  return new MediaModerationWorkerService(prisma as never, storage as never, { scan: asyncMock() } as never);
+}
+
 describe('MediaModerationWorkerService', () => {
   it('reports the provider for Google Vision, NSFWJS, and mixed scans', () => {
     expect(getMediaModerationProviderName(MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION)).toBe(
@@ -48,7 +52,7 @@ describe('MediaModerationWorkerService', () => {
 
   it('returns false when the queue is empty and does not claim an upload already claimed by another worker', async () => {
     const prisma = createPrismaMock();
-    const worker = new MediaModerationWorkerService(prisma as never, {} as never);
+    const worker = createWorker(prisma as never, {} as never);
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(null);
     await expect(worker.processNextAsset()).resolves.toBe(false);
 
@@ -61,7 +65,7 @@ describe('MediaModerationWorkerService', () => {
   it('automatically publishes a clean image and stores the scan result', async () => {
     const prisma = createPrismaMock();
     const storage = { approveModerationAsset: asyncMock() };
-    const worker = new MediaModerationWorkerService(prisma as never, storage as never);
+    const worker = createWorker(prisma as never, storage as never);
     spyOnScanner(worker).mockResolvedValue({ scores: { Drawing: 0.98, Porn: 0.01 }, frameCount: null });
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(queuedAsset);
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
@@ -82,7 +86,7 @@ describe('MediaModerationWorkerService', () => {
 
   it('sends uncertain results to moderator review and queues a notification email once', async () => {
     const prisma = createPrismaMock();
-    const worker = new MediaModerationWorkerService(prisma as never, {} as never);
+    const worker = createWorker(prisma as never, {} as never);
     spyOnScanner(worker).mockResolvedValue({ scores: { Porn: 0.8, Sexy: 0.65 }, frameCount: 12 });
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(queuedAsset);
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
@@ -123,7 +127,7 @@ describe('MediaModerationWorkerService', () => {
 
   it('sends an uncertain image to review without claiming a video frame count', async () => {
     const prisma = createPrismaMock();
-    const worker = new MediaModerationWorkerService(prisma as never, {} as never);
+    const worker = createWorker(prisma as never, {} as never);
     spyOnScanner(worker).mockResolvedValue({ scores: { Porn: 0.8 }, frameCount: null });
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(queuedAsset);
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
@@ -141,7 +145,7 @@ describe('MediaModerationWorkerService', () => {
   it('retries scan failures and sends exhausted uploads to manual review', async () => {
     const prisma = createPrismaMock();
     const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    const worker = new MediaModerationWorkerService(prisma as never, {} as never);
+    const worker = createWorker(prisma as never, {} as never);
     spyOnScanner(worker).mockRejectedValue(new Error('model unavailable'));
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
 
@@ -191,7 +195,7 @@ describe('MediaModerationWorkerService', () => {
 
   it('dispatches queued images and videos to the scanner', async () => {
     const prisma = createPrismaMock();
-    const worker = new MediaModerationWorkerService(prisma as never, { approveModerationAsset: asyncMock() } as never);
+    const worker = createWorker(prisma as never, { approveModerationAsset: asyncMock() } as never);
     const scan = spyOnScanner(worker)
       .mockResolvedValueOnce({ scores: { Drawing: 0.99 }, frameCount: null })
       .mockResolvedValueOnce({ scores: { Drawing: 0.98 }, frameCount: 2 });
@@ -209,7 +213,7 @@ describe('MediaModerationWorkerService', () => {
   it('handles non-Error scan failures and reports score categories that need review', async () => {
     const prisma = createPrismaMock();
     const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    const worker = new MediaModerationWorkerService(prisma as never, {} as never);
+    const worker = createWorker(prisma as never, {} as never);
     spyOnScanner(worker).mockRejectedValue('model unavailable');
     prisma.mediaModerationAsset.findFirst.mockResolvedValue(queuedAsset);
     prisma.mediaModerationAsset.updateMany.mockResolvedValue({ count: 1 });
@@ -227,7 +231,7 @@ describe('MediaModerationWorkerService', () => {
     jest.useFakeTimers();
     try {
       const prisma = createPrismaMock();
-      const worker = new MediaModerationWorkerService(prisma as never, {} as never);
+      const worker = createWorker(prisma as never, {} as never);
       const processNextAsset = jest
         .spyOn(worker, 'processNextAsset')
         .mockImplementationOnce(async () => false)
@@ -241,7 +245,7 @@ describe('MediaModerationWorkerService', () => {
       expect(processNextAsset).toHaveBeenCalledTimes(2);
 
       const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-      const failingWorker = new MediaModerationWorkerService(createPrismaMock() as never, {} as never);
+      const failingWorker = createWorker(createPrismaMock() as never, {} as never);
       jest.spyOn(failingWorker, 'processNextAsset').mockImplementation(async () => {
         failingWorker.requestStop();
         throw 'scanner unavailable';
@@ -258,7 +262,7 @@ describe('MediaModerationWorkerService', () => {
 
   it('logs an Error stack when the worker loop fails', async () => {
     const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    const worker = new MediaModerationWorkerService(createPrismaMock() as never, {} as never);
+    const worker = createWorker(createPrismaMock() as never, {} as never);
     const error = new Error('database unavailable');
     jest.spyOn(worker, 'processNextAsset').mockImplementation(async () => {
       worker.requestStop();
@@ -275,7 +279,7 @@ describe('MediaModerationWorkerService', () => {
 
   it('requeues stale processing assets before the worker loop and exits on requestStop', async () => {
     const prisma = createPrismaMock();
-    const worker = new MediaModerationWorkerService(prisma as never, {} as never);
+    const worker = createWorker(prisma as never, {} as never);
     const processNextAsset = jest.spyOn(worker, 'processNextAsset').mockImplementation(async () => {
       worker.requestStop();
       return true;

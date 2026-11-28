@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ModerationAccessService } from 'src/moderation/services/moderation-access.service';
 import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from '../shared/activity-visibility';
@@ -7,12 +7,8 @@ import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from '../shared/ac
 export class ActivityAccessService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Optional() @Inject(ModerationAccessService) moderationAccess?: ModerationAccessService,
-  ) {
-    this.moderationAccess = moderationAccess ?? new ModerationAccessService(this.prisma);
-  }
-
-  private readonly moderationAccess: ModerationAccessService;
+    @Inject(ModerationAccessService) private readonly moderationAccess: ModerationAccessService,
+  ) {}
 
   async isFollower(viewerId: string, ownerId: string) {
     if (viewerId === ownerId || (await this.moderationAccess.areBlocked(viewerId, ownerId))) return false;

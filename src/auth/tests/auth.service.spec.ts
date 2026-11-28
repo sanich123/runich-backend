@@ -9,7 +9,7 @@ import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service
 import { EmailService } from 'src/email/email.service';
 import { asyncMock, expectInternalServerError, syncMock } from 'src/tests/helpers';
 import { MediaCleanupService } from 'src/storage/services/media-cleanup.service';
-import { AuthService } from '../services/auth.service';
+import { createAuthServiceForTest } from 'src/tests/helpers/service-factories';
 import { CONFIRMATION_CODE_TTL_MS } from '../constants/auth.constants';
 import {
   makeConfirmedPasswordUser,
@@ -46,7 +46,7 @@ describe('AuthService', () => {
     const dependencies = createDependencies();
     dependencies.prisma.user.findUnique.mockResolvedValue({ id: 'user-1', emailConfirmedAt: null });
     dependencies.prisma.user.update.mockResolvedValue({ id: 'user-1' });
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -71,7 +71,7 @@ describe('AuthService', () => {
     const dependencies = createDependencies();
     dependencies.prisma.user.findUnique.mockResolvedValue(null);
     dependencies.prisma.user.create.mockResolvedValue({ id: 'user-1' });
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -101,7 +101,7 @@ describe('AuthService', () => {
     const dependencies = createDependencies();
     dependencies.prisma.user.findUnique.mockResolvedValue(null);
     dependencies.prisma.user.create.mockResolvedValue({ id: 'user-1' });
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -125,7 +125,7 @@ describe('AuthService', () => {
     dependencies.prisma.user.findUnique.mockResolvedValue(null);
     dependencies.prisma.user.create.mockResolvedValue({ id: 'user-1' });
     dependencies.email.sendConfirmationCode.mockRejectedValue(new Error('mail provider failed'));
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -136,7 +136,7 @@ describe('AuthService', () => {
 
   it('handles all login outcomes', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -175,7 +175,7 @@ describe('AuthService', () => {
       makeConfirmedPasswordUser(await (await import('bcrypt')).hash('secret123', 4)),
     );
     dependencies.prisma.user.update.mockResolvedValue({ id: 'user-1' });
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -192,7 +192,7 @@ describe('AuthService', () => {
       makeConfirmedPasswordUser(await (await import('bcrypt')).hash('secret123', 4), { authProvider: 'YANDEX' }),
     );
     dependencies.prisma.user.update.mockResolvedValue({ id: 'user-1' });
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -213,7 +213,7 @@ describe('AuthService', () => {
       encryptedPassword: null,
       authProvider: provider,
     });
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -228,7 +228,7 @@ describe('AuthService', () => {
     const dependencies = createDependencies();
     const appleAuth = { loginWithIdentityToken: asyncMock() };
     appleAuth.loginWithIdentityToken.mockResolvedValue(makeSessionTokens());
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -266,7 +266,7 @@ describe('AuthService', () => {
   it('revokes the current session on logout', async () => {
     const dependencies = createDependencies();
     const tokenService = { revokeSession: asyncMock() };
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -285,7 +285,7 @@ describe('AuthService', () => {
       callback: (transaction: typeof dependencies.prisma) => Promise<unknown>,
     ) => callback(dependencies.prisma)) as never);
     dependencies.prisma.user.delete.mockResolvedValue({ id: 'user-1' });
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -308,7 +308,7 @@ describe('AuthService', () => {
       consumeEmailLoginCode: asyncMock(),
       createSessionTokens: asyncMock(),
     };
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -339,7 +339,7 @@ describe('AuthService', () => {
 
   it('sends a passwordless login link for an existing user', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -357,7 +357,7 @@ describe('AuthService', () => {
 
   it('does not send a passwordless login link for an unknown user', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -371,7 +371,7 @@ describe('AuthService', () => {
 
   it('refreshes a valid access token and rejects invalid token payloads', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -391,7 +391,7 @@ describe('AuthService', () => {
 
   it('confirms email by code with normalization and handles invalid codes', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -420,7 +420,7 @@ describe('AuthService', () => {
 
   it('rejects an expired confirmation code', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -437,7 +437,7 @@ describe('AuthService', () => {
 
   it('prevents confirmation code replay after an atomic consume', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -462,7 +462,7 @@ describe('AuthService', () => {
   it('sets the required expiration claims on login and refreshed access tokens', async () => {
     const dependencies = createDependencies();
     const jwtService = new JwtService({ secret: 'test-jwt-secret' });
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       jwtService,
       dependencies.email as unknown as EmailService,
@@ -488,7 +488,7 @@ describe('AuthService', () => {
 
   it('sends a six-digit password change code and stores it for the user', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -515,7 +515,7 @@ describe('AuthService', () => {
 
   it('does not send a password change code for an unknown user', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -530,7 +530,7 @@ describe('AuthService', () => {
 
   it('verifies a password change code with email normalization', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -560,7 +560,7 @@ describe('AuthService', () => {
 
   it('changes the password after the recovery code was verified', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -602,7 +602,7 @@ describe('AuthService', () => {
 
   it('deletes a user and converts database failures from database-backed methods', async () => {
     const dependencies = createDependencies();
-    const service = new AuthService(
+    const service = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,
@@ -627,7 +627,7 @@ describe('AuthService', () => {
       consumeEmailLoginCode: asyncMock().mockResolvedValue('user-1'),
       createSessionTokens: asyncMock(),
     };
-    const verifyService = new AuthService(
+    const verifyService = createAuthServiceForTest(
       dependencies.prisma as unknown as PrismaService,
       dependencies.jwt as unknown as JwtService,
       dependencies.email as unknown as EmailService,

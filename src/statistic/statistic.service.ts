@@ -20,12 +20,8 @@ import {
 export class StatisticService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(ActivityMetricsService) metricsService?: ActivityMetricsService,
-  ) {
-    this.metricsService = metricsService ?? new ActivityMetricsService();
-  }
-
-  private readonly metricsService: ActivityMetricsService;
+    @Inject(ActivityMetricsService) private readonly metricsService: ActivityMetricsService,
+  ) {}
 
   private toMetricValue(value: number | string | null | undefined) {
     return Number(value ?? 0);

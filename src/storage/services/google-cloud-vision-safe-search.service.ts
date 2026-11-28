@@ -1,11 +1,13 @@
+import { Inject, Injectable } from '@nestjs/common';
 import { getAppEnvironment } from 'src/common/config/environment';
-import type { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { MEDIA_MODERATION_GOOGLE_VISION_MONTHLY_LIMIT } from '../shared/const';
 import type { VisionResponse } from '../shared/types';
 import { LIKELIHOOD_SCORE } from '../shared/google-cloud-vision.constants';
 
+@Injectable()
 export class GoogleCloudVisionSafeSearch {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async reserveUnit() {
     if (getAppEnvironment() !== 'production' || !this.getApiKey()) return false;

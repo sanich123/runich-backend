@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { ActivityAccessService } from '../services/activity-access.service';
+import { ModerationAccessService } from 'src/moderation/services/moderation-access.service';
 import { ACTIVITY_VISIBLE_TO_FOLLOWERS, ACTIVITY_VISIBILITY } from '../shared/activity-visibility';
 
 describe('ActivityAccessService', () => {
@@ -12,7 +13,10 @@ describe('ActivityAccessService', () => {
       findMany: jest.fn<(args: unknown) => Promise<unknown>>(),
     },
   };
-  const service = new ActivityAccessService(prisma as unknown as PrismaService);
+  const service = new ActivityAccessService(
+    prisma as unknown as PrismaService,
+    new ModerationAccessService(prisma as never),
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();

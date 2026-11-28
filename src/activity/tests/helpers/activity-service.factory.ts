@@ -14,6 +14,7 @@ import { ActivityReadService } from '../../services/activity-read.service';
 import { ActivityRouteFeedService } from '../../services/activity-route-feed.service';
 import { ActivityService } from '../../services/activity.service';
 import { ActivityWriteService } from '../../services/activity-write.service';
+import { ModerationAccessService } from 'src/moderation/services/moderation-access.service';
 
 export function createActivityService(
   prisma: PrismaService,
@@ -29,7 +30,7 @@ export function createActivityService(
   activityImportService?: ActivityImportService,
 ) {
   const persistence = persistenceService ?? new ActivityPersistenceService(prisma);
-  const access = activityAccessService ?? new ActivityAccessService(prisma);
+  const access = activityAccessService ?? new ActivityAccessService(prisma, new ModerationAccessService(prisma));
   const content = new ActivityContentReadService(prisma, access, storageService);
   const feed = new ActivityFeedService(prisma, access, content);
   const routeFeed = new ActivityRouteFeedService(prisma, content);

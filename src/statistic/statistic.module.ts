@@ -5,11 +5,17 @@ import { StatisticController } from './statistic.controller';
 import { StatisticService } from './statistic.service';
 import { ActivityModule } from 'src/activity/activity.module';
 import { AccountModule } from 'src/account/account.module';
-import { ActivityMetricsService } from './activity-metrics.service';
+import { ActivityMetricsModule } from './activity-metrics.module';
 
 @Module({
-  imports: [PrismaModule, ActivityModule, AccountModule, PassportModule.register({ defaultStrategy: 'jwt' })],
+  imports: [
+    PrismaModule,
+    ActivityModule,
+    AccountModule,
+    ActivityMetricsModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+  ],
   controllers: [StatisticController],
-  providers: [StatisticService, ActivityMetricsService],
+  providers: [StatisticService],
 })
 export class StatisticModule {}

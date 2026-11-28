@@ -12,8 +12,8 @@ export class GroupsStatisticsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ModerationAccessService) private readonly moderationAccess: ModerationAccessService,
+    @Inject(ActivityMetricsService) private readonly activityMetrics: ActivityMetricsService,
   ) {}
-  private readonly activityMetrics = new ActivityMetricsService();
 
   async getMonthlyLeaderboard(
     userId: string,

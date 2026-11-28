@@ -22,7 +22,6 @@ import type {
   MigrationProgress,
   StartMigrationUploadInput,
 } from '../shared/types';
-import { ActivityService } from './activity.service';
 import { ActivityMigrationProcessor } from './activity-migration.processor';
 import { StorageService } from 'src/storage/services/storage.service';
 import { UPLOAD_LIMITS } from 'src/common/uploads/upload-limits';
@@ -34,15 +33,11 @@ export class ActivityMigrationService {
   private readonly batchPauseMs = ACTIVITY_MIGRATION_CONFIG.batchPauseMs;
   private readonly pollIntervalMs = ACTIVITY_MIGRATION_CONFIG.workerPollIntervalMs;
   private stopRequested = false;
-  private readonly processor: ActivityMigrationProcessor;
-
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(ActivityService) private readonly activityService: ActivityService,
     @Inject(StorageService) private readonly storageService: StorageService,
-  ) {
-    this.processor = new ActivityMigrationProcessor(this.prisma, this.activityService, this.storageService);
-  }
+    @Inject(ActivityMigrationProcessor) private readonly processor: ActivityMigrationProcessor,
+  ) {}
 
   async enqueue(input: EnqueueMigrationInput) {
     const migrationId = randomUUID();

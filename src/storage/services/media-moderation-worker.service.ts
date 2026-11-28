@@ -2,7 +2,6 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { setTimeout as delay } from 'node:timers/promises';
 import { EMAIL_NOTIFICATION_JOB_STATUS, EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
-import { GoogleCloudVisionSafeSearch } from './google-cloud-vision-safe-search.service';
 import { MediaModerationScannerService } from './media-moderation-scanner.service';
 import {
   MEDIA_MODERATION_GOOGLE_VISION_MONTHLY_LIMIT,
@@ -22,15 +21,13 @@ import { StorageService } from './storage.service';
 @Injectable()
 export class MediaModerationWorkerService {
   private readonly logger = new Logger(MediaModerationWorkerService.name);
-  private readonly scanner: MediaModerationScannerService;
   private stopRequested = false;
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(StorageService) private readonly storage: StorageService,
-  ) {
-    this.scanner = new MediaModerationScannerService(this.storage, new GoogleCloudVisionSafeSearch(prisma));
-  }
+    @Inject(MediaModerationScannerService) private readonly scanner: MediaModerationScannerService,
+  ) {}
 
   requestStop() {
     this.stopRequested = true;

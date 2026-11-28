@@ -51,7 +51,7 @@ jest.unstable_mockModule('src/common/parsers/map-activities-with-coordinates', (
 }));
 
 const { ActivityMigrationService } = await import('../services/activity-migration.service');
-const { ActivityService } = await import('../services/activity.service');
+const { ActivityMigrationProcessor } = await import('../services/activity-migration.processor');
 
 const prisma = {
   activityMigrationJob: {
@@ -111,8 +111,8 @@ describe('ActivityMigrationService', () => {
 
   it('declares the Prisma injection token required by the ESM worker bootstrap', () => {
     expect(Reflect.getMetadata(SELF_DECLARED_DEPS_METADATA, ActivityMigrationService)).toEqual([
-      { index: 2, param: expect.anything() },
-      { index: 1, param: ActivityService },
+      { index: 2, param: ActivityMigrationProcessor },
+      { index: 1, param: expect.anything() },
       { index: 0, param: PrismaService },
     ]);
   });
@@ -131,8 +131,12 @@ describe('ActivityMigrationService', () => {
     jest.clearAllMocks();
     service = new ActivityMigrationService(
       prisma as unknown as PrismaService,
-      { createActivitiesFromMigrationArchive } as never,
       storage as never,
+      new ActivityMigrationProcessor(
+        prisma as never,
+        { createActivitiesFromMigrationArchive } as never,
+        storage as never,
+      ),
     );
 
     access.mockResolvedValue(undefined);

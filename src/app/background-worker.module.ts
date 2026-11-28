@@ -9,6 +9,8 @@ import { observeImports } from 'src/common/observe/observe.config';
 import { EmailNotificationModule } from 'src/email/email-notification.module';
 import { NotificationModule } from 'src/notification/notification.module';
 import { MediaModerationWorkerService } from 'src/storage/services/media-moderation-worker.service';
+import { MediaModerationScannerService } from 'src/storage/services/media-moderation-scanner.service';
+import { GoogleCloudVisionSafeSearch } from 'src/storage/services/google-cloud-vision-safe-search.service';
 import { ModerationModule } from 'src/moderation/moderation.module';
 
 @Module({
@@ -22,6 +24,12 @@ import { ModerationModule } from 'src/moderation/moderation.module';
     NotificationModule,
     ModerationModule,
   ],
-  providers: [ActivityMediaProcessingService, ActivityEnrichmentService, MediaModerationWorkerService],
+  providers: [
+    ActivityMediaProcessingService,
+    ActivityEnrichmentService,
+    MediaModerationWorkerService,
+    MediaModerationScannerService,
+    GoogleCloudVisionSafeSearch,
+  ],
 })
 export class BackgroundWorkerModule {}

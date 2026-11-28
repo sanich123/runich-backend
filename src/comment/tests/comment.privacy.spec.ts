@@ -1,6 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { CommentService } from '../comment.service';
 import { asyncMock } from 'src/tests/helpers';
+import { createCommentServiceForTest } from 'src/tests/helpers/service-factories';
 
 describe('CommentService privacy', () => {
   it('does not expose comments for a private activity', async () => {
@@ -10,7 +10,7 @@ describe('CommentService privacy', () => {
       commentLike: { findMany: asyncMock() },
     };
     const activityService = { canAccessActivity: asyncMock().mockResolvedValue(false) };
-    const service = new CommentService(prisma as never, {} as never, activityService as never);
+    const service = createCommentServiceForTest(prisma as never, {} as never, activityService as never);
 
     await expect(service.getCommentsbyActivityId('activity-1', '10', undefined, 'viewer-1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -27,7 +27,7 @@ describe('CommentService privacy', () => {
     prisma.comment.findUnique.mockResolvedValue({ activity: { id: 'activity-1' } });
     const activityService = { canAccessActivity: asyncMock().mockResolvedValue(false) };
     const accountService = { getAccountByUserId: asyncMock() };
-    const service = new CommentService(
+    const service = createCommentServiceForTest(
       prisma as never,
       accountService as never,
       activityService as never,
@@ -51,7 +51,7 @@ describe('CommentService privacy', () => {
       canInteractWithActivity: asyncMock().mockResolvedValue(false),
     };
     const accountService = { getAccountByUserId: asyncMock() };
-    const service = new CommentService(prisma as never, accountService as never, activityService as never);
+    const service = createCommentServiceForTest(prisma as never, accountService as never, activityService as never);
 
     await expect(
       service.createCommentByActivityId({ comment: 'Hello' }, 'activity-1', 'viewer-1'),
@@ -62,7 +62,7 @@ describe('CommentService privacy', () => {
 
   it('rejects deleting a comment that no longer exists', async () => {
     const prisma = { comment: { findUnique: asyncMock().mockResolvedValue(null), delete: asyncMock() } };
-    const service = new CommentService(prisma as never, {} as never, {} as never);
+    const service = createCommentServiceForTest(prisma as never, {} as never, {} as never);
 
     await expect(service.deleteCommentByCommentId('missing', 'owner-1')).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.comment.delete).not.toHaveBeenCalled();
@@ -72,7 +72,7 @@ describe('CommentService privacy', () => {
     const prisma = {
       comment: { findUnique: asyncMock(), delete: asyncMock() },
     };
-    const service = new CommentService(prisma as never, {} as never, {} as never);
+    const service = createCommentServiceForTest(prisma as never, {} as never, {} as never);
     prisma.comment.findUnique.mockResolvedValue({ authorId: 'comment-author', activity: { userId: 'activity-owner' } });
     prisma.comment.delete.mockResolvedValue({ id: 'comment-1' });
 

@@ -7,6 +7,7 @@ import { GroupsPostsService } from '../services/groups-posts.service';
 import { GroupsStatisticsService } from '../services/groups-statistics.service';
 import { GroupSummaryService } from '../services/groups-summary.service';
 import { GroupsService } from '../services/groups.service';
+import { ActivityMetricsService } from 'src/statistic/activity-metrics.service';
 
 export function createPrismaMock() {
   const transaction = {
@@ -65,7 +66,7 @@ export function createGroupsServices(
     groups: new GroupsService(prisma as never, moderationAccess as never, storage as never, groupSummaryService),
     summary: groupSummaryService,
     members: new GroupsMembersService(prisma as never, moderationAccess as never, groupSummaryService),
-    statistics: new GroupsStatisticsService(prisma as never, moderationAccess as never),
+    statistics: new GroupsStatisticsService(prisma as never, moderationAccess as never, new ActivityMetricsService()),
     posts: new GroupsPostsService(prisma as never, moderationAccess as never, storage as never),
     events: new GroupsEventsService(prisma as never, moderationAccess as never, groupNotificationsService),
   };

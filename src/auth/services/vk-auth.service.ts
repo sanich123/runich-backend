@@ -29,7 +29,7 @@ export class VkAuthService {
     @Inject(JwtService) private readonly jwtService: JwtService,
     @Inject(AuthTokenService) private readonly tokenService: AuthTokenService,
     @Inject(SuperuserEmailBootstrapService)
-    private readonly superuserEmailBootstrapService = new SuperuserEmailBootstrapService(prisma),
+    private readonly superuserEmailBootstrapService: SuperuserEmailBootstrapService,
   ) {}
 
   async loginWithNativeCode(

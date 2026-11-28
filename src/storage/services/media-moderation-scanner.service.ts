@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as nsfwjs from 'nsfwjs';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-cpu';
@@ -6,8 +6,8 @@ import sharp from 'sharp';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { StorageService } from './storage.service';
-import type { GoogleCloudVisionSafeSearch } from './google-cloud-vision-safe-search.service';
+import { StorageService } from './storage.service';
+import { GoogleCloudVisionSafeSearch } from './google-cloud-vision-safe-search.service';
 import {
   MEDIA_MODERATION_GOOGLE_VISION_MODEL_VERSION,
   MEDIA_MODERATION_MAX_VIDEO_FRAMES,
@@ -19,13 +19,14 @@ import {
 import { execFileAsync, mergeMediaModerationScores } from '../shared/utils';
 import type { MediaAsset, MediaModerationScanResult, Prediction } from '../shared/types';
 
+@Injectable()
 export class MediaModerationScannerService {
   private readonly logger = new Logger(MediaModerationScannerService.name);
   private model: nsfwjs.NSFWJS | undefined;
 
   constructor(
-    private readonly storage: StorageService,
-    private readonly googleCloudVision: GoogleCloudVisionSafeSearch,
+    @Inject(StorageService) private readonly storage: StorageService,
+    @Inject(GoogleCloudVisionSafeSearch) private readonly googleCloudVision: GoogleCloudVisionSafeSearch,
   ) {}
 
   async scan(asset: MediaAsset): Promise<MediaModerationScanResult> {

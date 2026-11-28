@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ModerationAccessService } from 'src/moderation/services/moderation-access.service';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError } from 'src/common/utils/database-errors';
@@ -19,16 +19,9 @@ export class CommentService {
     private readonly accountService: AccountService,
     @Inject(ActivityService)
     private readonly activityService: ActivityService,
-    @Inject(CommentLikeService)
-    commentLikeService?: CommentLikeService,
-    @Optional() @Inject(ModerationAccessService) moderationAccess?: ModerationAccessService,
-  ) {
-    this.commentLikeService = commentLikeService ?? new CommentLikeService(this.prisma);
-    this.moderationAccess = moderationAccess ?? new ModerationAccessService(this.prisma);
-  }
-
-  private readonly commentLikeService: CommentLikeService;
-  private readonly moderationAccess: ModerationAccessService;
+    @Inject(CommentLikeService) private readonly commentLikeService: CommentLikeService,
+    @Inject(ModerationAccessService) private readonly moderationAccess: ModerationAccessService,
+  ) {}
 
   private async ensureActivityAccess(activityId: string, currentUserId?: string) {
     if (currentUserId && !(await this.activityService.canAccessActivity(activityId, currentUserId))) {

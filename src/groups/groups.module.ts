@@ -3,6 +3,7 @@ import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from 'src/infrastructure/database/prisma/prisma.module';
 import { ModerationModule } from 'src/moderation/moderation.module';
 import { StorageModule } from 'src/storage/storage.module';
+import { ActivityMetricsModule } from 'src/statistic/activity-metrics.module';
 import { GroupsController } from './groups.controller';
 import { GroupsEventsService } from './services/groups-events.service';
 import { GroupsMembersService } from './services/groups-members.service';
@@ -13,7 +14,13 @@ import { GroupSummaryService } from './services/groups-summary.service';
 import { GroupsService } from './services/groups.service';
 
 @Module({
-  imports: [PrismaModule, ModerationModule, StorageModule, PassportModule.register({ defaultStrategy: 'jwt' })],
+  imports: [
+    PrismaModule,
+    ModerationModule,
+    StorageModule,
+    ActivityMetricsModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+  ],
   controllers: [GroupsController],
   providers: [
     GroupsService,

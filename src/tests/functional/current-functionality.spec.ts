@@ -2,8 +2,14 @@ import { BadRequestException, NotFoundException, UnauthorizedException } from '@
 import { JwtService } from '@nestjs/jwt';
 import { jest } from '@jest/globals';
 import * as bcrypt from 'bcrypt';
-import { AuthService } from '../../auth/services/auth.service';
-import { AccountService } from '../../account/account.service';
+import {
+  createAccountServiceForTest,
+  createAuthServiceForTest,
+  createCommentServiceForTest,
+  createFriendServiceForTest,
+  createStatisticServiceForTest,
+  createUserServiceForTest,
+} from '../helpers/service-factories';
 import { createActivityService } from '../../activity/tests/helpers/activity-service.factory';
 import { makeActivityDto, makeMigrationSuccessResult } from '../../activity/tests/fixtures';
 import {
@@ -12,12 +18,8 @@ import {
   makePendingConfirmationUser,
   makeSessionTokens,
 } from '../../auth/tests/fixtures';
-import { CommentService } from '../../comment/comment.service';
-import { FriendService } from '../../friend/friend.service';
 import { LikeService } from '../../like/like.service';
-import { StatisticService } from '../../statistic/statistic.service';
 import { makeActivityTotals, makeSportActivityTotals, makeStatisticActivities } from '../../statistic/tests/fixtures';
-import { UserService } from '../../user/user.service';
 import { JwtStrategy } from '../../auth/strategies/jwt.strategy';
 import { getLogLevels } from '../../common/utils/log-levels';
 import { getRandomInt, getTimeStampFromTime } from '../../common/utils/utils';
@@ -75,7 +77,7 @@ describe('authentication', () => {
       .mockResolvedValue(makeSessionTokens({ accessToken: 'jwt', refreshToken: 'jwt' })),
     consumeEmailLoginCode: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue('user-1'),
   };
-  const service = new AuthService(prisma as never, jwt, email as never, tokenService as never);
+  const service = createAuthServiceForTest(prisma as never, jwt, email as never, tokenService as never);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -138,7 +140,7 @@ describe('account, user and social services', () => {
 
   it('paginates and filters accounts', async () => {
     const prisma = db();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     prisma.profile.findMany.mockResolvedValue([{ id: 'profile-1', userId: 'user-1' }]);
     await expect(service.getFilteredAccounts('10', undefined, { name: 'Ann' })).resolves.toMatchObject({
       items: [{ id: 'profile-1' }],
@@ -147,7 +149,7 @@ describe('account, user and social services', () => {
 
   it('updates, finds and upserts profiles', async () => {
     const prisma = db();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     prisma.profile.findUnique.mockResolvedValue({ id: 'p1' });
     prisma.profile.upsert.mockResolvedValue({ id: 'p1' });
     await expect(service.getAccountByUserId('u1')).resolves.toEqual({ id: 'p1' });
@@ -156,7 +158,7 @@ describe('account, user and social services', () => {
 
   it('performs user profile CRUD through Prisma', async () => {
     const prisma = db();
-    const service = new UserService(prisma as never);
+    const service = createUserServiceForTest(prisma as never);
     prisma.profile.findUnique.mockResolvedValue({ id: 'p1' });
     prisma.profile.create.mockResolvedValue({ id: 'p1' });
     prisma.profile.update.mockResolvedValue({ id: 'p1' });
@@ -167,7 +169,7 @@ describe('account, user and social services', () => {
 
   it('propagates asynchronous profile write failures', async () => {
     const prisma = db();
-    const service = new UserService(prisma as never);
+    const service = createUserServiceForTest(prisma as never);
     prisma.profile.create.mockRejectedValue(new Error('database unavailable'));
 
     await expect(service.createProfileByUserId('u1', { name: 'Ann' })).rejects.toThrow('Внутренняя ошибка сервера');
@@ -176,7 +178,7 @@ describe('account, user and social services', () => {
   it('creates and deletes friends and likes', async () => {
     const prisma = db();
     const account = { getAccountByUserId: createMock().mockResolvedValue({ id: 'p1' }) };
-    const friend = new FriendService(prisma as never, account as never);
+    const friend = createFriendServiceForTest(prisma as never, account as never);
     const like = new LikeService(prisma as never, account as never, {} as never);
     prisma.friend.findMany.mockResolvedValue([]);
     prisma.friend.upsert.mockResolvedValue({ id: 'f1' });
@@ -202,7 +204,7 @@ describe('account, user and social services', () => {
   it('rejects social writes when the author profile is missing', async () => {
     const prisma = db();
     const account = { getAccountByUserId: createMock().mockResolvedValue(null) };
-    const friend = new FriendService(prisma as never, account as never);
+    const friend = createFriendServiceForTest(prisma as never, account as never);
     const like = new LikeService(prisma as never, account as never, {} as never);
     await expect(friend.addFriendByFriendId('u2', { userId: 'u1' })).rejects.toBeInstanceOf(NotFoundException);
     await expect(like.addLike({ activityId: 'a1' })).rejects.toBeInstanceOf(NotFoundException);
@@ -324,7 +326,7 @@ describe('activity, comments and statistics', () => {
   it('creates comments, likes and returns comment collections', async () => {
     const prisma = db();
     const account = { getAccountByUserId: createMock().mockResolvedValue({ id: 'p1' }) };
-    const service = new CommentService(prisma as never, account as never, {} as never);
+    const service = createCommentServiceForTest(prisma as never, account as never, {} as never);
     prisma.activity.findUnique.mockResolvedValue({ comments: [{ id: 'c1' }] });
     prisma.comment.create.mockResolvedValue({ id: 'c1' });
     prisma.comment.update.mockResolvedValue({ id: 'c1' });
@@ -358,7 +360,7 @@ describe('activity, comments and statistics', () => {
     const prisma = db();
     const queryRaw = createMock();
     Object.assign(prisma, { $queryRaw: queryRaw });
-    const service = new StatisticService(prisma as never);
+    const service = createStatisticServiceForTest(prisma as never);
     const activities = makeStatisticActivities();
     prisma.activity.findMany.mockResolvedValue(activities);
     queryRaw.mockResolvedValueOnce([

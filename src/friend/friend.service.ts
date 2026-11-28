@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { handleServiceError, isUniqueConstraintError } from 'src/common/utils/database-errors';
 import { AccountService } from 'src/account/account.service';
@@ -12,12 +12,8 @@ export class FriendService {
     private readonly prismaService: PrismaService,
     @Inject(AccountService)
     private readonly accountService: AccountService,
-    @Optional() @Inject(ModerationAccessService) moderationAccess?: ModerationAccessService,
-  ) {
-    this.moderationAccess = moderationAccess ?? new ModerationAccessService(this.prismaService);
-  }
-
-  private readonly moderationAccess: ModerationAccessService;
+    @Inject(ModerationAccessService) private readonly moderationAccess: ModerationAccessService,
+  ) {}
 
   private async assertFollowListsVisible(id: string, currentUserId?: string) {
     if (!currentUserId || currentUserId === id) return;

@@ -1,6 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { FriendService } from '../friend.service';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
+import { createFriendServiceForTest } from 'src/tests/helpers/service-factories';
 
 function createPrismaMock() {
   return {
@@ -13,7 +13,7 @@ describe('FriendService', () => {
   it('lists following users, followers, deletes and creates friendships', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new FriendService(prisma as never, account as never);
+    const service = createFriendServiceForTest(prisma as never, account as never);
     prisma.friend.findMany.mockResolvedValueOnce([{ id: 'friend-1' }]).mockResolvedValueOnce([{ id: 'friend-2' }]);
     prisma.friend.delete.mockResolvedValue({ id: 'friend-1' });
     prisma.friend.upsert.mockResolvedValue({ id: 'friend-3' });
@@ -32,7 +32,7 @@ describe('FriendService', () => {
   it('returns not found when the target profile is missing', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue(null) };
-    const service = new FriendService(prisma as never, account as never);
+    const service = createFriendServiceForTest(prisma as never, account as never);
 
     await expect(service.addFriendByFriendId('friend-user', { userId: 'user-1' })).rejects.toBeInstanceOf(
       NotFoundException,
@@ -45,7 +45,7 @@ describe('FriendService', () => {
     const account = {
       getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1', allowNewFollowers: false }),
     };
-    const service = new FriendService(prisma as never, account as never);
+    const service = createFriendServiceForTest(prisma as never, account as never);
 
     await expect(service.addFriendByFriendId('friend-user', { userId: 'user-1' })).rejects.toBeInstanceOf(
       ForbiddenException,
@@ -55,7 +55,7 @@ describe('FriendService', () => {
 
   it('hides both follow lists from other users while keeping them visible to the owner', async () => {
     const prisma = createPrismaMock();
-    const service = new FriendService(prisma as never, {} as never);
+    const service = createFriendServiceForTest(prisma as never, {} as never);
     prisma.profile.findUnique.mockResolvedValue({ hideFollowingList: true });
     prisma.friend.findMany.mockResolvedValue([{ id: 'follow-1' }]);
 
@@ -73,7 +73,7 @@ describe('FriendService', () => {
     const prisma = createPrismaMock();
     const error = new Error('database unavailable');
     Object.values(prisma.friend).forEach((operation) => operation.mockRejectedValue(error));
-    const service = new FriendService(
+    const service = createFriendServiceForTest(
       prisma as never,
       { getAccountByUserId: asyncMock().mockRejectedValue(error) } as never,
     );

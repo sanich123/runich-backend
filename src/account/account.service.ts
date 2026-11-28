@@ -13,13 +13,9 @@ import type { ProfilePhotoModerationAsset, ProfileSearchProfile } from './accoun
 export class AccountService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Optional() @Inject(ModerationAccessService) moderationAccess?: ModerationAccessService,
+    @Inject(ModerationAccessService) private readonly moderationAccess: ModerationAccessService,
     @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
-  ) {
-    this.moderationAccess = moderationAccess ?? new ModerationAccessService(this.prisma);
-  }
-
-  private readonly moderationAccess: ModerationAccessService;
+  ) {}
 
   async getFilteredAccounts(
     take = String(DEFAULT_PROFILE_PAGE_SIZE),

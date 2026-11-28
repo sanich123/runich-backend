@@ -1,9 +1,11 @@
 import { jest } from '@jest/globals';
 import { ActivityPersistenceService } from '../../activity/services/activity-persistence.service';
-import { CommentService } from '../../comment/comment.service';
-import { FriendService } from '../../friend/friend.service';
+import {
+  createCommentServiceForTest,
+  createFriendServiceForTest,
+  createUserServiceForTest,
+} from '../helpers/service-factories';
 import { LikeService } from '../../like/like.service';
-import { UserService } from '../../user/user.service';
 
 type TestMock = {
   (...args: unknown[]): unknown;
@@ -40,7 +42,7 @@ describe('ownership authorization', () => {
     prisma.comment.delete.mockResolvedValue({ id: 'comment-1' });
     prisma.comment.findUnique.mockResolvedValue({ authorId: 'owner-1', activity: { userId: 'activity-owner-1' } });
     prisma.commentLike.delete.mockResolvedValue({ id: 'comment-like-1' });
-    const service = new CommentService(
+    const service = createCommentServiceForTest(
       prisma as never,
       account as never,
       {} as never,
@@ -75,7 +77,7 @@ describe('ownership authorization', () => {
 
     const friendPrisma = { friend: { delete: mock() } };
     friendPrisma.friend.delete.mockResolvedValue({ id: 'friend-1' });
-    const friendService = new FriendService(friendPrisma as never, {} as never);
+    const friendService = createFriendServiceForTest(friendPrisma as never, {} as never);
     await friendService.deleteFriendById('friend-1', 'owner-1');
     expect(friendPrisma.friend.delete).toHaveBeenCalledWith({ where: { id: 'friend-1', userId: 'owner-1' } });
   });
@@ -83,7 +85,7 @@ describe('ownership authorization', () => {
   it('scopes profile updates to the authenticated user', async () => {
     const prisma = { profile: { update: mock() } };
     prisma.profile.update.mockResolvedValue({ id: 'profile-1' });
-    const service = new UserService(prisma as never);
+    const service = createUserServiceForTest(prisma as never);
     await service.updateProfileByProfileId('profile-1', 'owner-1', { name: 'New name' });
     expect(prisma.profile.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'profile-1', userId: 'owner-1' } }),
@@ -92,7 +94,7 @@ describe('ownership authorization', () => {
 
   it('rejects profile updates for another user', async () => {
     const prisma = { profile: { findUnique: mock(), upsert: mock() } };
-    const service = new UserService(prisma as never);
+    const service = createUserServiceForTest(prisma as never);
     prisma.profile.findUnique.mockResolvedValue(null);
 
     await expect(service.updateProfileByUserId('owner-1', 'other-user', { name: 'Blocked' })).rejects.toMatchObject({

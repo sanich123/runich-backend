@@ -1,6 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
-import { StatisticService } from '../statistic.service';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
+import { createStatisticServiceForTest } from 'src/tests/helpers/service-factories';
 import { DEFAULT_TIME_ZONE } from 'src/common/utils/time-zone';
 import {
   makeActivityTotals,
@@ -24,7 +24,7 @@ function getQueryParameters(call: unknown[]) {
 describe('StatisticService', () => {
   it('returns years and unique sports for activity history', async () => {
     const prisma = createPrismaMock();
-    const service = new StatisticService(prisma as never);
+    const service = createStatisticServiceForTest(prisma as never);
     prisma.$queryRaw.mockResolvedValueOnce([
       { year: 2025, sport: 'bike' },
       { year: 2025, sport: 'run' },
@@ -43,7 +43,7 @@ describe('StatisticService', () => {
 
   it('canonicalizes legacy time zone aliases before using PostgreSQL date extraction', async () => {
     const prisma = createPrismaMock();
-    const service = new StatisticService(prisma as never);
+    const service = createStatisticServiceForTest(prisma as never);
     prisma.$queryRaw.mockResolvedValueOnce([]);
 
     await expect(service.getYearsAndTypesOfActivities('u1', 'US/Pacific')).resolves.toEqual([]);
@@ -55,7 +55,7 @@ describe('StatisticService', () => {
 
   it('calculates monthly statistics grouped by sport', async () => {
     const prisma = createPrismaMock();
-    const service = new StatisticService(prisma as never);
+    const service = createStatisticServiceForTest(prisma as never);
     const activities = makeStatisticActivities();
     prisma.activity.findMany.mockResolvedValue(activities);
     prisma.$queryRaw.mockResolvedValue([
@@ -81,7 +81,7 @@ describe('StatisticService', () => {
 
   it('returns category activities, yearly summaries and empty-state summaries', async () => {
     const prisma = createPrismaMock();
-    const service = new StatisticService(prisma as never);
+    const service = createStatisticServiceForTest(prisma as never);
     prisma.activity.findMany.mockResolvedValueOnce([{ duration: 100, distance: 1000, speed: 5 }]);
     await expect(service.getActivitiesByYearMonthCategory('u1', '2025', '0', 'run')).resolves.toEqual([
       { duration: 100, distance: 1000, speed: 5 },
@@ -205,7 +205,7 @@ describe('StatisticService', () => {
 
   it('calculates weekly and all-time metrics, including empty input', async () => {
     const prisma = createPrismaMock();
-    const service = new StatisticService(prisma as never);
+    const service = createStatisticServiceForTest(prisma as never);
     prisma.$queryRaw.mockResolvedValue([makeActivityTotals()]);
 
     await expect(service.getCurrentWeekStatistics('u1', 'Mon Aug 10 2026', 'Sun Aug 16 2026')).resolves.toEqual({
@@ -228,7 +228,7 @@ describe('StatisticService', () => {
 
   it('hides total statistics from other users and keeps them visible to the owner', async () => {
     const prisma = createPrismaMock();
-    const service = new StatisticService(prisma as never);
+    const service = createStatisticServiceForTest(prisma as never);
     prisma.profile.findUnique.mockResolvedValue({ hideActivityStatistics: true });
     prisma.$queryRaw.mockResolvedValue([makeEmptyActivityTotals()]);
 
@@ -251,7 +251,7 @@ describe('StatisticService', () => {
     const error = new Error('database unavailable');
     prisma.activity.findMany.mockRejectedValue(error);
     prisma.$queryRaw.mockRejectedValue(error);
-    const service = new StatisticService(prisma as never);
+    const service = createStatisticServiceForTest(prisma as never);
 
     await expectInternalServerError(service.getYearsAndTypesOfActivities('u1'));
     await expectInternalServerError(service.getMonthStatisticsByYearMonth('u1', '2025', '0'));

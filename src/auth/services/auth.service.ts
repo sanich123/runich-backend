@@ -28,13 +28,6 @@ import { AppleAuthService } from './apple-auth.service';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly tokenService: AuthTokenService;
-  private readonly yandexAuthService: YandexAuthService;
-  private readonly authEmailService: AuthEmailService;
-  private readonly vkAuthService: VkAuthService;
-  private readonly mediaCleanupService?: MediaCleanupService;
-  private readonly superuserEmailBootstrapService: SuperuserEmailBootstrapService;
-  private readonly appleAuthService: AppleAuthService;
 
   constructor(
     @Inject(PrismaService)
@@ -42,35 +35,16 @@ export class AuthService {
     @Inject(JwtService)
     private jwtService: JwtService,
     @Inject(EmailService)
-    private emailService: EmailService,
-    @Inject(AuthTokenService)
-    tokenService?: AuthTokenService,
-    @Inject(YandexAuthService)
-    yandexAuthService?: YandexAuthService,
-    @Inject(AuthEmailService)
-    authEmailService?: AuthEmailService,
-    @Inject(VkAuthService)
-    vkAuthService?: VkAuthService,
-    @Inject(MediaCleanupService)
-    mediaCleanupService?: MediaCleanupService,
+    private readonly emailService: EmailService,
+    @Inject(AuthTokenService) private readonly tokenService: AuthTokenService,
+    @Inject(YandexAuthService) private readonly yandexAuthService: YandexAuthService,
+    @Inject(AuthEmailService) private readonly authEmailService: AuthEmailService,
+    @Inject(VkAuthService) private readonly vkAuthService: VkAuthService,
+    @Inject(MediaCleanupService) private readonly mediaCleanupService: MediaCleanupService,
     @Inject(SuperuserEmailBootstrapService)
-    superuserEmailBootstrapService?: SuperuserEmailBootstrapService,
-    @Inject(AppleAuthService)
-    appleAuthService?: AppleAuthService,
-  ) {
-    this.tokenService = tokenService ?? new AuthTokenService(this.jwtService);
-    this.superuserEmailBootstrapService =
-      superuserEmailBootstrapService ?? new SuperuserEmailBootstrapService(this.prisma);
-    this.yandexAuthService =
-      yandexAuthService ?? new YandexAuthService(this.prisma, this.tokenService, this.superuserEmailBootstrapService);
-    this.authEmailService = authEmailService ?? new AuthEmailService(this.emailService);
-    this.appleAuthService =
-      appleAuthService ?? new AppleAuthService(this.prisma, this.tokenService, this.superuserEmailBootstrapService);
-    this.vkAuthService =
-      vkAuthService ??
-      new VkAuthService(this.prisma, this.jwtService, this.tokenService, this.superuserEmailBootstrapService);
-    this.mediaCleanupService = mediaCleanupService;
-  }
+    private readonly superuserEmailBootstrapService: SuperuserEmailBootstrapService,
+    @Inject(AppleAuthService) private readonly appleAuthService: AppleAuthService,
+  ) {}
 
   startVkAuth(response: Response) {
     return this.vkAuthService.start(response);
@@ -268,9 +242,7 @@ export class AuthService {
       await this.appleAuthService.revokeUserToken(userId);
       const deletedUser = await this.prisma.$transaction(
         async (transaction) => {
-          if (this.mediaCleanupService) {
-            await this.mediaCleanupService.enqueueUserCleanup(userId, transaction as never);
-          }
+          await this.mediaCleanupService.enqueueUserCleanup(userId, transaction as never);
           await transaction.friend.deleteMany({
             where: {
               OR: [{ userId }, { friendId: userId }],

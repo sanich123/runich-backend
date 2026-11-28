@@ -15,7 +15,7 @@ export class YandexAuthService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuthTokenService) private readonly tokenService: AuthTokenService,
     @Inject(SuperuserEmailBootstrapService)
-    private readonly superuserEmailBootstrapService = new SuperuserEmailBootstrapService(prisma),
+    private readonly superuserEmailBootstrapService: SuperuserEmailBootstrapService,
   ) {}
 
   start(response: Response) {

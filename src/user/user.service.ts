@@ -20,14 +20,10 @@ import type { ProfilePhotoReviewStage, ProfileWithPendingPhoto } from './user.ty
 export class UserService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ModerationAccessService) private readonly moderationAccess: ModerationAccessService,
     @Optional() @Inject(LatencyMetricsService) private readonly latencyMetrics?: LatencyMetricsService,
     @Optional() @Inject(StorageService) private readonly storageService?: StorageService,
-    @Optional() @Inject(ModerationAccessService) moderationAccess?: ModerationAccessService,
-  ) {
-    this.moderationAccess = moderationAccess ?? new ModerationAccessService(this.prisma);
-  }
-
-  private readonly moderationAccess: ModerationAccessService;
+  ) {}
 
   async getProfileByUserId(userId: string, currentUserId = userId) {
     try {

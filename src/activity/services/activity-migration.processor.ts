@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { rm } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { setImmediate as yieldToEventLoop, setTimeout as delay } from 'node:timers/promises';
@@ -15,15 +15,16 @@ import type { MigratedActivity, MigrationJob, MigrationProgress } from '../share
 import { ActivityService } from './activity.service';
 import { StorageService } from 'src/storage/services/storage.service';
 
+@Injectable()
 export class ActivityMigrationProcessor {
   private readonly logger = new Logger(ActivityMigrationProcessor.name);
   private readonly batchSize = ACTIVITY_MIGRATION_CONFIG.batchSize;
   private readonly batchPauseMs = ACTIVITY_MIGRATION_CONFIG.batchPauseMs;
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly activityService: ActivityService,
-    private readonly storageService: StorageService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ActivityService) private readonly activityService: ActivityService,
+    @Inject(StorageService) private readonly storageService: StorageService,
   ) {}
 
   async processJob(job: MigrationJob, isStopRequested: () => boolean) {

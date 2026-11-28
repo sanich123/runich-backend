@@ -1,5 +1,5 @@
-import { AccountService } from '../account.service';
 import { asyncMock, expectInternalServerError } from 'src/tests/helpers';
+import { createAccountServiceForTest } from 'src/tests/helpers/service-factories';
 import { parseProfileCursor } from '../account.pagination';
 import {
   makeAccountPage,
@@ -33,7 +33,7 @@ function createPrismaMock() {
 describe('AccountService', () => {
   it('searches by name, surname and partial email using the same query', async () => {
     const prisma = createPrismaMock();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     const profile = { id: 'profile-1', userId: 'user-1' };
     const searchFields = [
       { filter: { name: 'Alexander' }, term: 'Alexander' },
@@ -85,7 +85,7 @@ describe('AccountService', () => {
 
   it('keeps the published profile photo in search while a replacement is pending', async () => {
     const prisma = createPrismaMock();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     prisma.profile.findMany.mockResolvedValue([makeSearchProfileWithPendingReplacement()]);
     prisma.mediaModerationAsset.findMany.mockResolvedValue([makeReviewRequiredProfilePhotoAsset()]);
 
@@ -114,7 +114,7 @@ describe('AccountService', () => {
 
   it('returns a pending placeholder when search finds no previously published photo', async () => {
     const prisma = createPrismaMock();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     prisma.profile.findMany.mockResolvedValue([makeSearchProfileWithFirstPendingPhoto()]);
     prisma.mediaModerationAsset.findMany.mockResolvedValue([makeReviewRequiredProfilePhotoAsset()]);
 
@@ -132,7 +132,7 @@ describe('AccountService', () => {
   it('returns the published URL when search sees an approved profile-photo asset', async () => {
     const prisma = createPrismaMock();
     const storage = { getPublicUrl: (key: string) => 'https://cdn.example/' + key };
-    const service = new AccountService(prisma as never, undefined, storage as never);
+    const service = createAccountServiceForTest(prisma as never, undefined, storage as never);
     prisma.profile.findMany.mockResolvedValue([makeSearchProfileWithFirstPendingPhoto()]);
     prisma.mediaModerationAsset.findMany.mockResolvedValue([
       {
@@ -155,7 +155,7 @@ describe('AccountService', () => {
 
   it('does not hide a profile photo when its moderation asset belongs to another user', async () => {
     const prisma = createPrismaMock();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     prisma.profile.findMany.mockResolvedValue([makeSearchProfileWithPendingReplacement()]);
     prisma.mediaModerationAsset.findMany.mockResolvedValue([
       { id: 'asset-1', ownerId: 'other-user', status: 'queued' },
@@ -173,7 +173,7 @@ describe('AccountService', () => {
 
   it('requires every word of a full-name search and ignores blank values', async () => {
     const prisma = createPrismaMock();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     prisma.profile.findMany.mockResolvedValue([]);
 
     await expect(
@@ -220,7 +220,7 @@ describe('AccountService', () => {
 
   it('finds and upserts accounts', async () => {
     const prisma = createPrismaMock();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     prisma.profile.findUnique.mockResolvedValue({ id: 'profile-1' });
     prisma.profile.upsert.mockResolvedValue({ id: 'profile-1' });
 
@@ -230,7 +230,7 @@ describe('AccountService', () => {
 
   it('uses the last profile id as a cursor', async () => {
     const prisma = createPrismaMock();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     prisma.profile.findMany.mockResolvedValueOnce([{ id: 'profile-1' }, { id: 'profile-2' }]);
 
     const firstPage = await service.getFilteredAccounts('1', undefined, {});
@@ -256,7 +256,7 @@ describe('AccountService', () => {
 
   it('shows private search profiles only to their owner', async () => {
     const prisma = createPrismaMock();
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
     prisma.profile.findMany.mockResolvedValue([]);
 
     await service.getFilteredAccounts('10', undefined, { name: 'Alex' }, 'viewer-1');
@@ -274,7 +274,7 @@ describe('AccountService', () => {
     const prisma = createPrismaMock();
     const error = new Error('database unavailable');
     prisma.profile.findMany.mockRejectedValue(error);
-    const service = new AccountService(prisma as never);
+    const service = createAccountServiceForTest(prisma as never);
 
     await expectInternalServerError(service.getFilteredAccounts('2', undefined, filter));
     prisma.profile.findUnique.mockRejectedValue(error);

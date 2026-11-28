@@ -19,6 +19,7 @@ import { AccountModule } from '../account/account.module';
 import { ActivityPersistenceService } from './services/activity-persistence.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ActivityMigrationService } from './services/activity-migration.service';
+import { ActivityMigrationProcessor } from './services/activity-migration.processor';
 import { MigrationArchiveUploadService } from './services/migration-archive-upload.service';
 import { StorageModule } from 'src/storage/storage.module';
 import { StaticMapService } from 'src/common/maps/static-map.service';
@@ -48,6 +49,7 @@ import { ThrottlerReflector } from 'src/common/security/throttler-reflector';
     ActivityImportService,
     ActivityPersistenceService,
     ActivityMigrationService,
+    ActivityMigrationProcessor,
     MigrationArchiveUploadService,
     StaticMapService,
     ThrottlerGuard,

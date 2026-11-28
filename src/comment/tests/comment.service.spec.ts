@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
-import { CommentService } from '../comment.service';
 import { asyncMock, expectInternalServerError, transactionMock } from 'src/tests/helpers';
+import { createCommentServiceForTest } from 'src/tests/helpers/service-factories';
 import { makeProfileName } from 'src/tests/fixtures/profile.fixtures';
 
 function createPrismaMock() {
@@ -29,7 +29,7 @@ describe('CommentService', () => {
   it('reads, creates, updates and deletes comments and comment likes', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
-    const service = new CommentService(prisma as never, account as never, {} as never);
+    const service = createCommentServiceForTest(prisma as never, account as never, {} as never);
     const comment = { id: 'comment-1', comment: 'Hello' };
     const like = { id: 'comment-like-1' };
     prisma.activity.findUnique.mockResolvedValue({
@@ -80,7 +80,7 @@ describe('CommentService', () => {
 
   it('requests one extra comment and returns a cursor when another page exists', async () => {
     const prisma = createPrismaMock();
-    const service = new CommentService(
+    const service = createCommentServiceForTest(
       prisma as never,
       {} as never,
       { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
@@ -130,7 +130,7 @@ describe('CommentService', () => {
     const prisma = createPrismaMock();
     const activityService = { canAccessActivity: asyncMock().mockResolvedValue(true) };
     const moderationAccess = { blockedUserIds: asyncMock().mockResolvedValue([]) };
-    const service = new CommentService(
+    const service = createCommentServiceForTest(
       prisma as never,
       {} as never,
       activityService as never,
@@ -177,7 +177,7 @@ describe('CommentService', () => {
       canAccessActivity: asyncMock().mockResolvedValue(true),
       canInteractWithActivity: asyncMock().mockResolvedValue(true),
     };
-    const service = new CommentService(prisma as never, account as never, activityService as never);
+    const service = createCommentServiceForTest(prisma as never, account as never, activityService as never);
     prisma.comment.create.mockResolvedValue({ id: 'comment-1' });
     prisma.activity.findUnique.mockResolvedValue({ userId: 'owner-1' });
     prisma.profile.findUnique.mockResolvedValue({
@@ -195,7 +195,7 @@ describe('CommentService', () => {
 
   it('selects comment fields and profile data without loading comment likes', async () => {
     const prisma = createPrismaMock();
-    const service = new CommentService(
+    const service = createCommentServiceForTest(
       prisma as never,
       {} as never,
       { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
@@ -228,7 +228,7 @@ describe('CommentService', () => {
 
   it('combines comment access and comment lookup into one query', async () => {
     const prisma = createPrismaMock();
-    const service = new CommentService(
+    const service = createCommentServiceForTest(
       prisma as never,
       {} as never,
       { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
@@ -249,7 +249,7 @@ describe('CommentService', () => {
 
   it('combines comment access and comment likes lookup into one query', async () => {
     const prisma = createPrismaMock();
-    const service = new CommentService(
+    const service = createCommentServiceForTest(
       prisma as never,
       {} as never,
       { canAccessActivity: asyncMock().mockResolvedValue(true) } as never,
@@ -273,7 +273,7 @@ describe('CommentService', () => {
       areBlocked: asyncMock().mockResolvedValue(false),
       blockedUserIds: asyncMock().mockResolvedValue(['blocked-user']),
     };
-    const service = new CommentService(
+    const service = createCommentServiceForTest(
       prisma as never,
       {} as never,
       activityService as never,
@@ -337,7 +337,7 @@ describe('CommentService', () => {
 
   it('hides a moderated comment even from an anonymous direct request', async () => {
     const prisma = createPrismaMock();
-    const service = new CommentService(prisma as never, {} as never, {} as never);
+    const service = createCommentServiceForTest(prisma as never, {} as never, {} as never);
     prisma.comment.findUnique.mockResolvedValue({ moderationStatus: 'hidden' });
 
     await expect(service.getCommentByCommentId('comment-1')).rejects.toBeInstanceOf(NotFoundException);
@@ -347,7 +347,7 @@ describe('CommentService', () => {
   it('returns not found when a comment author has no profile', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue(null) };
-    const service = new CommentService(prisma as never, account as never, {} as never);
+    const service = createCommentServiceForTest(prisma as never, account as never, {} as never);
 
     await expect(service.createCommentByActivityId({ comment: 'Hello' }, 'activity-1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -365,7 +365,7 @@ describe('CommentService', () => {
     Object.values(prisma.activity).forEach((operation) => operation.mockRejectedValue(error));
     Object.values(prisma.comment).forEach((operation) => operation.mockRejectedValue(error));
     Object.values(prisma.commentLike).forEach((operation) => operation.mockRejectedValue(error));
-    const service = new CommentService(
+    const service = createCommentServiceForTest(
       prisma as never,
       { getAccountByUserId: asyncMock().mockRejectedValue(error) } as never,
       {} as never,
