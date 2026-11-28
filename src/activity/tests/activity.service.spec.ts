@@ -400,6 +400,117 @@ describe('ActivityService', () => {
     });
   });
 
+  it('starts route, heart-rate, and photo uploads before waiting for any of them', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const routeMetadata = {
+      key: 'user-1/activities/activity-1/locations/locations-v1.json.gz',
+      formatVersion: 1,
+      pointCount: 2,
+      sizeBytes: 123,
+      checksum: 'a'.repeat(64),
+    };
+    const heartRateKey = 'user-1/activities/activity-1/heart-rate/heart-rate-v1.json.gz';
+    const promotedMedia = {
+      keys: ['user-1/activities/activity-1/photo.jpg'],
+      photos: [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }],
+    };
+    let resolveRouteUpload: (value: typeof routeMetadata) => void = () => undefined;
+    let resolveHeartRateUpload: (value: string) => void = () => undefined;
+    let resolveMediaPromotion: (value: typeof promotedMedia) => void = () => undefined;
+    const routeUpload = new Promise<typeof routeMetadata>((resolve) => {
+      resolveRouteUpload = resolve;
+    });
+    const heartRateUpload = new Promise<string>((resolve) => {
+      resolveHeartRateUpload = resolve;
+    });
+    const mediaPromotion = new Promise<typeof promotedMedia>((resolve) => {
+      resolveMediaPromotion = resolve;
+    });
+    const storage = {
+      uploadActivityRoute: asyncMock().mockImplementation(() => routeUpload),
+      uploadActivityHeartRateSamples: asyncMock().mockImplementation(() => heartRateUpload),
+      promoteActivityPhotos: asyncMock().mockImplementation(() => mediaPromotion),
+      deleteObjectByKey: asyncMock(),
+      refreshLinkedActivityMedia: asyncMock(),
+    };
+    const staticMap = {
+      generateActivityMap: asyncMock().mockResolvedValue({
+        key: 'user-1/activities/activity-1/map.webp',
+        url: 'https://cdn.example/activity-map.webp',
+      }),
+    };
+    const service = createActivityService(
+      prisma as never,
+      account as never,
+      undefined,
+      storage as never,
+      undefined,
+      staticMap as never,
+    );
+    prisma.activity.create.mockResolvedValue(makeQueuedActivity());
+
+    const activityToCreate = {
+      ...makeActivityDto(),
+      locations: [{ timestamp: 1, coords: makeMoscowCoordinate() }],
+      heartRateSamples: [{ timestamp: 1, beatsPerMinute: 130 }],
+      media: [makeActivityPhoto()],
+    };
+    const savePromise = service.createActivity(activityToCreate, 'user-1');
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(storage.uploadActivityRoute).toHaveBeenCalledTimes(1);
+    expect(storage.uploadActivityHeartRateSamples).toHaveBeenCalledTimes(1);
+    expect(storage.promoteActivityPhotos).toHaveBeenCalledTimes(1);
+
+    resolveRouteUpload(routeMetadata);
+    resolveHeartRateUpload(heartRateKey);
+    resolveMediaPromotion(promotedMedia);
+    await expect(savePromise).resolves.toEqual({ id: 'activity-1' });
+
+    expect(prisma.activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        routeStorageKey: routeMetadata.key,
+        heartRateStorageKey: heartRateKey,
+      }),
+    });
+    expect(prisma.activityMedia.createMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([expect.objectContaining({ url: promotedMedia.photos[0].url })]),
+      skipDuplicates: true,
+    });
+  });
+
+  it('cleans up successful uploads when a sibling activity upload fails', async () => {
+    const prisma = createPrismaMock();
+    const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };
+    const heartRateKey = 'user-1/activities/activity-1/heart-rate/heart-rate-v1.json.gz';
+    const mediaKey = 'user-1/activities/activity-1/photo.jpg';
+    const storage = {
+      uploadActivityRoute: asyncMock().mockRejectedValue(new Error('route upload failed')),
+      uploadActivityHeartRateSamples: asyncMock().mockResolvedValue(heartRateKey),
+      promoteActivityPhotos: asyncMock().mockResolvedValue({
+        keys: [mediaKey],
+        photos: [{ url: 'https://cdn.example/photo.jpg', thumbnail: null }],
+      }),
+      deleteObjectByKey: asyncMock(),
+    };
+    const service = createActivityService(prisma as never, account as never, undefined, storage as never);
+
+    const activityToCreate = {
+      ...makeActivityDto(),
+      locations: [{ timestamp: 1, coords: makeMoscowCoordinate() }],
+      heartRateSamples: [{ timestamp: 1, beatsPerMinute: 130 }],
+      media: [makeActivityPhoto()],
+    };
+    await expectInternalServerError(service.createActivity(activityToCreate, 'user-1'));
+
+    expect(storage.uploadActivityHeartRateSamples).toHaveBeenCalledTimes(1);
+    expect(storage.promoteActivityPhotos).toHaveBeenCalledTimes(1);
+    expect(storage.deleteObjectByKey).toHaveBeenCalledWith(heartRateKey);
+    expect(storage.deleteObjectByKey).toHaveBeenCalledWith(mediaKey);
+    expect(prisma.activity.create).not.toHaveBeenCalled();
+  });
+
   it('removes an uploaded route when the activity row cannot be saved', async () => {
     const prisma = createPrismaMock();
     const account = { getAccountByUserId: asyncMock().mockResolvedValue({ id: 'profile-1' }) };

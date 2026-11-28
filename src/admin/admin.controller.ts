@@ -18,7 +18,7 @@ import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
-import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { parsePageSizeQuery } from 'src/common/utils/query-validation';
 import { ADMIN_ROLES } from './admin-access.constants';
 import { AdminAccessService } from './admin-access.service';
 import type { AdminRole } from './admin-access.types';
@@ -43,7 +43,7 @@ export class AdminController {
   @ApiOperation({ summary: 'List current admin users or find users by part of an email address' })
   @ApiOkResponse({ description: 'Users and their active admin roles' })
   async listUsers(@Query('email') email?: string, @Query('take') take?: string) {
-    const pageSize = Number(validateOptionalIntegerQuery(take, 'take', { min: 1, max: 100 }) ?? 50);
+    const pageSize = Number(parsePageSizeQuery(take, 'take', { defaultSize: 50 }));
     const normalizedEmail = email?.trim().toLowerCase();
     if (normalizedEmail && normalizedEmail.length > 255) throw new BadRequestException('Некорректный email');
     return await this.adminAccess.listUsers(normalizedEmail, pageSize);
@@ -54,9 +54,7 @@ export class AdminController {
   @ApiOperation({ summary: 'Get admin access change history' })
   @ApiOkResponse({ description: 'Recent admin access changes' })
   async listAudit(@Query('take') take?: string) {
-    return await this.adminAccess.listAudit(
-      Number(validateOptionalIntegerQuery(take, 'take', { min: 1, max: 100 }) ?? 50),
-    );
+    return await this.adminAccess.listAudit(Number(parsePageSizeQuery(take, 'take', { defaultSize: 50 })));
   }
 
   @Put('users/:id/roles/:role')

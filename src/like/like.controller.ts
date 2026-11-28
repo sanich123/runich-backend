@@ -14,11 +14,11 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { parsePageSizeQuery } from 'src/common/utils/query-validation';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { parseLikeCursor } from './like.pagination';
-import { like, id, activityId, OK, BAD_REQUEST } from './const';
+import { like, id, activityId, MAX_LIKE_PAGE_SIZE, OK, BAD_REQUEST } from './const';
 
 @ApiTags(like)
 @ApiBearerAuth('bearerAuth')
@@ -68,7 +68,9 @@ export class LikeController {
     return await this.likeService.getLikesByActivityId(
       id,
       request ? getAuthenticatedUserId(request) : undefined,
-      validateOptionalIntegerQuery(limit, 'limit', { min: 1, max: 50 }),
+      parsePageSizeQuery(limit, 'limit', {
+        maxSize: MAX_LIKE_PAGE_SIZE,
+      }),
       parseLikeCursor(cursor),
     );
   }

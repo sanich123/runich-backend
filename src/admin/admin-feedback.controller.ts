@@ -17,7 +17,7 @@ import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
-import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { parsePageSizeQuery } from 'src/common/utils/query-validation';
 import { AdminFeedbackService } from './admin-feedback.service';
 import { AdminFeedbackReplyDto, ADMIN_FEEDBACK_STATUSES, UpdateAdminFeedbackStatusDto } from './admin-feedback.dto';
 import { FeedbackManagerGuard } from './feedback-manager.guard';
@@ -37,7 +37,7 @@ export class AdminFeedbackController {
     if (status !== undefined && !statusFilter) {
       throw new BadRequestException('Неизвестный статус обращения');
     }
-    const pageSize = Number(validateOptionalIntegerQuery(take, 'take', { min: 1, max: 100 }) ?? 50);
+    const pageSize = Number(parsePageSizeQuery(take, 'take', { defaultSize: 50 }));
     return await this.feedback.list(statusFilter, pageSize);
   }
 

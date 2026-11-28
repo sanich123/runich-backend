@@ -3,6 +3,8 @@ import { HttpStatus } from '@nestjs/common';
 
 export const { comment, id, like } = PATHS;
 export const { OK, BAD_REQUEST, CREATED, NO_CONTENT } = HttpStatus;
+export const DEFAULT_COMMENT_PAGE_SIZE = 10;
+export const MAX_COMMENT_PAGE_SIZE = 50;
 
 export const COMMENT_PROFILE_SELECT = {
   surname: true,

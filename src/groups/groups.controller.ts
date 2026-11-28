@@ -25,12 +25,15 @@ import { GroupsPostsService } from './services/groups-posts.service';
 import { GroupsStatisticsService } from './services/groups-statistics.service';
 import { GroupSummaryService } from './services/groups-summary.service';
 import { GroupsService } from './services/groups.service';
-import { validateOptionalIntegerQuery, validateOptionalIanaTimeZoneQuery } from 'src/common/utils/query-validation';
+import {
+  parsePageSizeQuery,
+  validateOptionalIntegerQuery,
+  validateOptionalIanaTimeZoneQuery,
+} from 'src/common/utils/query-validation';
 import { GROUP_PAGE_SIZE, parseGroupDateCursor, parseGroupDistanceCursor } from './shared/groups.pagination';
 
 function parseGroupPageSize(limit?: string) {
-  const validatedLimit = validateOptionalIntegerQuery(limit, 'limit', { min: 1, max: GROUP_PAGE_SIZE });
-  return validatedLimit === undefined ? GROUP_PAGE_SIZE : Number(validatedLimit);
+  return Number(parsePageSizeQuery(limit, 'limit', { defaultSize: GROUP_PAGE_SIZE, maxSize: GROUP_PAGE_SIZE }));
 }
 
 @ApiTags('groups')

@@ -1,6 +1,7 @@
 import { cursorPayloadObject, encodeBase64UrlCursor, parseBase64UrlCursor } from 'src/common/utils/base64url-cursor';
+import { MAX_PAGE_SIZE } from 'src/common/utils/query-validation';
 
-export const GROUP_PAGE_SIZE = 100;
+export const GROUP_PAGE_SIZE = MAX_PAGE_SIZE;
 
 export interface GroupDateCursor {
   date: Date;

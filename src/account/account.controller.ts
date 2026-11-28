@@ -5,7 +5,7 @@ import { PATHS, QueryParams } from 'src/common/constants';
 import { ProfilePaginationResponseDto } from './account.dto';
 import { type Filtering, FilteringParams } from './filter.decorator';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { parsePageSizeQuery } from 'src/common/utils/query-validation';
 import { parseProfileCursor } from './account.pagination';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 
@@ -35,11 +35,7 @@ export class AccountController {
     @FilteringParams(['name', 'email', 'surname']) filter: Filtering,
     @Req() request?: AuthenticatedRequest,
   ) {
-    const args = [
-      validateOptionalIntegerQuery(take, QueryParams.take, { min: 1, max: 100 }),
-      parseProfileCursor(cursor),
-      filter,
-    ] as const;
+    const args = [parsePageSizeQuery(take, QueryParams.take), parseProfileCursor(cursor), filter] as const;
     const currentUserId = request?.user.userId ?? request?.user.id;
     return currentUserId
       ? await this.accountService.getFilteredAccounts(...args, currentUserId)

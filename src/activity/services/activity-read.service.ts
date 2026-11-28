@@ -5,7 +5,7 @@ import { ActivityRouteFeedService } from './activity-route-feed.service';
 import { ActivityFriendsFeedService } from './activity-friends-feed.service';
 import type { ActivityCursor, ActivityMediaCursor } from '../shared/activity.pagination';
 import type { ActivityRouteWorkoutFilters } from '../shared/types';
-import { DEFAULT_ACTIVITY_PAGE_SIZE } from '../shared/const';
+import { DEFAULT_ACTIVITY_MEDIA_PAGE_SIZE, DEFAULT_ACTIVITY_PAGE_SIZE } from '../shared/const';
 
 @Injectable()
 export class ActivityReadService {
@@ -28,7 +28,12 @@ export class ActivityReadService {
     return await this.contentService.getActivityByActivityId(id, currentUserId);
   }
 
-  async getMediaByUserId(id: string, take = '10', cursor?: ActivityMediaCursor, currentUserId?: string) {
+  async getMediaByUserId(
+    id: string,
+    take = String(DEFAULT_ACTIVITY_MEDIA_PAGE_SIZE),
+    cursor?: ActivityMediaCursor,
+    currentUserId?: string,
+  ) {
     return await this.contentService.getMediaByUserId(id, take, cursor, currentUserId);
   }
 

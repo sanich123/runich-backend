@@ -37,7 +37,7 @@ import {
 import { ParamsId } from 'src/common/dto/params-validation';
 import { QueryParams } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { parsePageSizeQuery } from 'src/common/utils/query-validation';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
 import { activity, id } from './shared/const';
 import { parseActivityMediaCursor } from './shared/activity.pagination';
@@ -65,7 +65,7 @@ export class ActivityMediaController {
   ) {
     return this.activityService.getMediaByUserId(
       id,
-      validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 }),
+      parsePageSizeQuery(take, QueryParams.take),
       parseActivityMediaCursor(cursor),
       request?.user.userId ?? request?.user.id,
     );

@@ -9,6 +9,7 @@ import type { LikeCursor } from './like.pagination';
 import { EMAIL_NOTIFICATION_TYPE } from 'src/email/email-notification.constants';
 import { NOTIFICATION_TYPE } from 'src/notification/notification.constants';
 import { createNotificationEvent } from 'src/notification/notification-event';
+import { DEFAULT_LIKE_PAGE_SIZE } from './const';
 
 @Injectable()
 export class LikeService {
@@ -75,7 +76,12 @@ export class LikeService {
     }
   }
 
-  async getLikesByActivityId(id: string, currentUserId?: string, limit = '30', cursor?: LikeCursor) {
+  async getLikesByActivityId(
+    id: string,
+    currentUserId?: string,
+    limit = String(DEFAULT_LIKE_PAGE_SIZE),
+    cursor?: LikeCursor,
+  ) {
     try {
       const pageSize = Number(limit);
       const activity = await this.prismaService.activity.findUnique({

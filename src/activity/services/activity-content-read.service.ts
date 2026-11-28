@@ -5,7 +5,7 @@ import { ActivityAccessService } from './activity-access.service';
 import { reduceLocations } from 'src/common/parsers/reduce-locations';
 import { handleServiceError } from 'src/common/utils/database-errors';
 import { ActivityHeartRateSampleObject, LocationObject } from '../dto/activity.dto';
-import { ACTIVITY_DETAILS_SELECT, MAX_MAP_ROUTE_LOCATIONS } from '../shared/const';
+import { ACTIVITY_DETAILS_SELECT, DEFAULT_ACTIVITY_MEDIA_PAGE_SIZE, MAX_MAP_ROUTE_LOCATIONS } from '../shared/const';
 import { encodeActivityMediaCursor, type ActivityMediaCursor } from '../shared/activity.pagination';
 import {
   createActivityChartLocations,
@@ -150,7 +150,12 @@ export class ActivityContentReadService {
     }
   }
 
-  async getMediaByUserId(id: string, take = '10', cursor?: ActivityMediaCursor, currentUserId?: string) {
+  async getMediaByUserId(
+    id: string,
+    take = String(DEFAULT_ACTIVITY_MEDIA_PAGE_SIZE),
+    cursor?: ActivityMediaCursor,
+    currentUserId?: string,
+  ) {
     try {
       const pageSize = Number(take);
       if (currentUserId && currentUserId !== id) {

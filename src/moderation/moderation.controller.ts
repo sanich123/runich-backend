@@ -30,7 +30,7 @@ import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ParamsId } from 'src/common/dto/params-validation';
 import { RATE_LIMITS, RateLimit } from 'src/common/security/rate-limits';
-import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { parsePageSizeQuery } from 'src/common/utils/query-validation';
 import { isContentReportStatus } from './shared/moderation.constants';
 import {
   ModerationActionDto,
@@ -158,7 +158,7 @@ export class ModerationController {
     }
     return await this.moderationService.getReportQueue(
       status,
-      Number(validateOptionalIntegerQuery(take, 'take', { min: 1, max: 100 }) ?? 50),
+      Number(parsePageSizeQuery(take, 'take', { defaultSize: 50 })),
     );
   }
 
@@ -209,9 +209,7 @@ export class ModerationController {
   @ApiOperation({ summary: 'Get pending moderation appeals' })
   @ApiOkResponse({ description: 'Appeal queue' })
   async getAppealQueue(@Query('take') take?: string) {
-    return await this.moderationService.getAppealQueue(
-      Number(validateOptionalIntegerQuery(take, 'take', { min: 1, max: 100 }) ?? 50),
-    );
+    return await this.moderationService.getAppealQueue(Number(parsePageSizeQuery(take, 'take', { defaultSize: 50 })));
   }
 
   @Post('appeals/:id/decision')

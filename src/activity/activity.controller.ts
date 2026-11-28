@@ -49,7 +49,11 @@ import {
 } from '@nestjs/swagger';
 import { QueryParams } from 'src/common/constants';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { validateOptionalIanaTimeZoneQuery, validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import {
+  parsePageSizeQuery,
+  validateOptionalIanaTimeZoneQuery,
+  validateOptionalIntegerQuery,
+} from 'src/common/utils/query-validation';
 import {
   ACTIVITY_FAVORITE_API_COPY,
   ACTIVITY_FAVORITE_ROUTE,
@@ -186,7 +190,7 @@ export class ActivityController {
     @Query('year') year?: string,
     @Query('timeZone') timeZone?: string,
   ) {
-    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    const validatedTake = parsePageSizeQuery(take, QueryParams.take);
     const validatedMonth = validateOptionalIntegerQuery(month, 'month', { min: 1, max: 12 });
     const validatedDay = validateOptionalIntegerQuery(day, 'day', { min: 1, max: 31 });
     const validatedYear = validateOptionalIntegerQuery(year, 'year', { min: 1, max: 9999 });
@@ -222,7 +226,7 @@ export class ActivityController {
     @Query(QueryParams.cursor) cursor?: string,
     @Query(QueryParams.take) take?: string,
   ) {
-    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    const validatedTake = parsePageSizeQuery(take, QueryParams.take);
     return await this.activityService.getFavoriteActivities(
       getAuthenticatedUserId(request),
       validatedTake,
@@ -258,7 +262,7 @@ export class ActivityController {
     @Query('followersCursor') followersCursor?: string,
     @Query('favoritesCursor') favoritesCursor?: string,
   ) {
-    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    const validatedTake = parsePageSizeQuery(take, QueryParams.take);
     const parseHomeCursor = (cursor?: string) => (cursor === 'done' ? 'done' : parseActivityCursor(cursor));
     return await this.activityService.getHomeActivityFeeds(getAuthenticatedUserId(request), validatedTake, {
       my: parseHomeCursor(myCursor),
@@ -287,7 +291,7 @@ export class ActivityController {
     @Query(QueryParams.take) take?: string,
     @Req() request?: RequestWithUser,
   ) {
-    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    const validatedTake = parsePageSizeQuery(take, QueryParams.take);
     return await this.activityService.getActivitesByUserId(
       id,
       validatedTake,
@@ -316,7 +320,7 @@ export class ActivityController {
     @Query(QueryParams.take) take?: string,
     @Req() request?: RequestWithUser,
   ) {
-    const validatedTake = validateOptionalIntegerQuery(take, QueryParams.take, { min: 1 });
+    const validatedTake = parsePageSizeQuery(take, QueryParams.take);
     return await this.activityService.getAllActivitiesWithFriends(
       id,
       validatedTake,

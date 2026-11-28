@@ -78,18 +78,33 @@ export class ActivityWriteService {
       if (!activityId && storageService && (locations?.length || heartRateSamples?.length)) activityId = randomUUID();
       if (storageService && (locations?.length || media?.length || heartRateSamples?.length)) {
         activityId ??= randomUUID();
-        if (locations?.length) {
-          routeMetadata = await storageService.uploadActivityRoute(id, activityId, locations);
+        const [routeUpload, heartRateUpload, mediaPromotion] = await Promise.allSettled([
+          locations?.length
+            ? storageService.uploadActivityRoute(id, activityId, locations)
+            : Promise.resolve(undefined),
+          heartRateSamples?.length
+            ? storageService.uploadActivityHeartRateSamples(id, activityId, heartRateSamples)
+            : Promise.resolve(undefined),
+          media?.length
+            ? storageService.promoteActivityPhotos(id, activityId, media, mediaCreatedAt)
+            : Promise.resolve(undefined),
+        ]);
+
+        if (routeUpload.status === 'fulfilled' && routeUpload.value) {
+          routeMetadata = routeUpload.value;
           uploadedRouteKey = routeMetadata.key;
         }
-        if (heartRateSamples?.length) {
-          uploadedHeartRateKey = await storageService.uploadActivityHeartRateSamples(id, activityId, heartRateSamples);
+        if (heartRateUpload.status === 'fulfilled') uploadedHeartRateKey = heartRateUpload.value;
+        if (mediaPromotion.status === 'fulfilled' && mediaPromotion.value) {
+          media = mediaPromotion.value.photos;
+          uploadedActivityMediaKeys = mediaPromotion.value.keys;
         }
-        if (media?.length) {
-          const promotedMedia = await storageService.promoteActivityPhotos(id, activityId, media, mediaCreatedAt);
-          media = promotedMedia.photos;
-          uploadedActivityMediaKeys = promotedMedia.keys;
-        }
+
+        // Wait for every upload before failing so the catch block can clean up all successful results.
+        const failedUpload = [routeUpload, heartRateUpload, mediaPromotion].find(
+          (result) => result.status === 'rejected',
+        );
+        if (failedUpload?.status === 'rejected') throw failedUpload.reason;
       }
       uploadedRouteKey ??= routeMetadata?.key;
 

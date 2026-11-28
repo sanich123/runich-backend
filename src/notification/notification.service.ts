@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
+import { parsePageSizeQuery } from 'src/common/utils/query-validation';
 import {
   MANDATORY_NOTIFICATION_TYPES,
   NOTIFICATION_ERROR_MESSAGE,
@@ -13,10 +14,14 @@ export class NotificationService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async list(userId: string, takeInput?: string, cursorInput?: string) {
-    const requested = takeInput === undefined ? NOTIFICATION_PAGE_SIZE.default : Number(takeInput);
-    if (!Number.isInteger(requested) || requested < 1)
-      throw new BadRequestException(NOTIFICATION_ERROR_MESSAGE.invalidPageSize);
-    const take = Math.min(requested, NOTIFICATION_PAGE_SIZE.max);
+    const take = Number(
+      parsePageSizeQuery(takeInput, 'take', {
+        defaultSize: NOTIFICATION_PAGE_SIZE.default,
+        maxSize: NOTIFICATION_PAGE_SIZE.max,
+        overflow: 'clamp',
+        errorMessage: NOTIFICATION_ERROR_MESSAGE.invalidPageSize,
+      }),
+    );
     const cursor = parseNotificationCursor(cursorInput);
     const rows = await this.prisma.notification.findMany({
       where: {

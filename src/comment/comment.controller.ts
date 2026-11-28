@@ -32,11 +32,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { validateOptionalIntegerQuery } from 'src/common/utils/query-validation';
+import { parsePageSizeQuery } from 'src/common/utils/query-validation';
 import type { AuthenticatedRequest } from 'src/auth/request/auth-request';
 import { getAuthenticatedUserId } from 'src/auth/request/auth-request';
 import { parseCommentCursor } from './comment.pagination';
-import { comment, id, like, OK, BAD_REQUEST, CREATED, NO_CONTENT } from './const';
+import { comment, id, like, MAX_COMMENT_PAGE_SIZE, OK, BAD_REQUEST, CREATED, NO_CONTENT } from './const';
 
 @ApiTags(comment)
 @ApiBearerAuth('bearerAuth')
@@ -61,7 +61,9 @@ export class CommentController {
   ) {
     return await this.commentService.getCommentsbyActivityId(
       id,
-      validateOptionalIntegerQuery(limit, 'limit', { min: 1, max: 50 }),
+      parsePageSizeQuery(limit, 'limit', {
+        maxSize: MAX_COMMENT_PAGE_SIZE,
+      }),
       parseCommentCursor(cursor),
       request?.user.userId ?? request?.user.id,
     );

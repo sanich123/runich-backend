@@ -8,7 +8,7 @@ import { ActivityService } from 'src/activity/services/activity.service';
 import { CommentLikeService } from './comment-like.service';
 import { encodeCommentCursor } from './comment.pagination';
 import type { CommentCursor } from './comment.pagination';
-import { COMMENT_PROFILE_SELECT } from './const';
+import { COMMENT_PROFILE_SELECT, DEFAULT_COMMENT_PAGE_SIZE } from './const';
 
 @Injectable()
 export class CommentService {
@@ -51,7 +51,12 @@ export class CommentService {
     }
   }
 
-  async getCommentsbyActivityId(id: string, limit = '10', cursor?: CommentCursor, currentUserId?: string) {
+  async getCommentsbyActivityId(
+    id: string,
+    limit = String(DEFAULT_COMMENT_PAGE_SIZE),
+    cursor?: CommentCursor,
+    currentUserId?: string,
+  ) {
     try {
       await this.ensureActivityAccess(id, currentUserId);
       const pageSize = Number(limit);

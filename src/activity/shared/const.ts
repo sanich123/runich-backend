@@ -1,4 +1,5 @@
 import { PATHS } from 'src/common/constants';
+import { DEFAULT_PAGE_SIZE } from 'src/common/utils/query-validation';
 import type { ActivityUpdateField } from './types';
 
 export const { activity, id } = PATHS;
@@ -17,7 +18,8 @@ export const ACTIVITY_FAVORITE_ERROR_MESSAGES = {
   forbidden: 'Недостаточно прав',
 } as const;
 
-export const DEFAULT_ACTIVITY_PAGE_SIZE = 20;
+export const DEFAULT_ACTIVITY_PAGE_SIZE = DEFAULT_PAGE_SIZE;
+export const DEFAULT_ACTIVITY_MEDIA_PAGE_SIZE = 10;
 
 // The map needs the shape of the route, not every recorded GPS sample. Keep
 // the full route in object storage, but send a smaller representation to the

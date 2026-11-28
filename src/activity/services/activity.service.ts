@@ -7,7 +7,7 @@ import {
   type WatchWorkoutImportIdentityDto,
   type LocationObject,
 } from '../dto/activity.dto';
-import { DEFAULT_ACTIVITY_PAGE_SIZE } from '../shared/const';
+import { DEFAULT_ACTIVITY_MEDIA_PAGE_SIZE, DEFAULT_ACTIVITY_PAGE_SIZE } from '../shared/const';
 import type { ActivityCursor, ActivityMediaCursor } from '../shared/activity.pagination';
 import type {
   ActivityDatabase,
@@ -57,7 +57,12 @@ export class ActivityService {
     return await this.readService.getActivityByActivityId(id, currentUserId);
   }
 
-  async getMediaByUserId(id: string, take = '10', cursor?: ActivityMediaCursor, currentUserId?: string) {
+  async getMediaByUserId(
+    id: string,
+    take = String(DEFAULT_ACTIVITY_MEDIA_PAGE_SIZE),
+    cursor?: ActivityMediaCursor,
+    currentUserId?: string,
+  ) {
     return await this.readService.getMediaByUserId(id, take, cursor, currentUserId);
   }
 
