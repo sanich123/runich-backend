@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, IsUUID, Max, Min } from 'class-validator';
 import { MEDIA_UPLOAD_ROLES, MEDIA_UPLOAD_SCOPES, type MediaUploadScope } from '../shared/types';
 
 export class PhotoUploadOptionsDto {
@@ -17,6 +18,14 @@ export class PhotoUploadOptionsDto {
   @IsOptional()
   @IsUUID()
   groupId?: string;
+
+  @ApiPropertyOptional({ type: Number, minimum: 0.01, maximum: 100 })
+  @Type(() => Number)
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @Min(0.01)
+  @Max(100)
+  @IsOptional()
+  aspectRatio?: number;
 }
 
 export class PhotoUploadResponseDto {
@@ -32,6 +41,9 @@ export class PhotoUploadResponseDto {
 
   @ApiPropertyOptional({ type: String, description: 'Blurhash для показа медиа во время проверки' })
   blurhash?: string | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Соотношение сторон после нормализации' })
+  aspectRatio?: number | null;
 
   @ApiPropertyOptional({ type: String, description: 'S3 object key для немодерируемых вложений' })
   key?: string;

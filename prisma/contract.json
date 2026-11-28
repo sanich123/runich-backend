@@ -1125,6 +1125,13 @@
                   "kind": "scalar"
                 }
               },
+              "aspectRatio": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
               "blurhash": {
                 "nullable": true,
                 "type": {
@@ -1290,6 +1297,9 @@
                 },
                 "activityId": {
                   "column": "activity_id"
+                },
+                "aspectRatio": {
+                  "column": "aspect_ratio"
                 },
                 "blurhash": {
                   "column": "blurhash"
@@ -4124,6 +4134,13 @@
           },
           "MediaModerationAsset": {
             "fields": {
+              "aspectRatio": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
               "attempts": {
                 "nullable": false,
                 "type": {
@@ -4429,6 +4446,9 @@
             },
             "storage": {
               "fields": {
+                "aspectRatio": {
+                  "column": "aspect_ratio"
+                },
                 "attempts": {
                   "column": "attempts"
                 },
@@ -7716,6 +7736,11 @@
                   "dataType": "pg/uuid",
                   "nullable": false
                 },
+                "aspect_ratio": {
+                  "codecId": "pg/float8@1",
+                  "dataType": "pg/float8",
+                  "nullable": true
+                },
                 "blurhash": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -10765,6 +10790,11 @@
                 }
               ],
               "columns": {
+                "aspect_ratio": {
+                  "codecId": "pg/float8@1",
+                  "dataType": "pg/float8",
+                  "nullable": true
+                },
                 "attempts": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
@@ -13131,7 +13161,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "fe587b83b4b648d68a452c3e10239235203f1c6316d4df94f519e61b7ece22ea"
+    "storageHash": "b5035b254ef473dd204a61c8b00c7dd0b715ec2e878fafbcb06aa4725d32478b"
   },
   "capabilities": {
     "postgres": {

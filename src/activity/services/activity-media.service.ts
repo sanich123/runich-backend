@@ -365,6 +365,7 @@ export class ActivityMediaService {
             url: photo.url ?? null,
             thumbnail: photo.thumbnail ?? null,
             blurhash: photo.blurhash ?? null,
+            aspectRatio: photo.aspectRatio ?? null,
             mediaModerationAssetId: photo.assetId,
             thumbnailModerationAssetId: photo.thumbnailAssetId ?? null,
             mediaReviewStatus: photo.mediaReviewStatus ?? 'queued',
@@ -381,6 +382,7 @@ export class ActivityMediaService {
           url: photo.url,
           thumbnail: photo.thumbnail ?? null,
           blurhash: photo.blurhash ?? null,
+          aspectRatio: photo.aspectRatio ?? null,
         },
       ];
     });

@@ -192,7 +192,7 @@ export class StorageActivityService {
           if (photo.url) throw new BadRequestException('Для проверяемого файла нельзя передавать публичный URL');
           const mediaAsset = await this.prisma?.mediaModerationAsset.findFirst({
             where: { id: photo.assetId, ownerId: userId, scope: 'activity', role: 'media' },
-            select: { id: true, mediaId: true, status: true, publishedKey: true },
+            select: { id: true, mediaId: true, status: true, publishedKey: true, aspectRatio: true },
           });
           if (!mediaAsset)
             throw new BadRequestException('Загруженное медиа не найдено или принадлежит другому аккаунту');
@@ -225,6 +225,7 @@ export class StorageActivityService {
             ...(thumbnailAsset ? { thumbnailAssetId: thumbnailAsset.id } : {}),
             mediaReviewStatus: mediaAsset.status as ActivityMediaObject['mediaReviewStatus'],
             blurhash: photo.blurhash ?? null,
+            aspectRatio: mediaAsset.aspectRatio ?? photo.aspectRatio ?? null,
           });
           continue;
         }

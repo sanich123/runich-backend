@@ -5,6 +5,7 @@ import { StorageModerationService } from './storage-moderation.service';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
+import sharp from 'sharp';
 import { createReadStream } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { blurhashFromBuffer } from 'src/common/images/blurhash';
@@ -52,6 +53,12 @@ export class StorageUploadService {
       if (!input) throw new BadRequestException('Не удалось прочитать загруженный файл');
 
       const normalizedImage = file.mimetype.startsWith('image/') ? await this.core.normalizeImage(input) : undefined;
+      const normalizedImageMetadata = normalizedImage ? await sharp(normalizedImage).metadata() : undefined;
+      const normalizedAspectRatio =
+        normalizedImageMetadata?.width && normalizedImageMetadata.height
+          ? normalizedImageMetadata.width / normalizedImageMetadata.height
+          : undefined;
+      const aspectRatio = normalizedAspectRatio ?? manifestEntry?.aspectRatio ?? options.aspectRatio;
       const blurhash = normalizedImage ? await blurhashFromBuffer(normalizedImage) : null;
       const extension = normalizedImage ? 'webp' : this.core.getExtension(file.originalname, file.mimetype);
       const mediaId = manifestEntry?.mediaId ?? randomUUID();
@@ -79,6 +86,7 @@ export class StorageUploadService {
           contentLength: normalizedImage?.length ?? fileSize,
           body: normalizedImage ?? (file.path ? (stream = createReadStream(file.path)) : file.buffer!),
           blurhash,
+          aspectRatio,
         });
       }
 
@@ -103,7 +111,7 @@ export class StorageUploadService {
         ),
       );
 
-      return { url: this.core.getPublicUrl(key), key, contentType };
+      return { url: this.core.getPublicUrl(key), key, contentType, ...(aspectRatio ? { aspectRatio } : {}) };
     } finally {
       stream?.destroy();
       if (file.path) {
@@ -148,9 +156,10 @@ export class StorageUploadService {
       while (nextIndex < files.length) {
         const index = nextIndex++;
         try {
+          const uploadedPhoto = await this.uploadPhoto(userId, files[index], options, manifest[index]);
           results[index] = {
-            ...(await this.uploadPhoto(userId, files[index], options, manifest[index])),
             ...manifest[index],
+            ...uploadedPhoto,
           };
         } catch (error) {
           errors.push(error);
@@ -189,23 +198,32 @@ export class StorageUploadService {
 
     const seen = new Set<string>();
     return manifest.map((entry) => {
-      if (
-        !entry ||
-        typeof entry !== 'object' ||
-        typeof (entry as { mediaId?: unknown }).mediaId !== 'string' ||
-        !(MEDIA_UPLOAD_ROLES as readonly unknown[]).includes((entry as { role?: unknown }).role)
-      ) {
+      if (!entry || typeof entry !== 'object') {
         throw new BadRequestException('Некорректная запись manifest медиафайлов');
       }
 
-      const mediaId = (entry as { mediaId: string }).mediaId.trim();
-      const role = (entry as { role: MediaUploadManifestEntry['role'] }).role;
+      // Parsed JSON has no runtime type; narrow its fields before creating a manifest entry.
+      const candidate = entry as Record<string, unknown>;
+      const mediaIdValue = candidate.mediaId;
+      const role = MEDIA_UPLOAD_ROLES.find((value) => value === candidate.role);
+      if (typeof mediaIdValue !== 'string' || !role) {
+        throw new BadRequestException('Некорректная запись manifest медиафайлов');
+      }
+      const mediaId = mediaIdValue.trim();
       const key = `${mediaId}:${role}`;
       if (!mediaId || mediaId.length > 100 || seen.has(key)) {
         throw new BadRequestException('Manifest содержит пустой, слишком длинный или дублирующий mediaId и role');
       }
       seen.add(key);
-      return { mediaId, role };
+      // The manifest is parsed JSON, so validate its optional ratio at this boundary.
+      const aspectRatio = candidate.aspectRatio;
+      if (
+        aspectRatio !== undefined &&
+        (typeof aspectRatio !== 'number' || !Number.isFinite(aspectRatio) || aspectRatio < 0.01 || aspectRatio > 100)
+      ) {
+        throw new BadRequestException('Некорректное соотношение сторон в manifest медиафайлов');
+      }
+      return { mediaId, role, ...(typeof aspectRatio === 'number' ? { aspectRatio } : {}) };
     });
   }
 }

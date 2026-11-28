@@ -67,6 +67,7 @@ export const ACTIVITY_CARD_SELECT = {
       url: true,
       thumbnail: true,
       blurhash: true,
+      aspectRatio: true,
       mediaReviewStatus: true,
       mediaModerationAssetId: true,
       thumbnailModerationAssetId: true,

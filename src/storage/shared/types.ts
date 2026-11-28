@@ -17,6 +17,7 @@ type MediaUploadRole = (typeof MEDIA_UPLOAD_ROLES)[number];
 export type MediaUploadManifestEntry = {
   mediaId: string;
   role: MediaUploadRole;
+  aspectRatio?: number;
 };
 
 export type UploadedPhotoBatch = {
@@ -27,6 +28,7 @@ export type UploadedPhotoBatch = {
   assetId?: string;
   status?: 'queued' | 'processing' | 'review_required' | 'approved' | 'rejected' | 'failed';
   contentType: string;
+  aspectRatio?: number | null;
   mediaId: string;
   role: MediaUploadRole;
 };
@@ -35,6 +37,7 @@ export type PhotoUploadOptions = {
   scope?: MediaUploadScope;
   feedbackId?: string;
   groupId?: string;
+  aspectRatio?: number;
 };
 
 export type StorageSettings = {

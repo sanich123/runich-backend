@@ -59,6 +59,14 @@ class ActivityMediaDto {
   @IsString()
   @IsOptional()
   blurhash?: string | null;
+
+  @ApiPropertyOptional({ type: Number, minimum: 0.01, maximum: 100, nullable: true })
+  @Type(() => Number)
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @Min(0.01)
+  @Max(100)
+  @IsOptional()
+  aspectRatio?: number | null;
 }
 
 class ActivityCoordinatesDto {
@@ -182,6 +190,7 @@ export type ActivityMediaObject = {
   thumbnailAssetId?: string;
   mediaReviewStatus?: 'queued' | 'processing' | 'review_required' | 'approved' | 'rejected' | 'failed' | null;
   blurhash?: string | null;
+  aspectRatio?: number | null;
 };
 
 export type ActivityKilometreSplitObject = {

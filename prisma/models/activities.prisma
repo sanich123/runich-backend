@@ -74,6 +74,7 @@ model ActivityMedia {
   url                         String?
   thumbnail                   String?
   blurhash                    String?
+  aspectRatio                 Float?                   @map("aspect_ratio")
   moderationStatus            ModerationContentStatus  @default(visible) @map("moderation_status")
   mediaModerationAssetId      Uuid?                    @unique @map("media_moderation_asset_id")
   thumbnailModerationAssetId  Uuid?                    @unique @map("thumbnail_moderation_asset_id")

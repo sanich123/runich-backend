@@ -51,6 +51,7 @@ model MediaModerationAsset {
   quarantineKey       Varchar(2048)          @map("quarantine_key")
   publishedKey        Varchar(2048)?         @map("published_key")
   blurhash            String?
+  aspectRatio         Float?                @map("aspect_ratio")
   contentType         Varchar(255)           @map("content_type")
   byteSize            Int                   @map("byte_size")
   status              MediaModerationStatus @default(queued)

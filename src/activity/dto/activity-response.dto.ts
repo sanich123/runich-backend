@@ -95,6 +95,9 @@ class ActivityMediaItemDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   blurhash?: string | null;
 
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Соотношение сторон фото или видео' })
+  aspectRatio?: number | null;
+
   @ApiPropertyOptional({
     enum: ['queued', 'processing', 'review_required', 'approved', 'rejected', 'failed'],
     nullable: true,

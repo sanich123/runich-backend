@@ -29,6 +29,7 @@ export class StorageModerationService {
     contentLength: number;
     body: Buffer | Uint8Array | Readable;
     blurhash?: string | null;
+    aspectRatio?: number;
   }) {
     if (!this.prisma) throw new ServiceUnavailableException('Проверка загружаемых медиафайлов не настроена');
     const publicBucket = this.core.assertConfigured();
@@ -64,14 +65,16 @@ export class StorageModerationService {
           quarantineKey,
           contentType: input.contentType,
           blurhash: input.blurhash ?? null,
+          aspectRatio: input.aspectRatio ?? null,
           byteSize: input.contentLength,
         },
-        select: { id: true, status: true, contentType: true },
+        select: { id: true, status: true, contentType: true, aspectRatio: true },
       });
       return {
         assetId: asset.id,
         status: asset.status,
         contentType: asset.contentType,
+        aspectRatio: asset.aspectRatio,
         previewUrl,
         ...(input.blurhash ? { blurhash: input.blurhash } : {}),
       };
@@ -145,8 +148,14 @@ export class StorageModerationService {
     if (!this.prisma) throw new ServiceUnavailableException('Хранилище статусов загрузки недоступно');
     const assets = (await this.prisma.mediaModerationAsset.findMany({
       where: { ownerId, id: { in: assetIds } },
-      select: { id: true, status: true, publishedKey: true, contentType: true },
-    })) as Array<{ id: string; status: string; publishedKey: string | null; contentType: string }>;
+      select: { id: true, status: true, publishedKey: true, contentType: true, aspectRatio: true },
+    })) as Array<{
+      id: string;
+      status: string;
+      publishedKey: string | null;
+      contentType: string;
+      aspectRatio: number | null;
+    }>;
     return {
       items: assets.map((asset) => ({
         assetId: asset.id,
@@ -155,6 +164,7 @@ export class StorageModerationService {
           ? { url: this.core.getPublicUrl(asset.publishedKey) }
           : {}),
         contentType: asset.contentType,
+        aspectRatio: asset.aspectRatio,
       })),
     };
   }

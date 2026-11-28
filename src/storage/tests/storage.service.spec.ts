@@ -249,6 +249,62 @@ describe('StorageService', () => {
     });
   });
 
+  it('derives image aspect ratios from image data and accepts valid video ratios from the manifest', async () => {
+    s3Send.mockResolvedValue({} as never);
+    const prisma = createModerationPrismaMock();
+    prisma.mediaModerationAsset.create.mockResolvedValueOnce({
+      id: 'image-asset',
+      status: 'queued',
+      contentType: 'image/webp',
+      aspectRatio: 2,
+    });
+    prisma.mediaModerationAsset.create.mockResolvedValueOnce({
+      id: 'video-asset',
+      status: 'queued',
+      contentType: 'video/mp4',
+      aspectRatio: 1.5,
+    });
+    const service = createStorageService(undefined, prisma as never);
+    const image = await createTestImage();
+
+    const imageResult = await service.uploadPhoto(
+      'user-1',
+      { buffer: image, originalname: 'photo.jpg', mimetype: 'image/jpeg' },
+      { scope: 'activity' },
+      { mediaId: 'image-1', role: 'media', aspectRatio: 7 },
+    );
+    const videoResult = await service.uploadPhoto(
+      'user-1',
+      { buffer: Buffer.from('video'), originalname: 'clip.mp4', mimetype: 'video/mp4' },
+      { scope: 'activity' },
+      { mediaId: 'video-1', role: 'media', aspectRatio: 1.5 },
+    );
+
+    expect(prisma.mediaModerationAsset.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ aspectRatio: 2 }) }),
+    );
+    expect(prisma.mediaModerationAsset.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ aspectRatio: 1.5 }) }),
+    );
+    expect(imageResult).toMatchObject({ status: 'queued', aspectRatio: 2 });
+    expect(videoResult).toMatchObject({ status: 'queued', aspectRatio: 1.5 });
+  });
+
+  it.each([
+    ['not a number', '1.5'],
+    ['null', null],
+    ['below the minimum', 0],
+    ['above the maximum', 100.01],
+  ])('rejects a manifest aspect ratio that is %s', async (_caseName, aspectRatio) => {
+    const service = createStorageService();
+    const manifest = JSON.stringify([{ mediaId: 'media-1', role: 'media', aspectRatio }]);
+
+    await expect(service.uploadPhotos('user-1', [makePhotoUpload()], {}, manifest)).rejects.toThrow(
+      'Некорректное соотношение сторон в manifest медиафайлов',
+    );
+    expect(s3Send).not.toHaveBeenCalled();
+  });
+
   it('rejects a batch when manifest length does not match files', async () => {
     s3Send.mockResolvedValue({} as never);
     const service = createStorageService();
@@ -1002,9 +1058,15 @@ describe('StorageService', () => {
   it('returns moderation statuses and exposes a URL only for approved published assets', async () => {
     const prisma = createModerationPrismaMock();
     prisma.mediaModerationAsset.findMany.mockResolvedValue([
-      { id: 'approved-1', status: 'approved', publishedKey: 'user-1/uploads/approved.jpg', contentType: 'image/jpeg' },
-      { id: 'approved-2', status: 'approved', publishedKey: null, contentType: 'image/jpeg' },
-      { id: 'queued-1', status: 'queued', publishedKey: null, contentType: 'video/mp4' },
+      {
+        id: 'approved-1',
+        status: 'approved',
+        publishedKey: 'user-1/uploads/approved.jpg',
+        contentType: 'image/jpeg',
+        aspectRatio: 1.5,
+      },
+      { id: 'approved-2', status: 'approved', publishedKey: null, contentType: 'image/jpeg', aspectRatio: null },
+      { id: 'queued-1', status: 'queued', publishedKey: null, contentType: 'video/mp4', aspectRatio: null },
     ]);
     const service = createStorageService(undefined, prisma as never);
 
@@ -1017,14 +1079,15 @@ describe('StorageService', () => {
           status: 'approved',
           url: 'https://s3.twcstorage.ru/runich-test/user-1/uploads/approved.jpg',
           contentType: 'image/jpeg',
+          aspectRatio: 1.5,
         },
-        { assetId: 'approved-2', status: 'approved', contentType: 'image/jpeg' },
-        { assetId: 'queued-1', status: 'queued', contentType: 'video/mp4' },
+        { assetId: 'approved-2', status: 'approved', contentType: 'image/jpeg', aspectRatio: null },
+        { assetId: 'queued-1', status: 'queued', contentType: 'video/mp4', aspectRatio: null },
       ],
     });
     expect(prisma.mediaModerationAsset.findMany).toHaveBeenCalledWith({
       where: { ownerId: 'user-1', id: { in: ['approved-1', 'approved-2', 'queued-1'] } },
-      select: { id: true, status: true, publishedKey: true, contentType: true },
+      select: { id: true, status: true, publishedKey: true, contentType: true, aspectRatio: true },
     });
     await expect(createStorageService().getModerationUploadStatuses('user-1', [])).rejects.toBeInstanceOf(
       ServiceUnavailableException,

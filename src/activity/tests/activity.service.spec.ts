@@ -1717,7 +1717,12 @@ describe('ActivityService', () => {
         {},
         { url: 'https://cdn.example/photo-2.jpg', thumbnail: 'thumb', blurhash: 'hash' },
         { assetId: 'asset-1', thumbnailAssetId: 'thumb-asset-1' },
-        { assetId: 'asset-2', url: 'https://cdn.example/approved.jpg', mediaReviewStatus: 'approved' },
+        {
+          assetId: 'asset-2',
+          url: 'https://cdn.example/approved.jpg',
+          mediaReviewStatus: 'approved',
+          aspectRatio: 1.5,
+        },
       ]),
     ).toEqual([
       {
@@ -1737,6 +1742,7 @@ describe('ActivityService', () => {
         url: 'https://cdn.example/photo-2.jpg',
         thumbnail: 'thumb',
         blurhash: 'hash',
+        aspectRatio: null,
       },
       {
         activityId: 'activity-1',
@@ -1746,6 +1752,7 @@ describe('ActivityService', () => {
         url: null,
         thumbnail: null,
         blurhash: null,
+        aspectRatio: null,
         mediaModerationAssetId: 'asset-1',
         thumbnailModerationAssetId: 'thumb-asset-1',
         mediaReviewStatus: 'queued',
@@ -1758,6 +1765,7 @@ describe('ActivityService', () => {
         url: 'https://cdn.example/approved.jpg',
         thumbnail: null,
         blurhash: null,
+        aspectRatio: 1.5,
         mediaModerationAssetId: 'asset-2',
         thumbnailModerationAssetId: null,
         mediaReviewStatus: 'approved',

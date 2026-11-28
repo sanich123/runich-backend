@@ -18,7 +18,7 @@ import type {
 } from '@prisma/orm-postgres/contract-types';
 
 export type StorageHash =
-  StorageHashBase<'fe587b83b4b648d68a452c3e10239235203f1c6316d4df94f519e61b7ece22ea'>;
+  StorageHashBase<'b5035b254ef473dd204a61c8b00c7dd0b715ec2e878fafbcb06aa4725d32478b'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -681,6 +681,7 @@ export namespace Models {
   export type public_ActivityMedia = {
     activityDate: FieldOutputTypes['public']['ActivityMedia']['activityDate'];
     activityId: FieldOutputTypes['public']['ActivityMedia']['activityId'];
+    aspectRatio: FieldOutputTypes['public']['ActivityMedia']['aspectRatio'];
     blurhash: FieldOutputTypes['public']['ActivityMedia']['blurhash'];
     createdAt: FieldOutputTypes['public']['ActivityMedia']['createdAt'];
     id: FieldOutputTypes['public']['ActivityMedia']['id'];
@@ -969,6 +970,7 @@ export namespace Models {
     readonly [RelationKeys]?: never;
   };
   export type public_MediaModerationAsset = {
+    aspectRatio: FieldOutputTypes['public']['MediaModerationAsset']['aspectRatio'];
     attempts: FieldOutputTypes['public']['MediaModerationAsset']['attempts'];
     blurhash: FieldOutputTypes['public']['MediaModerationAsset']['blurhash'];
     byteSize: FieldOutputTypes['public']['MediaModerationAsset']['byteSize'];
@@ -1753,6 +1755,12 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/uuid';
                   readonly codecId: 'pg/uuid@1';
                   readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly aspect_ratio: {
+                  readonly dataType: 'pg/float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: true;
                   readonly many: false;
                 };
                 readonly blurhash: {
@@ -4067,6 +4075,12 @@ type ContractBase = Omit<
             };
             readonly MediaModerationAsset: {
               columns: {
+                readonly aspect_ratio: {
+                  readonly dataType: 'pg/float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly attempts: {
                   readonly dataType: 'pg/int4';
                   readonly codecId: 'pg/int4@1';
@@ -6531,6 +6545,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
+              readonly aspectRatio: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
               readonly blurhash: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -6635,6 +6653,7 @@ type ContractBase = Omit<
               readonly fields: {
                 readonly activityDate: { readonly column: 'activity_date' };
                 readonly activityId: { readonly column: 'activity_id' };
+                readonly aspectRatio: { readonly column: 'aspect_ratio' };
                 readonly blurhash: { readonly column: 'blurhash' };
                 readonly createdAt: { readonly column: 'created_at' };
                 readonly id: { readonly column: 'id' };
@@ -8415,6 +8434,10 @@ type ContractBase = Omit<
           };
           readonly MediaModerationAsset: {
             readonly fields: {
+              readonly aspectRatio: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
               readonly attempts: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
@@ -8631,6 +8654,7 @@ type ContractBase = Omit<
               readonly table: 'MediaModerationAsset';
               readonly namespaceId: 'public';
               readonly fields: {
+                readonly aspectRatio: { readonly column: 'aspect_ratio' };
                 readonly attempts: { readonly column: 'attempts' };
                 readonly blurhash: { readonly column: 'blurhash' };
                 readonly byteSize: { readonly column: 'byte_size' };

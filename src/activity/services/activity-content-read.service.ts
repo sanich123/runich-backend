@@ -195,6 +195,7 @@ export class ActivityContentReadService {
           url: true,
           thumbnail: true,
           blurhash: true,
+          aspectRatio: true,
           mediaReviewStatus: true,
           mediaModerationAssetId: true,
           thumbnailModerationAssetId: true,
@@ -209,6 +210,7 @@ export class ActivityContentReadService {
         url: string | null;
         thumbnail: string | null;
         blurhash: string | null;
+        aspectRatio: number | null;
         mediaReviewStatus: string | null;
         mediaModerationAssetId: string | null;
         thumbnailModerationAssetId: string | null;
@@ -222,6 +224,7 @@ export class ActivityContentReadService {
             url,
             thumbnail,
             blurhash,
+            aspectRatio,
             mediaReviewStatus,
             mediaModerationAssetId,
             thumbnailModerationAssetId,
@@ -231,6 +234,7 @@ export class ActivityContentReadService {
             url,
             thumbnail,
             blurhash,
+            aspectRatio,
             mediaReviewStatus,
             mediaModerationAssetId,
             thumbnailModerationAssetId,

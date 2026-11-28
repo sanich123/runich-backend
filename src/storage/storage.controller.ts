@@ -94,7 +94,10 @@ export class StorageController {
           items: { type: 'string', format: 'binary' },
           maxItems: UPLOAD_LIMITS.mediaBatchFiles,
         },
-        manifest: { type: 'string', description: 'JSON array aligned with files' },
+        manifest: {
+          type: 'string',
+          description: 'JSON array aligned with files; video entries can include aspectRatio',
+        },
         scope: { type: 'string', enum: ['activity', 'profile', 'group', 'feedback'], default: 'activity' },
         feedbackId: { type: 'string', format: 'uuid' },
         groupId: { type: 'string', format: 'uuid' },
@@ -148,6 +151,7 @@ export class StorageController {
         scope: { type: 'string', enum: ['activity', 'profile', 'group', 'feedback'], default: 'activity' },
         feedbackId: { type: 'string', format: 'uuid' },
         groupId: { type: 'string', format: 'uuid' },
+        aspectRatio: { type: 'number', minimum: 0.01, maximum: 100 },
       },
     },
   })
